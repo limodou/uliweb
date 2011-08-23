@@ -1,0 +1,52 @@
+ul.tabSet { /* general settings */
+text-align: left; /* set to left, right or center */
+margin: 0; /* set margins as desired */
+font: bold 11px verdana, arial, sans-serif; /* set font as desired */
+border-bottom: 1px solid #ccc; /* set border COLOR as desired */
+list-style-type: none;
+padding: 3px 10px 1px 10px; /* THIRD number must change with respect to padding-top (X) below */
+}
+ 
+ul.tabSet li { /* do not change */
+display: inline;
+margin-left: 5px !important;
+}
+ 
+ul.tabSet li.on{ /* settings for selected tab */
+border-bottom: 1px solid #fff; /* set border color to page background color */
+background-color: #fff; /* set background color to match above border color */
+}
+ 
+ul.tabSet li.on a { /* settings for selected tab link */
+background-color: #fff; /* set selected tab background color as desired */
+color: #000; /* set selected tab link color as desired */
+position: relative;
+top: 1px;
+padding-top: 4px; /* must change with respect to padding (X) above and below */
+}
+ 
+ul.tabSet li a { /* settings for all tab links */
+padding: 3px 4px; /* set padding (tab size) as desired; FIRST number must change with respect to padding-top (X) above */
+border: 1px solid #ccc; /* set border COLOR as desired; usually matches border color specified in #tabnav */
+background-color: #DDD; /* set unselected tab background color as desired */
+color: #666; /* set unselected tab link color as desired */
+margin-right: 0px; /* set additional spacing between tabs as desired */
+text-decoration: none;
+border-bottom: none;
+cursor: pointer;
+}
+ 
+ul.tabSet a:hover { /* settings for hover effect */
+background: #fff; /* set desired hover color */
+}
+ 
+.panelSet {
+	padding: 10px;
+	border:solid 1px #ccc;
+	border-top: 0px;
+	background: #fff;
+}
+
+.panel {
+overflow: none;
+}

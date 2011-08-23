@@ -1,0 +1,92 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) YAML core RTL stylesheet
+ * (de) YAML Basis-RTL-Stylesheet
+ *
+ * Don't make any changes in this file!
+ * Your changes should be placed in any css-file in your own stylesheet folder.
+ *
+ * @note:           Many thanks to Alexander Hass (http://www.yaml-fuer-drupal.de/) for contribution
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+@media all
+{
+ /**
+  * @section browser reset
+  * @see     http://www.yaml.de/en/documentation/css-components/base-stylesheet.html
+  *
+  * Changing direction of text flow, paddings & margins ...
+  */
+
+  option { padding: 0 0.4em 0 0; }
+
+  body {
+    text-align: right;
+    direction: rtl;
+  }
+
+  ul, ol, dl { margin: 0 1em 1em 0; }
+  li {
+    margin-left: 0;
+    margin-right: 0.8em;
+  }
+
+  dd { margin: 0 0.8em 1em 0; }
+  blockquote, cite { margin: 0 0.8em 1em 0; }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * @section base layout | Basis Layout
+  * @see     http://www.yaml.de/en/documentation/css-components/base-stylesheet.html
+  *
+  * Changing positions of #topnav container when paced within #header
+  */
+
+  #header #topnav {
+    left: 10px;
+    right: 0;
+    text-align: left;
+  }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+  /**
+   * (en) skip links cause large horizontal scrollbars in RTL mode in several browsers
+   * (de) skip links erzeugen große horziontale Scrollbalken in verschiedenen Browserin im RTL-Modus
+   *
+   * @workaround
+   * @affected   Firefox, Safari, IE 5.x - IE7
+   * @css-for    all
+   * @valid      yes
+   */
+
+  .skip, .hideme, .print, dfn {
+    left: 0;
+  }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * @section miscellaneous
+  *
+  * (en) CSS-class for ltr-content (left to right) within a rtl website
+  * (de) Eine CSS-Klasse für ltr-Inhalte (left to right) innerhalb einer rtl-Seite
+  */
+
+  .text-ltr {
+    direction: ltr;
+    text-align: left;
+  }
+}

@@ -1,0 +1,15 @@
+@charset "UTF-8";
+/* "Yet Another Multicolumn Layout" v3.1 (c) by Alexander Hass, Dirk Jesse (http://www.yaml.de)
+* $Revision: 343 $ $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $ */
+@media all {
+option{padding:0 .4em 0 0}
+body{text-align:right;direction:rtl}
+ul,ol,dl{margin:0 1em 1em 0}
+li{margin-left:0;margin-right:.8em}
+dd{margin:0 .8em 1em 0}
+blockquote,cite{margin:0 .8em 1em 0}
+#header #topnav{left:10px;right:auto;text-align:left}
+.skip,.hideme,.print,dfn{left:0}
+.text-ltr{direction:ltr;text-align:left}
+}
+

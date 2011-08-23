@@ -1,0 +1,47 @@
+@charset "UTF-8";
+/* "Yet Another Multicolumn Layout" v3.1 (c) by Dirk Jesse (http://www.yaml.de)
+* $Revision: 343 $ $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $ */
+@media all {
+html{height:auto;margin-bottom:0;margin-right:1px}
+* html textarea{overflow:scroll;overflow-x:hidden}
+* html input{overflow:hidden}
+body{position:relative;height:1%}
+* html body{position:static}
+#main{position:relative}
+.clearfix{display:block}
+* html .clearfix{height:1%}
+.floatbox{width:100%}
+.slidebox{position:relative;margin-right:-1000px;height:1%}
+* html #col1,* html #col2,* html #col3{position:relative}
+#page_margins,#page,.page_margins,.page,#header,#nav,#main,#footer{zoom:1}
+#page_margins,#page,.page_margins,.page{height:1%}
+* html #header,* html #nav,* html #main,* html #footer{width:100%;wid\th:auto}
+* html ul,* html ol,* html dl{position:relative}
+body ol li{display:list-item}
+fieldset,legend{position:relative}
+form.yform,form.yform div,form.yform div *{zoom:1}
+html #ie_clearing{position:static;display:block;\clear:both;width:100%;font-size:0;margin:-2px 0 -1em 1px}
+* html #ie_clearing{margin:-2px 0 -1em}
+#col3_content{margin-bottom:-2px}
+* html{margin-right:0}
+#col3{position:relative}
+*+html #col3 {z-index:-1}
+* html #col1,* html #col2 {z-index:1}
+* html #col3 {z-index:auto}
+* html body a,* html body a:hover{background-color:transparent}
+}
+@media screen,projection {
+#col1,#col2{display:inline}
+.c50l,.c25l,.c33l,.c38l,.c66l,.c75l,.c62l,.c50r,.c25r,.c33r,.c38r,.c66r,.c75r,.c62r{display:inline}
+* html .equalize,* html .equalize .subcolumns{overflow:visible;display:block}
+.equalize,.equalize .subcolumns{overflow:hidden;display:block}
+.equalize .c25l,.equalize .c33l,.equalize .c38l,.equalize .c50l,.equalize .c66l,.equalize .c75l,.equalize .c62l{float:left;display:inline;padding-bottom:32767px;margin-bottom:-32767px}
+.equalize .c25r,.equalize .c33r,.equalize .c38r,.equalize .c50r,.equalize .c66r,.equalize .c75r,.equalize .c62r{float:right;margin-left:-5px;display:inline;padding-bottom:32767px;margin-bottom:-32767px}
+.no-ie-padding .c25l,.no-ie-padding .c33l,.no-ie-padding .c38l,.no-ie-padding .c50l,.no-ie-padding .c66l,.no-ie-padding .c75l,.no-ie-padding .c62l,.no-ie-padding .c25r,.no-ie-padding .c33r,.no-ie-padding .c38r,.no-ie-padding .c50r,.no-ie-padding .c66r,.no-ie-padding .c75r,.no-ie-padding .c62r{padding-bottom:0;margin-bottom:0}
+* html #col1_content,* html #col2_content,* html #col3_content{word-wrap:break-word}
+.subc,.subcl,.subcr{height:1%}
+* html .subc,* html .subcl,* html .subcr{word-wrap:break-word;overflow:hidden}
+}
+@media print {
+#col3{height:1%}
+}

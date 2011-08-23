@@ -1,0 +1,253 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) CSS-component for creating vertical forms
+ * (de) CSS-Baustein zur Erstellung von Formularen mit untereinander angeordneten Elementen
+ *
+ * @note            Many thanks to Ansgar Hein (http://www.anatom5.de) for contribution
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+@media all
+{
+  /**
+   *  YAML Forms - visual styling
+   *
+   *  (en) visual form styling area
+   *  (de) Festlegung des optischen Erscheinungsbildes
+   */
+
+  form.yform {
+    background: #f4f4f4;
+    border: 1px #ddd solid;
+    margin: 0 0 1em 0;
+    padding: 10px;
+  }
+
+  form.yform fieldset {
+    border: 1px #ddd solid;
+    background: #fafafa;
+    margin: 0 0 1em 0;
+    padding: 0.5em 1em;
+  }
+
+  form.yform legend {
+    font-size: 125%; font-weight: normal; color: #000;
+  }
+
+  form.yform label {
+    color: #666;
+  }
+
+  form.yform .type-text input,
+  form.yform .type-text textarea,
+  form.yform .type-select select {
+    font-family:  Arial, Helvetica, sans-serif; /* proportional fonts for all form elements */
+    border: 1px solid #ddd;
+  }
+
+  /* :hover and :focus status on form fields | Effekt zur Hervorhebung von Formularfeldern bei :hover oder :focus */
+  form.yform div input:focus,
+  form.yform div select:focus,
+  form.yform div textarea:focus,
+  form.yform div input:hover,
+  form.yform div select:hover,
+  form.yform div textarea:hover,
+  form.yform div input:active,
+  form.yform div select:active,
+  form.yform div textarea:active {
+    border: 1px #a66 solid;
+    background: #fff;
+  }
+
+  /* Styling of buttons | Gestaltung von Buttons */
+  form.yform .type-button input {
+    border-top: 1px #ddd solid;
+    border-left: 1px #ddd solid;
+    border-right: 1px #444 solid;
+    border-bottom: 1px #444 solid;
+    color: #000;
+    background: #454545 url(images/button_gray.png) top left repeat-x;
+    padding: .5em 1.2em;
+  }
+
+  form.yform .type-button input#reset { color: #300; background: #661717 url(images/button_red.png) top left repeat-x; }
+  form.yform .type-button input#submit { color: #330; background: #5e5607 url(images/button_yellow.png) top left repeat-x; }
+
+  /* :hover and :focus status on buttons | Effekt zur Hervorhebung von Schaltern bei :hover oder :focus */
+  form.yform div.type-button input:focus,
+  form.yform div.type-button input:hover,
+  form.yform div.type-button input:active {
+    border-top: 1px #444 solid;
+    border-left: 1px #444 solid;
+    border-right: 1px #ddd solid;
+    border-bottom: 1px #ddd solid;
+    color: #fff;
+    background: #555; 
+  }
+
+  form.yform div.type-button input#reset:focus,
+  form.yform div.type-button input#reset:hover,
+  form.yform div.type-button input#reset:active {
+    background: #800; color: #fff;
+  }
+
+  form.yform div.type-button input#submit:focus,
+  form.yform div.type-button input#submit:hover,
+  form.yform div.type-button input#submit:active {
+    background: #880; color: #fff;
+  }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * Vertical-Forms - technical base (standard)
+  *
+  * |-------------------------------|
+  * | fieldset                      |
+  * |-------------------------------|
+  * |   label                       |
+  * |   input / select / textarea   |
+  * |-------------------------------|
+  * | /fieldset                     |
+  * |-------------------------------|
+  *
+  * (en) Styling of forms where both label and input/select/textarea are styled with display: block;
+  * (de) Formulargestaltung, bei der sowohl label als auch input/select/textarea mit display: block; gestaltet werden
+  *
+  * WARNING: This part contains several IE-stability-fixes. Don't edit this part if you are not sure, what you're doing!
+  */
+
+  /* General form styling  | Allgemeine Formatierung des Formulars */
+  form.yform { overflow: hidden; }
+  form.yform fieldset { overflow: hidden; }
+  form.yform legend { background: transparent; border: 0; }
+  form.yform label { display:block; cursor: pointer; }
+  form.yform .message { display: block; margin-bottom: 0.5em; color: #666; }
+
+  /* Hiding of hidden fields (otherwise ugly spaces in Firefox) | Versteckte Felder wirklich verstecken (sonst ggf. häßliche Lücken im Firefox) */
+  form.yform input[type=hidden] { display: none !important; }
+
+  /* Highlight mandatory fields | Pflichtfeldkennzeichnung hervorheben */
+  form.yform sup { color: #800; font-weight: bold; }
+
+  /* styling containing DIV elements | Gestaltung der kapselnden DIV-Elemente */
+  form.yform div.type-text,
+  form.yform div.type-select,
+  form.yform div.type-check,
+  form.yform div.type-button {
+    margin: 0.5em 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* styling standard form elements with 'almost' equal flexible width | Gestaltung der einzelnen Formularelemente mit annähend gleicher Breite */
+  form.yform .type-text input,
+  form.yform .type-text textarea {
+    display: block;
+    position: relative;
+    padding: 0.3em 0.3em;
+    width: 58.5%;
+  }
+
+  form.yform .type-select select {
+    display: block;
+    position: relative;
+    padding: 0.3em 2px 0.3em 1px;
+    width: 60%;
+    cursor: pointer;
+  }
+  form.yform .type-select select optgroup {
+    font-style: normal;
+    font-weight: bold;
+  }
+
+  form.yform .type-check input { cursor: pointer; }
+  form.yform .type-check label { display: inline; }
+
+  /* Styling of buttons | Gestaltung von Buttons */
+  form.yform .type-button input {
+    width: auto;
+    cursor: pointer;
+  }
+
+  /* Styling of error-messages | Fehlermeldungen */
+  form.yform div.error {
+    border: 1px #a00 dashed;
+    background: #faf4f4;
+    padding: 0.5em;
+  }
+
+  form.yform div.error label { color: #000; font-weight:bold; }
+  form.yform div.error .message { color: #800; }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * Columnar forms display - technical base (optional)
+  *
+  * |-------------------------------------------|
+  * | fieldset                                  |
+  * |-------------------------------------------|
+  * |                                           |
+  * |   label   |   input / select / textarea   |
+  * |                                           |
+  * |-------------------------------------------|
+  * | /fieldset                                 |
+  * |-------------------------------------------|
+  *
+  * (en) Styling of forms where label floats left of form-elements
+  * (de) Formulargestaltung, bei der die label-Elemente nach links fließen
+  *
+  * WARNING: This part contains several IE-stability-fixes. Don't edit this part if you are not sure, what you're doing!
+  */
+
+  /* Columnar display | Spalten-Darstellung */
+  .columnar .type-text label,
+  .columnar .type-select label {
+    float: left;
+    width: 30%; /* Can be fixed width too | Kann auch eine fixe Angabe sein */
+  }
+
+  /* Indent Checkbox fields to match label-width | Checkboxen um den gleichen Wert einrücken, wie die Breite der labels */
+  .columnar div.type-check { padding-left: 30%; }
+  .columnar div.error .message { margin-left: 30%; }
+
+  .columnar div.type-text input,
+  .columnar div.type-text textarea { width: 67.8%; }
+  .columnar div.type-select select { width: 69.4%; }
+  
+  /* width adjustments for IE 5.x & IE6 | Breitenanpassung für Internet Explorer 5.x und 6.0 */
+  * html .columnar div.type-text input,
+  * html .columnar div.type-text textarea { width: 67.2%; }
+  * html .columnar div.type-select select { width: 68.8%; }
+  
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * Forms Fieldset/Legend-Bug in IE
+  * @see http://www.mattheerema.com/web-design/2006/04/getting-fieldset-backgrounds-and-legends-to-behave-in-ie/
+  *
+  * @workaround
+  * @affected IE 5.x/Win, IE6, IE7
+  * @css-for IE 5.x/Win, IE6, IE7
+  * @valid yes
+  */
+  
+  /* IE5.x & IE6 */
+  * html form.yform legend { position:absolute; top: -.5em; left: .5em; }
+  * html form.yform fieldset { overflow:visible; height: 1%; margin-top:1.5em; padding-top:1.5em; }
+
+  /* IE7 */
+  *+html form.yform legend { position:absolute; top: -.5em; left: .5em; }
+  *+html form.yform fieldset { overflow:visible; height:1%; margin-top:1.5em; padding-top:1.5em; }
+}

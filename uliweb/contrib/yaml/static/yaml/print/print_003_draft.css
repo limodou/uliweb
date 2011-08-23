@@ -1,0 +1,56 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) print stylesheet
+ * (de) Druck-Stylesheet
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+/* import print base styles | Basisformatierung für Drucklayout einbinden */
+@import url(../core/print_base.css);
+
+@media print
+{
+ /**
+  * @section column selection
+  * (en) individually switch on/off any content column for printing
+  * (de) (De)aktivierung der Contentspalten für den Ausdruck
+  *
+  * @see     http://www.yaml.de/en/documentation/css-components/layout-for-print-media.html
+  */
+
+  #col1 { display:none; }
+  #col2 { display:none; }
+  #col3, #col3_content { width: 100%; margin:0; padding: 0; border:0; }
+
+  /*------------------------------------------------------------------------------------------------------*/
+
+  /* (en) optional output of acronyms and abbreviations*/
+  /* (de) optionale Ausgabe von Auszeichnung von Abkürzungen */
+
+  /*
+    abbr[title]:after, acronym[title]:after { content: '(' attr(title) ')'; }
+  */
+
+  /*------------------------------------------------------------------------------------------------------*/
+
+  /* (en) optional URL output of hyperlinks in print layout */
+  /* (de) optionale Ausgabe der URLs von Hyperlinks */
+  /*
+  a[href]:after {
+    content:" <URL: "attr(href)">";
+    color:#444;
+    background:inherit;
+    font-style:italic;
+  }
+  */
+}

@@ -1,0 +1,123 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) Vertical list navigation "vlist"
+ * (de) Vertikale Navigationsliste "vlist"
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+@media all
+{
+  /* title */
+  h6.vlist {
+    font-family:  Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    font-size: 100%;
+    width: 90%;
+    padding: 3px 0px 3px 10%; /* LTR */
+    margin:0;
+    color: #444;
+    background-color: #fff;
+    border-top: 2px #ddd solid;
+    border-bottom: 4px #888 solid;
+  }
+
+  .vlist {
+    width: 100%;
+    overflow: hidden;
+    margin: 0 0 1.5em 0;
+    list-style-type: none;
+    border-bottom: 2px #ddd solid;
+  }
+
+  .vlist ul {
+    list-style-type: none;
+    margin:0;
+    padding: 0;
+  }
+
+  .vlist li {
+    float:left; /* LTR */
+    width: 100%;
+    margin:0;
+    padding: 0;
+  }
+
+  .vlist a,
+  .vlist strong,
+  .vlist span {
+    display:block;
+    padding: 3px 0px 3px 10%;
+    text-decoration: none;
+    border-bottom: 1px #ddd solid;
+  }
+
+  .vlist a,
+  .vlist a:visited {
+    color: #444;
+  }
+
+  .vlist li span {
+    display:block;
+    font-weight: bold;
+    border-bottom: 1px #ddd solid;
+  }
+
+  /* active list element */
+  .vlist li.active {
+    color: #fff;
+    background-color:#800;
+    font-weight: bold;
+  }
+
+  /* Level 1 */
+  .vlist li a,
+  .vlist li strong,
+  .vlist li span { width: 90%; padding-left: 10%; } /* LTR */
+
+  .vlist li a:focus,
+  .vlist li a:hover,
+  .vlist li a:active { background-color:#a88; color: #fff; }
+
+  /* Level 2 */
+  .vlist li ul li a,
+  .vlist li ul li strong,
+  .vlist li ul li span { width: 80%; padding-left: 20%; } /* LTR */
+
+  .vlist li ul li a, 
+  .vlist li ul li a:visited { background-color:#f8f8f8; color: #333; }
+  .vlist li ul li a:focus,
+  .vlist li ul li a:hover,
+  .vlist li ul li a:active { background-color:#a88; color: #fff; }
+
+  /* Level 3 */
+  .vlist li ul li ul li a,
+  .vlist li ul li ul li strong,
+  .vlist li ul li ul li span { width: 70%; padding-left: 30%; } /* LTR */
+
+  .vlist li ul li ul li a,
+  .vlist li ul li ul li a:visited{ background-color:#f0f0f0; color: #222; }
+  .vlist li ul li ul li a:focus,
+  .vlist li ul li ul li a:hover,
+  .vlist li ul li ul li a:active { background-color:#a88; color: #fff; }
+
+  /* Level 4 */
+  .vlist li ul li ul li ul li a,
+  .vlist li ul li ul li ul li strong,
+  .vlist li ul li ul li ul li span { width: 60%; padding-left: 40%; } /* LTR */
+
+  .vlist li ul li ul li ul li a,
+  .vlist li ul li ul li ul li a:visited { background-color:#e8e8e8; color: #111; }
+  .vlist li ul li ul li ul li a:focus,
+  .vlist li ul li ul li ul li a:hover,
+  .vlist li ul li ul li ul li a:active { background-color:#a88; color: #fff; }
+}

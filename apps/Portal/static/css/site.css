@@ -1,0 +1,19 @@
+div.left {float:left; margin-right:30px;}
+div.clear {clear:both;}
+
+div.contents.topic {float:right; border:1px solid #dedede;padding:5px 20px 5px 5px; margin:5px; background-color:#FFF8AF;}
+div.document pre {border:1px solid #dedede; padding:5px; background-color:#FFF8AF; line-height:1.5em;}
+div.document h1 {margin-bottom:10px;}
+div.document tt.docutils.literal {border:1px solid #dedede;background-color:#A4FF9F;}
+div.document div.note {border:1px solid #ff0000;background:#FF9F9F url(../images/note.png) no-repeat scroll 0.8em 0.8em;padding:5px 5px 5px 55px;margin:5px;}
+
+ul#minitabs{list-style: none;margin: 0;padding: 7px 0;
+  border-bottom: 1px solid #CCC;font-weight: bold;
+  text-align: center;white-space: nowrap}
+ul#minitabs li{display: inline;margin: 0 5px}
+ul#minitabs a{text-decoration: none;padding: 0 0 3px;
+  border-bottom: 4px solid #FFF;color: #999}
+ul#minitabs a#current{border-color: #F60;color: #06F}
+ul#minitabs a:hover{border-color: #F60;color: #666}
+div.error {width:100%; text-align:center;}
+div.error span {width:80%; padding:6px;border:1px solid #cccccc;}

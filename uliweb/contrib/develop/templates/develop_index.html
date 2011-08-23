@@ -1,0 +1,12 @@
+{{extend "develop_layout.html"}}
+{{block nav_menu}}
+{{from uliweb.contrib.develop.menu import menu}}
+{{<< menu('Settings')}}
+{{end}}
+{{block content}}
+<div>
+<pre>
+{{=str(settings)}}
+</pre>
+</div>
+{{end}}

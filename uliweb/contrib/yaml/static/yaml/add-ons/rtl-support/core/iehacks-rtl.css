@@ -1,0 +1,37 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) YAML core RTL stylesheet - structure-independent bugfixes of IE/Win CSS-bugs
+ * (de) YAML Basis-RTL-Stylesheet - Strukturunabhängige Bugfixes von CSS-Bugs des IE/Win
+ *
+ * Don't make any changes in this file!
+ * Your changes should be added to a separate patch-file.
+ *
+ * @note:           Many thanks to Alexander Hass (http://www.yaml-fuer-drupal.de/) for contribution
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+@media all
+{
+ /**
+  * (en) Workaround for misplaced floating navigation lists
+  * (de) Workaround behebt deplatzierte floatende Navigationselemente
+  *
+  * @workaround
+  * @affected   IE 5.x/Win, IE6, IE7
+  * @css-for    IE 5.x/Win, IE6, IE7
+  * @valid      yes
+  */
+
+  #nav { direction:ltr; }
+  #nav * { direction:rtl; }
+}

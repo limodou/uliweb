@@ -1,0 +1,185 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: Sat Jan 29 21:33:39 2011\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: ENCODING\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:7
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:8
+msgid "Register"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:10
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:32
+msgid "Username:"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:11
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:33
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:55
+msgid "Password:"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:12
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:56
+msgid "Password again:"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:26
+msgid "Passwords are not match."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:29
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:30
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\views.py:9
+msgid "Login"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:34
+msgid "Remember Me"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:48
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:61
+msgid "Password is not right."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:51
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:529
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:533
+msgid "Save"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:52
+msgid "Change Password"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:54
+msgid "Old Password:"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:43
+msgid "Username"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:44
+msgid "Email"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:45
+msgid "Password"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:46
+msgid "Is Superuser"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:47
+msgid "Last Login"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:48
+msgid "Join Date"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:49
+msgid "Portrait"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:50
+msgid "Active Status"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\auth\models.py:51
+msgid "Lock Status"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\i18n\__init__.py:6
+msgid "English"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\contrib\i18n\__init__.py:7
+msgid "Simplified Chinese"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\form\layout.py:151
+msgid "more"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\form\uliform.py:235
+msgid "This field is required."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\form\uliform.py:704
+msgid "The date is not a valid date format."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\form\uliform.py:754
+msgid "The time is not a valid time format."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\form\uliform.py:803
+msgid "The datetime is not a valid datetime format."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\form\validators.py:23
+msgid "Choices need a dict, tuple or list data."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\form\validators.py:32
+msgid "Select a valid choice. That choice is not one of the available choices."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\form\validators.py:43
+msgid "The image file size exceeds the limit."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\form\validators.py:45
+msgid "The file is not a valid image."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:281
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:441
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:1198
+msgid "The information has been saved successfully!"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:282
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:442
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:1199
+msgid "There are somethings wrong."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:349
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:353
+msgid "Create"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:488
+msgid "The object has not been changed."
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:672
+msgid "The object has been deleted successfully!"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:741
+msgid "Total"
+msgstr ""
+
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:1263
+#: d:\project\mywork\uliweb\uliweb\utils\generic.py:1272
+msgid "Query"
+msgstr ""
+

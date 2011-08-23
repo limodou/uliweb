@@ -1,0 +1,55 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<title>{{block title}}Untitled{{end}}</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<!-- (en) Add your meta data here -->
+<!-- (de) Fuegen Sie hier ihre Meta-Daten ein -->
+{{block yaml_css}}
+<link href="{{=url_for_static('yaml/layout/base_layout.css')}}" rel="stylesheet" type="text/css" />
+<!--[if lte IE 7]>
+<link href="{{=url_for_static('yaml/layout/patches/patch_base_layout.css')}}" rel="stylesheet" type="text/css" />
+<![endif]-->
+{{end}}
+</head>
+<body>
+<div class="page_margins">
+	<div class="page">
+		<div id="header">
+            <div id="topnav">
+                {{block topnav}}
+                <span><a href="/login">Login</a> | <a href="/register">Register</a></span> 
+                {{end}}
+            </div>
+			{{block header}}<h1>Header</h1>{{end}}
+        </div>
+		<!-- begin: main navigation #nav -->
+		{{block nav}}
+		<div id="nav"> <a id="navigation" name="navigation"></a>
+			<!-- skiplink anchor: navigation -->
+			<div class="hlist">
+				{{block nav_menu}}
+                <ul>
+                    <li class="active"><strong>Home</strong></li>
+                    <li><a href="/about">About</a></li>
+                </ul>
+                {{end}}
+			</div>
+		</div>
+		{{end}}
+		<!-- end: main navigation -->
+		<!-- begin: main content area #main -->
+		<div id="main">
+            <div>{{block content}}{{end}}</div>
+		</div>
+		<!-- end: #main -->
+		<!-- begin: #footer -->
+		<div id="footer">{{block footer}}Footer<br/>
+        Author Limodou{{end}}</div>
+		<!-- end: #footer -->
+	</div>
+
+</div>
+</body>
+</html>

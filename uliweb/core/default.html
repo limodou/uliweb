@@ -1,0 +1,6 @@
+<h1>Default Template</h1>
+<p>This page is created from default template, because Uliweb can't
+find a matched template "{{=response.template}}".</p>
+{{import pprint
+from uliweb.utils.textconvert import text2html}}
+{{<<text2html(pprint.pformat(_vars.copy()))}}

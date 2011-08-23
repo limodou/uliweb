@@ -1,0 +1,118 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) Horizontal list navigation based on "Sliding Door II" from von "A List Apart"
+ * (de) Horizontale Navigationsliste basierend auf "Sliding Door II" von "A List Apart"
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+@media all
+{
+  .hlist {
+    /* (en) This image is mainly transparent */
+    /* (de) Dieses Bild ist größtenteils transparent */
+    background: transparent url("images/sliding_door/round/bg.gif") repeat-x bottom;
+    float: left;
+    width: 100%;
+  }
+
+  .hlist ul {
+    line-height: 1em;
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 50px; /* LTR */
+    white-space: nowrap;
+  }
+
+  .hlist li {
+    /* (en) Repeat the main color from the image */
+    /* (de) Wiederholung der Hauptfarbe aus der Bilddatei */
+    list-style-type: none !important;
+    background: #e0ecf8 url("images/sliding_door/round/left.png") no-repeat top left;
+    border-bottom: 1px solid #000;
+    float: left; /* LTR */
+    margin: 0;
+    padding: 0 0 0 3px;
+  }
+
+  .hlist a,
+  .hlist strong {
+    /* (en) This image is mainly transparent */
+    /* (de) Dieses Bild ist größtenteils transparent */
+    background: transparent url("images/sliding_door/round/right.png") no-repeat top right;
+    color: #667;
+    display: block;
+    font-weight: normal;
+    padding: 5px 11px 3px 8px;
+    text-decoration: none;
+    text-transform: none;
+
+    /**
+     * @bugfix
+     * @affected   IE5.x, IE6
+     * @css-for    all browsers
+     * @valid      yes
+     */
+    width: auto; /* only IE 5.x */
+    width/**/:/**/ .1em; /* only IE 6.0 */
+  }
+
+  .hlist a:link,
+  .hlist a:visited { background-color: transparent; color: #667; }
+
+  /**
+   * @bugfix
+   * @affected   IE5.x, IE6
+   * @css-for    all browsers
+   * @valid      yes
+   */
+  .hlist > ul a,
+  .hlist > ul strong { width: auto; }  /* for other browsers */
+
+  .hlist ul li:focus,
+  .hlist ul li:hover,
+  .hlist ul li:active {
+    /* (en) Repeat the main color from the image */
+    /* (de) Wiederholung der Hauptfarbe aus der Bilddatei */
+    background-color: #c4d0dc;
+    background-position: 0 -150px;
+  }
+
+  .hlist li:focus a,
+  .hlist li:hover a,
+  .hlist li:active a { background-position: 100% -150px; }
+
+  .hlist a:focus,
+  .hlist a:hover,
+  .hlist a:active { background-color: transparent; color: #223; }
+
+  .hlist li.active,
+  .hlist ul li.active:focus,
+  .hlist ul li.active:hover,
+  .hlist ul li.active:active {
+    /* (en) Repeat the main color from the image */
+    /* (de) Wiederholung der Hauptfarbe aus der Bilddatei */
+    background: white url("images/sliding_door/round/left_on.png") no-repeat top left;
+    border: 0 none;
+  }
+
+  .hlist li.active strong {
+    /* (en) This image is mainly transparent */
+    /* (de) Dieses Bild ist größtenteils transparent */
+    background: transparent url("images/sliding_door/round/right_on.png") no-repeat top right;
+    color: #334;
+    font-weight: bold;
+    padding-bottom: 4px;
+    padding-top: 5px;
+  }
+
+}

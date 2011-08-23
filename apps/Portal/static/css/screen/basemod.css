@@ -1,0 +1,125 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS framework
+ * (en) stylesheet for screen layout
+ * (de) Stylesheet für das Bildschirm-Layout
+ *
+ * @creator     YAML Builder V1.0.1 (http://builder.yaml.de)
+ * @file        basemod.css
+ */
+
+@media screen, projection
+{
+  /*-------------------------------------------------------------------------*/
+
+  /* (en) Marginal areas & page background */
+  /* (de) Randbereiche & Seitenhintergrund */
+  body { background: #3b69ad none; padding: 10px 0; }
+
+  /* Layout Alignment | Layout-Ausrichtung */
+  #page_margins { margin: 0 auto; }
+
+  /* Layout Properties | Layout-Eigenschaften */
+  #page_margins { width: auto;  min-width: 740px; max-width: 90em; background: #fff; }
+  #page { padding: 10px 15px 10px 10px; }
+  #header { padding: 45px 2em 1em 20px; color: #000; background: #fff; }
+  #topnav { color: #aaa; background: transparent; }
+  #nav { overflow:hidden; }
+  #nav_main {  }
+  #main { margin: 10px 0; background: #fff; }
+  #footer { padding: 10px 20px; color:#666; background: #f9f9f9; border-top: 5px #efefef solid; }
+
+  /* (en) navigation: horizontal adjustment | (de) horizontale Ausrichtung  */
+  #nav ul { margin-left: 20px; }
+
+  /*-------------------------------------------------------------------------*/
+
+  /**
+   * (en) Formatting content container
+   * (de) Formatierung der Inhalts-Container
+   *
+   */
+
+  #col1 { float: left; width: 25%}
+  #col2 { display:none}
+  #col3 { width: auto; margin: 0 0 0 25%}
+  #col1_content { padding: 0 10px 0 20px }
+  #col3_content { padding: 0 20px 0 10px }
+	
+  /*-------------------------------------------------------------------------*/
+
+  #page_margins {
+    border: 0 none;
+    background-image:  url(images/gfxborder/border_left.gif);
+    background-repeat:repeat-y;
+    background-position:left;
+  }
+
+  #page {
+    border: 0 none;
+    margin: 0 0 0 5px; padding: 10px 15px 10px 10px;
+    background-image:  url(images/gfxborder/border_right.gif);
+    background-repeat:repeat-y;
+    background-position:right;
+  }
+
+
+  #border-top {
+    overflow:hidden;
+    width: auto;
+    height: 20px;
+    font-size:0;
+    margin-bottom: -15px;
+    background-image:  url(images/gfxborder/border_top.gif);
+    background-repeat:repeat-x;
+    background-position:top left;
+  }
+
+  #border-bottom {
+    overflow:hidden;
+    width: auto;
+    height: 20px;
+    margin-top: -15px;
+    font-size:0;
+    background-image:  url(images/gfxborder/border_bottom.gif);
+    background-repeat:repeat-x;
+    background-position:bottom left;
+  }
+
+  #edge-tl {
+    float:left;
+    width: 20px;
+    height: 20px;
+    font-size:0;
+    background-image:  url(images/gfxborder/corner_tl.gif);
+    background-position: top left;
+  }
+
+  #edge-tr {
+    position:relative; /* IE Fix | z-index */
+    float:right;
+    width: 20px;
+    height: 20px;
+    font-size:0;
+    background-image:  url(images/gfxborder/corner_tr.gif);
+    background-position: top right;
+  }
+
+  #edge-bl {
+    float:left;
+    width: 20px;
+    height: 20px;
+    background-image:  url(images/gfxborder/corner_bl.gif);
+    background-position: bottom left;
+  }
+
+  #edge-br {
+    position:relative; /* IE Fix | z-index */
+    float:right;
+    width: 20px;
+    height: 20px;
+    background-image:  url(images/gfxborder/corner_br.gif);
+    background-position: bottom right;
+  }
+
+}

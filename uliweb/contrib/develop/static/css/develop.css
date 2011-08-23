@@ -1,0 +1,7 @@
+.selected {background-color:#BFFFC2}
+.noselected {background-color:#ccc}
+.details, .detail-body{margin: 5px 0 0 20px;  background-color: #FEFF9F;}	
+.app_panel h3.app_name {height: 40px; line-height: 40px; padding: 0 20px; margin: 5px 0; position: relative;}
+.app_panel h3.app_name a{text-decoration: none; cursor: pointer;}	
+.app_panel h3.app_name span {position: absolute; top: 0; right: 25px;  font-size: 0.8em; font-weight: bold;}
+.detail-body {border-left:3px dotted #999;}

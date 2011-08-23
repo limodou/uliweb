@@ -1,0 +1,223 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) YAML core stylesheet
+ * (de) YAML Basis-Stylesheet
+ *
+ * Don't make any changes in this file!
+ * Your changes should be placed in any css-file in your own stylesheet folder.
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+@media all
+{
+
+ /**
+  * @section browser reset
+  * @see     http://www.yaml.de/en/documentation/css-components/base-stylesheet.html
+  */
+
+  /* (en) Global reset of paddings and margins for all HTML elements */
+  /* (de) Globales Zurücksetzen der Innen- und Außenabstände für alle HTML-Elemente */
+  * { margin:0; padding: 0; }
+
+  /* (en) Correction: margin/padding reset caused too small select boxes. */
+  /* (de) Korrektur: Das Zurücksetzen der Abstände verursacht zu kleine Selectboxen. */
+  option { padding-left: 0.4em; } /* LTR */
+  select { padding: 1px; }
+
+ /**
+  * (en) Global fix of the Italics bugs in IE 5.x and IE 6
+  * (de) Globale Korrektur des Italics Bugs des IE 5.x und IE 6
+  *
+  * @bugfix
+  * @affected   IE 5.x/Win, IE6
+  * @css-for    IE 5.x/Win, IE6
+  * @valid      yes
+  */
+  * html body * { overflow:visible; }
+  * html iframe, * html frame { overflow:auto; }
+  * html frameset { overflow:hidden; }
+
+  /* (en) Forcing vertical scrollbars in Netscape, Firefox and Safari browsers */
+  /* (de) Erzwingen vertikaler Scrollbalken in Netscape, Firefox und Safari Browsern */
+  html { height: 100%; margin-bottom: 1px; }
+  body {
+    /* (en) Fix for rounding errors when scaling font sizes in older versions of Opera browser */
+    /* (de) Beseitigung von Rundungsfehler beim Skalieren von Schriftgrößen in älteren Opera Versionen */
+    font-size: 100.01%;
+
+    /* (en) Standard values for colors and text alignment */
+    /* (de) Vorgabe der Standardfarben und Textausrichtung */
+    color: #000;
+    background: #fff;
+    text-align: left; /* LTR */
+  }
+
+  /* (en) Clear borders for <fieldset> and <img> elements */
+  /* (de) Rahmen für <fieldset> und <img> Elemente löschen */
+  fieldset, img { border: 0 solid; }
+
+  /* (en) new standard values for lists, blockquote and cite */
+  /* (de) Neue Standardwerte für Listen & Zitate */
+  ul, ol, dl { margin: 0 0 1em 1em } /* LTR */
+  li {
+    margin-left: 0.8em; /* LTR */
+    line-height: 1.5em;
+  }
+
+  dt { font-weight: bold; }
+  dd { margin: 0 0 1em 0.8em; } /* LTR */
+
+  blockquote { margin: 0 0 1em 0.8em; } /* LTR */
+
+  blockquote:before, blockquote:after,
+  q:before, q:after { content: ""; }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * @section base layout | Basis Layout
+  * @see     http://www.yaml.de/en/documentation/css-components/base-stylesheet.html
+  *
+  * |-------------------------------|
+  * | #header                       |
+  * |-------------------------------|
+  * | #col1   | #col3     | #col2   |
+  * | 200 px  | flexible  | 200px   |
+  * |-------------------------------|
+  * | #footer                       |
+  * |-------------------------------|
+  */
+
+  #header { position:relative; }
+
+  /* (en) Text Alignment for #topnav content */
+  /* (de) Textausrichtung für #topnav Inhalte */
+  #topnav { text-align: right; }  /* LTR */
+
+  /* (en) Absolute positioning only within #header */
+  /* (de) Absolute Positionierung erfolgt nur innerhalb von #header */
+  #header #topnav {
+    position:absolute;
+    top: 10px;
+    right: 10px; /* LTR */
+  }
+
+  /* (en) Backup for correct positioning */
+  /* (de) Absicherung korrekte Positionierung */
+  #header, #nav, #main, #footer { clear:both; }
+
+  /* (en/de) Standard: 200 Pixel */
+  #col1 { float: left; width: 200px }
+  /* (en/de) Standard: 200 Pixel */
+  #col2 { float:right; width: 200px }
+  /* (en) Standard: center column with flexible width */
+  /* (de) Standard: Flexible mittlere Spalte */
+  #col3 { width:auto; margin: 0 200px }
+
+  /* (en) Preparation for absolute positioning within content columns */
+  /* (de) Vorbereitung für absolute Positionierungen innerhalb der Inhaltsspalten */
+  #col1_content, #col2_content, #col3_content { position:relative; }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * @section clearing methods
+  * @see     http://yaml.de/en/documentation/basics/general.html
+  */
+
+  /* (en) clearfix method for clearing floats */
+  /* (de) Clearfix-Methode zum Clearen der Float-Umgebungen */
+  .clearfix:after {
+    content: ".";
+    display: block;
+    font-size:0;
+    height: 0;
+    clear: both;
+    visibility: hidden;
+  }
+
+  /* (en) essential for Safari browser !! */
+  /* (de) Diese Angabe benötigt der Safari-Browser zwingend !! */
+  .clearfix { display: block; }
+
+  /* (en) overflow method for clearing floats */
+  /* (de) Overflow-Methode zum Clearen der Float-Umgebungen */
+  .floatbox { overflow:hidden; }
+
+  /* (en) IE-Clearing: Only used in Internet Explorer, switched on in iehacks.css */
+  /* (de) IE-Clearing: Benötigt nur der Internet Explorer und über iehacks.css zugeschaltet */
+  #ie_clearing { display: none; }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * @section subtemplates
+  * @see     http://www.yaml.de/en/documentation/practice/subtemplates.html
+  */
+
+  .subcolumns { width: 100%; overflow:hidden; }
+
+  /* (en) alternative class for optional support of old Mozilla/Netscape browers */
+  /* (de) Alternative Klasse zur optionalen Unterstützung alter Mozilla/Netscape-Brower */
+  .subcolumns_oldgecko { width: 100%; float:left; }
+
+  .c50l, .c25l, .c33l, .c38l, .c66l, .c75l, .c62l {float: left; }
+  .c50r, .c25r, .c33r, .c38r, .c66r, .c75r, .c62r {float: right; margin-left: -5px; }
+
+  .c25l, .c25r { width: 25%; }
+  .c33l, .c33r { width: 33.333%; }
+  .c50l, .c50r { width: 50%; }
+  .c66l, .c66r { width: 66.666%; }
+  .c75l, .c75r { width: 75%; }
+  .c38l, .c38r { width: 38.2%; }
+  .c62l, .c62r { width: 61.8%; }
+
+  .subc  { padding: 0 0.5em; }
+  .subcl { padding: 0 1em 0 0; }
+  .subcr { padding: 0 0 0 1em; }
+
+  .equalize, .equalize .subcolumns { overflow:visible; display:table; table-layout:fixed; }
+  .equalize .c50l,.equalize .c25l,.equalize .c33l,.equalize .c38l,.equalize .c66l,
+  .equalize .c75l,.equalize .c62l,.equalize .c50r,.equalize .c25r,.equalize .c33r,
+  .equalize .c38r,.equalize .c66r,.equalize .c75r,.equalize .c62r {
+    display:table-cell; vertical-align:top;
+    float:none; margin:0; overflow:hidden;
+  }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * @section hidden elements | Versteckte Elemente
+  * @see     http://www.yaml.de/en/documentation/basics/skip-links.html
+  *
+  * (en) skip links and hidden content
+  * (de) Skip-Links und versteckte Inhalte
+  */
+
+  /* (en) classes for invisible elements in the base layout */
+  /* (de) Klassen für unsichtbare Elemente im Basislayout */
+  .skip, .hideme, .print, dfn {
+    position: absolute;
+    left: -1000em; /* LTR */
+    top: -1000em;
+  }
+
+  /* (en) make skip links visible when using tab navigation */
+  /* (de) Skip-Links für Tab-Navigation sichtbar schalten */
+  .skip:focus, .skip:active {
+    position: static;
+    left: 0;
+    top:0;
+  }
+}

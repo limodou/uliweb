@@ -1,0 +1,218 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) Uniform design of standard content elements
+ * (de) Einheitliche Standardformatierungen für die wichtigten Inhalts-Elemente
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ * @appdef yaml
+ */
+
+@media all
+{
+ /**
+  * Fonts
+  *
+  * (en) global settings of font-families and font-sizes
+  * (de) Globale Einstellungen für Zeichensatz und Schriftgrößen
+  *
+  * @section content-global-settings
+  */
+
+  /* (en) reset font size for all elements to standard (16 Pixel) */
+  /* (de) Alle Schriftgrößen auf Standardgröße (16 Pixel) zurücksetzen */
+  html * { font-size: 100.01%; }
+
+ /**
+  * (en) reset monospaced elements to font size 16px in all browsers
+  * (de) Schriftgröße von monospaced Elemente in allen Browsern auf 16 Pixel setzen
+  *
+  * @see: http://webkit.org/blog/67/strange-medium/
+  */
+
+  textarea, pre, code, kbd, samp, var, tt {
+    font-family: Consolas, "Lucida Console", "Andale Mono", "Bitstream Vera Sans Mono", "Courier New", Courier;
+  }
+
+  /* (en) base layout gets standard font size 12px */
+  /* (de) Basis-Layout erhält Standardschriftgröße von 12 Pixeln */
+  body {
+    font-family:  Arial, Helvetica, sans-serif;
+    font-size: 75.00%;
+    color: #444;
+  }
+
+  /*--- Headings | Überschriften ------------------------------------------------------------------------*/
+
+  h1,h2,h3,h4,h5,h6 {
+    font-family: "Times New Roman", Times, serif;
+    font-weight:normal;
+    color:#222;
+    margin: 0 0 0.25em 0;
+  }
+
+  h1 { font-size: 250%; }                       /* 30px */
+  h2 { font-size: 200%; }                       /* 24px */
+  h3 { font-size: 150%; }                       /* 18px */
+  h4 { font-size: 133.33%; }                    /* 16px */
+  h5 { font-size: 116.67%; }                    /* 14px */
+  h6 { font-size: 116.67%; }                    /* 14px */
+
+  /* --- Lists | Listen  -------------------------------------------------------------------------------- */
+
+  ul, ol, dl { line-height: 1.5em; margin: 0 0 1em 1em; }
+  ul li { list-style-type: disc; }
+  ul ul li { list-style-type: circle; }
+
+  ol li { list-style-type: decimal; }
+  ol ol li { list-style-type: lower-latin; }
+
+  li { margin-left: 0.8em; line-height: 1.5em; }
+
+  dt { font-weight: bold; }
+  dd { margin: 0 0 1em 0.8em; }
+
+  /* --- general text formatting | Allgemeine Textauszeichnung ------------------------------------------ */
+
+  p { line-height: 1.5em; margin: 0 0 1em 0; }
+
+  blockquote, cite,q {
+    font-family: Georgia, "Times New Roman", Times, serif;
+    font-style:italic;
+  }
+  blockquote { margin: 0 0 1em 1.6em; color: #666; }
+
+  strong,b { font-weight: bold; }
+  em,i { font-style: italic; }
+
+  pre, code, kbd, tt, samp, var { font-size: 100%; }
+  pre, code { color: #800; }
+  pre { line-height: 1.5em; margin: 0 0 1em 0; }
+  kbd, samp, var { color: #666; }
+  var { font-style: italic; }
+
+  acronym, abbr {
+    border-bottom: 1px #aaa dotted;
+    font-variant: small-caps;
+    letter-spacing: .07em;
+    cursor: help;
+  }
+
+  sub, sup { font-size: 91.6667%; }
+
+  hr {
+    color: #fff;
+    background:transparent;
+    margin: 0 0 0.5em 0;
+    padding: 0 0 0.5em 0;
+    border:0;
+    border-bottom: 1px #eee solid;
+  }
+
+  /*--- Links ----------------------------------------------------------------------------------------- */
+
+  a { color: #4D87C7; background:transparent; text-decoration:none; }
+  a:visited  { color: #036; }
+
+  a:focus,
+  a:hover,
+  a:active { color:#182E7A; text-decoration:underline; }
+
+  /* --- images (with optional captions) | Bilder (mit optionaler Bildunterschrift) ------------------ */
+
+  p.icaption_left { float:left; display:inline; margin: 0 1em 0.15em 0; }
+  p.icaption_right { float:right; display:inline; margin: 0 0 0.15em 1em; }
+
+  p.icaption_left img,
+  p.icaption_right img { padding:0; border: 1px #888 solid; }
+
+  p.icaption_left strong,
+  p.icaption_right strong { display:block; overflow:hidden; margin-top: 2px; padding: 0.3em 0.5em; background: #eee; font-weight: normal; font-size: 91.667%; }
+
+ /**
+  * ------------------------------------------------------------------------------------------------- #
+  *
+  * Generic Content Classes
+  *
+  * (en) standard classes for positioning and highlighting
+  * (de) Standardklassen zur Positionierung und Hervorhebung
+  *
+  * @section content-generic-classes
+  */
+
+  .highlight { color: #f60; }
+  .dimmed { color: #888; }
+
+  .info { background: #f8f8f8; color: #666; padding: 10px; margin-bottom: 0.5em; font-size: 91.7%; }
+
+  .note { background: #efe; color: #040; border: 2px #484 solid; padding: 10px; margin-bottom: 1em; }
+  .important { background: #ffe; color: #440; border: 2px #884 solid; padding: 10px; margin-bottom: 1em; }
+  .warning { background: #fee; color: #400; border: 2px #844 solid; padding: 10px; margin-bottom: 1em; }
+
+  .float_left { float: left; display:inline; margin-right: 1em; margin-bottom: 0.15em; }
+  .float_right { float: right; display:inline; margin-left: 1em; margin-bottom: 0.15em; }
+  .center { display:block; text-align:center; margin: 0.5em auto; }
+
+ /**
+  * ------------------------------------------------------------------------------------------------- #
+  *
+  * Tables | Tabellen
+  *
+  * (en) Generic classes for table-width and design definition
+  * (de) Generische Klassen für die Tabellenbreite und Gestaltungsvorschriften für Tabellen
+  *
+  * @section content-tables
+  */
+
+  table { width: auto; border-collapse:collapse; margin-bottom: 0.5em; border-top: 2px #888 solid; border-bottom: 2px #888 solid; }
+  table caption { font-variant:small-caps; }
+  table.full { width: 100%; }
+  table.fixed { table-layout:fixed; }
+
+  th,td { padding: 0.5em; }
+  thead th { color: #000; border-bottom: 2px #800 solid; }
+  tbody th { background: #e0e0e0; color: #333; }
+  tbody th[scope="row"], tbody th.sub { background: #f0f0f0; }
+
+  tbody th { border-bottom: 1px solid #fff; text-align: left; }
+  tbody td { border-bottom: 1px solid #eee; }
+
+  tbody tr:hover th[scope="row"],
+  tbody tr:hover tbody th.sub { background: #f0e8e8; }
+  tbody tr:hover td { background: #fff8f8; }
+
+ /**
+  * ------------------------------------------------------------------------------------------------- #
+  *
+  * Miscellaneous | Sonstiges
+  *
+  * @section content-misc
+  */
+
+ /**
+  * (en) Emphasizing external Hyperlinks via CSS
+  * (de) Hervorhebung externer Hyperlinks mit CSS
+  *
+  * @section             content-external-links
+  * @app-yaml-default    disabled
+  */
+
+  /*
+  #main a[href^="http://www.my-domain.com"],
+  #main a[href^="https://www.my-domain.com"]
+  {
+    padding-left: 12px;
+    background-image: url('your_image.gif');
+    background-repeat: no-repeat;
+    background-position: 0 0.45em;
+  }
+  */
+}

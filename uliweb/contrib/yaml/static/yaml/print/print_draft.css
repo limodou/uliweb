@@ -1,0 +1,49 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) print stylesheet
+ * (de) Druck-Stylesheet
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 302 $
+ * @lastmodified    $Date: 2008-12-14 11:23:55 +0100 (So, 14. Dez 2008) $
+ */
+
+/* import print base styles | Basisformatierung für Drucklayout einbinden */
+@import url(../core/print_base.css);
+
+@media print
+{
+  /*------------------------------------------------------------------------------------------------------*/
+  /* add your print styles here */
+
+
+
+  /*------------------------------------------------------------------------------------------------------*/
+
+  /* (en) optional output of acronyms and abbreviations*/
+  /* (de) optionale Ausgabe von Auszeichnung von Abkürzungen */
+
+  /*
+    abbr[title]:after, acronym[title]:after { content: '(' attr(title) ')'; }
+  */
+
+  /*------------------------------------------------------------------------------------------------------*/
+
+  /* (en) optional URL output of hyperlinks in print layout */
+  /* (de) optionale Ausgabe der URLs von Hyperlinks */
+  /*
+  a[href]:after {
+    content:" <URL: "attr(href)">";
+    color:#444;
+    background:inherit;
+    font-style:italic;
+  }
+  */
+}

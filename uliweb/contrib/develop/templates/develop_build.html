@@ -1,0 +1,43 @@
+{{extend "develop_layout.html"}}
+{{block nav_menu}}
+{{from uliweb.contrib.develop.menu import menu}}
+{{<< menu('Build')}}
+{{end}}
+{{block content}}
+{{use "mootools"}}
+{{link "css/tabs.css"}}
+{{link "js/clientcide-tabswap.js"}}
+{{link "css/develop.css"}}
+{{link "js/Fx.Slide.js"}}
+<div id="build-container">
+    <ul class="tabSet">
+        <li class="on"><a>Generic</a></li>
+        <li class="off"><a>App Configure</a></li>
+    </ul>
+    <div class="panelSet">
+        <div class="panel">
+            {{include "develop_app_generic.html"}}
+        </div>
+        <div class="panel">
+            {{include "develop_app_show.html"}}
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+window.addEvent('domready', function() {
+	new TabSwapper({
+	  selectedClass: 'on',
+	  deselectedClass: 'off',
+	  tabs: $$('.tabSet li'),
+	  clickers: $$('.tabSet li a'),
+	  sections: $$('div.panelSet div.panel'),
+	  /*remember what the last tab the user clicked was*/
+	  cookieName: 'develop.build',
+	  /*use transitions to fade across*/
+	  smooth: true,
+      smoothSize: true
+	});
+});
+</script>
+{{end}}
+

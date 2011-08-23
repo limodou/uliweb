@@ -1,0 +1,59 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Uliweb Project Site</title>
+<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+<!-- add your meta tags here -->
+
+<link rel="stylesheet" type="text/css" href="{{= url_for_static('css/my_layout.css') }}">
+<link rel="stylesheet" type="text/css" href="{{= url_for_static('css/site.css') }}">
+<link rel="stylesheet" type="text/css" href="{{= url_for_static('css/haml-forms.css') }}">
+<link rel="stylesheet" type="text/css" href="{{= url_for_static('css/examples.css') }}">
+<!--[if lte IE 7]>
+<link rel="stylesheet" type="text/css" href="{{= url_for_static('css/patches/patch_my_layout.css') }}">
+<![endif]-->
+</head>
+<body>
+  <div id="page_margins">
+    <div id="border-top">
+      <div id="edge-tl"></div>
+      <div id="edge-tr"></div>
+    </div>
+    <div id="page">
+      <div id="header">
+        <div id="topnav">
+          <!-- start: skip link navigation -->
+          <a class="skip" title="skip link" href="#navigation">Skip to the navigation</a><span class="hideme">.</span>
+          <a class="skip" title="skip link" href="#content">Skip to the content</a><span class="hideme">.</span>
+          <!-- end: skip link navigation -->
+        </div>
+		<h1><a href="{{= url_for('Portal.views.index')}}">Uliweb Project</a></h1>  
+		<span>Simple, easy Python web framework</span>
+      </div>
+      <div id="nav">
+        <!-- skiplink anchor: navigation -->
+          <!-- main navigation: #nav_main -->
+          {{if hasattr(response, 'menu'):}}
+          <ul id="minitabs">
+           {{for f, c, a in response.menu:}}
+              {{if f:}}<li><a href="{{=a}}" id="current">{{=c}}</a></li>
+              {{else:}}<li><a href="{{=a}}">{{=c}}</a></li>
+              {{pass}}
+            {{pass}}
+          </ul>
+          {{pass}}
+      </div>
+      <div id="main">
+        {{block main}}
+      </div>
+      <!-- begin: #footer -->
+      <div id="footer">Copyleft Limodou <a href="http://hi.baidu.com/limodou">Author Blog</a>
+      </div>
+    </div>
+    <div id="border-bottom">
+      <div id="edge-bl"></div>
+      <div id="edge-br"></div>
+    </div>
+  </div>
+</body>
+</html>

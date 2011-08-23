@@ -1,0 +1,50 @@
+@charset "UTF-8";
+/* "Yet Another Multicolumn Layout" v3.1 (c) by Dirk Jesse (http://www.yaml.de)
+* $Revision: 343 $ $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $ */
+@media all {
+*{margin:0;padding:0}
+option{padding-left:.4em}
+select{padding:1px}
+* html body *{overflow:visible}
+* html iframe,* html frame{overflow:auto}
+* html frameset{overflow:hidden}
+html{height:100%;margin-bottom:1px}
+body{font-size:100.01%;color:#000;background:#fff;text-align:left}
+fieldset,img{border:0 solid}
+ul,ol,dl{margin:0 0 1em 1em}
+li{margin-left:.8em;line-height:1.5em}
+dt{font-weight:700}
+dd{margin:0 0 1em .8em}
+blockquote{margin:0 0 1em .8em}
+blockquote:before,blockquote:after,q:before,q:after{content:""}
+#header{position:relative}
+#topnav{text-align:right}
+#header #topnav{position:absolute;top:10px;right:10px}
+#header,#nav,#main,#footer{clear:both}
+#col1{float:left;width:200px}
+#col2{float:right;width:200px}
+#col3{width:auto;margin:0 200px}
+#col1_content,#col2_content,#col3_content{position:relative}
+.clearfix:after{content:".";display:block;font-size:0;height:0;clear:both;visibility:hidden}
+.clearfix{display:block}
+.floatbox{overflow:hidden}
+#ie_clearing{display:none}
+.subcolumns{width:100%;overflow:hidden}
+.subcolumns_oldgecko{width:100%;float:left}
+.c50l,.c25l,.c33l,.c38l,.c66l,.c75l,.c62l{float:left}
+.c50r,.c25r,.c33r,.c38r,.c66r,.c75r,.c62r{float:right;margin-left:-5px}
+.c25l,.c25r{width:25%}
+.c33l,.c33r{width:33.333%}
+.c50l,.c50r{width:50%}
+.c66l,.c66r{width:66.666%}
+.c75l,.c75r{width:75%}
+.c38l,.c38r{width:38.2%}
+.c62l,.c62r{width:61.8%}
+.subc{padding:0 .5em}
+.subcl{padding:0 1em 0 0}
+.subcr{padding:0 0 0 1em}
+.equalize,.equalize .subcolumns{overflow:visible;display:table;table-layout:fixed}
+.equalize .c50l,.equalize .c25l,.equalize .c33l,.equalize .c38l,.equalize .c66l,.equalize .c75l,.equalize .c62l,.equalize .c50r,.equalize .c25r,.equalize .c33r,.equalize .c38r,.equalize .c66r,.equalize .c75r,.equalize .c62r{display:table-cell;vertical-align:top;float:none;margin:0;overflow:hidden}
+.skip,.hideme,.print,dfn{position:absolute;left:-1000em;top:-1000em}
+.skip:focus,.skip:active{position:static;left:0;top:0}
+}

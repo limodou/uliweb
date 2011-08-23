@@ -1,0 +1,70 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) Template for designing a screen layout
+ * (de) Gestaltungsvorlage für die Erstellung eines Screenlayouts
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+@media screen, projection
+{
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * Design of the Basic Layout | Gestaltung des YAML Basis-Layouts
+  *
+  * @section layout-basics
+  */
+
+  /* Page margins and background | Randbereiche & Seitenhintergrund */
+  body {  }
+
+  /* Layout: Width, Background, Border | Layout: Breite, Hintergrund, Rahmen */
+  #page_margins {  }
+  #page{  }
+
+  /* Design of the Main Layout Elements | Gestaltung der Hauptelemente des Layouts */
+  #header {  }
+  #topnav {  }
+
+  #main {  }
+
+  #footer {  }
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * Formatting of the Content Area | Formatierung der Inhaltsbereichs
+  *
+  * @section layout-main
+  */
+
+  #col1 {  }
+  #col1_content {  }
+
+  #col2 {  }
+  #col2_content {  }
+
+  #col3 {  }
+  #col3_content {  }
+
+
+ /*------------------------------------------------------------------------------------------------------*/
+
+ /**
+  * Design of Additional Layout Elements | Gestaltung weiterer Layoutelemente
+  *
+  * @section layout-misc
+  */
+
+
+}

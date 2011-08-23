@@ -1,0 +1,24 @@
+{{extend "layout.html"}}
+{{block main}}
+ <div id="col1">
+   <div id="col1_content" class="clearfix">
+     <!-- add your content here -->
+     <li><a href="http://code.google.com/p/uliweb">Uliweb Project</a></li>
+     <li><a href="http://groups.google.com/group/uliweb">Uliweb Maillist</a></li>
+     <li><a href="http://sites.google.com/site/learninguliweb/">Learning Uliweb</a></li>
+     <li><a href="http://code.google.com/p/uliweb-tests/">Uliweb Tests</a></li>
+   </div>
+ </div>
+ <div id="col3">
+   <div id="col3_content" class="clearfix">
+     <!-- add your content here -->
+     <div class="left"><img src="{{= url_for_static('images/logo.jpg') }}"></div>
+     <h1>What's it</h1>
+     <p>It's a simple, easy, flexible python web framework. This site is built on Uliweb also. 
+     If you want to know more details please visit documents.</p>
+     <p>Here is an <a href="{{= url_for('Documents.views.show_document', filename='introduction') }}">introduction</a> about Uliweb, you can read it first.</p>
+   </div>
+   <!-- IE Column Clearing -->
+   <div id="ie_clearing"> &#160; </div>
+ </div>
+{{end}}

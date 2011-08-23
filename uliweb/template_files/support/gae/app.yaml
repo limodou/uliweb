@@ -1,0 +1,8 @@
+application: uliweb
+version: 1
+api_version: 1
+runtime: python
+
+handlers:
+- url: /.*
+  script: gae_handler.py

@@ -1,0 +1,197 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) YAML debugging stylesheet
+ * (de) YAML Stylesheet zur Fehlersuche
+ *
+ * Don't make any changes in this file!
+ * Your changes should be placed in any css-file in your own stylesheet folder.
+ *
+ * @note:           Many thanks to Tomas Caspers (http://www.tomascaspers.de/) for contribution
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+@media all
+{
+  /*------------------------------------------------------------------------------------------------------*/
+
+  /**
+   * @section layout preparation for debugging
+   * @see http://www.yaml.de/en/documentation/practice/drafting-and-debugging.html
+   */
+
+  /* Adding debugging background */
+  body { padding-top: 10px !important; background: transparent url("images/grid_pattern.png") top left no-repeat fixed !important; }
+
+  /* CSS-Warning, if core stylesheet 'iehacks.css' is missing in the layout */
+  *+html #ie_clearing { display:block; } /* IE7 */
+  * html #ie_clearing { display:block; } /* IE 5.x & 6 */
+
+  #ie_clearing {
+    width: 500px;
+    font-size: 25px;
+    position:absolute;
+    top: -2px;
+    left:0px;
+    background: url("images/warning_iehacks.png") top left no-repeat;
+  }
+
+  /**
+   * @section pixel grid
+   */
+
+  .bg_grid {
+    background-image:url("images/grid_pattern.png") !important;
+    background-repeat:no-repeat;
+    background-position:top left !important;
+  }
+
+  /**
+   * @section transparency
+   */
+
+  .transOFF { -moz-opacity: 1.0; opacity: 1.0; filter: alpha(Opacity=100);}
+  .trans50,
+  .transON { -moz-opacity: 0.5; opacity: 0.5; filter: alpha(Opacity=50);}
+  .trans25 { -moz-opacity: 0.25; opacity: 0.25; filter: alpha(Opacity=25);}
+  .trans75 { -moz-opacity: 0.75; opacity: 0.75; filter: alpha(Opacity=75);}
+
+  /**
+   * @section colors
+   */
+
+  .bg_red { background-color: #f00 !important;}
+  .bg_blue { background-color: #00f !important;}
+  .bg_green { background-color: #0f0 !important;}
+
+  /**
+   * @visualize semantic structure
+   *
+   */
+
+  div[id] { padding: 0 !important; margin: 0 -1px; border: 1px #000 solid !important; }
+  div[class] { padding: 0 !important; margin: 0 -1px; border: 1px #000 solid !important; }
+
+  div[id]:before,
+  div[class]:before {
+   display:block;
+  text-align:left;
+  color: #fff;
+  padding: 2px;
+  font: normal 11px "Lucida console", monospace;
+  }
+
+  div[id]:before {
+  background:  #800;
+  content: "[div id='"attr(id)"']";
+  }
+
+  div[class]:before {
+  background:  #a44;
+  content: "[div class='"attr(class)"']";
+  }
+
+  div[id][class]:before {
+  background:  #800;
+  content: "[div id='"attr(id)"' class='"attr(class)"']";
+  }
+
+
+  div[class="floatbox"] { background: #f4f4f4; }
+  div[class="floatbox"]:before {
+   display:block;
+  color: #fff;
+  padding: 2px;
+  font: normal 11px "Lucida console", monospace;
+  background:  #66a;
+  content: "[div class='"attr(class)"']";
+  }
+
+  div[class="subcolumns"] { background: #f8f8f8; color: #000 !important; }
+  div[class="subcolumns"]:before {
+   display:block;
+  color: #fff;
+  padding: 2px;
+  font: normal 11px "Lucida console", monospace;
+  background:  #444;
+  content: "[div ."attr(class)"]";
+  }
+
+  div[class="subcolumns"] > div:before {
+   display:block;
+  color: #fff;
+  padding: 2px;
+  font: normal 11px "Lucida console", monospace;
+  background:  #080;
+  content: "[div ."attr(class)"]";
+  }
+
+  div[class="subc"], div[class="subcl"], div[class="subcr"] { background: #eee; }
+  div[class="subc"]:before, div[class="subcl"]:before, div[class="subcr"]:before {
+   display:block;
+  color: #fff;
+  padding: 2px;
+  font: normal 11px "Lucida console", monospace;
+  background: #6a6;
+  content: "[div ."attr(class)"]";
+  }
+
+  h1:before  { content: "[h1] "; }
+  h2:before  { content: "[h2] "; }
+  h3:before  { content: "[h3] "; }
+  h4:before  { content: "[h4] "; }
+  h5:before  { content: "[h5] "; }
+  h6:before  { content: "[h6] "; }
+
+
+  /* make link attributes href,title visible on hover ... */
+  a:hover { color: #fff !important; background: #337; text-align: left;}
+  a:hover:after { color: #fff; background: #333; content: " (href='" attr(href) "' title='"attr(title)"')"; text-align: left; }
+
+  a[class="skip"] {  }
+
+  a[id="navigation"]:before,
+  a[id="content"]:before { font: normal 11px "Lucida console", monospace; content: "[skip anchor: "attr(id)"]"; padding: 2px !important; }
+
+  a[id="content"]:hover,
+  a[id="navigation"]:hover { background: #ff0; color: #000; }
+
+  a[id="content"]:hover:after,
+  a[id="navigation"]:hover:after { content: ""; background: inherit; color: #000; }
+
+  img:after  { font: normal 11px "Lucida console", monospace; content:" ( alt='" attr(alt)"' ) "; }
+
+  address, blockquote, dl, fieldset, form, h1, h2, h3, h4, ol, p, pre, ul  {
+  border:  1px dotted #888;
+  margin: 2px;
+  padding: 2px;
+  display: block;
+  }
+
+ /* Highlighting empty elements */
+ div:empty, span:empty, p:empty, a:empty, td:empty, th:empty, li:empty,
+ b:empty, i:empty, em:empty {padding: 2px 4px; background: yellow;}
+
+ /* Highlighting inline-Styles */
+ *[style] {outline: 3px solid #f0f;}
+ *[style]:after { font: normal 11px "Lucida console", monospace; background: #f0f; color: #000; height: auto; visibility:visible; content: "Element contains inline styles!" !important; }
+
+  /**
+   * @visualize inline elements
+   *
+   */
+
+  abbr, acronym  { background: #d9eaff; }
+  q, cite, dfn, kbd  { background: #ffe3f6; }
+  /* :lang(de), :lang(en), :lang(fr), :lang(es) { background: #d9efaa !important; } */
+
+}

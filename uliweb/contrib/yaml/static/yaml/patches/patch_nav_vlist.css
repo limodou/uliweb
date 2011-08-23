@@ -1,0 +1,60 @@
+@charset "UTF-8";
+/**
+ * "Yet Another Multicolumn Layout" - (X)HTML/CSS Framework
+ *
+ * (en) IE adjustment stylesheet for YAML vlist navigation
+ *      Import this file within the IE-patch-file if needed in your layout
+ *
+ * (de) IE Anpassungs-Stylesheet für YAML vlist-Navigation
+ *      Einbindung ins Layout erfolgt über den Import innerhalb des IE-Anspassungs-Stylesheet
+ *
+ * @copyright       Copyright 2005-2009, Dirk Jesse
+ * @license         CC-A 2.0 (http://creativecommons.org/licenses/by/2.0/),
+ *                  YAML-C (http://www.yaml.de/en/license/license-conditions.html)
+ * @link            http://www.yaml.de
+ * @package         yaml
+ * @version         3.1
+ * @revision        $Revision: 343 $
+ * @lastmodified    $Date: 2009-01-19 23:41:32 +0100 (Mo, 19. Jan 2009) $
+ */
+
+@media screen, projection
+{
+  /**
+   * Box Model Bug
+   * (en) Adjustment of width values for list elements of the menu in IE 5.x/Win.
+   *      Note: If IE6 is running in quirks mode, it also needs 100% values!
+   *
+   * (de) Korrektur der Breitenangaben der Listenelemente des Submenüs im IE 5.x/Win.
+   *      Hinweis: Befindet sich der IE6 im Quirks Mode, so benötigt er ebenfalls 100%-Werte !
+   *
+   * @bugfix
+   * @affected   IE 5.x/Win (IE6 in Quirks-Mode)
+   * @css-for    IE 5.x/Win, IE6
+   * @valid      no
+   */
+
+
+  /* title */
+  * html h6.vlist { width: 100%; w\idth: 90%; }
+
+  /* level 1 */
+  * html .vlist li a,
+  * html .vlist li strong,
+  * html .vlist li span { width: 100%; w\idth: 90%; }
+
+  /* level 2 */
+  * html .vlist li ul li a,
+  * html .vlist li ul li strong,
+  * html .vlist li ul li span { width: 100%; w\idth: 80%; }
+
+  /* level 3 */
+  * html .vlist li ul li ul li a,
+  * html .vlist li ul li ul li strong,
+  * html .vlist li ul li ul li span { width: 100%; w\idth: 70%; }
+
+  /* level 4 */
+  * html .vlist li ul li ul li ul li a,
+  * html .vlist li ul li ul li ul li strong,
+  * html .vlist li ul li ul li ul li span { width: 100%; w\idth: 60%; }
+}

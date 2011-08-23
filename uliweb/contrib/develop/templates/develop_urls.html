@@ -1,0 +1,15 @@
+{{extend "develop_layout.html"}}
+{{block nav_menu}}
+{{from uliweb.contrib.develop.menu import menu}}
+{{<< menu('Urls')}}
+{{end}}
+{{block content}}
+<table>
+    <tbody>
+    <tr><th>URL</th><th>View Functions</th></tr>
+    {{for rule, methods, endpoint in urls:}}
+        <tr><td><a href="{{=rule}}">{{=rule}}</a> {{=methods}}</td><td>{{=endpoint}}</td></tr>
+    {{pass}}
+    </tbody>
+</table>
+{{end}}
