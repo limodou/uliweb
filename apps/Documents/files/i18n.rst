@@ -1,8 +1,0 @@
-I18N Process 
-=====================================================
-
-:Authors: Limodou <limodou@gmail.com>
-
-.. contents:: 
-.. sectnum::
-

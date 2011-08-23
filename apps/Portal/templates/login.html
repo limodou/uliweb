@@ -1,9 +1,0 @@
-{{extend "layout.html"}}
-{{block main}}
-{{ if message:
-    htmlbuf << htmlwidgets.Message(message, message_type)
-pass}}
-<div id="login-form">
-{{xml(form)}}
-</div>
-{{end}}
