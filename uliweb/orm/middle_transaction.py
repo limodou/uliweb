@@ -1,26 +1,22 @@
 from uliweb.middleware import Middleware
 import threading
+from uliweb.orm import Begin, Commit, Rollback
 
 class TransactionMiddle(Middleware):
     ORDER = 100
     
     def __init__(self, application, settings):
-        from uliweb.orm import get_connection
-        self.db = get_connection()
+        pass
         
     def process_request(self, request):
-        self.db.begin()
+        Begin()
 
     def process_response(self, request, response):
-        conn = self.db.contextual_connect()
-        if conn.in_transaction():
-            self.db.commit()
-        conn.close()
-        return response
+        try:
+            return response
+        finally:
+            Commit()
             
     def process_exception(self, request, exception):
-        conn = self.db.contextual_connect()
-        if conn.in_transaction():
-            self.db.rollback()
-        conn.close()
+        Rollback()
         

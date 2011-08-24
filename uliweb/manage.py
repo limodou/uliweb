@@ -359,7 +359,8 @@ class CallCommand(Command):
 register_command(CallCommand)
  
 def collect_files(apps_dir, apps):
-    files = [os.path.join(apps_dir, 'settings.ini', 'local_settings.ini')]
+    files = [os.path.join(apps_dir, 'settings.ini'), 
+        os.path.join(apps_dir, 'local_settings.ini')]
     
     def f(path):
         for r in os.listdir(path):

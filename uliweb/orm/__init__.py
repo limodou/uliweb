@@ -36,6 +36,7 @@ import threading
 
 Local = threading.local()
 Local.dispatch_send = True
+Local.conn = None
 
 now = date.now
 
@@ -93,6 +94,7 @@ def get_connection(connection='', metadata=_default_metadata, default=True, debu
         db = create_engine(connection, **args)
     else:
         db = connection
+        
     if default:
         __default_connection__ = db
         
@@ -118,29 +120,51 @@ def set_connection(db, default=True, debug=False):
     metadata = MetaData(db)
     db.metadata = metadata
     
+def get_conn(auto_create_local=False):
+    if hasattr(Local, 'conn') and Local.conn:
+        return Local.conn
+    if auto_create_local:
+        Local.conn = get_connection().connect()
+        return Local.conn
+    return get_connection()
+
+def do_(query):
+    """
+    Execute a query
+    """
+    conn = get_conn()
+    return conn.execute(query)
+    
 def Begin(db=None):
     if not db:
         db = get_connection()
-    db.begin()
+    Local.conn = conn = db.connect()
+    Local.trans = conn.begin()
     
-def Commit(db=None, close=False):
-    if not db:
-        db = get_connection()
-    conn = db.contextual_connect()
-    if conn.in_transaction():
-        db.commit()
-    if close:
-        conn.close()
+def Commit():
+    """
+    Before using this function, you should called Begin first.
+    """
+    if hasattr(Local, 'trans') and Local.trans:
+        try:
+            Local.trans.commit()
+        finally:
+            Local.trans = None
+            Local.conn.close()
+            Local.conn = None
 
-def Rollback(db=None, close=False):
-    if not db:
-        db = get_connection()
-    conn = db.contextual_connect()
-    if conn.in_transaction():
-        db.rollback()
-    if close:
-        conn.close()
-
+def Rollback():
+    """
+    Before using this function, you should called Begin first.
+    """
+    if hasattr(Local, 'trans') and Local.trans:
+        try:
+            Local.trans.rollback()
+        finally:
+            Local.trans = None
+            Local.conn.close()
+            Local.conn = None
+            
 class SQLStorage(dict):
     """
     a dictionary that let you do d['a'] as well as d.a
@@ -1024,9 +1048,9 @@ class Result(object):
         Execute update table set field = field+1 like statement
         """
         if self.condition is not None:
-            self.result = self.model.table.update().where(self.condition).values(**kwargs).execute()
+            self.result = do_(self.model.table.update().where(self.condition).values(**kwargs))
         else:
-            self.result = self.model.table.update().values(**kwargs).execute()
+            self.result = do_(self.model.table.update().values(**kwargs))
         return self.result
     
     def run(self, limit=0):
@@ -1039,7 +1063,7 @@ class Result(object):
         #add limit support
         if limit > 0:
             query = getattr(query, 'limit')(limit)
-        self.result = query.execute()
+        self.result = do_(query)
         return self.result
     
     def one(self):
@@ -1096,19 +1120,12 @@ class ReverseResult(Result):
         if not ids:
             return False
         
-        result = self.model.table.count(self.condition & (self.model.table.c['id'].in_(ids))).execute()
-        count = 0
-        if result:
-            r = result.fetchone()
-            if r:
-                count = r[0]
-        else:
-            count = 0
+        count = do_(self.model.table.count(self.condition & (self.model.table.c['id'].in_(ids)))).scalar()
         return count > 0
     
     def ids(self):
         query = select([self.model.c['id']], self.condition)
-        ids = [x[0] for x in query.execute()]
+        ids = [x[0] for x in do_(query)]
         return ids
     
     def clear(self, *objs):
@@ -1117,9 +1134,9 @@ class ReverseResult(Result):
         """
         if objs:
             ids = get_objs_columns(objs)
-            self.model.table.delete(self.condition & self.model.table.c['id'].in_(ids)).execute()
+            do_(self.model.table.delete(self.condition & self.model.table.c['id'].in_(ids)))
         else:
-            self.model.table.delete(self.condition).execute()
+            do_(self.model.table.delete(self.condition))
     
     remove = clear
     
@@ -1169,13 +1186,13 @@ class ManyResult(Result):
                 else:
                     v = o
                 d = {self.fielda:self.valuea, self.fieldb:v}
-                self.table.insert().execute(**d)
+                do_(self.table.insert().values(**d))
                 modified = modified or True
         return modified
          
     def ids(self):
         query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
-        ids = [x[0] for x in query.execute()]
+        ids = [x[0] for x in do_(query)]
         return ids
     
     def update(self, *objs):
@@ -1191,7 +1208,7 @@ class ManyResult(Result):
                 ids.remove(v)
             else:
                 d = {self.fielda:self.valuea, self.fieldb:v}
-                self.table.insert().execute(**d)
+                do_(self.table.insert().values(**d))
                 modified = True
                 
         if ids: #if there are still ids, so delete them
@@ -1205,9 +1222,9 @@ class ManyResult(Result):
         """
         if objs:
             ids = get_objs_columns(objs, self.realfieldb)
-            self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
+            do_(self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))))
         else:
-            self.table.delete(self.table.c[self.fielda]==self.valuea).execute()
+            do_(self.table.delete(self.table.c[self.fielda]==self.valuea))
        
     remove = clear
     
@@ -1228,14 +1245,7 @@ class ManyResult(Result):
         if not ids:
             return False
         
-        result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))).execute()
-        count = 0
-        if result:
-            r = result.fetchone()
-            if r:
-                count = r[0]
-        else:
-            count = 0
+        count = do_(self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids)))).scalar()
         return count > 0
         
     def with_relation(self, relation_name=None):
@@ -1265,7 +1275,7 @@ class ManyResult(Result):
             query = getattr(query, func)(*args, **kwargs)
         if limit > 0:
             query = getattr(query, 'limit')(limit)
-        self.result = query.execute()
+        self.result = do_(query)
         return self.result
         
     def one(self):
@@ -1745,7 +1755,7 @@ class Model(object):
                             _manytomany[k] = d.pop(k)
                             old.pop(k)
                 if d:
-                    obj = self.table.insert().execute(**d)
+                    obj = do_(self.table.insert().values(**d))
                     if old:
                         saved = True
                     
@@ -1777,7 +1787,7 @@ class Model(object):
                                 _manytomany[k] = d.pop(k)
                                 old.pop(k)
                     if d:
-                        self.table.update(self.table.c.id == self.id).execute(**d)
+                        do_(self.table.update(self.table.c.id == self.id).values(**d))
                         if old:
                             saved = True
                     if _manytomany:
@@ -1800,7 +1810,7 @@ class Model(object):
     def delete(self):
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'pre_delete', instance=self)
-        self.table.delete(self.table.c.id==self.id).execute()
+        do_(self.table.delete(self.table.c.id==self.id))
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'post_delete', instance=self)
         self.id = None
@@ -1936,21 +1946,14 @@ class Model(object):
     @classmethod
     def remove(cls, condition=None, **kwargs):
         if isinstance(condition, (int, long)):
-            cls.table.delete(cls.c.id==condition, **kwargs).execute()
+            do_(cls.table.delete(cls.c.id==condition, **kwargs))
         elif isinstance(condition, (tuple, list)):
-            cls.table.delete(cls.c.id.in_(condition)).execute()
+            do_(cls.table.delete(cls.c.id.in_(condition)))
         else:
-            cls.table.delete(condition, **kwargs).execute()
+            do_(cls.table.delete(condition, **kwargs))
             
     @classmethod
     def count(cls, condition=None, **kwargs):
-        obj = cls.table.count(condition, **kwargs).execute()
-        count = 0
-        if obj:
-            r = obj.fetchone()
-            if r:
-                count = r[0]
-        else:
-            count = 0
+        count = do_(cls.table.count(condition, **kwargs)).scalar()
         return count
             
