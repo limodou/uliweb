@@ -38,17 +38,19 @@ def thumbnail_image(realfile, filename, size=(200, 75)):
     import Image
 
     im = Image.open(realfile)
-    print size, im.size
     file, ext = os.path.splitext(realfile)
     if im.size[0]<=size[0] and im.size[1]<=size[1]:
         #the image size is smaller than thumbnail size, so we don't need to 
         #thumbnail the image
-        return filename
+        return filename, filename
     im.thumbnail(size, Image.ANTIALIAS)
-    ofile = file + ".thumbnail" + '.jpg'
-    im.save(ofile, "JPEG")
+    format = ext[1:].upper()
+    if format == 'JPG':
+        format = 'JPEG'
+    ofile = file + ".thumbnail" + ext
+    im.save(ofile, format)
     file1, ext1 = os.path.splitext(filename)
-    return ofile, file1 + ".thumbnail" + '.jpg'
+    return ofile, file1 + ".thumbnail" + ext
 
 def resize_image_string(buf, size=(50, 50)):
     from StringIO import StringIO
