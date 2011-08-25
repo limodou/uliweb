@@ -214,7 +214,7 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
     for i, a in enumerate(apps):
         if isinstance(a, (tuple, list)):
             apps[i] = a[0]
-            __app_alias__[a[1]] = a[0]
+            __app_alias__[a[1]+'.'] = a[0] + '.'
             
     apps.extend(include_apps)
     #process dependencies
