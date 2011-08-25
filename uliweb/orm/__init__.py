@@ -138,8 +138,11 @@ def do_(query):
 def Begin(db=None):
     if not db:
         db = get_connection()
-    Local.conn = conn = db.connect()
-    Local.trans = conn.begin()
+    if hasattr(Local, 'trans') and Local.trans:
+        return Local.trans
+    if not hasattr(Local, 'conn') or not Local.conn:
+        Local.conn = conn = db.connect()
+        Local.trans = conn.begin()
     
 def Commit():
     """
