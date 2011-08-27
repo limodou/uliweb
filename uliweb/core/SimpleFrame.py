@@ -206,7 +206,7 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
             apps = x.GLOBAL.get('INSTALLED_APPS', apps)
     if not apps and os.path.exists(apps_dir):
         for p in os.listdir(apps_dir):
-            if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS'] and not p.startswith('.') and not p.startswith('_'):
+            if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS', '.git'] and not p.startswith('.') and not p.startswith('_'):
                 apps.append(p)
     
     #process app alias
@@ -267,7 +267,7 @@ class Loader(object):
     
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir='apps', include_apps=None, start=True, default_settings=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
+    def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, start=True, default_settings=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
         conf.application = self
         self.debug = False
         self.include_apps = include_apps or []
@@ -275,16 +275,20 @@ class Dispatcher(object):
         self.settings_file = settings_file
         self.local_settings_file = local_settings_file
         if not Dispatcher.installed:
-            self.init(apps_dir)
+            self.init(project_dir, apps_dir)
             dispatch.call(self, 'startup_installed')
             self.init_urls()
             
         if start:
             dispatch.call(self, 'startup')
     
-    def init(self, apps_dir):
-        conf.apps_dir = apps_dir
-        Dispatcher.apps_dir = apps_dir
+    def init(self, project_dir, apps_dir):
+        if not project_dir:
+            project_dir = norm_path(os.path.join(apps_dir, '..'))
+        conf.project_dir = project_dir
+        conf.apps_dir = norm_path(os.path.join(project_dir, 'apps'))
+        Dispatcher.project_dir = project_dir
+        Dispatcher.apps_dir = conf.apps_dir
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps, self.settings_file, self.local_settings_file)
         Dispatcher.modules = self.collect_modules()
         self.install_settings(self.modules['settings'])

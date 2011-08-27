@@ -17,6 +17,7 @@ static_views = []
 url_map = None
 local = None
 apps_dir = 'apps'
+project_dir = None
 use_urls = False
 response = None
 request = None

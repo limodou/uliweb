@@ -55,15 +55,16 @@ class I18nCommand(Command):
     
     def handle(self, options, global_options, *args):
         if options.project:
-            _process(os.path.normpath(global_options.project + '/..'), options.locale)
+            _process(global_options.project, options.locale)
         elif options.apps or args:
             if options.apps:
-                _apps = SimpleFrame.get_apps(global_options.project)
+                _apps = SimpleFrame.get_apps(global_options.apps_dir)
             else:
                 _apps = args
+            apps_dir = os.path.normpath(os.path.abspath(global_options.apps_dir))
             for appname in _apps:
                 path = SimpleFrame.get_app_dir(appname)
-                if not path.startswith(global_options.project):
+                if not path.startswith(apps_dir):
                     continue
                 _process(SimpleFrame.get_app_dir(appname), options.locale)
         elif options.uliweb:

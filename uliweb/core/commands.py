@@ -107,14 +107,19 @@ class Command(object):
         self.execute(args, options, global_options)
         
     def execute(self, args, options, global_options):
-        #todo: add translation process
         from uliweb.utils.common import check_apps_dir
         from uliweb.core.SimpleFrame import get_apps
 
+        #add apps_dir to global_options and insert it to sys.path
+        global_options.project = '.'
+        global_options.apps_dir = apps_dir = os.path.normpath(os.path.join(global_options.project, 'apps'))
+        if apps_dir not in sys.path:
+            sys.path.insert(0, apps_dir)
+            
         if self.check_apps_dirs:
             check_apps_dir(global_options.project)
         if self.check_apps and args: #then args should be apps
-            all_apps = get_apps(global_options.project)
+            all_apps = get_apps(global_options.apps_dir)
             apps = args
             args = []
             for p in apps:
@@ -174,8 +179,6 @@ class ApplicationCommandManager(Command):
             help='Settings file name. Default is "settings.ini".'),
         make_option('-L', '--local_settings', dest='local_settings', default='local_settings.ini',
             help='Local settings file name. Default is "local_settings.ini".'),
-        make_option('--project', default='apps',
-            help='Project "apps" directory.'),
         make_option('--pythonpath', default='',
             help='A directory to add to the Python path, e.g. "/home/myproject".'),
     )

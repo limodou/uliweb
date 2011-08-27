@@ -5,7 +5,7 @@ import types
 from optparse import make_option
 import uliweb
 from uliweb.core.commands import Command
-from uliweb.utils.common import log, check_apps_dir
+from uliweb.utils.common import log
         
 apps_dir = 'apps'
 __commands__ = {}
@@ -77,11 +77,15 @@ def set_log(app):
     set_log_handers(log, [handler])
     log.setLevel(getattr(logging, level, logging.INFO))
 
-def make_application(debug=None, apps_dir='apps', include_apps=None, debug_console=True, settings_file='settings.ini', start=True):
+def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps=None, debug_console=True, settings_file='settings.ini', start=True):
     from uliweb.utils.common import sort_list
     
+    if project_dir:
+        apps_dir = os.path.normpath(os.path.join(project_dir, 'apps'))
+        
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
+        print '==========================', apps_dir
         
     install_config(apps_dir)
     
@@ -137,8 +141,8 @@ class MakeAppCommand(Command):
         
         ans = '-1'
         app_path = appname.replace('.', '//')
-        if os.path.exists(apps_dir):
-            path = os.path.join(apps_dir, app_path)
+        if os.path.exists('apps'):
+            path = os.path.join('apps', app_path)
         else:
             path = app_path
         
@@ -226,6 +230,7 @@ class ExportStaticCommand(Command):
     name = 'exportstatic'
     help = 'Export all installed apps static directory to output directory.'
     args = 'output_directory'
+    check_apps_dirs = True
     option_list = (
         make_option('-c', '--check', action='store_true', 
             help='Check if the output files or directories have conflicts.'),
@@ -241,8 +246,6 @@ class ExportStaticCommand(Command):
     has_options = True
     
     def handle(self, options, global_options, *args):
-        check_apps_dir(global_options.project)
-
         from uliweb.utils.common import copy_dir_with_check
 
         if not args:
@@ -251,7 +254,7 @@ class ExportStaticCommand(Command):
         else:
             outputdir = args[0]
 
-        application = SimpleFrame.Dispatcher(apps_dir=global_options.project, start=False)
+        application = SimpleFrame.Dispatcher(project_dir=global_options.project, start=False)
         apps = application.apps
         dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in apps]
         self.options = options
@@ -259,7 +262,6 @@ class ExportStaticCommand(Command):
         copy_dir_with_check(dirs, outputdir, global_options.verbose, options.check, processor=self.process_file)
         
     def process_file(self, sfile, dpath):
-        import subprocess
         js_compressor = None
         css_compressor = None
         
@@ -331,14 +333,14 @@ class CallCommand(Command):
     
     def handle(self, options, global_options, *args):
         if not args:
-            log.error("Error: There is no command module name behind call command.")
+            print "Error: There is no command module name behind call command."
             return
         else:
             command = args[0]
             
         if not options.appname:
             from uliweb import get_apps
-            apps = get_apps(apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+            apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         else:
             apps = [options.appname]
         exe_flag = False
@@ -355,7 +357,7 @@ class CallCommand(Command):
                 continue
             
         if not exe_flag:
-            log.error("Can't import the [%s], please check the file and try again." % command)
+            print "Error: Can't import the [%s], please check the file and try again." % command
 register_command(CallCommand)
  
 def collect_files(apps_dir, apps):
@@ -364,7 +366,7 @@ def collect_files(apps_dir, apps):
     
     def f(path):
         for r in os.listdir(path):
-            if r in ['.svn', '_svn']:
+            if r in ['.svn', '_svn', '.git'] or r.startswith('.'):
                 continue
             fpath = os.path.join(path, r)
             if os.path.isdir(fpath):
@@ -409,12 +411,12 @@ class RunserverCommand(Command):
 
         if self.develop:
             include_apps = ['uliweb.contrib.develop']
-            app = make_application(options.debug, global_options.project, 
+            app = make_application(options.debug, project_dir=global_options.project, 
                         include_apps=include_apps)
         else:
-            app = make_application(options.debug, global_options.project)
+            app = make_application(options.debug, project_dir=global_options.project)
             include_apps = []
-        extra_files = collect_files(global_options.project, get_apps(global_options.project, settings_file=global_options.settings, local_settings_file=global_options.local_settings)+include_apps)
+        extra_files = collect_files(global_options.apps_dir, get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)+include_apps)
         run_simple(options.hostname, options.port, app, options.reload, False, True,
                    extra_files, 1, options.thread, options.processes)
 register_command(RunserverCommand)
@@ -435,13 +437,13 @@ class ShellCommand(Command):
     )
     banner = "Uliweb Command Shell"
     
-    def make_shell_env(self):
-        application = SimpleFrame.Dispatcher(apps_dir=apps_dir, start=False)
+    def make_shell_env(self, project_dir):
+        application = SimpleFrame.Dispatcher(project_dir=project_dir, start=False)
         env = {'application':application, 'settings':application.settings}
         return env
     
     def handle(self, options, global_options, *args):
-        namespace = self.make_shell_env()
+        namespace = self.make_shell_env(global_options.project)
         if options.ipython:
             try:
                 import IPython
@@ -456,10 +458,9 @@ class ShellCommand(Command):
 register_command(ShellCommand)
 
 def main():
-    global apps_dir
     from uliweb.core.commands import execute_command_line
     
-    apps_dir = os.path.join(os.getcwd(), apps_dir)
+    apps_dir = os.path.join(os.getcwd(), 'apps')
     if os.path.exists(apps_dir):
         sys.path.insert(0, apps_dir)
        

@@ -13,7 +13,7 @@ class CreateSuperUserCommand(Command):
         from uliweb import orm
         from getpass import getpass
         
-        app = Dispatcher(apps_dir=global_options.project, start=False)
+        app = Dispatcher(project_dir=global_options.project, start=False)
         orm.set_auto_create(True)
         db = orm.get_connection(app.settings.ORM.CONNECTION)
         
