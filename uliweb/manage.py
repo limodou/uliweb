@@ -85,7 +85,6 @@ def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps
         
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
-        print '==========================', apps_dir
         
     install_config(apps_dir)
     
