@@ -120,19 +120,14 @@ def set_connection(db, default=True, debug=False):
     metadata = MetaData(db)
     db.metadata = metadata
     
-def get_conn(auto_create_local=False):
-    if hasattr(Local, 'conn') and Local.conn:
-        return Local.conn
-    if auto_create_local:
-        Local.conn = get_connection().connect()
-        return Local.conn
-    return get_connection()
-
 def do_(query):
     """
     Execute a query
     """
-    conn = get_conn()
+    if hasattr(Local, 'conn') and Local.conn:
+        conn = Local.conn
+    else:
+        conn = get_connection()
     return conn.execute(query)
     
 def Begin(db=None, create=False):
