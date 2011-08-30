@@ -135,16 +135,18 @@ def do_(query):
     conn = get_conn()
     return conn.execute(query)
     
-def Begin(db=None):
+def Begin(db=None, create=False):
+    if hasattr(Local, 'trans') and Local.trans:
+        return
     if not db:
         db = get_connection()
-    if hasattr(Local, 'trans') and Local.trans:
-        return Local.trans
-    if not hasattr(Local, 'conn') or not Local.conn:
+    if create:
         Local.conn = conn = db.connect()
         Local.trans = conn.begin()
+    else:
+        db.begin()
     
-def Commit():
+def Commit(db=None, close=False):
     """
     Before using this function, you should called Begin first.
     """
@@ -153,10 +155,19 @@ def Commit():
             Local.trans.commit()
         finally:
             Local.trans = None
-            Local.conn.close()
-            Local.conn = None
+            if close:
+                Local.conn.close()
+                Local.conn = None
+    else:
+        if not db:
+            db = get_connection()
+        conn = db.contextual_connect()
+        if conn.in_transaction():
+            db.commit()
+        if close:
+            conn.close()
 
-def Rollback():
+def Rollback(db=None, close=False):
     """
     Before using this function, you should called Begin first.
     """
@@ -165,8 +176,18 @@ def Rollback():
             Local.trans.rollback()
         finally:
             Local.trans = None
-            Local.conn.close()
-            Local.conn = None
+            if close:
+                Local.conn.close()
+                Local.conn = None
+    else:
+        if not db:
+            db = get_connection()
+        conn = db.contextual_connect()
+        if conn.in_transaction():
+            db.rollback()
+        if close:
+            conn.close()
+    
             
 class SQLStorage(dict):
     """
@@ -311,7 +332,7 @@ class Property(object):
 
     def __init__(self, verbose_name=None, name=None, default=None,
         required=False, validators=None, choices=None, max_length=None, 
-        hint='', auto=None, auto_add=None, **kwargs):
+        hint='', auto=None, auto_add=None, type_class=None, type_attrs=None, **kwargs):
         self.verbose_name = verbose_name
         self.property_name = None
         self.name = name
@@ -328,6 +349,8 @@ class Property(object):
         self.kwargs = kwargs
         self.creation_counter = Property.creation_counter
         self.value = None
+        self.type_attrs = type_attrs or {}
+        self.type_class = type_class or self.field_class
         Property.creation_counter += 1
         
     def create(self, cls):
@@ -346,9 +369,9 @@ class Property(object):
 
     def _create_type(self):
         if self.max_length:
-            f_type = self.field_class(self.max_length)
+            f_type = self.type_class(self.max_length, **self.type_attrs)
         else:
-            f_type = self.field_class
+            f_type = self.type_class(**self.type_attrs)
         return f_type
     
     def __property_config__(self, model_class, property_name):
@@ -494,7 +517,7 @@ class CharProperty(Property):
     data_type = unicode
     field_class = CHAR
     
-    def __init__(self, verbose_name=None, default='', max_length=30, **kwds):
+    def __init__(self, verbose_name=None, default=u'', max_length=30, **kwds):
         super(CharProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
     
     def empty(self, value):
@@ -508,16 +531,16 @@ class CharProperty(Property):
     
     def _create_type(self):
         if self.max_length:
-            f_type = self.field_class(self.max_length, convert_unicode=True)
+            f_type = self.type_class(self.max_length, convert_unicode=True, **self.type_attrs)
         else:
-            f_type = self.field_class
+            f_type = self.type_class(**self.type_attrs)
         return f_type
     
     def to_str(self, v):
         return v
     
 class StringProperty(CharProperty):
-    field_class = String
+    field_class = VARCHAR
     
 class FileProperty(StringProperty):
     def __init__(self, verbose_name=None, default='', max_length=255, **kwds):
@@ -699,7 +722,7 @@ class FloatProperty(Property):
         self.precision = precision
         
     def _create_type(self):
-        f_type = self.field_class(precision=self.precision)
+        f_type = self.type_class(precision=self.precision, **self.type_attrs)
         return f_type
     
     def validate(self, value):
@@ -730,7 +753,7 @@ class DecimalProperty(Property):
         return value
     
     def _create_type(self):
-        f_type = self.field_class(precision=self.precision, scale=self.scale)
+        f_type = self.type_class(precision=self.precision, scale=self.scale, **self.type_attrs)
         return f_type
     
     def get_display_value(self, value):

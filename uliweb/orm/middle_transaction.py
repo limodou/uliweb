@@ -9,14 +9,14 @@ class TransactionMiddle(Middleware):
         pass
         
     def process_request(self, request):
-        Begin()
+        Begin(create=True)
 
     def process_response(self, request, response):
         try:
             return response
         finally:
-            Commit()
+            Commit(close=True)
             
     def process_exception(self, request, exception):
-        Rollback()
+        Rollback(close=True)
         
