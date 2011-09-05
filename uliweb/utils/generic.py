@@ -1149,8 +1149,12 @@ class SimpleListView(object):
                     return result
         
     def download(self, filename, timeout=3600, inline=False, download=False, query=None, fields_convert_map=None, type=None, domain=None):
+        """
+        Default domain option is PARA/DOMAIN
+        """
         from uliweb.utils.filedown import filedown
-        from uliweb import request
+        from uliweb import request, settings
+        
         if fields_convert_map is not None:
             fields_convert_map = fields_convert_map 
         else:
@@ -1170,6 +1174,8 @@ class SimpleListView(object):
             else:
                 type = 'csv'
         if type == 'xlt':
+            if not domain:
+                domain = settings.get_var('PARA/DOMAIN')
             return self.download_xlt(filename, query, table, inline, download, fields_convert_map, domain)
         else:
             return self.download_csv(filename, query, table, inline, download, fields_convert_map)
@@ -1579,7 +1585,7 @@ class ListView(SimpleListView):
     def query(self):
         import uliweb.orm as orm
         
-        if not self._query or isinstance(self._query, orm.Result): #query result
+        if self._query is None or isinstance(self._query, (orm.Result, Select)): #query result
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)

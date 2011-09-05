@@ -52,7 +52,7 @@ def get_tables(apps_dir, apps=None, engine=None, import_models=False, settings_f
     else:
         old_models = orm.__models__.keys()
         try:
-            for tablename, m in orm.__models__.iteritems():
+            for tablename, m in orm.__models__.items():
                 orm.get_model(tablename)
         except:
             print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))

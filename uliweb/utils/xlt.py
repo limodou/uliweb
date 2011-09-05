@@ -169,7 +169,15 @@ class ExcelWriter(object):
             return
         
         for i, row in enumerate(data):
-            for j, col in enumerate(row):
+            for j, h in enumerate(self.header):
+                if isinstance(row, (tuple, list)):
+                    col = row[j]
+                elif isinstance(row, dict):
+                    col = row[h['name']]
+                else:
+                    raise Exception, "Can't support data format %s, only support list, tuple, dict" % type(row)
+                col = row[j]
+#            for j, col in enumerate(row):
 #                if isinstance(col, dict):
 #                    col_y = self.begin_y+(col.get('row') or i)
 #                    col_x = self.begin_x+(col.get('col') or j)
