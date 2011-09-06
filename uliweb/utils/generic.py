@@ -4,9 +4,10 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField, StringField
 import os, sys
 import time
-from uliweb.orm import get_model
+from uliweb.orm import get_model, Model
 from uliweb import function, redirect, json
 from uliweb.core.storage import Storage
+from sqlalchemy.sql import Select
 
 __default_fields_builds__ = {}
 class __default_value__(object):pass
@@ -293,7 +294,10 @@ def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None,
         convert = prop.get('convert', None)
     else:
         if old_value is __default_value__:
-            value = prop.get_value_for_datastore(obj)
+            if isinstance(obj, Model):
+                value = prop.get_value_for_datastore(obj)
+            else:
+                value = obj[prop.property_name]
         display = prop.get_display_value(value)
         name = prop.property_name
         if isinstance(field, dict):
@@ -338,12 +342,15 @@ def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None,
                     if old_value is not __default_value__:
                         d = prop.reference_class.c[prop.reference_fieldname]
                         v = prop.reference_class.get(d==old_value)
+                    if not isinstance(obj, Model):
+                        d = prop.reference_class.c[prop.reference_fieldname]
+                        v = prop.reference_class.get(d==value)
                     else:
                         v = getattr(obj, prop.property_name)
                 except orm.Error:
                     display = obj.get_datastore_value(prop.property_name)
                     v = None
-                if v:
+                if isinstance(v, Model):
                     if hasattr(v, 'get_url'):
                         display = v.get_url()
                     else:
@@ -1497,6 +1504,7 @@ class SimpleListView(object):
                 kwargs = {}
                 kwargs['field'] = _f.pop('name')
                 _f.pop('verbose_name', None)
+                _f.pop('prop', None)
                 kwargs['title'] = simple_value(field['name'])
                 span = False
                 if field['colspan'] > 1:
@@ -1589,7 +1597,10 @@ class ListView(SimpleListView):
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
-            self.total = query.count()
+            if isinstance(query, Select):
+                self.total = self.model.count(query._whereclause)
+            else:
+                self.total = query.count()
         else:
             query = self.query_range(self.pageno, self.pagination)
         return query
@@ -1614,6 +1625,7 @@ class ListView(SimpleListView):
             'fields_list':[{'name':fieldname,'width':100,'align':'left'},...],
             'count':10,
         """
+        from uliweb.orm import do_
         result = {}
         s = []
         if head:
@@ -1631,6 +1643,8 @@ class ListView(SimpleListView):
         if body:
             self.rows_num = 0
             #create table body
+            if isinstance(query, Select):
+                query = do_(query)
             for record in query:
                 self.rows_num += 1
                 r = []
@@ -1694,8 +1708,10 @@ class ListView(SimpleListView):
         """
         Query all records with limit and offset, it's used for pagination query.
         """
-        if self._query:
-            query = self._query.filter(condition)
+        if self._query is not None:
+            query = self._query
+            if condition is not None and isinstance(query, orm.Result):
+                query = query.filter(condition)
         else:
             query = model.filter(condition)
         if self.pagination:
