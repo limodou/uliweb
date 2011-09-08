@@ -34,6 +34,23 @@ conf.url_map = Map()
 __app_dirs__ = {}
 __app_alias__ = {}
 
+#User can defined decorator functions in settings DECORATORS
+#and user can user @decorators.function_name in views
+#and this usage need settings be initialized before decorator invoking
+class Decorators(object):
+    __decorators__ = {}
+    
+    def __getattr__(self, name):
+        if name in self.__decorators__:
+            return self.__decorators__[name]
+        if name not in conf.settings.DECORATORS:
+            raise Exception, "decorator %s is not existed!" % name
+        func = import_attr(conf.settings.DECORATORS.get(name))
+        self.__decorators__[name] = func
+        return func
+    
+decorators = Decorators()
+
 #Initialize pyini env
 pyini.set_env({'_':gettext_lazy, 'gettext_lazy':gettext_lazy})
 

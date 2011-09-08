@@ -1,8 +1,10 @@
 from uliweb.orm import get_model
-from uliweb.utils.common import import_attr
+from uliweb.utils.common import import_attr, wraps
+from uliweb.i18n import ugettext_lazy as _
 
 __all__ = ['add_role_func', 'register_role_method',
-    'superuser', 'trusted', 'anonymous', 'has_role', 'has_permission']
+    'superuser', 'trusted', 'anonymous', 'has_role', 'has_permission',
+    'check_role', 'check_permission']
 
 def call_func(func, kwargs):
     import inspect
@@ -37,7 +39,7 @@ def add_role_func(name, func):
     
     __role_funcs__[name] = func
     
-def has_role(user, role, **kwargs):
+def has_role(user, *roles, **kwargs):
     """
     Judge is the user belongs to the role, and if does, then return the role object
     if not then return False. kwargs will be passed to role_func.
@@ -47,30 +49,31 @@ def has_role(user, role, **kwargs):
         User = get_model('user')
         user = User.get(User.c.username==user)
         
-    if isinstance(role, (str, unicode)):
-        role = Role.get(Role.c.name==role)
-        if not role:
-            return False
-    name = role.name
-    
-    func = __role_funcs__.get(name, None)
-    if func:
-        if isinstance(func, (unicode, str)):
-            func = import_attr(func)
-            
-        assert callable(func)
+    for role in roles:
+        if isinstance(role, (str, unicode)):
+            role = Role.get(Role.c.name==role)
+            if not role:
+                return False
+        name = role.name
         
-        para = kwargs.copy()
-        para['user'] = user
-        flag = call_func(func, para)
+        func = __role_funcs__.get(name, None)
+        if func:
+            if isinstance(func, (unicode, str)):
+                func = import_attr(func)
+                
+            assert callable(func)
+            
+            para = kwargs.copy()
+            para['user'] = user
+            flag = call_func(func, para)
+            if flag:
+                return role
+        flag = role.users.has(user)
         if flag:
             return role
-    flag = role.users.has(user)
-    if flag:
-        return role
     return False
 
-def has_permission(user, permission, **role_kwargs):
+def has_permission(user, *permissions, **role_kwargs):
     """
     Judge if an user has permission, and if it does return role object, and if it doesn't
     return False. role_kwargs will be passed to role functions.
@@ -82,13 +85,39 @@ def has_permission(user, permission, **role_kwargs):
         User = get_model('user')
         user = User.get(User.c.username==user)
         
-    perm = Perm.get(Perm.c.name==permission)
-    if not perm:
-        return False
-    
-    for role in perm.perm_roles.with_relation().all():
-        flag = has_role(user, role, **role_kwargs)
+    for name in permissions:
+        perm = Perm.get(Perm.c.name==name)
+        if not perm:
+            continue
+        
+        flag = has_role(user, *list(perm.perm_roles.with_relation().all()), **role_kwargs)
         if flag:
             return flag
+        
     return False
 
+def check_role(*roles):
+    """
+    It's just like has_role, but it's a decorator.
+    """
+    def f1(func, roles=roles):
+        @wraps(func)
+        def f2(*args, **kwargs):
+            if not has_role(request.user, *roles):
+                error(_("You have no roles to visit this page."))
+            return func(*args, **kwargs)
+        return f2
+    return f1
+
+def check_permission(*permissions):
+    """
+    It's just like has_role, but it's a decorator.
+    """
+    def f1(func, permissions=permissions):
+        @wraps(func)
+        def f2(*args, **kwargs):
+            if not has_permission(request.user, *permissions):
+                error(_("You have no permissions to visit this page."))
+            return func(*args, **kwargs)
+        return f2
+    return f1
