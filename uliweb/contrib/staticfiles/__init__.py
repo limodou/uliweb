@@ -11,7 +11,7 @@ def prepare_default_env(sender, env):
     env['url_for_static'] = url_for_static
     
 def url_for_static(filename=None, **kwargs):
-    from uliweb import url_for
+    from uliweb import url_for, settings
     from urlparse import urlparse
     
     if filename.startswith('/'):
@@ -20,6 +20,10 @@ def url_for_static(filename=None, **kwargs):
     if r.scheme or r.netloc:
         return filename
     kwargs['filename'] = filename
+    #add STATIC_VER support
+    ver = settings.GLOBAL.STATIC_VER
+    if ver:
+        kwargs['ver'] = ver
     return url_for('uliweb.contrib.staticfiles.static', **kwargs)
 
 def static(filename):
