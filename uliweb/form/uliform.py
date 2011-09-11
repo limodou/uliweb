@@ -421,7 +421,7 @@ class TextField(StringField):
     """
     default_build = TextArea
 
-    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=10, cols=75, convert_html=False, **kwargs):
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=10, cols=None, convert_html=False, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.rows = rows
         self.cols = cols
