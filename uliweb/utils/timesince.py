@@ -48,13 +48,13 @@ def timesince(d, now=None, pos=True, flag=False):
         count = since // seconds
         if count != 0:
             break
-    s = ugettext('%(number)d %(type)s') % {'number': count, 'type': name(count)}
+    s = ('%(number)d %(type)s') % {'number': count, 'type': name(count)}
     if i + 1 < len(chunks):
         # Now get the second item
         seconds2, name2 = chunks[i + 1]
         count2 = (since - (seconds * count)) // seconds2
         if count2 != 0:
-            s += ugettext(', %(number)d %(type)s') % {'number': count2, 'type': name2(count2)}
+            s += (', %(number)d %(type)s') % {'number': count2, 'type': name2(count2)}
     #if flag==True, then return twe elements (since, message0 
     if flag:
         return oldsince, s + suffix

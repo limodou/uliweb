@@ -5,18 +5,36 @@
 # Minimally patched to make it even more xgettext compatible
 # by Peter Funk <pf@artcom-gmbh.de>
 #
-# 2002-11-22 J黵gen Hermann <jh@web.de>
+# 2002-11-22 J?gen Hermann <jh@web.de>
 # Added checks that _() only contains string literals, and
 # command line args are resolved to module lists, i.e. you
 # can now pass a filename, a module or package name, or a
 # directory (including globbing chars, important for Win32).
 # Made docstring fit in 80 chars wide displays using pydoc.
+# 
+# 2010-06-12 Jan-Hendrik G?lner <jan-hendrik.goellner@gmx.de>
+# Made it plural sensitive, added ngettext as default keyword.
+# Any keyworded function that is being supplied > 2 arguments
+# is treated like ngettext.
+# Also added support for constructs like "_('foo' + 10*'bar')"
+# by evaluating the whole expression.
+# Code like _(foo(arg1, arg2) + "bar") does not work by design
+# as that expression must be evaluated at runtime and this script
+# only extracts static strings known before runtime.
+# However it is possible to do things like
+#   "ngettext('World', 'Worlds', numWorlds)"
+# as only the first two arguments are evaluated.
+# Advanced version number from 1.5 to 1.6
 #
-# Updated by limodou 2009-02-23
 
 # for selftesting
 import sys
 sys.path.insert(0, '..')
+try:
+    import fintl
+    _ = fintl.gettext
+except ImportError:
+    _ = lambda s: s
 
 __doc__ = """pygettext -- Python equivalent of xgettext(1)
 
@@ -161,15 +179,13 @@ import time
 import getopt
 import token
 import tokenize
-import operator
 
-__version__ = '1.5'
+__version__ = '1.6'
 
-default_keywords = ['_']
+default_keywords = ['_', 'ngettext']
 DEFAULTKEYWORDS = ', '.join(default_keywords)
 
 EMPTYSTRING = ''
-
 
 
 # The normal pot-file header. msgmerge and Emacs's po-mode work better if it's
@@ -189,10 +205,10 @@ msgstr ""
 "MIME-Version: 1.0\\n"
 "Content-Type: text/plain; charset=CHARSET\\n"
 "Content-Transfer-Encoding: ENCODING\\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\\n"
 "Generated-By: pygettext.py %(version)s\\n"
 
 '''
-
 
 def usage(code, msg=''):
     print >> sys.stderr, __doc__ % globals()
@@ -201,14 +217,13 @@ def usage(code, msg=''):
     sys.exit(code)
 
 
-
 escapes = []
 
 def make_escapes(pass_iso8859):
     global escapes
     if pass_iso8859:
         # Allow iso-8859 characters to pass through so that e.g. 'msgid
-        # "H鰄e"' would result not result in 'msgid "H\366he"'.  Otherwise we
+        # "H?e"' would result not result in 'msgid "H\366he"'.  Otherwise we
         # escape any character outside the 32..126 range.
         mod = 128
     else:
@@ -254,7 +269,6 @@ def normalize(s):
         s = '""\n"' + lineterm.join(lines) + '"'
     return s
 
-
 def containsAny(str, set):
     """Check whether 'str' contains ANY of the chars in 'set'"""
     return 1 in [c in str for c in set]
@@ -270,22 +284,21 @@ def _visit_pyfiles(list, dirname, names):
         _py_ext = [triple[0] for triple in imp.get_suffixes()
                    if triple[2] == imp.PY_SOURCE]
         
-
     # don't recurse into CVS directories
     if 'CVS' in names:
         names.remove('CVS')
 
     if '.svn' in names:
         names.remove('.svn')
+
+    if '.git' in names:
+        names.remove('.git')
     
     # add all *.py files to list
     list.extend(
         [os.path.join(dirname, file) for file in names
-         #if os.path.splitext(file)[1] == _py_ext]
-         #so that _py_ext could be a list
          if os.path.splitext(file)[1] in _py_ext]
         )
-
 
 def _get_modpkg_path(dotted_name, pathlist=None):
     """Get the filesystem path for a module or a package.
@@ -355,23 +368,23 @@ def getFilesForName(name):
 
     return []
 
-
 class TokenEater:
     def __init__(self, options):
         self.__options = options
         self.__messages = {}
         self.__state = self.__waiting
-        self.__data = []
+        self.__args = []
         self.__lineno = -1
         self.__freshmodule = 1
         self.__curfile = None
 
     def __call__(self, ttype, tstring, stup, etup, line):
         # dispatch
-#        import token
-#        print >> sys.stderr, self.__curfile, 'ttype:', token.tok_name[ttype], \
-#              'tstring:', tstring, line
+##        import token
+##        print >> sys.stderr, 'ttype:', token.tok_name[ttype], \
+##              'tstring:', tstring
         self.__state(ttype, tstring, stup[0])
+
 
     def __waiting(self, ttype, tstring, lineno):
         opts = self.__options
@@ -380,7 +393,19 @@ class TokenEater:
             # module docstring?
             if self.__freshmodule:
                 if ttype == tokenize.STRING:
-                    self.__addentry(safe_eval(tstring), lineno, isdocstring=1)
+                    try:
+                        s = safe_eval(tstring)
+                    except Exception as e:
+                        print >> sys.stderr, (
+                            '*** %(file)s:%(lineno)s: could not evaluate argument "%(arg)s"'
+                            ) % {
+                            'arg': tstring,
+                            'file': self.__curfile,
+                            'lineno': self.__lineno
+                            }
+                        print >> sys.stderr, str(e)
+                    else:
+                        self.__addentry([s], lineno, isdocstring=1)
                     self.__freshmodule = 0
                 elif ttype not in (tokenize.COMMENT, tokenize.NL):
                     self.__freshmodule = 0
@@ -400,7 +425,19 @@ class TokenEater:
     def __suitedocstring(self, ttype, tstring, lineno):
         # ignore any intervening noise
         if ttype == tokenize.STRING:
-            self.__addentry(safe_eval(tstring), lineno, isdocstring=1)
+            try:
+                s = safe_eval(tstring)
+            except Exception as e:
+                print >> sys.stderr, (
+                    '*** %(file)s:%(lineno)s: could not evaluate argument "%(arg)s"'
+                    ) % {
+                    'arg': tstring,
+                    'file': self.__curfile,
+                    'lineno': self.__lineno
+                    }
+                print >> sys.stderr, str(e)
+            else:
+                self.__addentry(s, lineno, isdocstring=1)
             self.__state = self.__waiting
         elif ttype not in (tokenize.NEWLINE, tokenize.INDENT,
                            tokenize.COMMENT):
@@ -409,41 +446,149 @@ class TokenEater:
 
     def __keywordseen(self, ttype, tstring, lineno):
         if ttype == tokenize.OP and tstring == '(':
-            self.__data = []
+            self.__args = ['']
             self.__lineno = lineno
-            self.__state = self.__openseen
+            self.__depth = 0
+            self.__state = self.__scanstring1
         else:
             self.__state = self.__waiting
 
-    def __openseen(self, ttype, tstring, lineno):
+    def __scanstring1(self, ttype, tstring, lineno):
+        # handle first argument, which is supposed to be a string.
         if ttype == tokenize.OP and tstring == ')':
-            # We've seen the last of the translatable strings.  Record the
-            # line number of the first line of the strings and update the list
-            # of messages seen.  Reset state for the next batch.  If there
-            # were no strings inside _(), then just ignore this entry.
-            if self.__data:
-                self.__addentry(EMPTYSTRING.join(self.__data))
+            # End of list of arguments for the current function call.
+            # If the argument list is empty (as in keyword()), ignore this call.
+            # otherwise evaluate the fragments we collected as the first
+            # argument and record its line number and update the list of
+            # messages seen. Reset state for the next batch.
+            if self.__args[-1]:
+                try:
+                    s = safe_eval(self.__args[-1])
+                except Exception as e:
+                    print >> sys.stderr, (
+                        '*** %(file)s:%(lineno)s: could not evaluate argument "%(arg)s"'
+                        ) % {
+                        'arg': self.__args[-1],
+                        'file': self.__curfile,
+                        'lineno': self.__lineno
+                        }
+                    print >> sys.stderr, str(e)
+                    self.__state = self.__waiting
+                    return
+                if type(s) == str or type(s) == unicode:
+                    self.__args[-1] = s
+                    self.__addentry(self.__args)
+                else:
+                    print >> sys.stderr, (
+                        '*** %(file)s:%(lineno)s: argument is no str or unicode object "%(arg)s"'
+                        ) % {
+                        'arg': s,
+                        'file': self.__curfile,
+                        'lineno': self.__lineno
+                        }
             self.__state = self.__waiting
-        elif ttype == tokenize.STRING:
-            self.__data.append(safe_eval(tstring))
-        elif ttype not in [tokenize.COMMENT, token.INDENT, token.DEDENT,
-                           token.NEWLINE, tokenize.NL]:
-            # warn if we see anything else than STRING or whitespace
+        elif ttype == tokenize.OP and tstring == ',':
+            # Start of the next argument.
+            try:
+                s = safe_eval(self.__args[-1])
+            except Exception as e:
+                print >> sys.stderr, (
+                    '*** %(file)s:%(lineno)s: could not evaluate argument "%(arg)s"'
+                    ) % {
+                    'arg': self.__args[-1],
+                    'file': self.__curfile,
+                    'lineno': self.__lineno
+                    }
+                print >> sys.stderr, str(e)
+                self.__state = self.__waiting
+                return
+            if type(s) == str or type(s) == unicode:
+                self.__args[-1] = s
+                self.__args.append('') # next argument.
+                self.__state = self.__scanstring2
+            else:
+                print >> sys.stderr, (
+                    '*** %(file)s:%(lineno)s: argument 1 is no str or unicode object "%(arg)s"'
+                    ) % {
+                    'arg': s,
+                    'file': self.__curfile,
+                    'lineno': self.__lineno
+                    }
+                self.__state = self.__waiting
+        else:
+            # add string to current argument for later evaluation.
+            # no state change in this case.
+            self.__args[-1] += tstring
+
+    def __scanstring2(self, ttype, tstring, lineno):
+        # handle second argument, which is supposed to be a string.
+        if ttype == tokenize.OP and tstring == ')':
+            # End of list of arguments for the current function call.
+            # This is an error if we expect either one or three arguments but
+            # never two.
             print >> sys.stderr, (
-                '*** %(file)s:%(lineno)s: Seen unexpected token "%(token)s"'
+                '*** %(file)s:%(lineno)s: unexpected number of arguments (2)"'
                 ) % {
-                'token': tstring,
                 'file': self.__curfile,
                 'lineno': self.__lineno
                 }
             self.__state = self.__waiting
+        elif ttype == tokenize.OP and tstring == ',':
+            # Start of the next argument. We do not need to parse it, we only
+            # made sure it is there and now we assume this is a plural call.
+            try:
+                s = safe_eval(self.__args[-1])
+            except Exception as e:
+                print >> sys.stderr, (
+                    '*** %(file)s:%(lineno)s: could not evaluate argument "%(arg)s"'
+                    ) % {
+                    'arg': self.__args[-1],
+                    'file': self.__curfile,
+                    'lineno': self.__lineno
+                    }
+                print >> sys.stderr, str(e)
+                self.__state = self.__waiting
+                return
+            s = safe_eval(self.__args[-1])
+            if type(s) == str or type(s) == unicode:
+                self.__args[-1] = s
+                self.__addentry(self.__args)
+                self.__state = self.__waiting
+            else:
+                print >> sys.stderr, (
+                    '*** %(file)s:%(lineno)s: argument 2 is no str or unicode object "%(arg)s"'
+                    ) % {
+                    'arg': s,
+                    'file': self.__curfile,
+                    'lineno': self.__lineno
+                    }
+                self.__state = self.__waiting
+        else:
+            # add string to current argument for later evaluation.
+            # no state change in this case.
+            self.__args[-1] += tstring
 
-    def __addentry(self, msg, lineno=None, isdocstring=0):
+    def __addentry(self, args, lineno=None, isdocstring=0):
+        isplural = 0
+        if len(args) > 1:
+            isplural = 1
         if lineno is None:
             lineno = self.__lineno
-        if not msg in self.__options.toexclude:
+        exclude = 0
+        if args[0] in self.__options.toexclude:
+            exclude = 1
+        if isplural:
+            if args[1] not in self.__options.toexclude:
+                # in case of plural, both strings must be in the toexclude list
+                # to exclude this entry.
+                exclude = 0
+        if not exclude:
             entry = (self.__curfile, lineno)
-            self.__messages.setdefault(msg, {})[entry] = isdocstring
+            # entries look like this:
+            # {('arg1','arg2') : {(filename,lineno) : <isdocstring>},
+            #  ('arg1',)       : {(filename,lineno) : <iscodstring>}}
+            # a key with len > 1 indicates plurals
+            self.__messages.setdefault(tuple(args[0:2]), {})[entry] = isdocstring
 
     def set_filename(self, filename):
         self.__curfile = filename
@@ -451,7 +596,7 @@ class TokenEater:
 
     def write(self, fp):
         options = self.__options
-        timestamp = time.ctime(time.time())
+        timestamp = time.strftime('%Y-%m-%d %H:%M')
         # The time stamp in the header doesn't have the same format as that
         # generated by xgettext...
         print >> fp, pot_header % {'time': timestamp, 'version': __version__}
@@ -468,12 +613,10 @@ class TokenEater:
             rentries = reverse[rkey]
             rentries.sort()
             for k, v in rentries:
-                isdocstring = 0
                 # If the entry was gleaned out of a docstring, then add a
                 # comment stating so.  This is to aid translators who may wish
                 # to skip translating some unimportant docstrings.
-                if reduce(operator.__add__, v.values()):
-                    isdocstring = 1
+                isdocstring = sum(v.values())
                 # k is the message string, v is a dictionary-set of (filename,
                 # lineno) tuples.  We want to sort the entries in v first by
                 # file name and then by line number.
@@ -503,10 +646,13 @@ class TokenEater:
                         print >> fp, locline
                 if isdocstring:
                     print >> fp, '#, docstring'
-                print >> fp, 'msgid', normalize(k)
-                print >> fp, 'msgstr ""\n'
-
-
+                print >> fp, 'msgid', normalize(k[0])
+                if len(k) > 1:
+                    print >> fp, 'msgid_plural', normalize(k[1])
+                    print >> fp, 'msgstr[0] ""'
+                    print >> fp, 'msgstr[1] ""\n'
+                else:
+                    print >> fp, 'msgstr ""\n'
 
 def main():
     global default_keywords
@@ -531,7 +677,7 @@ def main():
         # defaults
         extractall = 0 # FIXME: currently this option has no effect at all.
         escape = 0
-        keywords = []
+        keywords = ['ugettext', 'ungettext']
         outpath = ''
         outfile = 'messages.pot'
         writelocations = 1
@@ -659,8 +805,7 @@ def main():
                 fp = StringIO(text)
             else:
                 fp = open(filename)
-            closep = 1
-            
+                closep = 1
         try:
             eater.set_filename(filename)
             try:
@@ -694,8 +839,10 @@ def main():
         if closep:
             fp.close()
 
-def extrace_files(files, outputfile):
+def extrace_files(files, outputfile, opts=None):
     global _py_ext
+    
+    opts = opts or {}
     
     _py_ext = ['.py', '.ini', '.html']
     class Options:
@@ -705,7 +852,7 @@ def extrace_files(files, outputfile):
         # defaults
         extractall = 0 # FIXME: currently this option has no effect at all.
         escape = 0
-        keywords = ['gettext', 'ngettext']
+        keywords = ['_', 'gettext', 'ngettext', 'ungettext', 'ugettext']
         outpath = ''
         outfile = outputfile
         writelocations = 1
@@ -721,6 +868,15 @@ def extrace_files(files, outputfile):
 
     make_escapes(options.escape)
     options.keywords.extend(default_keywords)
+    for k, v in opts.items():
+        if v and hasattr(options, k):
+            _v = getattr(options, k)
+            if isinstance(_v, list):
+                _v.extend(v)
+            elif isinstance(_v, dict):
+                _v.update(v)
+            else:
+                setattr(options, k, v)
     
     if not isinstance(files, list):
         files = getFilesForName(files)
@@ -777,7 +933,6 @@ def extrace_files(files, outputfile):
     finally:
         if closep:
             fp.close()
-    
 
 if __name__ == '__main__':
     main()

@@ -22,13 +22,13 @@ def _get_outputfile(path, locale='en'):
     output = os.path.normpath(os.path.join(path, 'locale', locale, 'LC_MESSAGES', 'uliweb.pot'))
     return output
 
-def _process(path, locale):
+def _process(path, locale, options):
     from pygettext import extrace_files
     from po_merge import merge
 
     output = _get_outputfile(path, locale=locale)
     try:
-        extrace_files(path, output)
+        extrace_files(path, output, {'verbose':options['verbose']})
         print 'Success! output file is %s' % output
         merge(output[:-4]+'.po', output)
     except:
@@ -54,8 +54,9 @@ class I18nCommand(Command):
     )
     
     def handle(self, options, global_options, *args):
+        opts = {'verbose':global_options.verbose}
         if options.project:
-            _process(global_options.project, options.locale)
+            _process(global_options.project, options.locale, opts)
         elif options.apps or args:
             if options.apps:
                 _apps = SimpleFrame.get_apps(global_options.apps_dir)
@@ -66,10 +67,10 @@ class I18nCommand(Command):
                 path = SimpleFrame.get_app_dir(appname)
                 if not path.startswith(apps_dir):
                     continue
-                _process(SimpleFrame.get_app_dir(appname), options.locale)
+                _process(SimpleFrame.get_app_dir(appname), options.locale, opts)
         elif options.uliweb:
             path = pkg.resource_filename('uliweb', '')
-            _process(path, options.locale)
+            _process(path, options.locale, opts)
         elif options.directory:
-            _process(options.directory, options.locale)
+            _process(options.directory, options.locale, opts)
             

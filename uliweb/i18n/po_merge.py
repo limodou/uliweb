@@ -2,51 +2,59 @@
 
 import os, sys
 
-def parse_translation(f):
+def parse_translation(f, lineno):
     """Read a single translation entry from the file F and return a
     tuple with the comments, msgid and msgstr.  The comments is returned
     as a list of lines which do not end in new-lines.  The msgid and
     msgstr are strings, possibly with embedded newlines"""
     line = f.readline()
-
+    
+    def get_line(f, line, need_keys, lineno):
+        line = line.rstrip()
+        key, value = line.split(' ', 1)
+        # Parse msgid
+        if key not in need_keys:
+            print 'Error Line, need %r: %d, line=' % (need_keys, lineno, line)
+            raise RuntimeError("parse error")
+        v = value
+        while 1:
+            line = f.readline()
+            line = line.rstrip()
+            lineno += 1
+            if not line or line[0] != '"':
+                break
+            v += '\n' + line[:]
+        return lineno, key, v, line
+    
     # Parse comments
     comments = []
     while 1:
         if not line:
-            return None, None, None
+            return lineno, None, None, None
         if line.strip() == '':
-            return comments, None, None
+            return lineno, comments, None, None
         elif line[0] == '#':
             comments.append(line[:-1])
         else:
             break
         line = f.readline()
+        lineno += 1
 
-    # Parse msgid
-    if line[:7] != 'msgid "' or line[-2] != '"':
-        raise RuntimeError("parse error")
-    msgid = line[6:-1]
-    while 1:
-        line = f.readline()
-        if line[0] != '"':
-            break
-        msgid += '\n' + line[:-1]
-
-    # Parse msgstr
-    if line[:8] != 'msgstr "' or line[-2] != '"':
-        raise RuntimeError("parse error")
-    msgstr = line[7:-1]
-    while 1:
-        line = f.readline()
-        if len(line) == 0 or line[0] != '"':
-            break
-        msgstr += '\n' + line[:-1]
-
-    if line.strip() != '':
+    lineno, key, msgid, line = get_line(f, line, ['msgid'], lineno)
+    lineno, key, value, line = get_line(f, line, ['msgid_plural', 'msgstr'], lineno)
+    if key == 'msgid_plural':
+        msgid = (msgid, value)
+        lineno, key, v1, line = get_line(f, line, ['msgstr[0]'], lineno)
+        lineno, key, v2, line = get_line(f, line, ['msgstr[1]'], lineno)
+        msgstr = (v1, v2)
+    else:
+        msgstr = value
+        
+    if line != '':
         print 'Error Line: ', line
         raise RuntimeError("parse error")
 
-    return comments, msgid, msgstr
+    return lineno, comments, msgid, msgstr
 
 def split_comments(comments):
     """Split COMMENTS into flag comments and other comments.  Flag
@@ -60,6 +68,21 @@ def split_comments(comments):
             other.append(c)
     return flags, other
 
+def write_msg(comments, msgid, msgstr):
+    s = []
+    s.append('\n'.join(comments) + '\n')
+    if isinstance(msgid, (tuple, list)):
+        s.append('msgid ' + msgid[0] + '\n')
+        s.append('msgid_plural ' + msgid[1] + '\n')
+    else:
+        s.append('msgid ' + msgid + '\n')
+    if isinstance(msgstr, (tuple, list)):
+        s.append('msgstr[0] ' + msgstr[0] + '\n')
+        s.append('msgstr[1] ' + msgstr[1] + '\n\n')
+    else:
+        s.append('msgstr ' + msgstr + '\n\n')
+    return ''.join(s)
+
 def merge(file1, file2):
     import shutil
     if not os.path.exists(file1):
@@ -68,12 +91,13 @@ def merge(file1, file2):
     # Read the source po file into a hash
     source = {}
     f2 = file(file2)
+    lineno = 1
     while 1:
-        comments, msgid, msgstr = parse_translation(f2)
+        lineno, comments, msgid, msgstr = parse_translation(f2, lineno)
         if comments is None and msgid is None and msgstr is None:
             break
-        if msgid is not None and msgid != '""':
-            source[msgid] = msgstr, split_comments(comments)[0]
+        if msgid is not None and msgid != '""' and msgid != ('""', '""') :
+            source[msgid] = msgstr, split_comments(comments)[1]
     
     f2.close()
     
@@ -88,14 +112,15 @@ def merge(file1, file2):
     update_count = 0
     untranslated = 0
     f1 = file(infile)
+    lineno = 1
     while 1:
-        comments, msgid, msgstr = parse_translation(f1)
+        lineno, comments, msgid, msgstr = parse_translation(f1, lineno)
         if comments is None and msgid is None and msgstr is None:
             break
         if msgid is None:
             continue
         else:
-            if msgid != '""':
+            if msgid != '""' and msgid != ('""', '""'):
                 string_count += 1
             # Do not update the header, and only update if the source
             # has a non-empty translation.
@@ -105,19 +130,18 @@ def merge(file1, file2):
                     new_msgstr, new_flags = source[msgid]
                     new_comments = other + new_flags
                     del source[msgid]
-                    if (new_msgstr != msgstr and new_msgstr != '""') or not new_comments and repr(new_comments) != repr(comments):
-                        if new_msgstr != msgstr and new_msgstr != '""':
+                    if (new_msgstr != msgstr and new_msgstr != '""' and new_msgstr != ('""', '""')) or new_comments != comments:
+                        if new_msgstr != msgstr and new_msgstr != '""' and new_msgstr != ('""', '""'):
                             update_count += 1
                             msgstr = new_msgstr
                         else:
                             comments = new_comments
+                    
 #                    else:
 #                        if msgid != '""' and msgstr == '""':
 #                            untranslated += 1
-            outfile.write('\n'.join(comments) + '\n')
-            outfile.write('msgid ' + msgid + '\n')
-            outfile.write('msgstr ' + msgstr + '\n\n')
-        if msgid != '""' and msgstr == '""':
+            outfile.write(write_msg(comments, msgid, msgstr))
+        if msgid != '""' and (msgstr == '""' or msgstr == ('""', '""')):
             untranslated += 1
     
     _len = len(source)
@@ -126,14 +150,13 @@ def merge(file1, file2):
         string_count += _len
         for msgid, _v in source.iteritems():
             msgstr, comments = _v
-            outfile.write('\n'.join(comments) + '\n')
-            outfile.write('msgid ' + msgid + '\n')
-            outfile.write('msgstr ' + msgstr + '\n')
+            outfile.write(write_msg(comments, msgid, msgstr))
             
             if msgid != '""' and msgstr == '""':
                 untranslated += 1
 
     f1.close()
+    outfile.close()
     # We're done.  Tell the user what we did.
     if string_count == 0:
         print '0 strings updated.'
