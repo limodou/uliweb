@@ -4,6 +4,8 @@ from uliweb.i18n import ungettext, ugettext
 
 def timesince(d, now=None, pos=True, flag=False):
     """
+    pos means calculate which direction, pos = True, now - d, pos = False, d - now
+    flag means return value type, True will return since, message and Flase return message
     >>> d = datetime.datetime(2009, 10, 1, 12, 23, 19)
     >>> now = datetime.datetime(2009, 10, 1, 12, 24, 19)
     >>> timesince(d, now, True)
@@ -55,7 +57,7 @@ def timesince(d, now=None, pos=True, flag=False):
         count2 = (since - (seconds * count)) // seconds2
         if count2 != 0:
             s += (', %(number)d %(type)s') % {'number': count2, 'type': name2(count2)}
-    #if flag==True, then return twe elements (since, message0 
+    #if flag==True, then return twe elements (since, message) 
     if flag:
         return oldsince, s + suffix
     else:
