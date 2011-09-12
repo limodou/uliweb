@@ -20,6 +20,11 @@ def timesince(d, now=None, pos=True, flag=False):
     >>> timesince(d, now, True)
     u'2 days ago'
     """
+    if not d:
+        if flag:
+            return 0, ''
+        else:
+            return ''
     chunks = (
       (60 * 60 * 24 * 365, lambda n: ungettext('year', 'years', n)),
       (60 * 60 * 24 * 30, lambda n: ungettext('month', 'months', n)),
