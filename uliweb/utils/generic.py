@@ -4,7 +4,8 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField, StringField
 import os, sys
 import time
-from uliweb.orm import get_model, Model
+from uliweb.orm import get_model, Model, Result
+import uliweb.orm as orm
 from uliweb import function, redirect, json
 from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
@@ -169,7 +170,6 @@ def to_json_result(success, msg='', d=None, **kwargs):
     return json(t)
     
 def make_form_field(field, model, field_cls=None, builds_args_map=None):
-    import uliweb.orm as orm
     import uliweb.form as form
     
     field_type = None
@@ -266,8 +266,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     
         return f
 
-def make_view_field(field, obj, types_convert_map=None, fields_convert_map=None, value=__default_value__):
-    import uliweb.orm as orm
+def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=None, value=__default_value__):
     from uliweb.utils.textconvert import text2html
     from uliweb.core.html import Tag
     from uliweb import settings
@@ -389,7 +388,8 @@ class AddView(object):
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None, file_replace=True, template_data=None, 
-        success_data=None, meta='AddForm', get_form_field=None, post_fail=None):
+        success_data=None, meta='AddForm', get_form_field=None, post_fail=None,
+        types_convert_map=None, fields_convert_map=None):
 
         self.model = get_model(model)
         self.meta = meta
@@ -417,6 +417,8 @@ class AddView(object):
         self.post_fail = post_fail
         self.file_replace = file_replace
         self.success_data = success_data
+        self.types_convert_map = types_convert_map
+        self.fields_convert_map = fields_convert_map
         self.form = self.make_form(form)
         
     def get_fields(self):
@@ -436,6 +438,16 @@ class AddView(object):
             m = getattr(self.model, self.meta)
             if hasattr(m, 'layout'):
                 return getattr(m, 'layout')
+            
+    def prepare_static_data(self, data):
+        """
+        If user defined static fields, then process them with visiable value
+        """
+        d = data.copy()
+        for f in self.get_fields():
+            if f['static'] and f['name'] in d:
+                d[f['name']] = make_view_field(f, None, self.types_convert_map, self.fields_convert_map, d[f['name']])['display']
+        return d
     
     def make_form(self, form):
         from uliweb.form import Form, Submit
@@ -471,17 +483,17 @@ class AddView(object):
         if self.post_created_form:
             self.post_created_form(DummyForm, self.model)
             
-        return DummyForm(data=self.data, **self.form_args)
+        data = self.prepare_static_data(self.data)
+        return DummyForm(data=data, **self.form_args)
     
     def process_files(self, data):
-        from uliweb.orm import FileProperty
         from uliweb.contrib.upload import save_file
         
         flag = False
     
         fields_list = self.get_fields()
         for f in fields_list:
-            if isinstance(f['prop'], FileProperty):
+            if isinstance(f['prop'], orm.FileProperty):
                 if f['name'] in data and data[f['name']]:
                     fobj = data[f['name']]
                     data[f['name']] = save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
@@ -678,7 +690,6 @@ class EditView(AddView):
         return self.model.get(self.condition)
     
     def make_form(self, form):
-        import uliweb.orm as orm
         from uliweb.form import Form, Submit
         
         if form:
@@ -731,7 +742,11 @@ class EditView(AddView):
         if self.post_created_form:
             self.post_created_form(DummyForm, self.model, self.obj)
           
-        return DummyForm(data=data, **self.form_args)
+        
+        d = self.prepare_static_data(data)
+        
+        print 'xxxxxxxxxxxxxx', d
+        return DummyForm(data=d, **self.form_args)
 
 from uliweb.core import uaml
 from uliweb.core.html import begin_tag, end_tag, u_str
@@ -1188,7 +1203,6 @@ class SimpleListView(object):
             return self.download_csv(filename, query, table, inline, download, fields_convert_map)
        
     def get_data(self, query, table, fields_convert_map, encoding='utf-8'):
-        from uliweb.orm import Model
         from uliweb.utils.common import safe_unicode
 
         fields_convert_map = fields_convert_map or {}
@@ -1198,7 +1212,7 @@ class SimpleListView(object):
             if isinstance(record, dict):
                 for x in table['fields']:
                     row.append(record[x]) 
-            elif isinstance(record, Model):
+            elif isinstance(record, orm.Model):
                 row = []
                 for x in table['fields']:
                     if hasattr(record, x):
@@ -1248,7 +1262,6 @@ class SimpleListView(object):
         from uliweb.utils.filedown import filedown
         from uliweb import request, settings
         from uliweb.utils.common import simple_value, safe_unicode
-        from uliweb.orm import Model
         import tempfile
         import csv
         
@@ -1591,8 +1604,6 @@ class ListView(SimpleListView):
         return result
     
     def query(self):
-        import uliweb.orm as orm
-        
         if self._query is None or isinstance(self._query, (orm.Result, Select)): #query result
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
@@ -1710,7 +1721,7 @@ class ListView(SimpleListView):
         """
         if self._query is not None:
             query = self._query
-            if condition is not None and isinstance(query, orm.Result):
+            if condition is not None and isinstance(query, Result):
                 query = query.filter(condition)
         else:
             query = model.filter(condition)
@@ -1824,16 +1835,14 @@ class QueryView(object):
                 return getattr(m, 'layout')
     
     def make_form(self):
-        import uliweb.orm as orm
         import uliweb.form as form
-        from uliweb import request
         from uliweb.form.layout import QueryLayout
         
         if self.form:
             return self.form
         
         if isinstance(self.model, str):
-            self.model = orm.get_model(self.model)
+            self.model = get_model(self.model)
             
         if self.form_cls:
             class DummyForm(self.form_cls):pass

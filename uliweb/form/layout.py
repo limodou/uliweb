@@ -19,9 +19,10 @@ def min_times(num):
     return reduce(_f, num)
 
 class Layout(object):
-    def __init__(self, form, layout=None):
+    def __init__(self, form, layout=None, **kwargs):
         self.form = form
         self.layout = layout
+        self.kwargs = kwargs
         
     def html(self):
         return ''
@@ -44,6 +45,11 @@ class TableLayout(Layout):
         ('Radio', 'Checkbox'):'type-check',
         }
     
+    def __init__(self, form, layout=None, label_fix=False):
+        self.form = form
+        self.layout = layout
+        self.label_fix = label_fix
+
     def get_class(self, f):
         name = f.build.__name__
         _class = 'type-text'
@@ -88,7 +94,10 @@ class TableLayout(Layout):
                             tr << f.label
                             tr << f.help_string or '&nbsp;'
                         else:
-                            tr << f.label
+                            if self.label_fix:
+                                tr << f.field.get_label(_class='field label_fix')
+                            else:
+                                tr << f.label
                             tr << f
                             tr << f.help_string or '&nbsp;'
                 
@@ -101,12 +110,10 @@ class TableLayout(Layout):
         return tr
 
     def buttons_line(self, buttons, n):
-        tr = Tag('tr', align='center', _class="buttons")
-        with tr:
-            with tr.td(colspan=n, align='left'):
-                tr << Tag('label', '&nbsp;', _class='field')
-                tr << buttons
-        return tr
+        div = Tag('div', _class="type-button")
+        with div:
+            div << buttons
+        return div
         
     def html(self):
         if 'tform' not in self.form.html_attrs['_class']:
@@ -152,7 +159,7 @@ class TableLayout(Layout):
                     
                     buf << '<table class="%s"><tbody>' % cls
                     table = True
-                    first = True
+                    first = False
                     continue
                 else:
                     fields = [fields]
@@ -162,13 +169,13 @@ class TableLayout(Layout):
                 table = True
             buf << self.line(fields, n)
             
-        buf << self.buttons_line(self.form.get_buttons(), n)
-        
         #close the tags
         if table:
             buf << '</tbody></table>'
         if fieldset:
             buf << '</fieldset>'
+        
+        buf << self.buttons_line(self.form.get_buttons(), n)
         
         buf << self.form.form_end
         return str(buf)

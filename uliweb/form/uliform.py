@@ -13,6 +13,7 @@ DEFAULT_FORM_CLASS = 'form'
 REQUIRED_CAPTION = '*'
 REQUIRED_CAPTION_AFTER = True
 DEFAULT_ENCODING = 'utf-8'
+DEFAULT_LABEL_DELIMETER = ':'
 
 class ReservedWordError(Exception):pass
 
@@ -162,6 +163,8 @@ class BaseField(object):
             label = self.label
         if not label:
             return ''
+        if DEFAULT_LABEL_DELIMETER:
+            label += DEFAULT_LABEL_DELIMETER
         if self.required:
             if REQUIRED_CAPTION_AFTER:
                 label += str(Tag('span', REQUIRED_CAPTION, _class='field_required'))
@@ -849,6 +852,7 @@ class Form(object):
 
     layout_class = YamlLayout
     layout = None
+    layout_class_args = {}
     fieldset = False
     form_action = ''
     form_method = 'POST'
@@ -998,7 +1002,7 @@ class Form(object):
         if hasattr(self, 'pre_html'):
             result.append(self.pre_html())
         cls = self.layout_class
-        layout = cls(self, self.layout)
+        layout = cls(self, self.layout, **self.layout_class_args)
         result.append(str(layout))
         if hasattr(self, 'post_html'):
             result.append(self.post_html())

@@ -16,165 +16,126 @@ msgstr ""
 "X-Poedit-Language: Chinese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:7
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:8
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:7
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:8
 msgid "Register"
 msgstr "注册"
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:10
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:32
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:10
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:32
 msgid "Username:"
 msgstr "用户名："
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:11
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:33
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:55
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:11
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:33
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:55
 msgid "Password:"
 msgstr "密码："
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:12
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:56
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:12
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:56
 msgid "Password again:"
 msgstr "再次输入密码："
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:26
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:26
 msgid "Passwords are not match."
 msgstr "密码不一致。"
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:29
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:30
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\views.py:9
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:29
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:30
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:9
 msgid "Login"
 msgstr "登录"
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:34
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:34
 msgid "Remember Me"
 msgstr "记住我"
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:48
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:61
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:48
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:61
 msgid "Password is not right."
 msgstr "密码不正确。"
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:51
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:459
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:463
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:51
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:690
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:694
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:701
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:705
 msgid "Save"
 msgstr "保存"
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:52
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:52
 msgid "Change Password"
 msgstr "修改密码"
 
-#: d:\project\mywork\uliweb\uliweb\contrib\auth\forms.py:54
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:54
 msgid "Old Password:"
 msgstr "旧密码："
 
-#: d:\project\mywork\uliweb\uliweb\contrib\i18n\__init__.py:6
 #: d:\project\mywork\uliweb-git\uliweb\contrib\i18n\__init__.py:6
 msgid "English"
 msgstr "英语"
 
-#: d:\project\mywork\uliweb\uliweb\contrib\i18n\__init__.py:7
 #: d:\project\mywork\uliweb-git\uliweb\contrib\i18n\__init__.py:7
 msgid "Simplified Chinese"
 msgstr "简体中文"
 
-#: d:\project\mywork\uliweb\uliweb\form\uliform.py:235
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:235
+#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:238
 msgid "This field is required."
 msgstr "这个字段是必输项。"
 
-#: d:\project\mywork\uliweb\uliweb\form\uliform.py:688
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:705
+#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:708
 msgid "The date is not a valid date format."
 msgstr "日期不是一个有效的日期格式。"
 
-#: d:\project\mywork\uliweb\uliweb\form\uliform.py:738
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:756
+#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:759
 msgid "The time is not a valid time format."
 msgstr "时间不是一个有效的时间格式。"
 
-#: d:\project\mywork\uliweb\uliweb\form\uliform.py:787
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:806
+#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:809
 msgid "The datetime is not a valid datetime format."
 msgstr "日期时间不是一个有效的日期时间格式。"
 
-#: d:\project\mywork\uliweb\uliweb\form\validators.py:23
 #: d:\project\mywork\uliweb-git\uliweb\form\validators.py:16
 msgid "Choices need a dict, tuple or list data."
 msgstr "Choices需要一个dict,tuple或list数据。"
 
-#: d:\project\mywork\uliweb\uliweb\form\validators.py:32
 #: d:\project\mywork\uliweb-git\uliweb\form\validators.py:25
 msgid "Select a valid choice. That choice is not one of the available choices."
 msgstr "请选择一个有效的选项。所选项不是一个有效的选项。"
 
-#: d:\project\mywork\uliweb\uliweb\form\validators.py:43
 #: d:\project\mywork\uliweb-git\uliweb\form\validators.py:36
 msgid "The image file size exceeds the limit."
 msgstr "图片文件大小超出限制。"
 
-#: d:\project\mywork\uliweb\uliweb\form\validators.py:45
 #: d:\project\mywork\uliweb-git\uliweb\form\validators.py:38
 msgid "The file is not a valid image."
 msgstr "文件不是一个有效的图片。"
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:240
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:378
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:384
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:579
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1775
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:383
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:591
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1786
 msgid "The information has been saved successfully!"
 msgstr "信息已经被正确保存。"
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:241
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:379
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:385
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:580
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1776
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:384
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:592
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1787
 msgid "There are somethings wrong."
 msgstr "存在错误。"
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:306
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:310
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:449
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:453
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:461
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:465
 msgid "Create"
 msgstr "创建"
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:419
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:627
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:639
 msgid "The object has not been changed."
 msgstr "对象没有修改。"
 
-#: d:\project\mywork\uliweb\uliweb\utils\generic.py:595
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:934
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:949
 msgid "The object has been deleted successfully!"
 msgstr "对象已经被成功删除！"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1031
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1046
 msgid "Total"
 msgstr "合计"
 
@@ -194,8 +155,8 @@ msgstr "头像"
 msgid "Active Status"
 msgstr "活动状态"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1841
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1852
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1850
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1861
 msgid "Query"
 msgstr "查询"
 
@@ -215,19 +176,21 @@ msgstr "超级用户"
 msgid "Lock Status"
 msgstr "锁状态"
 
+
 msgid "Join Date"
 msgstr "加入日期"
 
-#: d:\project\mywork\uliweb-git\uliweb\form\layout.py:267
+#: d:\project\mywork\uliweb-git\uliweb\form\layout.py:274
 msgid "more"
 msgstr "更多条件"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:26
+#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:33
 msgid "hour"
 msgid_plural "hours"
 msgstr[0] "小时"
+msgstr[1] ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:42
+#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:49
 msgid " ago"
 msgstr " 之前"
 
@@ -235,33 +198,37 @@ msgstr " 之前"
 msgid "You have no permissions to visit this page."
 msgstr "你没有相应的权限来访问此页面。"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:44
+#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:51
 msgid " later"
 msgstr " 之后"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:25
+#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:32
 msgid "day"
 msgid_plural "days"
 msgstr[0] "天"
+msgstr[1] ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\rbac.py:109
 msgid "You have no roles to visit this page."
 msgstr "你没有相应的角色来访问此页面。"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:27
+#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:34
 msgid "minute"
 msgid_plural "minutes"
 msgstr[0] "分钟"
+msgstr[1] ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:23
+#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:30
 msgid "month"
 msgid_plural "months"
 msgstr[0] "月"
+msgstr[1] ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:22
+#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:29
 msgid "year"
 msgid_plural "years"
 msgstr[0] "年"
+msgstr[1] ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\settings.ini:7
 msgid "Super User"
@@ -275,10 +242,11 @@ msgstr "加入时间"
 msgid "Trusted User"
 msgstr "可信用户"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:24
+#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:31
 msgid "week"
 msgid_plural "weeks"
 msgstr[0] "周"
+msgstr[1] ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\settings.ini:8
 msgid "Anonymous User"
