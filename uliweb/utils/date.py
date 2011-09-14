@@ -1,18 +1,12 @@
 import time
-import datetime
-
-pytz = None
-
-def use_tz():
-    global pytz
-    
-    try:
-        import pytz
-    except:
-        pytz = None
+from datetime import tzinfo, timedelta, datetime, date, time as time_
+from sorteddict import SortedDict
 
 __timezone__ = None
 __local_timezone__ = None
+__timezones__ = SortedDict()
+
+class DateError(Exception):pass
 
 DEFAULT_DATETIME_INPUT_FORMATS = (
     '%Y-%m-%d %H:%M:%S',     # '2006-10-25 14:30:59'
@@ -31,45 +25,99 @@ DEFAULT_DATETIME_INPUT_FORMATS = (
     '%H:%M',                 # '14:30'
 )
 
+ZERO = timedelta(0)
+
+class UTCTimeZone(tzinfo):
+    """UTC"""
+
+    def utcoffset(self, dt):
+        return ZERO
+
+    def tzname(self, dt):
+        return "UTC"
+
+    def dst(self, dt):
+        return ZERO
+    
+    def __repr__(self):
+        return '<tzinfo UTC>'
+
+UTC = UTCTimeZone()
+
+class FixedOffset(tzinfo):
+    """Fixed offset in minutes east from UTC."""
+
+    def __init__(self, offset, name):
+        self.__offset = timedelta(minutes = offset)
+        self.__name = name
+
+    def utcoffset(self, dt):
+        return self.__offset
+
+    def tzname(self, dt):
+        return self.__name
+
+    def dst(self, dt):
+        return ZERO
+    
+    def __repr__(self):
+        return "<tzinfo %s>" % self.__name
+    
+for i in range(-12, 13):
+    if i == 0:
+        continue
+    if i>0:
+        k = 'GMT +%d' % i
+    else:
+        k = 'GMT %d' % i
+    __timezones__[k] = FixedOffset(i*60, k)
+    
+__timezones__['UTC'] = UTC
+
 def set_timezone(tz):
     global __timezone__
     __timezone__ = timezone(tz)
     
-def get_default_timezone():
+def get_timezone():
     return __timezone__
 
 def set_local_timezone(tz):
     global __local_timezone__
     __local_timezone__ = timezone(tz)
     
-def get_default_local_timezone():
+def get_local_timezone():
     return __local_timezone__
 
+def get_timezones():
+    return __timezones__
+
+def register_timezone(name, tz):
+    __timezones__[name] = tz
+    
 def timezone(tzname):
     if not tzname:
         return None
+    
     if isinstance(tzname, (str, unicode)):
-        if pytz:
-            return pytz.timezone(tzname)
-        else:
-            #not pytz module imported, so just return None
-            return None
-    else:
+        #not pytz module imported, so just return None
+        tz = __timezones__.get(tzname, None)
+        if not tz:
+            raise DateError, "Can't find tzname %s" % tzname
+        return tz
+    elif isinstance(tzname, tzinfo):
         return tzname
+    else:
+        raise DateError, "Unsupported tzname %r type" % tzname
     
 def pick_timezone(*args):
-    """
-    >>> pick_timezone(None, 'Asia/Shanghai', None)
-    <DstTzInfo 'Asia/Shanghai' LMT+8:06:00 STD>
-    """
     for x in args:
         tz = timezone(x)
         if tz:
             return tz
     
 def now(tzinfo=None):
-    tz = pick_timezone(tzinfo, __local_timezone__, __timezone__)
-    return datetime.datetime.now(tz)
+    tz = pick_timezone(tzinfo, __timezone__)
+    return datetime.now(tz)
 
 def today(tzinfo=None):
     d = now(tzinfo)
@@ -79,33 +127,44 @@ def to_timezone(dt, tzinfo=None):
     """
     Convert a datetime to timezone
     """
+    if not dt:
+        return dt
     tz = pick_timezone(tzinfo, __timezone__)
     if not tz:
         return dt
     dttz = getattr(dt, 'tzinfo', None)
     if not dttz:
-        return tz.localize(dt)
+        return dt.replace(tzinfo=tz)
     else:
         return dt.astimezone(tz)
     
-def to_date(dt, tzinfo=None):
+def to_date(dt, tzinfo=None, format=None):
     """
     Convert a datetime to date with tzinfo
     """
-    d = to_timezone(dt, tzinfo)
-    return datetime.date(d.year, d.month, d.day)
+    d = to_datetime(dt, tzinfo, format)
+    if not d:
+        return d
+    return date(d.year, d.month, d.day)
 
-def to_time(dt, tzinfo=None):
+def to_time(dt, tzinfo=None, format=None):
     """
     Convert a datetime to time with tzinfo
     """
-    d = to_timezone(dt, tzinfo)
-    return datetime.time(d.hour, d.minute, d.second, d.microsecond, tzinfo=d.tzinfo)
+    d = to_datetime(dt, tzinfo, format)
+    if not d:
+        return d
+    return time_(d.hour, d.minute, d.second, d.microsecond, tzinfo=d.tzinfo)
 
 def to_datetime(dt, tzinfo=None, format=None):
     """
     Convert a date or time to datetime with tzinfo
     """
+    if not dt:
+        return dt
+    
+    tz = pick_timezone(tzinfo, __timezone__)
+    
     if isinstance(dt, (str, unicode)):
         if not format:
             formats = DEFAULT_DATETIME_INPUT_FORMATS
@@ -114,53 +173,40 @@ def to_datetime(dt, tzinfo=None, format=None):
         d = None
         for fmt in formats:
             try:
-                d = datetime.datetime(*time.strptime(dt, fmt)[:6])
+                d = datetime(*time.strptime(dt, fmt)[:6])
             except ValueError:
                 continue
         if not d:
             return None
+        d = d.replace(tzinfo=tz)
     else:
-        d = datetime.datetime(getattr(dt, 'year', 1970), getattr(dt, 'month', 1),
+        d = datetime(getattr(dt, 'year', 1970), getattr(dt, 'month', 1),
             getattr(dt, 'day', 1), getattr(dt, 'hour', 0), getattr(dt, 'minute', 0),
             getattr(dt, 'second', 0), getattr(dt, 'microsecond', 0))
-        if getattr(dt, 'tzinfo', None):
-            d = dt.tzinfo.localize(d)
+        if not getattr(dt, 'tzinfo', None):
+            d = d.replace(tzinfo=tz)
+        else:
+            d = d.replace(tzinfo=dt.tzinfo)
     return to_timezone(d, tzinfo)
 
-def __test():
-    """
-    >>> d = datetime.datetime(2009, 1, 2, 3, 4, 5)
-    >>> tzname = 'Asia/Shanghai'
-    >>> timezone(tzname)
-    <DstTzInfo 'Asia/Shanghai' LMT+8:06:00 STD>
-    >>> t = to_timezone(d, tzname)
-    >>> t
-    datetime.datetime(2009, 1, 2, 3, 4, 5, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
-    >>> x = to_timezone(t, 'UTC')
-    >>> x
-    datetime.datetime(2009, 1, 1, 19, 4, 5, tzinfo=<UTC>)
-    >>> to_date(t, tzname)
-    datetime.date(2009, 1, 2)
-    >>> to_date(t, 'UTC')
-    datetime.date(2009, 1, 1)
-    >>> to_time(t, tzname)
-    datetime.time(3, 4, 5, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
-    >>> to_time(t, 'UTC')
-    datetime.time(19, 4, 5, tzinfo=<UTC>)
-    >>> p = to_datetime(x)
-    >>> p
-    datetime.datetime(2009, 1, 1, 19, 4, 5, tzinfo=<UTC>)
-    >>> to_datetime(x, tzname)
-    datetime.datetime(2009, 1, 2, 3, 4, 5, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
-    >>> to_datetime('2009-1-2 3:4:5', tzname)
-    datetime.datetime(2009, 1, 2, 3, 4, 5, tzinfo=<DstTzInfo 'Asia/Shanghai' CST+8:00:00 STD>)
-    """
+def to_local(dt, tzinfo=None):
+    tz = pick_timezone(tzinfo, __local_timezone__)
+    return to_datetime(dt, tzinfo=tz)
+
+def to_string(dt):
+    if isinstance(dt, datetime):
+        return dt.strftime('%Y-%m-%d %H:%M:%S %Z')
+    elif isinstance(dt, date):
+        return dt.strftime('%Y-%m-%d')
+    elif isinstance(dt, time_):
+        return dt.strftime('%H:%M:%S')
     
 #if __name__ == '__main__':
-#    d = datetime.datetime(2009, 1, 2, 3, 4, 5)
-#    tzname = 'Asia/Shanghai'
-#    t = to_timezone(d, tzname)
-#    print '1', repr(t), t.tzinfo
-#    print '2', repr(t.astimezone(pytz.utc))
-#    print '3', repr(to_timezone(t, tzname))
-#    print '4', repr(t.astimezone(pytz.utc))
+#    GMT8 = timezone('GMT +8')
+#    d = to_datetime('2011-9-13 20:14:15', tzinfo=GMT8)
+#    print repr(d)
+#    set_timezone(UTC)
+#    print repr(to_datetime(d))
+#    set_local_timezone('GMT +8')
+#    print get_local_timezone()
+#    print repr(to_local(d))

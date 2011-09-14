@@ -38,8 +38,6 @@ Local = threading.local()
 Local.dispatch_send = True
 Local.conn = None
 
-now = date.now
-
 _default_metadata = MetaData()
 
 class Error(Exception):pass
@@ -449,7 +447,7 @@ class Property(object):
 #                            c.append(choice)
 #                    raise BadValueError('Property %s is %r; must be one of %r' %
 #                        (self.name, value, c))
-        if (value is not None) and self.data_type and (not isinstance(value, self.data_type)):
+        if value is not None:
             try:
                 value = self.convert(value)
             except TypeError, err:
@@ -470,7 +468,10 @@ class Property(object):
         return value
     
     def convert(self, value):
-        return self.data_type(value)
+        if self.data_type and not isinstance(value, self.data_type):
+            return self.data_type(value)
+        else:
+            return value
     
     def __repr__(self):
         return ("<%s 'type':%r, 'verbose_name':%r, 'name':%r, " 
@@ -560,6 +561,9 @@ class BlobProperty(StringProperty):
     def get_display_value(self, value):
         return repr(value)
     
+    def convert(self, value):
+        return value
+    
 class PickleProperty(BlobProperty):
     field_class = PickleType
     data_type = None
@@ -593,9 +597,11 @@ class DateTimeProperty(Property):
     
     @staticmethod
     def now():
-        return now()
+        return date.now()
 
     def convert(self, value):
+        if not value:
+            return None
         d = date.to_datetime(value, format=self.format)
         if d:
             return d
@@ -612,36 +618,32 @@ class DateTimeProperty(Property):
             return unicode(v.strftime(u'%Y-%m-%d %H:%M:%S'))
         else:
             return unicode(v)
-    
+
 class DateProperty(DateTimeProperty):
     data_type = datetime.date
     field_class = Date
     
-    def validate(self, value):
-        value = super(DateProperty, self).validate(value)
-        if value:
-            return date.to_date(value)
-        return value
-    
+    #if the value is datetime.datetime, this convert will not be invoked at all
+    #Todo: so if I need to fix it?
+    #this is fixed by call date.to_date(value) in validate() method
+#    def validate(self, value):
+#        value = super(DateProperty, self).validate(value)
+#        if value:
+#            return date.to_date(value)
+#        return value
+
     def make_value_from_datastore(self, value):
         if value is not None:
             value = date.to_date(value)
         return value
 
-    #if the value is datetime.datetime, this convert will not be invoked at all
-    #Todo: so if I need to fix it?
-    #this is fixed by call date.to_date(value) in validate() method
     def convert(self, value):
-        assert isinstance(value, (str, unicode, datetime.datetime)), \
-            'The value of DataProperty should be str, unicode, or datetime.datetime type.'\
-            'But it is %s' % type(value).__name__
-        if isinstance(value, datetime.datetime):
-            return date.to_date(value)
-        else:
-            d = date.to_datetime(value)
-            if d:
-                return date.to_date(d)
-            raise BadValueError('The date value is not a valid format')
+        if not value:
+            return None
+        d = date.to_date(value, format=self.format)
+        if d:
+            return d
+        raise BadValueError('The date value is not a valid format')
     
     def to_str(self, v):
         if isinstance(v, datetime.date):
@@ -667,16 +669,12 @@ class TimeProperty(DateTimeProperty):
         return value
 
     def convert(self, value):
-        assert isinstance(value, (str, unicode, datetime.datetime)), \
-            'The value of DataProperty should be str, unicode, or datetime.datetime type.'\
-            'But it is %s' % type(value).__name__
-        if isinstance(value, datetime.datetime):
-            return date.to_time(value)
-        else:
-            d = date.to_datetime(value)
-            if d:
-                return date.to_time(d)
-            raise BadValueError('The time value is not a valid format')
+        if not value:
+            return None
+        d = date.to_time(value, format=self.format)
+        if d:
+            return d
+        raise BadValueError('The time value is not a valid format')
     
     def to_str(self, v):
         if isinstance(v, datetime.time):
@@ -689,7 +687,7 @@ class TimeProperty(DateTimeProperty):
             return unicode(v.strftime('%H:%M:%S'))
         else:
             return unicode(v)
-    
+
 class IntegerProperty(Property):
     """An integer property."""
 
@@ -1725,6 +1723,8 @@ class Model(object):
                     x = v.get_value_for_datastore(self)
                     #todo If need to support ManyToMany and Reference except id field?
                     if isinstance(x, Model):
+                        
+                        \
                         x = x.id
                 else:
                     x = v.get_value_for_datastore(self, cached=True)

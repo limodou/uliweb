@@ -45,6 +45,9 @@ def test_1():
     >>> Test.remove(Test.c.id==2)
     >>> Test.count()
     0
+    >>> a = Test(username='tttt')
+    >>> a.save()
+    True
     """
     
 #testing model alter one the fly
@@ -345,6 +348,7 @@ def test_datetime_property():
     ...     date3 = TimeProperty()
     >>> a = Test()
     >>> #test common datetime object
+    >>> a.date1 = None
     >>> a.date1=datetime.datetime(2009,1,1,14,0,5)
     >>> a.date2=datetime.date(2009,1,1)
     >>> a.date3=datetime.time(14,0,5)
@@ -1075,21 +1079,17 @@ def test_pickle():
     """
     
 #if __name__ == '__main__':
-#    set_debug_query(True)
-#    db = get_connection('mysql://root:limodou@localhost/test')
+#    db = get_connection('sqlite://')
 #    db.metadata.drop_all()
 #    class Test(Model):
-#        f = FloatProperty()
-#    print Test.f.precision
-#    class Test1(Model):
-#        f = FloatProperty(precision=6)
-#    print Test1.f.precision
-#    class Test2(Model):
-#        f = FloatProperty(max_length=5)
-#    print Test2.f.precision
-#    a = Test2(f=23.123456789).save()
-#    print a
-#    print Test2.get(1)
+#        date1 = DateTimeProperty()
+#        date2 = DateProperty()
+#        date3 = TimeProperty()
+#    a = Test()
+#    #test common datetime object
+#    a.date1 = None
+#    a.date1 = datetime.datetime(2009,1,1,14,0,5)
+#    
     
     
     
