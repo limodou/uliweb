@@ -67,9 +67,9 @@ for i in range(-12, 13):
     if i == 0:
         continue
     if i>0:
-        k = 'GMT +%d' % i
+        k = 'GMT+%d' % i
     else:
-        k = 'GMT %d' % i
+        k = 'GMT%d' % i
     __timezones__[k] = FixedOffset(i*60, k)
     
 __timezones__['UTC'] = UTC
