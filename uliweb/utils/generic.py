@@ -1,7 +1,7 @@
 #coding=utf-8
 from __future__ import with_statement
 from uliweb.i18n import gettext_lazy as _
-from uliweb.form import SelectField, BaseField, StringField
+from uliweb.form import SelectField, BaseField
 import os, sys
 import time
 from uliweb.orm import get_model, Model, Result
@@ -107,14 +107,14 @@ class ManyToManySelectField(ReferenceSelectField):
             html_attrs=html_attrs, help_string=help_string, build=build, 
             empty=None, multiple=True, **kwargs)
             
-class RemoteField(StringField):
+class RemoteField(BaseField):
     """
     Fetch remote data
     """
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, alt='', url='', **kwargs):
         _attrs = {'url':url, 'alt':alt, '_class':'rselect'}
         _attrs.update(html_attrs or {})
-        StringField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=_attrs, help_string=help_string, build=build, **kwargs)
+        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=_attrs, help_string=help_string, build=build, **kwargs)
             
 def get_fields(model, fields, meta):
     if fields is not None:
@@ -483,8 +483,7 @@ class AddView(object):
         if self.post_created_form:
             self.post_created_form(DummyForm, self.model)
             
-        data = self.prepare_static_data(self.data)
-        return DummyForm(data=data, **self.form_args)
+        return DummyForm(data=self.data, **self.form_args)
     
     def process_files(self, data):
         from uliweb.contrib.upload import save_file
@@ -559,6 +558,8 @@ class AddView(object):
             return self.on_success(d, json_result)
         else:
             d = self.template_data.copy()
+            data = self.prepare_static_data(self.form.data)
+            self.form.bind(data)
             d.update({'form':self.form})
             if self.post_fail:
                 self.post_fail(d)
@@ -570,6 +571,8 @@ class AddView(object):
         if request.method == 'POST':
             return self.execute(json_result)
         else:
+            data = self.prepare_static_data(self.form.data)
+            self.form.bind(data)
             return self.display(json_result)
         
     def save(self, data):
@@ -617,6 +620,10 @@ class EditView(AddView):
             return self.on_success(d, json_result)
         else:
             d = self.template_data.copy()
+            
+            new_d = self.prepare_static_data(self.form.data)
+            self.form.bind(new_d)
+            
             d.update({'form':self.form, 'object':self.obj})
             if self.post_fail:
                 self.post_fail(d, self.obj)
@@ -664,6 +671,8 @@ class EditView(AddView):
         if request.method == 'POST':
             return self.execute(json_result)
         else:
+            d = self.prepare_static_data(self.form.data)
+            self.form.bind(d)
             return self.display(json_result)
         
     def save(self, obj, data):
@@ -741,12 +750,8 @@ class EditView(AddView):
         
         if self.post_created_form:
             self.post_created_form(DummyForm, self.model, self.obj)
-          
         
-        d = self.prepare_static_data(data)
-        
-        print 'xxxxxxxxxxxxxx', d
-        return DummyForm(data=d, **self.form_args)
+        return DummyForm(data=data, **self.form_args)
 
 from uliweb.core import uaml
 from uliweb.core.html import begin_tag, end_tag, u_str
