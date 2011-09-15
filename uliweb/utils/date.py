@@ -1,4 +1,4 @@
-import time
+import time, re
 from datetime import tzinfo, timedelta, datetime, date, time as time_
 from sorteddict import SortedDict
 
@@ -73,6 +73,20 @@ for i in range(-12, 13):
     __timezones__[k] = FixedOffset(i*60, k)
     
 __timezones__['UTC'] = UTC
+re_timezone = re.compile(r'GMT\s?([+-]?)(\d+)', re.IGNORECASE)
+
+def fix_gmt_timezone(tz):
+    if isinstance(tz, (str, unicode)):
+        b = re_timezone.match(tz)
+        if b:
+            n = b.group(2)
+            if n == '0':
+                return 'UTC'
+            sign = b.group(1)
+            if not sign:
+                sign = '+'
+            return 'GMT ' + sign + n
+    return tz
 
 def set_timezone(tz):
     global __timezone__
@@ -100,6 +114,7 @@ def timezone(tzname):
     
     if isinstance(tzname, (str, unicode)):
         #not pytz module imported, so just return None
+        tzname = fix_gmt_timezone(tzname)
         tz = __timezones__.get(tzname, None)
         if not tz:
             raise DateError, "Can't find tzname %s" % tzname

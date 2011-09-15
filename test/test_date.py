@@ -47,4 +47,18 @@ def test():
     >>> date.set_local_timezone('GMT +8')
     >>> date.to_local(d)
     datetime.datetime(2011, 9, 13, 20, 14, 15, tzinfo=<tzinfo GMT +8>)
+    >>> date.fix_gmt_timezone('GMT8')
+    'GMT +8'
+    >>> date.fix_gmt_timezone('GMT-8')
+    'GMT -8'
+    >>> date.fix_gmt_timezone('GMT+8')
+    'GMT +8'
+    >>> date.fix_gmt_timezone('gmt -8')
+    'GMT -8'
+    >>> date.fix_gmt_timezone('gmt -0')
+    'UTC'
+    >>> date.fix_gmt_timezone('asia/shanghai')
+    'asia/shanghai'
+    >>> date.timezone('gmt8')
+    <tzinfo GMT +8>
     """
