@@ -86,7 +86,7 @@ class TableLayout(Layout):
                     _class = _class + ' error'
                 
                 with tr.td(colspan=_span, width='%d%%' % (100*_span/n,), valign='top'):
-                    with tr.div(_class=_class):
+                    with tr.div(_class=_class, id='div_'+obj.id):
                         if f.error:
                             tr.strong(f.error, _class="message")
                         if self.get_widget_name(obj) == 'Checkbox':
@@ -348,7 +348,7 @@ class YamlLayout(Layout):
             fs << input
             return fs
         else:
-            div = Tag('div', _class=_class)
+            div = Tag('div', _class=_class, id='div_'+obj.id)
             with div:
                 if error:
                     div.strong(error, _class="message")

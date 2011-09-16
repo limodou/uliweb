@@ -4,7 +4,6 @@
 # Known smtp server: smtp.gmail.com, 587
 #######################################
 import os
-import smtplib
 import mimetypes
 import email
 from email.MIMEMultipart import MIMEMultipart
@@ -50,7 +49,7 @@ class EmailMessage(object):
             content_type = 'plain'
         msg.attach(MIMEText(self.message, content_type, self.encoding))
         
-        for f in attachments:
+        for f in self.attachments:
             msg.attach(self.getAttachment(f))
             
     def attach(self, filename):
@@ -84,21 +83,28 @@ class EmailMessage(object):
         return self.msg.as_string()
         
 class Mail(object):
-    def __init__(self):
+    def __init__(self, host=None, port=None, user=None, password=None, backend=None):
         from uliweb import settings
         from uliweb.utils.common import import_attr
         
-        self.host = settings.MAIL.HOST
-        self.port = settings.MAIL.PORT
-        self.user = settings.MAIL.USER
-        self.password = settings.MAIL.PASSWORD
-        self.backend = settings.MAIL.BACKEND or 'uliweb.mail.backends.smtp'
+        self.host = host or (settings and settings.get_var('MAIL/HOST'))
+        self.port = port or (settings and settings.get_var('MAIL/PORT', 25))
+        self.user = user or (settings and settings.get_var('MAIL/USER'))
+        self.password = password or (settings and settings.get_var('MAIL/PASSWORD'))
+        self.backend = backend or (settings and settings.get_var('MAIL/BACKEND', 'uliweb.mail.backends.smtp'))
         cls = import_attr(self.backend + '.MailConnection')
         self.con = cls(self)
         
     def send_mail(self, from_, to_, subject, message, html=False, attachments=None):
+        #process to_
+        if isinstance(to_, (str, unicode)):
+            send_to = to_.split(',')
+        elif isinstance(to_, (tuple, list)):
+            send_to = to_
+            to_ = ','.join(send_to)
+        
         email = EmailMessage(from_, to_, subject, message, html=html, attachments=attachments)
         self.con.get_connection()
-        self.con.send_mail(from_, to_, email)
+        self.con.send_mail(from_, send_to, email)
         self.con.close()
         
