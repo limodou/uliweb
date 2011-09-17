@@ -1,5 +1,8 @@
 import os, sys
 import re
+import logging
+
+log = logging
 
 def safe_import(path):
     module = path.split('.')
@@ -69,13 +72,14 @@ def extract_file(module, path, dist, verbose=False):
     inf = pkg.resource_filename(module, path)
     shutil.copy2(inf, dist)
     if verbose:
-        log.info('Info : Copy [%s] to [%s]' % (inf, dist))
+        log.info('Copy %s to %s' % (inf, dist))
   
 def extract_dirs(mod, path, dst, verbose=False):
+    log = logging.getLogger('uliweb.console')
     if not os.path.exists(dst):
         os.makedirs(dst)
         if verbose:
-            log.info('Make directory', dst)
+            log.info('Make directory %s' % dst)
     for r in pkg.resource_listdir(mod, path):
         if r in ['.svn', '_svn']:
             continue
@@ -90,6 +94,8 @@ def extract_dirs(mod, path, dst, verbose=False):
 
 def copy_dir(src, dst, verbose=False, check=False, processor=None):
     import shutil
+
+    log = logging.getLogger('uliweb.console')
 
     def _md5(filename):
         try:
@@ -132,7 +138,7 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
                             continue
                     shutil.copy2(fpath, dst)
                     if verbose:
-                        log.info("Copy [%s] to [%s]" % (fpath, dst))
+                        log.info("Copy %s to %s" % (fpath, dst))
                     
             else:
                 if processor:
@@ -140,9 +146,11 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
                         continue
                 shutil.copy2(fpath, dst)
                 if verbose:
-                    log.info("Copy [%s] to [%s]" % (fpath, dst))
+                    log.info("Copy %s to %s" % (fpath, dst))
 
 def copy_dir_with_check(dirs, dst, verbose=False, check=True, processor=None):
+    log = logging.getLogger('uliweb.console')
+
     for d in dirs:
         if not os.path.exists(d):
             if verbose:
@@ -151,30 +159,8 @@ def copy_dir_with_check(dirs, dst, verbose=False, check=True, processor=None):
 
         copy_dir(d, dst, verbose, check, processor)
 
-log = None
-FORMAT = "%(levelname)-8s %(asctime)-15s %(filename)s,%(lineno)d] %(message)s"
-
-def get_logger(format=FORMAT, datafmt=None):
-    global log
-    import logging
-    handler = logging.StreamHandler()
-    fmt = logging.Formatter(format, datafmt)
-    handler.setFormatter(fmt)
-    
-    log = logging.getLogger('werkzeug')
-    log.addHandler(handler)
-    log.setLevel(logging.INFO)
-    return log
-
-def set_log_handers(logger, handlers):
-    if handlers:
-        logger.handlers = []
-        for h in handlers:
-            logger.addHandler(h)
-            
-get_logger()
-
 def check_apps_dir(apps_dir):
+    log = logging.getLogger('uliweb.console')
     if not os.path.exists(apps_dir):
         log.error("Can't find the apps_dir [%s], please check it out", apps_dir)
         sys.exit(1)
@@ -253,6 +239,7 @@ def sort_list(alist, default=500, duplicate=False):
     return t
 
 def timeit(func):
+    log = logging.getLogger('uliweb.app')
     import time
     @wraps(func)
     def f(*args, **kwargs):

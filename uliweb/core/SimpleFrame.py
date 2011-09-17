@@ -308,8 +308,12 @@ class Dispatcher(object):
         Dispatcher.apps_dir = conf.apps_dir
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps, self.settings_file, self.local_settings_file)
         Dispatcher.modules = self.collect_modules()
+        
         self.install_settings(self.modules['settings'])
         Dispatcher.settings = conf.settings
+        
+        #setup log
+        self.set_log()
         
         #set app rules
         rules.set_app_rules(dict(conf.settings.get('URL', {})))
@@ -343,6 +347,71 @@ class Dispatcher(object):
         env['json'] = json
         return env
     
+    def set_log(self):
+        import logging
+        
+        s = self.settings
+        
+        def _get_level(level):
+            return getattr(logging, level.upper())
+        
+        #get basic configuration
+        config = {}
+        for k, v in s.LOG.items():
+            if k in ['format', 'datefmt', 'filename', 'filemode']:
+                config[k] = v
+                
+        config['level'] = _get_level(s.get_var('LOG/level', 'info'))
+        logging.basicConfig(**config)
+        
+        #process formatters
+        formatters = {}
+        for f, v in s.get_var('LOG.Formatters', {}).items():
+            formatters[f] = logging.Formatter(v)
+            
+        #process handlers
+        handlers = {}
+        for h, v in s.get_var('LOG.Handlers', {}).items():
+            handler_cls = v.get('class', 'logging.StreamHandler')
+            handler_args = v.get('args', ())
+            handler_level = v.get('level', 'NOTSET')
+            
+            handler = import_attr(handler_cls)(*handler_args)
+            handler.setLevel(_get_level(handler_level))
+            
+            format = v.get('format')
+            if format in formatters:
+                handler.setFormatter(formatters[format])
+            
+            handlers[h] = handler
+            
+        #process loggers
+        for logger_name, v in s.get_var('LOG.Loggers', {}).items():
+            if logger_name == 'ROOT':
+                log = logging.getLogger('')
+            else:
+                log = logging.getLogger(logger_name)
+                
+            if v.get('level'):
+                log.setLevel(_get_level(v.get('level')))
+            if 'propagate' in v:
+                log.propagate = v.get('propagate')
+            if 'handlers' in v:
+                for h in v['handlers']:
+                    if h in handlers:
+                        log.addHandler(handlers[h])
+                    else:
+                        raise Exception, "Log Handler %s is not defined yet!"
+                        sys.exit(1)
+            elif 'format' in v:
+                if v['format'] not in formatters:
+                    fmt = logging.Formatter(v['format'])
+                else:
+                    fmt = formatters[v['format']]
+                handler = logging.StreamHandler()
+                handler.setFormatter(fmt)
+                log.addHandler(handler)
+                
     def get_file(self, filename, dir='static'):
         """
         get_file will search from apps directory

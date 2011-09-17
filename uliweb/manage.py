@@ -5,10 +5,11 @@ import types
 from optparse import make_option
 import uliweb
 from uliweb.core.commands import Command
-from uliweb.utils.common import log
         
 apps_dir = 'apps'
 __commands__ = {}
+
+log = logging.getLogger('uliweb.console')
 
 def get_commands():
     global __commands__
@@ -63,20 +64,6 @@ def install_config(apps_dir):
                 if not p in sys.path:
                     sys.path.insert(0, p)
                     
-def set_log(app):
-    from uliweb.utils.common import set_log_handers
-    
-    if app.settings.LOG:
-        level = app.settings.LOG.get("level", "info").upper()
-    else:
-        level = 'INFO'
-    handler_name = app.settings.LOG.get("handler_class", 'StreamHandler')
-    handler_cls = getattr(logging, handler_name)
-    arguments = app.settings.LOG.get("arguments", ())
-    handler = handler_cls(*arguments)
-    set_log_handers(log, [handler])
-    log.setLevel(getattr(logging, level, logging.INFO))
-
 def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps=None, debug_console=True, settings_file='settings.ini', start=True):
     from uliweb.utils.common import sort_list
     
@@ -93,9 +80,6 @@ def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps
     #settings global application object
     uliweb.application = app
     
-    #set logger level
-    set_log(app)
-    
     if uliweb.settings.GLOBAL.WSGI_MIDDLEWARES:
         s = sort_list(uliweb.settings.GLOBAL.WSGI_MIDDLEWARES, default=500)
         for w in reversed(s):
@@ -106,7 +90,7 @@ def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps
             if args:
                 klass = args.pop('CLASS', None) or args.pop('class', None)
                 if not klass:
-                    log.error('Error: There is no a CLASS option in this WSGI Middleware [%s].' % w)
+                    logging.error('Error: There is no a CLASS option in this WSGI Middleware [%s].' % w)
                     continue
                 modname, clsname = klass.rsplit('.', 1)
                 try:
@@ -248,7 +232,7 @@ class ExportStaticCommand(Command):
         from uliweb.utils.common import copy_dir_with_check
 
         if not args:
-            log.error("outputdir should be a directory and existed")
+            print >>sys.stderr, "Error: outputdir should be a directory and existed"
             sys.exit(0)
         else:
             outputdir = args[0]

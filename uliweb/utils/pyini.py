@@ -297,22 +297,27 @@ class Ini(SortedDict):
                         replace_flag = False
                         
                     keyname = line[:begin].strip()
-                    f.seek(lastpos+end)
-                    try:
-                        value = self.__read_line(f)
-                    except Exception, e:
-                        import traceback
-                        traceback.print_exc()
-                        raise Exception, "Parsing ini file error in line(%d): %s" % (lineno, line)
-                    try:
-                        if ((value.startswith("u'") and value.endswith("'")) or
-                            (value.startswith('u"') and value.endswith('"'))):
-                            v = unicode(value[2:-1], self._encoding)
-                        else:
-                            v = eval(value, self._env, section)
-                    except Exception, e:
-                        raise Exception, "Converting value (%s) error in line %d:%s" % (value, lineno, line)
-                    
+                    rest = line[end:].strip()
+                    #if key= then value will be set ''
+                    if rest == '':
+                        v = None
+                    else:
+                        f.seek(lastpos+end)
+                        try:
+                            value = self.__read_line(f)
+                        except Exception, e:
+                            import traceback
+                            traceback.print_exc()
+                            raise Exception, "Parsing ini file error in line(%d): %s" % (lineno, line)
+                        try:
+                            
+                            if ((value.startswith("u'") and value.endswith("'")) or
+                                (value.startswith('u"') and value.endswith('"'))):
+                                v = unicode(value[2:-1], self._encoding)
+                            else:
+                                v = eval(value, self._env, section)
+                        except Exception, e:
+                            raise Exception, "Converting value (%s) error in line %d:%s" % (value, lineno, line)
                     section.add(keyname, v, comments, replace=replace_flag)
                     comments = []
             else:
