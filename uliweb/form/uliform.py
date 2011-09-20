@@ -975,7 +975,7 @@ class Form(object):
             b << self._buttons
         return str(b)
     
-    def bind(self, data={}, errors={}):
+    def bind(self, data=None, errors=None):
         if data is not None:
             self.data = data
         if errors is not None:

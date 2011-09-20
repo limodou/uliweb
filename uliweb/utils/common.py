@@ -1,6 +1,7 @@
 import os, sys
 import re
 import logging
+import cPickle
 
 log = logging
 
@@ -381,6 +382,15 @@ def date_in(d, dates):
     if not d:
         return False
     return dates[0] <= d <= dates[1]
+
+class Serial(object):
+    @classmethod
+    def load(self, s):
+        return cPickle.loads(s)
+    
+    @classmethod
+    def dump(self, v):
+        return cPickle.dumps(v, cPickle.HIGHEST_PROTOCOL)
 
 #if __name__ == '__main__':
 #    log.info('Info: info')
