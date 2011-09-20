@@ -361,7 +361,8 @@ class Dispatcher(object):
             if k in ['format', 'datefmt', 'filename', 'filemode']:
                 config[k] = v
                 
-        config['level'] = _get_level(s.get_var('LOG/level', 'info'))
+        if s.get_var('LOG/level'):
+            config['level'] = _get_level(s.get_var('LOG/level'))
         logging.basicConfig(**config)
         
         #process formatters
@@ -374,15 +375,18 @@ class Dispatcher(object):
         for h, v in s.get_var('LOG.Handlers', {}).items():
             handler_cls = v.get('class', 'logging.StreamHandler')
             handler_args = v.get('args', ())
-            handler_level = v.get('level', 'NOTSET')
             
             handler = import_attr(handler_cls)(*handler_args)
-            handler.setLevel(_get_level(handler_level))
+            if v.get('level'):
+                handler.setLevel(_get_level(v.get('level')))
             
             format = v.get('format')
             if format in formatters:
                 handler.setFormatter(formatters[format])
-            
+            elif format:
+                fmt = logging.Formatter(format)
+                handler.setFormatter(fmt)
+                
             handlers[h] = handler
             
         #process loggers
