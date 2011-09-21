@@ -41,6 +41,7 @@ Local.conn = None
 _default_metadata = MetaData()
 
 class Error(Exception):pass
+class NotFound(Error):pass
 class ReservedWordError(Error):pass
 class ModelInstanceError(Error):pass
 class DuplicatePropertyError(Error):
@@ -878,7 +879,7 @@ class ReferenceProperty(Property):
                 d = self.reference_class.c[self.reference_fieldname]
                 instance = self.reference_class.get(d==reference_id)
                 if instance is None:
-                    raise Error('ReferenceProperty %s failed to be resolved' % self.reference_fieldname)
+                    raise NotFound('ReferenceProperty %s failed to be resolved' % self.reference_fieldname)
                 setattr(model_instance, self._resolved_attr_name(), instance)
                 return instance
         else:

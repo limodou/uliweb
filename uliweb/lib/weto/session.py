@@ -37,11 +37,11 @@ class SessionCookie(object):
         self.domain = self.default_domain
         self.path = self.default_path
         self.secure = self.default_secure
-        self.expiry_time = None
+        self.expiry_time = self.default_expiry_time
         self.cookie_id = self.default_cookie_id
         
     def save(self):
-        self.expiry_time =  self.expiry_time or self.default_expiry_time or self.session.expiry_time
+        self.expiry_time =  self.expiry_time or self.session.expiry_time
    
 from cache import Serial, Empty
 
@@ -106,7 +106,8 @@ class Session(dict):
         return self._old_value != dict(self)
     
     def save(self):
-        if not self.deleted and (bool(self) or (not bool(self) and self._is_modified())):
+#        if not self.deleted and (bool(self) or (not bool(self) and self._is_modified())):
+        if not self.deleted and self._is_modified():
             self.key = self.key or _get_id()
             self.storage.set(self.key, dict(self), self.expiry_time)
             self.cookie.save()
