@@ -532,12 +532,10 @@ class AddView(object):
                 return d
         
     def on_fail(self, d, json_result=False):
-        from uliweb import settings
         import logging
         
-        if settings.GLOBAL.DEBUG:
-            log = logging.getLogger('uliweb.app')
-            log.debug(self.form.errors)
+        log = logging.getLogger('uliweb.app')
+        log.debug(self.form.errors)
         if json_result:
             return to_json_result(False, self.fail_msg, self.form.errors)
         else:
@@ -663,6 +661,10 @@ class EditView(AddView):
                 return d
             
     def on_fail(self, d, json_result=False):
+        import logging
+        
+        log = logging.getLogger('uliweb.app')
+        log.debug(self.form.errors)
         if json_result:
             return to_json_result(False, self.fail_msg, self.form.errors)
         else:
