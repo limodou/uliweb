@@ -9,7 +9,7 @@ class Storage(BaseStorage):
         BaseStorage.__init__(self, cache_manager, options)
 
         self.url = options.get('url', 'sqlite:///')
-        self.tablename = options['table_name']
+        self.tablename = options.get('table_name', 'session')
         self.auto_create = options.get('auto_create', True)
         self.db, self.meta, self.table = create_table(self.url, self.tablename, self.auto_create)
         
