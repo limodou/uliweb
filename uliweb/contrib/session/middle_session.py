@@ -11,6 +11,7 @@ class SessionMiddle(Middleware):
         self.remember_me_timeout = settings.SESSION.remember_me_timeout
         self.session_storage_type = settings.SESSION.type
         self.timeout = settings.SESSION.timeout
+        Session.force = settings.SESSION.force
         
         #process Cookie options
         SessionCookie.default_domain = settings.SESSION_COOKIE.domain

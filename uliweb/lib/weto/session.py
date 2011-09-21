@@ -46,6 +46,8 @@ class SessionCookie(object):
 from cache import Serial, Empty
 
 class Session(dict):
+    force = False
+    
     def __init__(self, key=None, storage_type='file', options=None, expiry_time=3600*24*365,
         serial_cls=Serial):
         """
@@ -106,8 +108,13 @@ class Session(dict):
         return self._old_value != dict(self)
     
     def save(self):
+        flag = False
+        if not self.deleted and self.force and (bool(self) or (not bool(self) and self._is_modified())):
+            flag = True
+        elif not self.deleted and not self.force and self._is_modified():
+            flag = True
 #        if not self.deleted and (bool(self) or (not bool(self) and self._is_modified())):
-        if not self.deleted and self._is_modified():
+        if flag:
             self.key = self.key or _get_id()
             self.storage.set(self.key, dict(self), self.expiry_time)
             self.cookie.save()
