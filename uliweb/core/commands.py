@@ -115,9 +115,9 @@ class Command(object):
         global_options.apps_dir = apps_dir = os.path.normpath(os.path.join(global_options.project, 'apps'))
         if apps_dir not in sys.path:
             sys.path.insert(0, apps_dir)
-            
+        
         if self.check_apps_dirs:
-            check_apps_dir(global_options.project)
+            check_apps_dir(global_options.apps_dir)
         if self.check_apps and args: #then args should be apps
             all_apps = get_apps(global_options.apps_dir)
             apps = args

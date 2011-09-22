@@ -413,6 +413,7 @@ class ShellCommand(Command):
     name = 'shell'
     help = 'Create a new interactive python shell environment.'
     args = ''
+    check_apps_dirs = True
     has_options = True
     option_list = (
         make_option('-i', dest='ipython', default=False, action='store_true',

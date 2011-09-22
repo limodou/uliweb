@@ -129,7 +129,7 @@ def function(fname, *args, **kwargs):
         else:
             return import_attr(func)
     else:
-        raise Exception, "Can't find the function [%s] in settings" % func
+        raise Exception, "Can't find the function [%s] in settings" % fname
  
 def json(data, unicode=False):
     from js import json_dumps

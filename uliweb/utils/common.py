@@ -161,9 +161,9 @@ def copy_dir_with_check(dirs, dst, verbose=False, check=True, processor=None):
         copy_dir(d, dst, verbose, check, processor)
 
 def check_apps_dir(apps_dir):
-    log = logging.getLogger('uliweb.console')
+    log = logging
     if not os.path.exists(apps_dir):
-        log.error("Can't find the apps_dir [%s], please check it out", apps_dir)
+        print >>sys.stderr, "[Error] Can't find the apps_dir [%s], please check it out" % apps_dir
         sys.exit(1)
 
 def is_pyfile_exist(dir, pymodule):

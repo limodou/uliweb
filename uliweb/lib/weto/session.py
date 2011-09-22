@@ -79,7 +79,7 @@ class Session(dict):
         self['_session_remember_'] = v
         
     def _get_remember(self):
-        return self.get('_session_remember_', True)
+        return self.get('_session_remember_', False)
     
     remember = property(_get_remember, _set_remember)
     
