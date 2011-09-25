@@ -274,7 +274,6 @@ class SoapClient(object):
             return lambda self=self, *args, **kwargs: self.call(attr,*args,**kwargs)
         else: # using WSDL:
             def f(self=self, *args, **kwargs):
-                print 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxx', self, attr
                 return self.wsdl_call(attr,*args,**kwargs)
 #            f = lambda self=self, *args, **kwargs: self.wsdl_call(attr,*args,**kwargs)
             return f
