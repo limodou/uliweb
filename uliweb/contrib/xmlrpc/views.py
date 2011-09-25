@@ -13,7 +13,7 @@ def xmlrpc():
         f = rpc.__xmlrpc_functions__.get(m)
         if f:
             mod, handler_cls, handler = app.prepare_request(request, f)
-            result = app.call_view(mod, handler_cls, handler, request, response, _wrap_result, *p)
+            result = app.call_view(mod, handler_cls, handler, request, response, _wrap_result, args=p)
             xml = xmlrpclib.dumps((result,), methodresponse=1)
         else:
             xml = xmlrpclib.dumps(xmlrpclib.Fault(-32400, 'system error: Cannot find or call %s' % m), methodresponse=1)

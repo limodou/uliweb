@@ -558,7 +558,7 @@ class Dispatcher(object):
             request.view_class = None
         return mod, _klass, handler
     
-    def call_view(self, mod, cls, handler, request, response=None, wrap_result=None, *args, **kwargs):
+    def call_view(self, mod, cls, handler, request, response=None, wrap_result=None, args=None, kwargs=None):
         #get env
         wrap = wrap_result or self.wrap_result
         env = self.get_view_env()
@@ -577,7 +577,7 @@ class Dispatcher(object):
             if result is not None:
                 return wrap(result, request, response, env)
         
-        result = self.call_handler(handler, request, response, env, wrap, *args, **kwargs)
+        result = self.call_handler(handler, request, response, env, wrap, args, kwargs)
 
         result1 = None
         if hasattr(mod, '__end__'):
@@ -648,21 +648,23 @@ class Dispatcher(object):
         
         return self.get_env(local_env)
        
-    def _call_function(self, handler, request, response, env, *args, **kwargs):
+    def _call_function(self, handler, request, response, env, args, kwargs):
         
         for k, v in env.iteritems():
             handler.func_globals[k] = v
         
         handler.func_globals['env'] = env
         
+        args = args or ()
+        kwargs = kwargs or {}
         result = handler(*args, **kwargs)
         if isinstance(result, ResponseProxy):
             result = local.response
         return result
     
-    def call_handler(self, handler, request, response, env, wrap_result=None, *args, **kwargs):
+    def call_handler(self, handler, request, response, env, wrap_result=None, args=None, kwargs=None):
         wrap = wrap_result or self.wrap_result
-        result = self._call_function(handler, request, response, env, *args, **kwargs)
+        result = self._call_function(handler, request, response, env, args, kwargs)
         return wrap(result, request, response, env)
             
     def collect_modules(self, check_view=True):
@@ -771,24 +773,29 @@ class Dispatcher(object):
                 raise Exception, 'BINDS definition [%s=%r] is not right' % (func, args)
                 
         d = conf.settings.get('EXPOSES', {})
-        for url, args in d.iteritems():
+        for name, args in d.iteritems():
             if not args:
                 continue
             is_wrong = False
             if isinstance(args, (tuple, list)):
-                if len(args) != 2:
-                    is_wrong = True
-                if not isinstance(args[1], dict):
+                if len(args) == 2:
+                    url, method = args
+                    kwargs = {'name':name}
+                elif len(args) == 3:
+                    url, method, kwargs = args
+                    if not isinstance(kwargs, dict):
+                        is_wrong = True
+                    else:
+                        kwargs['name'] = name
+                else:
                     is_wrong = True
                 if not is_wrong:
-                    expose(url, **args[1])(args[0])
-            elif isinstance(args, (str, unicode)):
-                expose(url)(args)
+                    expose(url, **kwargs)(method)
             else:
                 is_wrong = True
             if is_wrong:
-                log.error('EXPOSES definition should be "url=endpoint" or "url=endpoint, {"args":value1,...}"')
-                raise Exception, 'EXPOSES definition [%s=%r] is not right' % (url, args)
+                log.error('EXPOSES definition should be "name=url, endpoint" or "name=url, endpoint, {"args":value1,...}"')
+                raise Exception, 'EXPOSES definition [%s=%r] is not right' % (name, args)
                 
     def get_template_dirs(self):
         """
@@ -816,7 +823,7 @@ class Dispatcher(object):
             
             #process static
             if endpoint in conf.static_views:
-                response = self.call_view(mod, handler_cls, handler, req, res, **values)
+                response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
             else:
                 response = None
                 _clses = {}
@@ -851,7 +858,7 @@ class Dispatcher(object):
                 
                 if response is None:
                     try:
-                        response = self.call_view(mod, handler_cls, handler, req, res, **values)
+                        response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
                         
                     except Exception, e:
                         for middleware in reversed(middlewares):

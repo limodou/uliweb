@@ -12,10 +12,17 @@ class TransactionMiddle(Middleware):
         Begin(create=True)
 
     def process_response(self, request, response):
-        try:
+        """
+        If response.error is True, then also rollback
+        """
+        if hasattr(response, 'error') and response.error:
+            Rollback(close=True)
             return response
-        finally:
-            Commit(close=True)
+        else:
+            try:
+                return response
+            finally:
+                Commit(close=True)
             
     def process_exception(self, request, exception):
         Rollback(close=True)

@@ -96,7 +96,7 @@ def has_permission(user, *permissions, **role_kwargs):
         
     return False
 
-def check_role(*roles):
+def check_role(*roles, **args_map):
     """
     It's just like has_role, but it's a decorator. And it'll check request.user
     """
@@ -105,13 +105,17 @@ def check_role(*roles):
         def f2(*args, **kwargs):
             from uliweb import request, error
             
-            if not has_role(request.user, *roles):
+            arguments = {}
+            for k, v in args_map.items():
+                if v in kwargs:
+                    arguments[k] = kwargs[v]
+            if not has_role(request.user, *roles, **arguments):
                 error(_("You have no roles to visit this page."))
             return func(*args, **kwargs)
         return f2
     return f1
 
-def check_permission(*permissions):
+def check_permission(*permissions, **args_map):
     """
     It's just like has_role, but it's a decorator. And it'll check request.user
     """
@@ -120,7 +124,11 @@ def check_permission(*permissions):
         def f2(*args, **kwargs):
             from uliweb import request, error
 
-            if not has_permission(request.user, *permissions):
+            arguments = {}
+            for k, v in args_map.items():
+                if v in kwargs:
+                    arguments[k] = kwargs[v]
+            if not has_permission(request.user, *permissions, **arguments):
                 error(_("You have no permissions to visit this page."))
             return func(*args, **kwargs)
         return f2
