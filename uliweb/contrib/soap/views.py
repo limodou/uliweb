@@ -1,0 +1,91 @@
+#coding=utf-8
+from uliweb import expose
+import logging
+from pysimplesoap.simplexml import TYPE_MAP
+
+log = logging.getLogger('uliweb.app')
+
+def _wrap_result(result, request, response, env):
+    return result
+
+def exception_handler(e, response):
+    log.exception(e)
+    response.error = True
+    
+def _fix_soap_datatype(data):
+    def _f(args):
+        s = list(args)[:]
+        for i, v in enumerate(args):
+            if not isinstance(v, dict):
+                #this should be a single type, .e.g [str]
+                if type(v) in TYPE_MAP.keys():
+                    s[i] = {TYPE_MAP[type(v)]:v}
+                else:
+                    raise Exception, "Unsupport type %r" % v
+        return s
+    
+    if isinstance(data, (tuple, list)):
+        return _f(data)
+    elif isinstance(data, dict):
+        d = data or {}
+        for k, v in d.items():
+            if isinstance(v, (tuple, list)):
+                d[k] = _f(v)
+        return d
+    else:
+        return data
+
+__soap_dispatcher__ = None
+
+def soap():
+    from pysimplesoap.server import SoapDispatcher
+    import uliweb.contrib.soap as soap
+    from uliweb.utils.common import import_attr
+    from uliweb import application as app, response, url_for
+    from functools import partial
+    
+    global __soap_dispatcher__
+    
+    if not __soap_dispatcher__:
+        location = "%s://%s%s" % (
+            request.environ['wsgi.url_scheme'],
+            request.environ['HTTP_HOST'],
+            request.path)
+        namespace = settings.SOAP.namespace or location
+        documentation = settings.SOAP.documentation
+        dispatcher = SoapDispatcher(
+            name = settings.SOAP.name,
+            location = location,
+            action = '', # SOAPAction
+            namespace = namespace,
+            prefix=settings.SOAP.prefix,
+            documentation = documentation,
+            exception_handler = partial(exception_handler, response=response),
+            ns = True)
+        for name, (func, returns, args, doc) in soap.__soap_functions__.items():
+            if isinstance(func, (str, unicode)):
+                func = import_attr(func)
+            dispatcher.register_function(name, func, returns, args, doc)
+    else:
+        dispatcher = __soap_dispatcher__
+        
+    if 'wsdl' in request.GET:
+        # Return Web Service Description
+        response.headers['Content-Type'] = 'text/xml'
+        response.write(dispatcher.wsdl())
+        return response
+    elif request.method == 'POST':
+        def _call(func, args):
+            mod, handler_cls, handler = app.prepare_request(request, func)
+            result = app.call_view(mod, handler_cls, handler, request, response, _wrap_result, kwargs=args)
+            r = _fix_soap_datatype(result)
+            return r
+        # Process normal Soap Operation
+        response.headers['Content-Type'] = 'text/xml'
+        log.debug("---request message---")
+        log.debug(request.data)
+        result = dispatcher.dispatch(request.data, call_function=_call)
+        log.debug("---response message---")
+        log.debug(result)
+        response.write(result)
+        return response
