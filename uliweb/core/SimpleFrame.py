@@ -648,7 +648,7 @@ class Dispatcher(object):
         
         return self.get_env(local_env)
        
-    def _call_function(self, handler, request, response, env, args, kwargs):
+    def _call_function(self, handler, request, response, env, args=None, kwargs=None):
         
         for k, v in env.iteritems():
             handler.func_globals[k] = v
