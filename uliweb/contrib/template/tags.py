@@ -8,6 +8,8 @@ r_head = re.compile('(?i)<head>(.*?)</head>', re.DOTALL)
 r_top = re.compile('<!--\s*toplinks\s*-->')
 r_bottom = re.compile('<!--\s*bottomlinks\s*-->')
 
+class UseModuleNotFound(Exception): pass
+
 class LinkNode(Node):
     
     def __init__(self, value=None, content=None, template=None):
@@ -64,7 +66,7 @@ class UseNode(LinkNode):
     @staticmethod
     def use(vars, env, plugin, *args, **kwargs):
         from uliweb.core.SimpleFrame import get_app_dir
-        from uliweb import application as app
+        from uliweb import application as app, settings
 
         if plugin in UseNode.__saved_template_plugins_modules__:
             mod = UseNode.__saved_template_plugins_modules__[plugin]
@@ -83,7 +85,10 @@ class UseNode(LinkNode):
             if mod:
                 UseNode.__saved_template_plugins_modules__[plugin] = mod
             else:
-                log.debug("Can't found the [%s] html plugins, please check if you've installed special app already" % plugin)
+                log.error("Can't find the [%s] template plugin, please check if you've installed special app already" % plugin)
+                if settings.get_var('TEMPLATE/RAISE_USE_EXCEPTION'):
+                    raise UseModuleNotFound("Can't find the %s template plugin, check if you've installed special app already" % plugin)
+                
         call = getattr(mod, 'call', None)
         if call:
             v = call(app, vars, env, *args, **kwargs)
