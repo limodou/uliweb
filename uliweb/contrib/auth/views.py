@@ -12,21 +12,20 @@ def login():
     
     if request.method == 'GET':
         form.next.data = request.GET.get('next', '/')
-        return {'form':form, 'message':''}
+        return {'form':form, 'msg':''}
     if request.method == 'POST':
         flag = form.validate(request.params)
         if flag:
-            f, d = authenticate(request, username=form.username.data, password=form.password.data)
+            f, d = authenticate(username=form.username.data, password=form.password.data)
             if f:
                 request.session.remember = form.rememberme.data
-                login(request, form.username.data)
+                login(form.username.data)
                 next = request.POST.get('next', '/')
                 return redirect(next)
             else:
                 data = d
-        m = form.errors.get('_', '') or 'Login failed!'
-        message = '<p class="error message">%s</p>' % m
-        return {'form':form, 'message':message}
+        msg = form.errors.get('_', '') or _('Login failed!')
+        return {'form':form, 'msg':str(msg)}
 
 def register():
     from uliweb.contrib.auth import create_user
@@ -36,38 +35,22 @@ def register():
     
     if request.method == 'GET':
         form.next.data = request.GET.get('next', '/')
-        return {'form':form, 'message':''}
+        return {'form':form, 'msg':''}
     if request.method == 'POST':
         flag = form.validate(request.params)
         if flag:
-            f, d = create_user(request, username=form.username.data, password=form.password.data)
+            f, d = create_user(username=form.username.data, password=form.password.data)
             if f:
                 next = request.POST.get('next', '/')
                 return redirect(next)
             else:
                 form.errors.update(d)
                 
-        m = form.errors.get('_', '') or 'Register failed!'
-        message = '<p class="error message">%s</p>' % m
-        return {'form':form, 'message':message, 'message_type':'error'}
+        msg = form.errors.get('_', '') or _('Register failed!')
+        return {'form':form, 'msg':str(msg)}
         
 def logout():
     from uliweb.contrib.auth import logout as out
-    out(request)
+    out()
     next = request.GET.get('next', '/')
     return redirect(next)
-    
-def admin():
-    from forms import ChangePasswordForm
-    changepasswordform = ChangePasswordForm()
-    if request.method == 'GET':
-        return {'changepasswordform':changepasswordform}
-    if request.method == 'POST':
-        if request.POST.get('action') == 'changepassword':
-            flag = changepasswordform.valiate(request.POST, request)
-            if flag:
-                return redirect(request.path)
-            else:
-                message = '<p class="error message">There was something wrong! Please fix them.</p>'
-                return {'changepasswordform':changepasswordform, 
-                    'message':message}

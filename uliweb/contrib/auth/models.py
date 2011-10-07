@@ -41,8 +41,9 @@ def check_password(raw_password, enc_password):
 
 class User(Model):
     username = Field(str, verbose_name=_('Username'), max_length=30, unique=True, index=True, nullable=False)
+    nickname = Field(str, verbose_name=_('Nick Name'), max_length=30)
     email = Field(str, verbose_name=_('Email'), max_length=40)
-    password = Field(str, verbose_name=_('Password'), max_length=128, nullable=False)
+    password = Field(str, verbose_name=_('Password'), max_length=128)
     is_superuser = Field(bool, verbose_name=_('Is Superuser'))
     last_login = Field(datetime.datetime, verbose_name=_('Last Login'))
     date_join = Field(datetime.datetime, verbose_name=_('Joined Date'), auto_now_add=True)
@@ -64,14 +65,6 @@ class User(Model):
         encryption formats behind the scenes.
         """
         return check_password(raw_password, self.password)
-    
-    def active(self, flag=True):
-        self.active = flag
-        self.save()
-        
-    def lock(self, flag=True):
-        self.locked = flag
-        self.save()
     
     def get_image_url(self):
         from uliweb.contrib.upload import get_url
