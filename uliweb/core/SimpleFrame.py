@@ -51,6 +51,20 @@ class Decorators(object):
     
 decorators = Decorators()
 
+class Functions(object):
+    __functions__ = {}
+    
+    def __getattr__(self, name):
+        if name in self.__functions__:
+            return self.__functions__[name]
+        if name not in conf.settings.FUNCTIONS:
+            raise Exception, "function %s is not existed!" % name
+        func = import_attr(conf.settings.FUNCTIONS.get(name))
+        self.__functions__[name] = func
+        return func
+
+functions = Functions()
+
 #Initialize pyini env
 pyini.set_env({'_':gettext_lazy, 'gettext_lazy':gettext_lazy})
 
