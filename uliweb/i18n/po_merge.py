@@ -80,7 +80,10 @@ def write_msg(comments, msgid, msgstr):
         s.append('msgid ' + msgid + '\n')
     if isinstance(msgstr, (tuple, list)):
         s.append('msgstr[0] ' + msgstr[0] + '\n')
-        s.append('msgstr[1] ' + msgstr[1] + '\n\n')
+        if msgstr[0] != '""':
+            s.append('\n')
+        else:
+            s.append('msgstr[1] ' + msgstr[1] + '\n\n')
     else:
         s.append('msgstr ' + msgstr + '\n\n')
     return ''.join(s)

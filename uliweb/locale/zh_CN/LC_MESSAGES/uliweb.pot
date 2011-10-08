@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2011-09-13 15:22\n"
+"POT-Creation-Date: 2011-10-08 11:07\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,94 +16,118 @@ msgstr ""
 "Generated-By: pygettext.py 1.6\n"
 
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:7
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:8
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\__init__.py:47
+msgid "Password isn't correct!"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\__init__.py:49
+msgid "Username is not existed!"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:5
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:6
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\templates\register.html:4
 msgid "Register"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:10
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:32
-msgid "Username:"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:11
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:33
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:55
-msgid "Password:"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:12
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:56
-msgid "Password again:"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:26
-msgid "Passwords are not match."
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:29
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:8
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:30
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:9
-msgid "Login"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:34
-msgid "Remember Me"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:48
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:61
-msgid "Password is not right."
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:51
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:701
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:705
-msgid "Save"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:52
-msgid "Change Password"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:54
-msgid "Old Password:"
-msgstr ""
-
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:43
 msgid "Username"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:44
-msgid "Email"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:45
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:9
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:31
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:51
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:46
 msgid "Password"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:46
-msgid "Is Superuser"
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:10
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:52
+msgid "Password again"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:20
+msgid "User \"%s\" is already existed!"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:24
+msgid "Passwords are not match."
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:27
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:28
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\templates\login.html:4
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:9
+msgid "Login"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:32
+msgid "Remember Me"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:42
+msgid "User \"%s\" is not existed!"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:44
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:57
+msgid "Password is not right."
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:47
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:718
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:722
+msgid "Save"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:48
+msgid "Change Password"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:50
+msgid "Old Password"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:44
+msgid "Nick Name"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:45
+msgid "Email"
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:47
-msgid "Last Login"
+msgid "Is Superuser"
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:48
-msgid "Joined Date"
+msgid "Last Login"
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:49
-msgid "Portrait"
+msgid "Joined Date"
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:50
-msgid "Active Status"
+msgid "Portrait"
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:51
+msgid "Active Status"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:52
 msgid "Lock Status"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:27
+msgid "Login failed!"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:49
+msgid "Register failed!"
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\i18n\__init__.py:6
@@ -114,11 +138,11 @@ msgstr ""
 msgid "Simplified Chinese"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\rbac.py:109
+#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\rbac.py:113
 msgid "You have no roles to visit this page."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\rbac.py:124
+#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\rbac.py:132
 msgid "You have no permissions to visit this page."
 msgstr ""
 
@@ -171,14 +195,14 @@ msgid "The file is not a valid image."
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:383
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:591
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1786
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:598
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1799
 msgid "The information has been saved successfully!"
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:384
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:592
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1787
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:599
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1800
 msgid "There are somethings wrong."
 msgstr ""
 
@@ -187,20 +211,20 @@ msgstr ""
 msgid "Create"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:639
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:650
 msgid "The object has not been changed."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:949
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:962
 msgid "The object has been deleted successfully!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1046
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1059
 msgid "Total"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1850
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1861
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1863
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1874
 msgid "Query"
 msgstr ""
 
