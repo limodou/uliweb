@@ -214,14 +214,14 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         elif cls is orm.BooleanProperty:
             field_type = form.BooleanField
         elif cls is orm.DateProperty:
-            if not prop.auto_now and not prop.auto_now_add:
-                field_type = form.DateField
+#            if not prop.auto_now and not prop.auto_now_add:
+            field_type = form.DateField
         elif cls is orm.TimeProperty:
-            if not prop.auto_now and not prop.auto_now_add:
-                field_type = form.TimeField
+#            if not prop.auto_now and not prop.auto_now_add:
+            field_type = form.TimeField
         elif cls is orm.DateTimeProperty:
-            if not prop.auto_now and not prop.auto_now_add:
-                field_type = form.DateTimeField
+#            if not prop.auto_now and not prop.auto_now_add:
+            field_type = form.DateTimeField
         elif cls is orm.DecimalProperty:
             field_type = form.StringField
             if prop.choices is not None:
