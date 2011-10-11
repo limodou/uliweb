@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2011-10-08 11:07\n"
+"POT-Creation-Date: 2011-10-11 15:15\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -77,8 +77,8 @@ msgid "Password is not right."
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:47
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:718
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:722
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:719
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:723
 msgid "Save"
 msgstr ""
 
@@ -162,20 +162,24 @@ msgstr ""
 msgid "more"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:238
+#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:242
 msgid "This field is required."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:708
+#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:712
 msgid "The date is not a valid date format."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:759
+#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:763
 msgid "The time is not a valid time format."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:809
+#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:813
 msgid "The datetime is not a valid datetime format."
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:977
+msgid "Submit"
 msgstr ""
 
 #: d:\project\mywork\uliweb-git\uliweb\form\validators.py:16
@@ -194,37 +198,37 @@ msgstr ""
 msgid "The file is not a valid image."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:383
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:598
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1799
-msgid "The information has been saved successfully!"
-msgstr ""
-
 #: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:384
 #: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:599
 #: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1800
+msgid "The information has been saved successfully!"
+msgstr ""
+
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:385
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:600
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1801
 msgid "There are somethings wrong."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:461
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:465
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:462
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:466
 msgid "Create"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:650
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:651
 msgid "The object has not been changed."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:962
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:963
 msgid "The object has been deleted successfully!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1059
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1060
 msgid "Total"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1863
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1874
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1864
+#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1875
 msgid "Query"
 msgstr ""
 

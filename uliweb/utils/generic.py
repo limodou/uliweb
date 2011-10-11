@@ -243,6 +243,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         elif cls is orm.ReferenceProperty or cls is orm.OneToOne:
             #field_type = form.IntField
             kwargs['model'] = prop.reference_class
+            kwargs['value_field'] = prop.reference_fieldname
             field_type = ReferenceSelectField
         elif cls is orm.FileProperty:
             field_type = form.FileField

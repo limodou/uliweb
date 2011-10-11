@@ -974,7 +974,7 @@ class Form(object):
     def get_buttons(self):
         b = Buf()
         if self._buttons is None:
-            b << [Submit(value='Submit', _class="button", name="submit")]
+            b << [Submit(value=_('Submit'), _class="button", name="submit")]
         else:
             b << self._buttons
         return str(b)
