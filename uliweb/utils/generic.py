@@ -190,6 +190,8 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         field_type = form.StringField
         kwargs['required'] = False
         kwargs['static'] = True
+        if prop.choices is not None:
+            kwargs['choices'] = prop.get_choices()
         
     if field['hidden']:
         field_type = form.HiddenField
