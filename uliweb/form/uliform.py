@@ -61,7 +61,11 @@ class FieldProxy(object):
         
     @property
     def label(self):
-        return self.field.get_label(_class='field')
+        if self.field.__class__ is BooleanField:
+            delimeter = False
+        else:
+            delimeter = True
+        return self.field.get_label(_class='field', delimeter=delimeter)
     
     @property
     def help_string(self):
@@ -156,14 +160,14 @@ class BaseField(object):
         else:
             return str(self.build(name=self.name, value=value, id=self.id, **self.html_attrs))
 
-    def get_label(self, **kwargs):
+    def get_label(self, delimeter=True, **kwargs):
         if not self.label:
             label = capitalize(self.name)
         else:
             label = self.label
         if not label:
             return ''
-        if DEFAULT_LABEL_DELIMETER:
+        if delimeter and DEFAULT_LABEL_DELIMETER:
             label += DEFAULT_LABEL_DELIMETER
         if self.required:
             if REQUIRED_CAPTION_AFTER:

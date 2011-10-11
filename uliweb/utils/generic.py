@@ -1208,7 +1208,7 @@ class SimpleListView(object):
                 type = type[1:]
             else:
                 type = 'csv'
-        if type == 'xlt':
+        if type in ('xlt', 'xls'):
             if not domain:
                 domain = settings.get_var('PARA/DOMAIN')
             return self.download_xlt(filename, query, table, inline, download, fields_convert_map, domain)
