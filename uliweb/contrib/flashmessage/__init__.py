@@ -12,5 +12,7 @@ def flash(message, category='success'):
     
 def get_flashed_messages():
     from uliweb import request
-
-    return request.session.pop('_flashed_messages', [])
+    if hasattr(request, 'session'):
+        return request.session.pop('_flashed_messages', [])
+    else:
+        return []

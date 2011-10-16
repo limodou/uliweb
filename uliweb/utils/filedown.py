@@ -37,7 +37,7 @@ def filedown(environ, filename, cache=True, cache_timeout=None, download=False, 
     if cache:
         etag = _generate_etag(mtime, file_size, real_filename)
         headers += [
-            ('Etag', '"%s"' % etag),
+            ('ETag', '"%s"' % etag),
         ]
         if cache_timeout:
             headers += [

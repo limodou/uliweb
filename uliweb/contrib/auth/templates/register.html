@@ -1,0 +1,17 @@
+{{extend "layout.html"}}
+
+{{block userinfo}}{{end}}
+
+{{block content}}
+<div class="content">
+    <div class="box center col_10 box_shadow">
+        <h2>{{=_('Register')}}</h2>
+        <div class="box-body">
+            {{if msg:}}
+            <p class="error">{{<<msg}}</p>
+            {{pass}}
+            {{<< form}}
+        </div>
+    </div>
+</div>
+{{end}}
