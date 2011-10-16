@@ -2,13 +2,15 @@ import os
 import re
 from uliweb.utils.common import log
 from uliweb.core.template import *
+from uliweb.contrib.staticfiles import url_for_static
 
-r_links = re.compile('<link\s.*?\s+href\s*=\s*"?(.*?)["\s>]|<script\s.*?\s+src\s*=\s*"?(.*?)["\s>]', re.I)
+r_links = re.compile('<link\s+.*?\s*href\s*=\s*"?(.*?)["\s>]|<script\s+.*?\s*src\s*=\s*"?(.*?)["\s>]', re.I)
 r_head = re.compile('(?i)<head>(.*?)</head>', re.DOTALL)
 r_top = re.compile('<!--\s*toplinks\s*-->')
 r_bottom = re.compile('<!--\s*bottomlinks\s*-->')
 
 class UseModuleNotFound(Exception): pass
+class TemplateDefineError(Exception): pass
 
 class LinkNode(Node):
     
@@ -30,7 +32,7 @@ class LinkNode(Node):
         return '{{link %s}}' % self.value
     
     @staticmethod
-    def link(env, links, media=None, toplinks=True):
+    def link(env, links, media=None, to='toplinks'):
         if not isinstance(links, (tuple, list)):
             links = [links]
         if media:
@@ -38,7 +40,7 @@ class LinkNode(Node):
             for x in links:
                 new_links.append({'value':x, 'media':media})
             links = new_links
-        if toplinks:
+        if to == 'toplinks':
             env['__links__']['toplinks'].extend(links)
         else:
             env['__links__']['bottomlinks'].extend(links)
@@ -115,30 +117,59 @@ class HtmlMerge(object):
         self.vars = vars
         
     def __call__(self):
-        b = r_head.search(self.text)
-        if b:
-            start, end = b.span()
-            head = b.group()
-            p = self.cal_position(head, start)
+#        b = r_head.search(self.text)
+#        if b:
+#            start, end = b.span()
+#            head = b.group()
+#            p = self.cal_position(head, start)
+#            links = []
+#            for v in r_links.findall(head):
+#                link = v[0] or v[1]
+#                links.append(link)
+#            result = self.assemble(self._clean_collection(links))
+#            if result['toplinks'] or result['bottomlinks']:
+#                top = result['toplinks'] or ''
+#                bottom = result['bottomlinks'] or ''
+#                return (self.text[:p[0]] + top + self.text[p[1]:p[2]] + bottom +
+#                    self.text[p[3]:])
+#        else:
+#            result = self.assemble(self._clean_collection([]))
+#            if result['toplinks'] or result['bottomlinks']:
+#                top = result['toplinks'] or ''
+#                bottom = (result['bottomlinks'] or '')
+#                return top + bottom + self.text
+
+        result = self.assemble(self._clean_collection([]))
+        #cal links first, if no toplinks or bottomlinks be found, then
+        #do nothing, otherwise find the head, and calculate the position
+        #of toplinks and bottomlinks
+        if result['toplinks'] or result['bottomlinks']:
             links = []
-            for v in r_links.findall(head):
-                link = v[0] or v[1]
-                links.append(link)
+            b = r_head.search(self.text)
+            if b:
+                start, end = b.span()
+                head = b.group()
+                for v in r_links.findall(head):
+                    link = v[0] or v[1]
+                    links.append(link)
             result = self.assemble(self._clean_collection(links))
             if result['toplinks'] or result['bottomlinks']:
                 top = result['toplinks'] or ''
                 bottom = result['bottomlinks'] or ''
-                return (self.text[:p[0]] + top + self.text[p[1]:p[2]] + bottom +
-                    self.text[p[3]:])
-        else:
-            result = self.assemble(self._clean_collection([]))
-            if result['toplinks'] or result['bottomlinks']:
-                top = result['toplinks'] or ''
-                bottom = (result['bottomlinks'] or '')
-                return top + bottom + self.text
-            
-        return self.text
+                top_start, bottom_start = self.cal_position(self.text, top, bottom,
+                    len(head), start)
+                
+                if top and bottom:
+                    if bottom_start < top_start:
+                        raise TemplateDefineError, "Template <!-- bottomlinks --> shouldn't be defined before <!-- toplinks -->"
+                    return self.text[:top_start] + top + self.text[top_start:bottom_start] + bottom + self.text[bottom_start:]
+                elif top:
+                    return self.text[:top_start] + top + self.text[top_start:]
+                elif bottom:
+                    return self.text[:bottom_start] + bottom + self.text[bottom_start:]
         
+        return self.text
+    
     def _clean_collection(self, existlinks):
         r = {'toplinks':[], 'bottomlinks':[]}
         links = {}
@@ -149,28 +180,40 @@ class HtmlMerge(object):
                 #link will also be template string
                 if '{{' in link and '}}' in link:
                     link = template(link, self.env)
-                if not link in r[_type] and not link in existlinks:
+                if link.endswith('.js') or link.endswith('.css'):
+                    _link = url_for_static(link)
+                else:
+                    _link = link
+                if not link in r[_type] and not _link in existlinks:
                     r[_type].append(link)
         return r
 
-    def cal_position(self, head, start=0):
-        length = len(head)
-        t = r_top.search(head)
-        if t:
-            top_start, top_end = t.span()
+    def cal_position(self, text, has_toplinks, has_bottomlinks, head_len, head_start):
+        """
+        Calculate the position of toplinks and bottomlinks, if there is not
+        toplinks and bottomlinks then toplinks position will be the position after <head>
+        and if there is no bottomlinks, the bottomlinks position will be the
+        position before </head>.
+        """
+        if head_len == 0:
+            top_start = top_end = bottom_start = bottom_end = 0
         else:
-            top_start = top_end = 6
-        t = r_bottom.search(head)
-        if t:
-            bottom_start, bottom_end = t.span()
-        else:
-            bottom_start = bottom_end = length-7
-        r = [start+i for i in [top_start, top_end, bottom_start, bottom_end]]
-        return r
+            top_start = top_end = head_start + 6
+            bottom_start = bottom_end = head_start + head_len - 7
+            
+        if has_toplinks:
+            t = r_top.search(text)
+            if t:
+                top_start, top_end = t.span()
+        
+        if has_bottomlinks:
+            t = r_bottom.search(text)
+            if t:
+                bottom_start, bottom_end = t.span()
+
+        return top_end, bottom_end
 
     def assemble(self, links):
-        from uliweb.contrib.staticfiles import url_for_static
-        
         toplinks = ['']
         bottomlinks = ['']
         for _type, result in [('toplinks', toplinks), ('bottomlinks', bottomlinks)]:
