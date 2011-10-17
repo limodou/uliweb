@@ -12,6 +12,9 @@ def startup(sender):
     from uliweb import settings
     from rbac import register_role_method
     
-    if 'ROLE_METHODS' in settings:
-        for k, v in settings.ROLE_METHODS.items():
-            register_role_method(k, v)
+    if 'ROLES' in settings:
+        for k, v in settings.get_var('ROLES', {}).iteritems():
+            if isinstance(v, (list, tuple)) and len(v) > 1:
+                method = v[1]
+                if method:
+                    register_role_method(k, method)

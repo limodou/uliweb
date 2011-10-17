@@ -8,7 +8,11 @@ Rel = get_model('role_perm_rel')
 r = uliweb.settings.get('ROLES', {})
 for name, v in r.items():
     if isinstance(v, (tuple, list)):
-        description, reserve = v
+        if len(v) == 2:
+            description, method = v
+            reserve = False
+        else:
+            description, method, reserve = v
     else:
         description, reserve = v, True
     role = Role.get(Role.c.name==name)

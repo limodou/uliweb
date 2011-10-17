@@ -10,6 +10,11 @@ __templates_temp_dir__ = 'tmp/templates_temp'
 __options__ = {'use_temp_dir':False}
 __nodes__ = {}   #user defined nodes
 
+class TemplateException(Exception): pass
+class ContextPopException(TemplateException):
+    "pop() has been called more times than push()"
+    pass
+
 def use_tempdir(dir=''):
     global __options__, __templates_temp_dir__
     
@@ -214,10 +219,6 @@ class Content(BlockNode):
             s.append(str(x))
         return ''.join(s)
 
-class ContextPopException(Exception):
-    "pop() has been called more times than push()"
-    pass
-
 class Context(object):
     "A stack container for variable context"
     def __init__(self, dict_=None):
@@ -367,9 +368,23 @@ class Template(object):
     def set_filename(self, filename):
         fname = get_templatefile(filename, self.dirs, self.default_template)
         if not fname:
-            raise Exception, "Can't find the template %s" % filename
+            raise TemplateException, "Can't find the template %s" % filename
         self.filename = fname
-        
+    
+    def _get_parameters(self, value):
+        def _f(*args, **kwargs):
+            return args, kwargs
+        d = self.env.to_dict()
+        d['_f'] = _f
+        try:
+            args, kwargs = eval("_f(%s)" % value, self.vars, d)
+        except:
+            if self.skip_error:
+                return (None,), {}
+            else:
+                raise
+        return args, kwargs
+    
     def parse(self):
         text = self.text
         in_tag = False
@@ -377,7 +392,7 @@ class Template(object):
         for i in r_tag.split(text):
             if i:
                 if len(self.stack) == 0:
-                    raise Exception, "The 'end' tag is unmatched, please check if you have more '{{end}}'"
+                    raise TemplateException, "The 'end' tag is unmatched, please check if you have more '{{end}}'"
                 top = self.stack[-1]
                 if in_tag:
                     line = i[2:-2].strip()
@@ -469,7 +484,7 @@ class Template(object):
     def _parse_text(self, content, var):
         try:
             text = str(eval(var, self.vars, self.env.to_dict()))
-        except Exception:
+        except:
             if self.skip_error:
                 text = ''
             else:
@@ -480,60 +495,52 @@ class Template(object):
             t.add_root(self)
             content.merge(t.content)
     
-    def _parse_include(self, content, filename):
-        if not filename.strip():
-            return
-        try:
-            filename = eval(filename, self.vars, self.env.to_dict())
-        except Exception:
-            if self.skip_error:
-                filename = ''
-            else:
-                raise
-        if not filename:
-            return
-        
-        fname = get_templatefile(filename, self.dirs)
-        if not fname:
-            raise Exception, "Can't find the template %s" % filename
-        
-        self.depend_files.append(fname)
-        
-        f = open(fname, 'rb')
-        text = f.read()
-        f.close()
-        t = Template(text, self.vars, self.env, self.dirs)
-        t.add_root(self)
-        t.parse()
-        content.merge(t.content)
-        
-    def _parse_extend(self, filename):
-        try:
-            filename = eval(filename, self.vars, self.env.to_dict())
-        except Exception:
-            if self.skip_error:
-                filename = ''
-            else:
-                raise
-        if not filename:
-            return
-        fname = get_templatefile(filename, self.dirs)
-        if not fname:
-            raise Exception, "Can't find the template %s" % filename
-        
-        self.depend_files.append(fname)
-        
-        f = open(fname, 'rb')
-        text = f.read()
-        f.close()
+    def _parse_include(self, content, value):
         self.env.push()
-        t = Template(text, self.vars, self.env, self.dirs)
-        t.add_root(self)
-        t.parse()
-        self.content.clear_content()
-        t.content.merge(self.content)
-        self.content = t.content
-    
+        try:
+            args, kwargs = self._get_parameters(value)
+            filename = args[0]
+            self.env.update(kwargs)
+            fname = get_templatefile(filename, self.dirs)
+            if not fname:
+                raise TemplateException, "Can't find the template %s" % filename
+            
+            self.depend_files.append(fname)
+            
+            f = open(fname, 'rb')
+            text = f.read()
+            f.close()
+            t = Template(text, self.vars, self.env, self.dirs)
+            t.add_root(self)
+            t.parse()
+            content.merge(t.content)
+        finally:
+            self.env.pop()
+        
+    def _parse_extend(self, value):
+        self.env.push()
+        try:
+            args, kwargs = self._get_parameters(value)
+            filename = args[0]
+            self.env.update(kwargs)
+            fname = get_templatefile(filename, self.dirs)
+            if not fname:
+                raise TemplateException, "Can't find the template %s" % filename
+            
+            self.depend_files.append(fname)
+            
+            f = open(fname, 'rb')
+            text = f.read()
+            f.close()
+            t = Template(text, self.vars, self.env, self.dirs)
+            t.add_root(self)
+            t.parse()
+            self.content.clear_content()
+            t.content.merge(self.content)
+            self.content = t.content
+        finally:
+            self.env.pop()
+            
     def get_parsed_code(self):
         if self.use_temp:
             f = get_temp_template(self.filename)
