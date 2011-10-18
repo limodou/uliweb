@@ -363,6 +363,8 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                             display = str(Tag('a', unicode(v), href=url_prefix+'/'+str(v.id)))
                         else:
                             display = unicode(v)
+                else:
+                    display = str(v)
             elif isinstance(prop, orm.FileProperty):
                 from uliweb.contrib.upload import get_url
                 url = get_url(value)
@@ -1218,7 +1220,7 @@ class SimpleListView(object):
         else:
             return self.download_csv(filename, query, table, inline, download, fields_convert_map)
        
-    def get_data(self, query, table, fields_convert_map, encoding='utf-8'):
+    def get_data(self, query, table, fields_convert_map, encoding='utf-8', plain=True):
         from uliweb.utils.common import safe_unicode
 
         fields_convert_map = fields_convert_map or {}
@@ -1231,16 +1233,28 @@ class SimpleListView(object):
             elif isinstance(record, orm.Model):
                 row = []
                 for x in table['fields_list']:
-                    if hasattr(self.model, x['name']):
-                        field = getattr(self.model, x['name'])
+                    if plain:
+                        if hasattr(record, x['name']):
+                            row.append(safe_unicode(record.get_display_value(x['name']), encoding))
+                        else:
+                            row.append('')
                     else:
-                        field = x
-                    v = make_view_field(field, record, fields_convert_map)
-                    row.append(safe_unicode(v['display'], encoding))
+                        if hasattr(self.model, x['name']):
+                            field = getattr(self.model, x['name'])
+                        else:
+                            field = x
+                        v = make_view_field(field, record, fields_convert_map)
+                        row.append(safe_unicode(v['display'], encoding))
+                        
             elif not isinstance(record, (tuple, list)):
                 row = list(record)
             else:
                 row = record
+            if fields_convert_map:
+                for i, x in enumerate(table['fields_list']):
+                    convert = fields_convert_map.get(x['name'])
+                    if convert:
+                        row[i] = convert(row[i], record)
             yield row
         total = self.get_total(table)
         if total:
@@ -1267,7 +1281,7 @@ class SimpleListView(object):
         dirname = os.path.dirname(t_filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        w = ExcelWriter(header=table['fields_list'], data=self.get_data(data, table, fields_convert_map, default_encoding), encoding=default_encoding, domain=domain)
+        w = ExcelWriter(header=table['fields_list'], data=self.get_data(data, table, fields_convert_map, default_encoding, plain=False), encoding=default_encoding, domain=domain)
         w.save(t_filename)
         return filedown(request.environ, r_filename, real_filename=t_filename, inline=inline, download=download)
         
