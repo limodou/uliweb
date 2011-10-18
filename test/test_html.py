@@ -27,7 +27,7 @@ def test_json_dumps():
     >>> import datetime
     >>> a = {'name':u'limodou', 'date':datetime.datetime(2010, 10, 25), 'data':{'name':'aaa', 'total': 100, 'has':True}}
     >>> json_dumps(a)
-    u'{"date": "2010-10-25 00:00:00", "data": {"has": true, "total": 100, "name": "aaa"}, "name": "limodou"}'
+    '{"date": "2010-10-25 00:00:00", "data": {"has": true, "total": 100, "name": "aaa"}, "name": "limodou"}'
     
     """
     
@@ -35,6 +35,9 @@ def test_tag():
     """
     >>> print Tag('a', 'Link', href='#')
     <a href="#">Link</a>
+    <BLANKLINE>
+    >>> print Tag('a', 'Link', href='http://localhost:8000?a=b&c=d')
+    <a href="http://localhost:8000?a=b&c=d">Link</a>
     <BLANKLINE>
     >>> print Script(src="jquery.js")
     <script src="jquery.js" type="text/javascript"></script>

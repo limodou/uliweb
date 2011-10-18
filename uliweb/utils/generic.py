@@ -1230,20 +1230,17 @@ class SimpleListView(object):
                     row.append(record[x]) 
             elif isinstance(record, orm.Model):
                 row = []
-                for x in table['fields']:
-                    if hasattr(record, x):
-                        row.append(safe_unicode(record.get_display_value(x), encoding))
+                for x in table['fields_list']:
+                    if hasattr(self.model, x['name']):
+                        field = getattr(self.model, x['name'])
                     else:
-                        row.append('')
+                        field = x
+                    v = make_view_field(field, record, fields_convert_map)
+                    row.append(safe_unicode(v['display'], encoding))
             elif not isinstance(record, (tuple, list)):
                 row = list(record)
             else:
                 row = record
-            if fields_convert_map:
-                for i, x in enumerate(table['fields_list']):
-                    convert = fields_convert_map.get(x['name'])
-                    if convert:
-                        row[i] = convert(row[i], record)
             yield row
         total = self.get_total(table)
         if total:

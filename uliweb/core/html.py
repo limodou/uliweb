@@ -2,6 +2,8 @@ from __future__ import with_statement
 import cgi
 import StringIO
 
+__noescape_attrs__ = ['href', 'src']
+
 def u_str(v, encoding='utf-8'):
     if isinstance(v, str):
         pass
@@ -41,7 +43,10 @@ def _create_kwargs(args, nocreate_if_none=['id', 'for']):
             if k not in nocreate_if_none:
                 s.append(k)
         else:
-            t = cgi.escape(u_str(v))
+            if k.lower() in __noescape_attrs__:
+                t = u_str(v)
+            else:
+                t = cgi.escape(u_str(v))
             if t and t[0] not in "\"'":
                 t = '"%s"' % t
             elif not t:
