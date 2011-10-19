@@ -281,7 +281,8 @@ class Context(object):
         "Like dict.update(). Pushes an entire dictionary's keys and values onto the context."
         if not hasattr(other_dict, '__getitem__'): 
             raise TypeError('other_dict must be a mapping (dictionary-like) object.')
-        self.dicts = [other_dict] + self.dicts
+        self.dicts[0].update(other_dict)
+#        self.dicts = [other_dict] + self.dicts
         self.dirty = True
         return other_dict
     
@@ -583,11 +584,13 @@ class Template(object):
         
     def _run(self, code, filename):
         def f(_vars, _env):
-            def defined(v):
-                try:
-                    return v in _vars or v in _env
-                except:
-                    return False
+            def defined(v, default=None):
+                _v = default
+                if v in _vars:
+                    _v = _vars[v]
+                elif v in _env:
+                    _v = _env[v]
+                return _v
             return defined
 
         e = {}
@@ -602,7 +605,7 @@ class Template(object):
         e['Out'] = Out
         e['xml'] = out.xml
         e['_vars'] = self.vars
-        e['defined'] = f(self.vars, new_e)
+        e['defined'] = f(self.vars, self.env)
         e['_env'] = e
         
         e.update(self.exec_env)

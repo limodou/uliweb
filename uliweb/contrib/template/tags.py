@@ -108,6 +108,14 @@ class UseNode(LinkNode):
                         if not isinstance(links, (tuple, list)):
                             links = [links]
                         env['__links__'][_type].extend(links)
+                if 'depends_after' in v:
+                    for _t in v['depends_after']:
+                        if isinstance(_t, str):
+                            UseNode.use(vars, env, _t)
+                        else:
+                            d, kw = _t
+                            UseNode.use(vars, env, d, **kw)
+                
     
 class HtmlMerge(object):
     def __init__(self, text, links, vars, env):
@@ -231,6 +239,9 @@ class HtmlMerge(object):
                         result.append('<link rel="stylesheet" type="text/css" href="%s" media="%s"/>' % (link, media))
                     else:
                         result.append('<link rel="stylesheet" type="text/css" href="%s"/>' % link)
+                elif link.endswith('.less'):
+                    link = url_for_static(link)
+                    result.append('<link rel="stylesheet/less" href="%s"/>' % link)
                 else:
                     result.append(link)
         return {'toplinks':'\n'.join(toplinks), 'bottomlinks':'\n'.join(bottomlinks)}

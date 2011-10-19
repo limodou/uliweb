@@ -1224,37 +1224,42 @@ class SimpleListView(object):
         from uliweb.utils.common import safe_unicode
 
         fields_convert_map = fields_convert_map or {}
+        d = self.fields_convert_map.copy() 
+        d.update(fields_convert_map)
+        
+        def get_value(name, value, record):
+            convert = d.get(name)
+            if convert:
+                value = convert(value, record)
+            return safe_unicode(value, encoding)
+        
         for record in query:
             self.cal_total(table, record)
             row = []
-            if isinstance(record, dict):
-                for x in table['fields']:
-                    row.append(record[x]) 
-            elif isinstance(record, orm.Model):
-                row = []
-                for x in table['fields_list']:
+            if not isinstance(record, (orm.Model, dict)):
+                if not isinstance(record, (tuple, list)):
+                    record = list(record)
+                record = dict(zip(table['fields'], record))
+                
+            for i, x in enumerate(table['fields_list']):
+                name = x['name']
+                if isinstance(record, dict):
+                    value = get_value(name, record[name], record)
+                elif isinstance(record, orm.Model):
                     if plain:
-                        if hasattr(record, x['name']):
-                            row.append(safe_unicode(record.get_display_value(x['name']), encoding))
+                        if hasattr(record, name):
+                            value = safe_unicode(record.get_display_value(name), encoding)
                         else:
-                            row.append('')
+                            value = ''
                     else:
-                        if hasattr(self.model, x['name']):
-                            field = getattr(self.model, x['name'])
+                        if hasattr(record.__class__, name):
+                            field = getattr(record.__class__, name)
                         else:
                             field = x
-                        v = make_view_field(field, record, fields_convert_map)
-                        row.append(safe_unicode(v['display'], encoding))
-                        
-            elif not isinstance(record, (tuple, list)):
-                row = list(record)
-            else:
-                row = record
-            if fields_convert_map:
-                for i, x in enumerate(table['fields_list']):
-                    convert = fields_convert_map.get(x['name'])
-                    if convert:
-                        row[i] = convert(row[i], record)
+                        v = make_view_field(field, record, d)
+                        value = safe_unicode(v['display'], encoding)
+                row.append(value)
+                
             yield row
         total = self.get_total(table)
         if total:
