@@ -384,7 +384,13 @@ class RunserverCommand(Command):
         make_option('--thread', dest='thread', action='store_true', default=False,
             help='If use thread server mode. Default is False.'),
         make_option('--processes', dest='processes', type='int', default=1,
-            help='The default number of processes to start.')
+            help='The default number of processes to start.'),
+        make_option('--ssl', dest='ssl', action='store_true',
+            help='Using SSL to access http.'),
+        make_option('--ssl-key', dest='ssl_key', default='ssl.key',
+            help='The SSL private key filename.'),
+        make_option('--ssl-cert', dest='ssl_cert', default='ssl.cert',
+            help='The SSL certificate filename.'),
     )
     develop = False
     
@@ -400,8 +406,16 @@ class RunserverCommand(Command):
             app = make_application(options.debug, project_dir=global_options.project)
             include_apps = []
         extra_files = collect_files(global_options.apps_dir, get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)+include_apps)
+        
+        if options.ssl:
+            from OpenSSL import SSL
+            ctx = SSL.Context(SSL.SSLv23_METHOD)
+            ctx.use_privatekey_file(options.ssl_key)
+            ctx.use_certificate_file(options.ssl_cert)
+        else:
+            ctx = None
         run_simple(options.hostname, options.port, app, options.reload, False, True,
-                   extra_files, 1, options.thread, options.processes)
+                   extra_files, 1, options.thread, options.processes, ssl_context=ctx)
 register_command(RunserverCommand)
 
 class DevelopCommand(RunserverCommand):
