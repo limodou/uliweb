@@ -1947,6 +1947,13 @@ class Model(object):
         return obj
     
     @classmethod
+    def get_or_notfound(cls, condition=None):
+        obj = cls.get(condition)
+        if not obj:
+            raise NotFound, "Can't found the object"
+        return obj
+    
+    @classmethod
     def _data_prepare(cls, record):
         d = {}
         for k, v in record:
