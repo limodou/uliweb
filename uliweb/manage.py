@@ -410,6 +410,12 @@ class RunserverCommand(Command):
         if options.ssl:
             from OpenSSL import SSL
             ctx = SSL.Context(SSL.SSLv23_METHOD)
+            if not os.path.exists(options.ssl_key):
+                log.error("Can't find ssl key file [%s], please check it first." % options.ssl_key)
+                sys.exit(1)
+            if not os.path.exists(options.ssl_cert):
+                log.error("Can't find ssl certificate file [%s], please check it first." % options.ssl_key)
+                sys.exit(1)
             ctx.use_privatekey_file(options.ssl_key)
             ctx.use_certificate_file(options.ssl_cert)
         else:
