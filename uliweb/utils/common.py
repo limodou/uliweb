@@ -255,13 +255,13 @@ def safe_unicode(s, encoding='utf-8'):
     if isinstance(s, unicode):
         return s
     else:
-        return unicode(s, encoding)
+        return unicode(str(s), encoding)
 
 def safe_str(s, encoding='utf-8'):
     if isinstance(s, unicode):
         return s.encode(encoding)
     else:
-        return s
+        return str(s)
 
 def get_var(key):
     def f():
