@@ -1256,7 +1256,7 @@ class SimpleListView(object):
                             field = getattr(record.__class__, name)
                         else:
                             field = x
-                        v = make_view_field(field, record, d)
+                        v = make_view_field(field, record, fields_convert_map=d)
                         value = safe_unicode(v['display'], encoding)
                 row.append(value)
                 
