@@ -12,15 +12,23 @@ def install(sender):
     expose('%s/<path:filename>' % url, static=True)(file_serving)
  
 def file_serving(filename):
+    from uliweb import settings
     from uliweb.utils.filedown import filedown
     from uliweb.core.SimpleFrame import local
     
     fname = get_filename(filename, filesystem=True)
     action = request.GET.get('action', 'download')
-    if action == 'inline':
-        return filedown(local.request.environ, fname, inline=True)
-    else:
-        return filedown(local.request.environ, fname, download=True)
+    x_sendfile = settings.get_var('UPLOAD/X_SENDFILE')
+    x_header = settings.get_var('UPLOADX_HEADER')
+    if x_sendfile and not x_header:
+        if x_sendfile == 'nginx':
+            x_header = 'X-Accel-Redirect'
+        elif x_sendfile == 'apache':
+            x_header = 'X-Sendfile'
+        else:
+            raise Exception, "X_HEADER can't be None, or X_SENDFILE is not supprted"
+    return filedown(local.request.environ, fname, action=action, 
+        x_sendfile=bool(x_sendfile), x_header=x_header)
 
 def normfilename(filename):
     return os.path.normpath(filename).replace('\\', '/')
