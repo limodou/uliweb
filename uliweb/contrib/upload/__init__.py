@@ -15,12 +15,17 @@ def file_serving(filename):
     from uliweb import settings
     from uliweb.utils.filedown import filedown
     from uliweb.core.SimpleFrame import local
+    from uliweb.utils import files
     
-    fname = get_filename(filename, filesystem=True)
+    s = settings.GLOBAL
+    fname = files.encode_filename(filename, s.HTMLPAGE_ENCODING, s.FILESYSTEM_ENCODING)
     action = request.GET.get('action', 'download')
     x_sendfile = settings.get_var('UPLOAD/X_SENDFILE')
-    x_header_name = settings.get_var('UPLOADX_HEADER_NAME')
+    x_header_name = settings.get_var('UPLOAD/X_HEADER_NAME')
+    x_file_prefix = settings.get_var('UPLOAD/X_FILE_PREFIX')
     if x_sendfile and not x_header_name:
+        if x_file_prefix:
+            fname = os.path.normpath(os.path.join(x_file_prefix, fname)).replace('\\', '/')
         if x_sendfile == 'nginx':
             x_header_name = 'X-Accel-Redirect'
         elif x_sendfile == 'apache':
