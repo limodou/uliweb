@@ -19,16 +19,16 @@ def file_serving(filename):
     fname = get_filename(filename, filesystem=True)
     action = request.GET.get('action', 'download')
     x_sendfile = settings.get_var('UPLOAD/X_SENDFILE')
-    x_header = settings.get_var('UPLOADX_HEADER')
-    if x_sendfile and not x_header:
+    x_header_name = settings.get_var('UPLOADX_HEADER_NAME')
+    if x_sendfile and not x_header_name:
         if x_sendfile == 'nginx':
-            x_header = 'X-Accel-Redirect'
+            x_header_name = 'X-Accel-Redirect'
         elif x_sendfile == 'apache':
-            x_header = 'X-Sendfile'
+            x_header_name = 'X-Sendfile'
         else:
             raise Exception, "X_HEADER can't be None, or X_SENDFILE is not supprted"
     return filedown(local.request.environ, fname, action=action, 
-        x_sendfile=bool(x_sendfile), x_header=x_header)
+        x_sendfile=bool(x_sendfile), x_header=(x_header_name, fname))
 
 def normfilename(filename):
     return os.path.normpath(filename).replace('\\', '/')

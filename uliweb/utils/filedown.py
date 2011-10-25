@@ -45,6 +45,8 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
     elif action == 'inline':
         headers.append(('Content-Disposition', 'inline; filename=%s' % d_filename))
     if x_sendfile:
+        if not x_header:
+            raise Exception, "x_header can't be empty"
         headers.append(x_header)
         return Response('', status=200, headers=headers,
             direct_passthrough=True)
