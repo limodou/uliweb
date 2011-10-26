@@ -6,11 +6,6 @@ from werkzeug.exceptions import Forbidden
 __all__ = ['save_file', 'get_filename', 'get_url', 'save_file_field', 'save_image_field', 
     'delete_filename', 'normfilename']
 
-#@bind('startup_installed')
-#def install(sender):
-#    url = sender.settings.UPLOAD.URL_SUFFIX.rstrip('/')
-#    expose('%s/<path:filename>' % url, static=True)(file_serving)
-    
 class FileServing(object):
     options = {
         'x_sendfile' : ('UPLOAD/X_SENDFILE', None),
@@ -57,33 +52,6 @@ class FileServing(object):
 def file_serving(filename):
     f = FileServing()
     return f.do(filename)
-
-#def file_serving(filename, action=None, x_sendfile=None, x_header_name=None, 
-#    x_file_prefix=None, x_filename=None, real_filename=None):
-#    """
-#    if url_filename is not given, then it means the url filename should be the same
-#        with filename
-#    """
-#    from uliweb import settings, request
-#    from uliweb.utils.filedown import filedown
-#    from uliweb.utils import files
-#    
-#    s = settings.GLOBAL
-#    fname = files.encode_filename(filename, s.HTMLPAGE_ENCODING, s.HTMLPAGE_ENCODING)
-#    x_filename = x_filename or fname
-#    action = request.GET.get('action', action)
-#    if x_sendfile is None:
-#        x_sendfile = settings.get_var('UPLOAD/X_SENDFILE')
-#    if x_header_name is None:
-#        x_header_name = settings.get_var('UPLOAD/X_HEADER_NAME')
-#    if x_file_prefix is None:
-#        x_file_prefix = settings.get_var('UPLOAD/X_FILE_PREFIX')
-#    if x_file_prefix:
-#        x_filename = os.path.normpath(os.path.join(x_file_prefix, x_filename)).replace('\\', '/')
-#    
-#    return filedown(request.environ, fname, action=action, 
-#        x_sendfile=bool(x_sendfile), x_header_name=x_header_name, x_filename=x_filename, 
-#        real_filename=real_filename)
 
 def normfilename(filename):
     return os.path.normpath(filename).replace('\\', '/')
@@ -149,7 +117,7 @@ def delete_filename(filename):
 
 def get_url(filename):
     import urllib
-    from uliweb import application
+    from uliweb import application, url_for
 
     if not filename:
         return ''
@@ -159,6 +127,6 @@ def get_url(filename):
         filename = filename.encode('utf-8')
 #    filename = urllib.quote_plus(filename)
     fname = os.path.normpath(filename)
-    f = normfilename(os.path.join(application.settings.UPLOAD.URL_SUFFIX, fname))
+    f = normfilename(url_for('file_serving', filename=fname))
     
     return f
