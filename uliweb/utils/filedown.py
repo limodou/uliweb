@@ -22,8 +22,12 @@ def _generate_etag(mtime, file_size, real_filename):
 
 def filedown(environ, filename, cache=True, cache_timeout=None, 
     action=None, real_filename=None, x_sendfile=False,
-    x_header=None, default_mimetype='application/octet-stream'):
+    x_header_name=None, x_filename=None, default_mimetype='application/octet-stream'):
     """
+    filename is used for display in download
+    real_filename if used for the real file location
+    x_urlfile is only used in x-sendfile, and be set to x-sendfile header
+    
     filedown now support web server controlled download, you should set
     xsendfile=True, and add x_header, for example:
     
@@ -40,14 +44,14 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
     headers = []
     headers.append(('Content-Type', mime_type))
     d_filename = os.path.basename(filename)
-    if action == 'downlaod':
+    if action == 'download':
         headers.append(('Content-Disposition', 'attachment; filename=%s' % d_filename))
     elif action == 'inline':
         headers.append(('Content-Disposition', 'inline; filename=%s' % d_filename))
     if x_sendfile:
-        if not x_header:
-            raise Exception, "x_header can't be empty"
-        headers.append(x_header)
+        if not x_header_name or not x_filename:
+            raise Exception, "x_header_name or x_filename can't be empty"
+        headers.append((x_header_name, x_filename))
         return Response('', status=200, headers=headers,
             direct_passthrough=True)
     else:
@@ -76,6 +80,5 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
             ('Last-Modified', http_date(mtime))
         ))
     
-        print 'headers', environ['PATH_INFO'], headers
         return Response(wrap_file(environ, f), status=200, headers=headers,
             direct_passthrough=True)

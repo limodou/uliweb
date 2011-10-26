@@ -9,6 +9,7 @@ import uliweb.orm as orm
 from uliweb import function, redirect, json
 from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
+from uliweb.contrib.upload import FileServing
 
 __default_fields_builds__ = {}
 class __default_value__(object):pass
@@ -1013,7 +1014,14 @@ class DeleteView(object):
     def delete_manytomany(self, obj):
         for k, v in obj._manytomany.iteritems():
             getattr(obj, k).clear()
-        
+  
+class GenericFileServing(FileServing):
+    options = {
+        'x_sendfile' : ('GENERIC/X_SENDFILE', None),
+        'x_header_name': ('GENERIC/X_HEADER_NAME', None),
+        'x_file_prefix': ('GENERIC/X_FILE_PREFIX', '/gdownload'),
+    }
+
 class SimpleListView(object):
     def __init__(self, fields=None, query=None, cache_file=None, 
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
@@ -1049,6 +1057,7 @@ class SimpleListView(object):
         self.template_data = template_data or {}
         self.default_column_width = default_column_width
         self.manual = manual
+        self.downloader = GenericFileServing()
         
     def create_total_infos(self, total_fields):
         if total_fields:
@@ -1188,11 +1197,10 @@ class SimpleListView(object):
                     flag, self.total, result = repeat(query_result, -1, self.total)
                     return result
         
-    def download(self, filename, timeout=3600, inline=False, download=False, query=None, fields_convert_map=None, type=None, domain=None):
+    def download(self, filename, timeout=3600, action=None, query=None, fields_convert_map=None, type=None, domain=None):
         """
         Default domain option is PARA/DOMAIN
         """
-        from uliweb.utils.filedown import filedown
         from uliweb import request, settings
         
         if fields_convert_map is not None:
@@ -1200,9 +1208,10 @@ class SimpleListView(object):
         else:
             fields_convert_map = self.fields_convert_map
         
-        if os.path.exists(filename):
-            if timeout and os.path.getmtime(filename) + timeout > time.time():
-                return filedown(request.environ, filename, inline=inline, download=download)
+        t_filename = self.get_real_file(filename)
+        if os.path.exists(t_filename):
+            if timeout and os.path.getmtime(t_filename) + timeout > time.time():
+                return self.downloader.do(filename, action)
             
         table = self.table_info()
         if not query:
@@ -1216,9 +1225,9 @@ class SimpleListView(object):
         if type in ('xlt', 'xls'):
             if not domain:
                 domain = settings.get_var('PARA/DOMAIN')
-            return self.download_xlt(filename, query, table, inline, download, fields_convert_map, domain)
+            return self.download_xlt(filename, query, table, action, fields_convert_map, domain, not_tempfile=bool(timeout))
         else:
-            return self.download_csv(filename, query, table, inline, download, fields_convert_map)
+            return self.download_csv(filename, query, table, action, fields_convert_map, not_tempfile=bool(timeout))
        
     def get_data(self, query, table, fields_convert_map, encoding='utf-8', plain=True):
         from uliweb.utils.common import safe_unicode
@@ -1271,49 +1280,68 @@ class SimpleListView(object):
                 row.append(v)
             yield row
 
-    def download_xlt(self, filename, data, table, inline, download, fields_convert_map=None, domain=None):
+    def get_real_file(self, filename):
+        from uliweb.utils import files
+        from uliweb import settings
+        
+        s = settings.GLOBAL
+        fname = files.encode_filename(filename, s.HTMLPAGE_ENCODING, s.FILESYSTEM_ENCODING)
+        path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
+        t_filename = os.path.normpath(os.path.join(path, fname)).replace('\\', '/')
+        return t_filename
+    
+    def get_download_file(self, filename, not_tempfile):
+        import tempfile
+        
+        t_filename = self.get_real_file(filename)
+        dirname = os.path.dirname(t_filename)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        #bfile is display filename
+        bfile = os.path.basename(t_filename)
+        #tfile is template filename and it's the real filename
+        if not not_tempfile:
+            tfile = tempfile.NamedTemporaryFile(suffix = ".tmp", prefix = bfile+'_', dir=dirname, delete = False)
+        else:
+            tfile = open(t_filename, 'wb')
+        #ufile is internal url filename
+        ufile = os.path.join(os.path.dirname(filename), os.path.basename(tfile.name))
+        return tfile, bfile, ufile
+    
+    def download_xlt(self, filename, data, table, action, fields_convert_map=None, domain=None, not_tempfile=False):
         from uliweb.utils.xlt import ExcelWriter
         from uliweb import request, settings
-        from uliweb.utils.filedown import filedown
         
         fields_convert_map = fields_convert_map or {}
-        path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
+        tfile, bfile, ufile = self.get_download_file(filename, not_tempfile)
         if not domain:
             domain = settings.get_var('GENERIC/DOWNLOAD_DOMAIN', request.host_url)
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
-        t_filename = os.path.join(path, filename)
-        r_filename = os.path.basename(filename)
-        dirname = os.path.dirname(t_filename)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        w = ExcelWriter(header=table['fields_list'], data=self.get_data(data, table, fields_convert_map, default_encoding, plain=False), encoding=default_encoding, domain=domain)
-        w.save(t_filename)
-        return filedown(request.environ, r_filename, real_filename=t_filename, inline=inline, download=download)
+        w = ExcelWriter(header=table['fields_list'], data=self.get_data(data, 
+            table, fields_convert_map, default_encoding, plain=False), 
+            encoding=default_encoding, domain=domain)
+        w.save(tfile.name)
+        return self.downloader.do(bfile, action=action, x_filename=ufile, 
+            real_filename=tfile.name)
         
-    def download_csv(self, filename, data, table, inline, download, fields_convert_map=None):
-        from uliweb.utils.filedown import filedown
-        from uliweb import request, settings
+    def download_csv(self, filename, data, table, action, fields_convert_map=None, not_tempfile=False):
+        from uliweb import settings
         from uliweb.utils.common import simple_value, safe_unicode
-        import tempfile
         import csv
         
         fields_convert_map = fields_convert_map or {}
-        path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
+        tfile, bfile, ufile = self.get_download_file(filename, not_tempfile)
+
         encoding = settings.get_var('GENERIC/CSV_ENCODING', sys.getfilesystemencoding() or 'utf-8')
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
-        t_filename = os.path.join(path, filename)
-        r_filename = os.path.basename(filename)
-        dirname = os.path.dirname(t_filename)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        with tempfile.NamedTemporaryFile(suffix = ".tmp", prefix = r_filename+'_', dir=dirname, delete = False) as f:
-            t_filename = f.name
+        with tfile as f:
             w = csv.writer(f)
             row = [safe_unicode(x, default_encoding) for x in table['fields_name']]
             w.writerow(simple_value(row, encoding))
             for row in self.get_data(data, table, fields_convert_map, default_encoding):
                 w.writerow(simple_value(row, encoding))
-        return filedown(request.environ, r_filename, real_filename=t_filename, inline=inline, download=download)
+        return self.downloader.do(bfile, action=action, x_filename=ufile, 
+            real_filename=tfile.name)
         
     def json(self):
         return self.run(head=False, body=True, json_body=True)
@@ -1616,6 +1644,7 @@ class ListView(SimpleListView):
         self.create_total_infos(total_fields)
         self.template_data = template_data or {}
         self.default_column_width = default_column_width
+        self.downloader = GenericFileServing()
         
         self.init()
         

@@ -6,34 +6,84 @@ from werkzeug.exceptions import Forbidden
 __all__ = ['save_file', 'get_filename', 'get_url', 'save_file_field', 'save_image_field', 
     'delete_filename', 'normfilename']
 
-@bind('startup_installed')
-def install(sender):
-    url = sender.settings.UPLOAD.URL_SUFFIX.rstrip('/')
-    expose('%s/<path:filename>' % url, static=True)(file_serving)
- 
-def file_serving(filename):
-    from uliweb import settings
-    from uliweb.utils.filedown import filedown
-    from uliweb.core.SimpleFrame import local
-    from uliweb.utils import files
+#@bind('startup_installed')
+#def install(sender):
+#    url = sender.settings.UPLOAD.URL_SUFFIX.rstrip('/')
+#    expose('%s/<path:filename>' % url, static=True)(file_serving)
     
-    s = settings.GLOBAL
-    fname = files.encode_filename(filename, s.HTMLPAGE_ENCODING, s.FILESYSTEM_ENCODING)
-    action = request.GET.get('action', 'download')
-    x_sendfile = settings.get_var('UPLOAD/X_SENDFILE')
-    x_header_name = settings.get_var('UPLOAD/X_HEADER_NAME')
-    x_file_prefix = settings.get_var('UPLOAD/X_FILE_PREFIX')
-    if x_sendfile and not x_header_name:
-        if x_file_prefix:
-            fname = os.path.normpath(os.path.join(x_file_prefix, fname)).replace('\\', '/')
-        if x_sendfile == 'nginx':
-            x_header_name = 'X-Accel-Redirect'
-        elif x_sendfile == 'apache':
-            x_header_name = 'X-Sendfile'
-        else:
-            raise Exception, "X_HEADER can't be None, or X_SENDFILE is not supprted"
-    return filedown(local.request.environ, fname, action=action, 
-        x_sendfile=bool(x_sendfile), x_header=(x_header_name, fname))
+class FileServing(object):
+    options = {
+        'x_sendfile' : ('UPLOAD/X_SENDFILE', None),
+        'x_header_name': ('UPLOAD/X_HEADER_NAME', ''),
+        'x_file_prefix': ('UPLOAD/X_FILE_PREFIX', '/files'),
+    }
+    
+    def __init__(self):
+        from uliweb import settings
+        
+        for k, v in self.options.items():
+            item, default = v
+            setattr(self, k, settings.get_var(item, default))
+            
+        if self.x_sendfile and not self.x_header_name:
+            if self.x_sendfile == 'nginx':
+                self.x_header_name = 'X-Accel-Redirect'
+            elif self.x_sendfile == 'apache':
+                self.x_header_name = 'X-Sendfile'
+            else:
+                raise Exception, "X_HEADER can't be None, or X_SENDFILE is not supprted"
+        
+    def do(self, filename, action=None, x_filename='', real_filename=''):
+        """
+        action will be "download", "inline"
+        and if the request.GET has 'action', then the action will be replaced by it.
+        """
+        from uliweb.utils.common import safe_str
+        from uliweb.utils.filedown import filedown
+        from uliweb import request
+        
+        action = request.GET.get('action', action)
+        
+        fname = safe_str(filename)
+        if not x_filename:
+            x_filename = fname
+        if self.x_file_prefix:
+            x_filename = os.path.normpath(os.path.join(self.x_file_prefix, x_filename)).replace('\\', '/')
+        
+        return filedown(request.environ, fname, action=action, 
+            x_sendfile=bool(self.x_sendfile), x_header_name=self.x_header_name, 
+            x_filename=x_filename, real_filename=real_filename)
+     
+def file_serving(filename):
+    f = FileServing()
+    return f.do(filename)
+
+#def file_serving(filename, action=None, x_sendfile=None, x_header_name=None, 
+#    x_file_prefix=None, x_filename=None, real_filename=None):
+#    """
+#    if url_filename is not given, then it means the url filename should be the same
+#        with filename
+#    """
+#    from uliweb import settings, request
+#    from uliweb.utils.filedown import filedown
+#    from uliweb.utils import files
+#    
+#    s = settings.GLOBAL
+#    fname = files.encode_filename(filename, s.HTMLPAGE_ENCODING, s.HTMLPAGE_ENCODING)
+#    x_filename = x_filename or fname
+#    action = request.GET.get('action', action)
+#    if x_sendfile is None:
+#        x_sendfile = settings.get_var('UPLOAD/X_SENDFILE')
+#    if x_header_name is None:
+#        x_header_name = settings.get_var('UPLOAD/X_HEADER_NAME')
+#    if x_file_prefix is None:
+#        x_file_prefix = settings.get_var('UPLOAD/X_FILE_PREFIX')
+#    if x_file_prefix:
+#        x_filename = os.path.normpath(os.path.join(x_file_prefix, x_filename)).replace('\\', '/')
+#    
+#    return filedown(request.environ, fname, action=action, 
+#        x_sendfile=bool(x_sendfile), x_header_name=x_header_name, x_filename=x_filename, 
+#        real_filename=real_filename)
 
 def normfilename(filename):
     return os.path.normpath(filename).replace('\\', '/')
