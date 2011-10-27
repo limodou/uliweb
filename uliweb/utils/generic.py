@@ -1852,7 +1852,7 @@ class QueryView(object):
     def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
         data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, post_created_form=None, 
-        layout=None, get_form_field=None):
+        layout=None, get_form_field=None, links=None):
 
         self.model = model
         self.ok_url = ok_url
@@ -1873,6 +1873,7 @@ class QueryView(object):
         self.static_fields = static_fields or []
         self.hidden_fields = hidden_fields or []
         self.post_created_form = post_created_form
+        self.links = links or []
         
         #add layout support
         self.layout = layout
@@ -1940,7 +1941,9 @@ class QueryView(object):
         if self.post_created_form:
             self.post_created_form(DummyForm, self.model)
             
-        return DummyForm(data=self.data, **self.form_args)
+        form = DummyForm(data=self.data, **self.form_args)
+        form.links = self.links
+        return form
     
     def run(self):
         from uliweb import request

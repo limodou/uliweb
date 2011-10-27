@@ -261,12 +261,16 @@ class QueryLayout(Layout):
                 with buf.table(_class='query'):
                     with buf.tr:
                         for x in line:
-                            f = getattr(self.form, x)
-                            obj = self.form.fields[x]
-                            if self.is_hidden(obj):
-                                buf << f
-                            else:
-                                buf << self.line(obj, f.label, f, f.help_string, f.error)
+                            f = getattr(self.form, x, None)
+                            if f:
+                                obj = self.form.fields[x]
+                                if self.is_hidden(obj):
+                                    buf << f
+                                else:
+                                    buf << self.line(obj, f.label, f, f.help_string, f.error)
+                            elif x:
+                                with buf.td:
+                                    buf << x
                         if first:
                             with buf.td:
                                 buf << self.form.get_buttons()
@@ -275,19 +279,22 @@ class QueryLayout(Layout):
                             
             else:
                 f = getattr(self.form, line)
-                obj = self.form.fields[line]
-                if self.is_hidden(obj):
+                obj = self.form.fields.get(line)
+                if obj and self.is_hidden(obj):
                     buf << f
                 else:
                     with buf.table(_class='query'):
                         with buf.tr:
-                            buf << self.line(obj, f.label, f, f.help_string, f.error)
-                            
+                            if obj:
+                                buf << self.line(obj, f.label, f, f.help_string, f.error)
+                            elif line:
+                                with buf.td:
+                                    buf << line
                             if first:
                                 with buf.td:
                                     buf << self.form.get_buttons()
                                     if more:
-                                        buf << '<a href="#" id="more_query">more</a>'
+                                        buf << '<a href="#" id="more_query">%s</a>' % _('more')
                                     
         if not self.layout:
             self.layout = [[name for name, obj in self.form.fields_list]]
