@@ -45,6 +45,10 @@ class FileServing(object):
         if self.x_file_prefix:
             x_filename = os.path.normpath(os.path.join(self.x_file_prefix, x_filename)).replace('\\', '/')
         
+        if not real_filename:
+            real_filename = get_filename(filename)
+        else:
+            real_filename = get_filename(real_filename)
         return filedown(request.environ, fname, action=action, 
             x_sendfile=bool(self.x_sendfile), x_header_name=self.x_header_name, 
             x_filename=x_filename, real_filename=real_filename)
