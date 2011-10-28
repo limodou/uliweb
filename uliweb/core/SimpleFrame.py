@@ -634,7 +634,7 @@ class Dispatcher(object):
                 d = ['default.html', self.default_template]
             else:
                 d = None
-            response = self.render(tmpfile, result, env=env, default_template=d, content_type=content_type)
+            response.write(self.template(tmpfile, result, env, default_template=d))
         elif isinstance(result, (str, unicode)):
             response = Response(result, content_type='text/html')
         elif isinstance(result, (Response, BaseResponse)):
