@@ -303,6 +303,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                 value = obj[prop.property_name]
         display = prop.get_display_value(value)
         name = prop.property_name
+        
         if isinstance(field, dict):
             initial = field.get('verbose_name', None)
         else:
@@ -677,7 +678,18 @@ class EditView(AddView):
             flash = function('flash')
             flash(self.fail_msg, 'error')
             return d
-        
+
+    def prepare_static_data(self, data):
+        """
+        If user defined static fields, then process them with visiable value
+        """
+        d = self.obj.to_dict()
+        d.update(data.copy())
+        for f in self.get_fields():
+            if f['static'] and f['name'] in d:
+                v = make_view_field(f, self.obj, self.types_convert_map, self.fields_convert_map, d[f['name']])
+                d[f['name']] = v['display']
+        return d
 
     def run(self, json_result=False):
         from uliweb import request
