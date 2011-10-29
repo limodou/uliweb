@@ -1032,6 +1032,8 @@ class GenericFileServing(FileServing):
         'x_sendfile' : ('GENERIC/X_SENDFILE', None),
         'x_header_name': ('GENERIC/X_HEADER_NAME', None),
         'x_file_prefix': ('GENERIC/X_FILE_PREFIX', '/gdownload'),
+        'to_path': ('GENERIC/TO_PATH', './files'),
+        'buffer_size': ('GENERIC/BUFFER_SIZE', 4096),
     }
 
 class SimpleListView(object):
@@ -1213,7 +1215,7 @@ class SimpleListView(object):
         """
         Default domain option is PARA/DOMAIN
         """
-        from uliweb import request, settings
+        from uliweb import settings
         
         if fields_convert_map is not None:
             fields_convert_map = fields_convert_map 
@@ -1223,7 +1225,7 @@ class SimpleListView(object):
         t_filename = self.get_real_file(filename)
         if os.path.exists(t_filename):
             if timeout and os.path.getmtime(t_filename) + timeout > time.time():
-                return self.downloader.do(filename, action)
+                return self.downloader.download(filename, action)
             
         table = self.table_info()
         if not query:
@@ -1293,13 +1295,7 @@ class SimpleListView(object):
             yield row
 
     def get_real_file(self, filename):
-        from uliweb.utils import files
-        from uliweb import settings
-        
-        s = settings.GLOBAL
-        fname = files.encode_filename(filename, s.HTMLPAGE_ENCODING, s.FILESYSTEM_ENCODING)
-        path = settings.get_var('GENERIC/DOWNLOAD_DIR', 'files')
-        t_filename = os.path.normpath(os.path.join(path, fname)).replace('\\', '/')
+        t_filename = self.downloader.get_filename(filename)
         return t_filename
     
     def get_download_file(self, filename, not_tempfile):
@@ -1333,7 +1329,7 @@ class SimpleListView(object):
             table, fields_convert_map, default_encoding, plain=False), 
             encoding=default_encoding, domain=domain)
         w.save(tfile.name)
-        return self.downloader.do(bfile, action=action, x_filename=ufile, 
+        return self.downloader.download(bfile, action=action, x_filename=ufile, 
             real_filename=tfile.name)
         
     def download_csv(self, filename, data, table, action, fields_convert_map=None, not_tempfile=False):
@@ -1352,7 +1348,7 @@ class SimpleListView(object):
             w.writerow(simple_value(row, encoding))
             for row in self.get_data(data, table, fields_convert_map, default_encoding):
                 w.writerow(simple_value(row, encoding))
-        return self.downloader.do(bfile, action=action, x_filename=ufile, 
+        return self.downloader.download(bfile, action=action, x_filename=ufile, 
             real_filename=tfile.name)
         
     def json(self):

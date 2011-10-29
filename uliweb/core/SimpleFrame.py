@@ -17,8 +17,8 @@ import dispatch
 from uliweb.utils.common import (pkg, log, sort_list, import_attr, 
     myimport, wraps, norm_path, cache_get)
 import uliweb.utils.pyini as pyini
-import uliweb as conf
 from uliweb.i18n import gettext_lazy
+from uliweb.utils.localproxy import LocalProxy, Global
 
 #from rules import Mapping, add_rule
 import rules
@@ -28,11 +28,18 @@ try:
 except:
     from sets import Set as set
 
-conf.local = local = Local()
+local = Local()
+__global__ = Global()
 local_manager = LocalManager([local])
-conf.url_map = Map()
+url_map = Map()
+static_views = []
+use_urls = False
 __app_dirs__ = {}
 __app_alias__ = {}
+
+#Initialize pyini env
+pyini.set_env({'_':gettext_lazy, 'gettext_lazy':gettext_lazy})
+__global__.settings = pyini.Ini()
 
 #User can defined decorator functions in settings DECORATORS
 #and user can user @decorators.function_name in views
@@ -43,9 +50,9 @@ class Decorators(object):
     def __getattr__(self, name):
         if name in self.__decorators__:
             return self.__decorators__[name]
-        if name not in conf.settings.DECORATORS:
+        if name not in settings.DECORATORS:
             raise Exception, "decorator %s is not existed!" % name
-        func = import_attr(conf.settings.DECORATORS.get(name))
+        func = import_attr(settings.DECORATORS.get(name))
         self.__decorators__[name] = func
         return func
     
@@ -57,16 +64,13 @@ class Functions(object):
     def __getattr__(self, name):
         if name in self.__functions__:
             return self.__functions__[name]
-        if name not in conf.settings.FUNCTIONS:
+        if name not in settings.FUNCTIONS:
             raise Exception, "function %s is not existed!" % name
-        func = import_attr(conf.settings.FUNCTIONS.get(name))
+        func = import_attr(settings.FUNCTIONS.get(name))
         self.__functions__[name] = func
         return func
 
 functions = Functions()
-
-#Initialize pyini env
-pyini.set_env({'_':gettext_lazy, 'gettext_lazy':gettext_lazy})
 
 class Request(OriginalRequest):
     GET = OriginalRequest.args
@@ -78,41 +82,9 @@ class Response(OriginalResponse):
     def write(self, value):
         self.stream.write(value)
     
-class RequestProxy(object):
-    def instance(self):
-        return conf.local.request
-        
-    def __getattr__(self, name):
-        return getattr(conf.local.request, name)
-    
-    def __setattr__(self, name, value):
-        setattr(conf.local.request, name, value)
-        
-    def __str__(self):
-        return str(conf.local.request)
-    
-    def __repr__(self):
-        return repr(conf.local.request)
-            
-class ResponseProxy(object):
-    def instance(self):
-        return conf.local.response
-        
-    def __getattr__(self, name):
-        return getattr(conf.local.response, name)
-    
-    def __setattr__(self, name, value):
-        setattr(conf.local.response, name, value)
-
-    def __str__(self):
-        return str(conf.local.response)
-    
-    def __repr__(self):
-        return repr(conf.local.response)
-    
 class HTTPError(Exception):
     def __init__(self, errorpage=None, **kwargs):
-        self.errorpage = errorpage or conf.settings.GLOBAL.ERROR_PAGE
+        self.errorpage = errorpage or settings.GLOBAL.ERROR_PAGE
         self.errors = kwargs
 
     def __str__(self):
@@ -136,7 +108,7 @@ def error(message='', errorpage=None, request=None, appname=None, **kwargs):
     raise HTTPError(errorpage, **kwargs)
 
 def function(fname, *args, **kwargs):
-    func = conf.settings.get_var('FUNCTIONS/'+fname)
+    func = settings.get_var('FUNCTIONS/'+fname)
     if func:
         if args or kwargs:
             return import_attr(func)(*args, **kwargs)
@@ -198,7 +170,7 @@ def url_for(endpoint, **values):
     _external = values.pop('_external', False)
     if point in rules.__url_names__:
         point = rules.__url_names__[point]
-    return conf.local.url_adapter.build(point, values, force_external=_external)
+    return local.url_adapter.build(point, values, force_external=_external)
 
 def get_app_dir(app):
     """
@@ -299,7 +271,7 @@ class Loader(object):
 class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, start=True, default_settings=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
-        conf.application = self
+        __global__.application = self
         self.debug = False
         self.include_apps = include_apps or []
         self.default_settings = default_settings or {}
@@ -316,21 +288,19 @@ class Dispatcher(object):
     def init(self, project_dir, apps_dir):
         if not project_dir:
             project_dir = norm_path(os.path.join(apps_dir, '..'))
-        conf.project_dir = project_dir
-        conf.apps_dir = norm_path(os.path.join(project_dir, 'apps'))
         Dispatcher.project_dir = project_dir
-        Dispatcher.apps_dir = conf.apps_dir
+        Dispatcher.apps_dir = norm_path(os.path.join(project_dir, 'apps'))
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps, self.settings_file, self.local_settings_file)
         Dispatcher.modules = self.collect_modules()
         
         self.install_settings(self.modules['settings'])
-        Dispatcher.settings = conf.settings
+        Dispatcher.settings = settings
         
         #setup log
         self.set_log()
         
         #set app rules
-        rules.set_app_rules(dict(conf.settings.get('URL', {})))
+        rules.set_app_rules(dict(settings.get('URL', {})))
         
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_dirs = self.get_template_dirs()
@@ -340,12 +310,12 @@ class Dispatcher(object):
         
         dispatch.call(self, 'after_init_apps')
 
-        Dispatcher.url_map = conf.url_map
+        Dispatcher.url_map = url_map
         self.install_views(self.modules['views'])
         #process dispatch hooks
         self.dispatch_hooks()
         
-        self.debug = conf.settings.GLOBAL.get('DEBUG', False)
+        self.debug = settings.GLOBAL.get('DEBUG', False)
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
         Dispatcher.default_template = pkg.resource_filename('uliweb.core', 'default.html')
         
@@ -357,7 +327,7 @@ class Dispatcher(object):
         env['redirect'] = redirect
         env['error'] = error
         env['application'] = self
-        env['settings'] = conf.settings
+        env['settings'] = settings
         env['json'] = json
         return env
     
@@ -500,7 +470,7 @@ class Dispatcher(object):
                 urls.append((r.rule, methods, r.endpoint))
             urls.sort()
             return self._page_not_found(url=local.request.path, urls=urls)
-        tmp_file = template.get_templatefile('404'+conf.settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('404'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':local.request.path}, status=404)
         else:
@@ -508,7 +478,7 @@ class Dispatcher(object):
         return response
     
     def internal_error(self, e):
-        tmp_file = template.get_templatefile('500'+conf.settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = template.get_templatefile('500'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
         if tmp_file:
             response = self.render(tmp_file, {'url':local.request.path}, status=500)
         else:
@@ -525,10 +495,6 @@ class Dispatcher(object):
     def prepare_request(self, request, endpoint):
         from uliweb.utils.common import safe_import
 
-        #binding some variable to request
-        request.settings = conf.settings
-        request.application = self
-        
         #get handler
         _klass = None
         if isinstance(endpoint, (str, unicode)):
@@ -623,9 +589,9 @@ class Dispatcher(object):
                 #TEMPLATE_TEMPLATE should be two elements tuple or list, the first one will be used for view_class is not empty
                 #and the second one will be used for common functions
                 if request.view_class:
-                    tmpfile = conf.settings.GLOBAL.TEMPLATE_TEMPLATE[0] % args + conf.settings.GLOBAL.TEMPLATE_SUFFIX
+                    tmpfile = settings.GLOBAL.TEMPLATE_TEMPLATE[0] % args + settings.GLOBAL.TEMPLATE_SUFFIX
                 else:
-                    tmpfile = conf.settings.GLOBAL.TEMPLATE_TEMPLATE[1] % args + conf.settings.GLOBAL.TEMPLATE_SUFFIX
+                    tmpfile = settings.GLOBAL.TEMPLATE_TEMPLATE[1] % args + settings.GLOBAL.TEMPLATE_SUFFIX
                 response.template = tmpfile
             content_type = response.content_type
             
@@ -650,13 +616,13 @@ class Dispatcher(object):
         #process before view call
         dispatch.call(self, 'prepare_view_env', local_env, local.request)
         
-        local_env['application'] = local.application
-        local_env['request'] = conf.request
-        local_env['response'] = conf.response
+        local_env['application'] = __global__.application
+        local_env['request'] = local.request
+        local_env['response'] = local.response
         local_env['url_for'] = url_for
         local_env['redirect'] = redirect
         local_env['error'] = error
-        local_env['settings'] = conf.settings
+        local_env['settings'] = __global__.settings
         local_env['json'] = json
         local_env['function'] = function
         local_env['functions'] = functions
@@ -673,7 +639,7 @@ class Dispatcher(object):
         args = args or ()
         kwargs = kwargs or {}
         result = handler(*args, **kwargs)
-        if isinstance(result, ResponseProxy):
+        if isinstance(result, LocalProxy) and result._obj_name == 'response':
             result = local.response
         return result
     
@@ -743,8 +709,8 @@ class Dispatcher(object):
             appname, endpoint, url, kw = v
             static = kw.pop('static', None)
             if static:
-                conf.static_views.append(endpoint)
-            rules.add_rule(conf.url_map, url, endpoint, **kw)
+                static_views.append(endpoint)
+            rules.add_rule(url_map, url, endpoint, **kw)
     
     def install_apps(self):
         for p in self.apps:
@@ -756,18 +722,18 @@ class Dispatcher(object):
                 log.exception(e)
             
     def install_settings(self, s):
-        conf.settings = pyini.Ini()
+#        settings = pyini.Ini()
         for v in s:
-            conf.settings.read(v)
-        conf.settings.update(self.default_settings)
+            settings.read(v)
+        settings.update(self.default_settings)
         
         #process FILESYSTEM_ENCODING
-        if not conf.settings.GLOBAL.FILESYSTEM_ENCODING:
-            conf.settings.GLOBAL.FILESYSTEM_ENCODING = sys.getfilesystemencoding() or conf.settings.GLOBAL.DEFAULT_ENCODING
+        if not settings.GLOBAL.FILESYSTEM_ENCODING:
+            settings.GLOBAL.FILESYSTEM_ENCODING = sys.getfilesystemencoding() or settings.GLOBAL.DEFAULT_ENCODING
             
     def dispatch_hooks(self):
         #process DISPATCH hooks
-        d = conf.settings.get('BINDS', {})
+        d = settings.get('BINDS', {})
         for func, args in d.iteritems():
             if not args:
                 continue
@@ -787,7 +753,7 @@ class Dispatcher(object):
                 log.error('BINDS definition should be "function=topic" or "function=topic, {"args":value1,...}"')
                 raise Exception, 'BINDS definition [%s=%r] is not right' % (func, args)
                 
-        d = conf.settings.get('EXPOSES', {})
+        d = settings.get('EXPOSES', {})
         for name, args in d.iteritems():
             if not args:
                 continue
@@ -824,12 +790,9 @@ class Dispatcher(object):
         return [os.path.join(get_app_dir(p), 'template_plugins') for p in self.apps]
     
     def __call__(self, environ, start_response):
-        local.application = self
         local.request = req = Request(environ)
-        conf.request = RequestProxy()
         local.response = res = Response(content_type='text/html')
-        conf.response = ResponseProxy()
-        local.url_adapter = adapter = conf.url_map.bind_to_environ(environ)
+        local.url_adapter = adapter = url_map.bind_to_environ(environ)
         
         try:
             endpoint, values = adapter.match()
@@ -837,7 +800,7 @@ class Dispatcher(object):
             mod, handler_cls, handler = self.prepare_request(req, endpoint)
             
             #process static
-            if endpoint in conf.static_views:
+            if endpoint in static_views:
                 response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
             else:
                 response = None
@@ -845,7 +808,7 @@ class Dispatcher(object):
                 _inss = {}
 
                 #middleware process request
-                middlewares = conf.settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
+                middlewares = settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
                 s = []
                 for middleware in middlewares:
                     try:
@@ -865,7 +828,7 @@ class Dispatcher(object):
                 for middleware in middlewares:
                     cls = _clses[middleware]
                     if hasattr(cls, 'process_request'):
-                        ins = cls(self, conf.settings)
+                        ins = cls(self, settings)
                         _inss[middleware] = ins
                         response = ins.process_request(req)
                         if response is not None:
@@ -881,7 +844,7 @@ class Dispatcher(object):
                             if hasattr(cls, 'process_exception'):
                                 ins = _inss.get(middleware)
                                 if not ins:
-                                    ins = cls(self, conf.settings)
+                                    ins = cls(self, settings)
                                 response = ins.process_exception(req, e)
                                 if response:
                                     break
@@ -895,7 +858,7 @@ class Dispatcher(object):
                     if hasattr(cls, 'process_response'):
                         ins = _inss.get(middleware)
                         if not ins:
-                            ins = cls(self, conf.settings)
+                            ins = cls(self, settings)
                         response = ins.process_response(req, response)
                 
             #endif
@@ -914,3 +877,8 @@ class Dispatcher(object):
                 raise
         return ClosingIterator(response(environ, start_response),
                                [local_manager.cleanup])
+
+response = LocalProxy(local, 'response', Response)
+request = LocalProxy(local, 'request', Request)
+settings = LocalProxy(__global__, 'settings', pyini.Ini)
+application = LocalProxy(__global__, 'application', Dispatcher)
