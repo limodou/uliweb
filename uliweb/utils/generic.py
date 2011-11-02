@@ -1631,7 +1631,7 @@ class ListView(SimpleListView):
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
         total_fields=None, template_data=None, default_column_width=100, 
-            default_count_condition=None, meta='Table'):
+        meta='Table'):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -1655,7 +1655,6 @@ class ListView(SimpleListView):
         self.template_data = template_data or {}
         self.default_column_width = default_column_width
         self.downloader = GenericFileServing()
-        self.default_count_condition = default_count_condition
         
         self.init()
         
@@ -1683,7 +1682,7 @@ class ListView(SimpleListView):
             if isinstance(query, Select):
                 self.total = self.model.count(query._whereclause)
             else:
-                self.total = query.filter(self.default_count_condition).count()
+                self.total = query.count()
         else:
             query = self.query_range(self.pageno, self.pagination)
         return query
