@@ -1,6 +1,7 @@
 from uliweb.orm import *
 import datetime
 from uliweb.i18n import ugettext_lazy as _
+from uliweb import functions
 
 def get_hexdigest(algorithm, salt, raw_password):
     """
@@ -73,11 +74,11 @@ class User(Model):
         if self.image:
             return get_url(self.image)
         else:
-            return url_for_static('images/user%dx%d.jpg' % (50, 50))
+            return functions.url_for_static('images/user%dx%d.jpg' % (50, 50))
         
     def get_default_image_url(self, size=50):
         from uliweb.contrib.staticfiles import url_for_static
-        return url_for_static('images/user%dx%d.jpg' % (size, size))
+        return functions.url_for_static('images/user%dx%d.jpg' % (size, size))
         
     def __unicode__(self):
         return self.username

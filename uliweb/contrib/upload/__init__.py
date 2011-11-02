@@ -114,9 +114,8 @@ class FileServing(object):
         
         #make sure the filename is utf-8 encoded
         s = settings.GLOBAL
-        fname = files.unicode_filename(filename, s.FILESYSTEM_ENCODING)
-        f = norm_filename(url_for('file_serving', filename=fname))
-        
+        fname = norm_filename(files.unicode_filename(filename, s.FILESYSTEM_ENCODING))
+        f = url_for('file_serving', filename=fname)
         return f
     
 default_fileserving = FileServing()

@@ -34,6 +34,7 @@ local_manager = LocalManager([local])
 url_map = Map()
 static_views = []
 use_urls = False
+url_adapters = {}
 __app_dirs__ = {}
 __app_alias__ = {}
 
@@ -149,6 +150,17 @@ def GET(rule, **kw):
     kw['methods'] = ['GET']
     return expose(rule, **kw)
 
+def get_url_adapter(_domain_name):
+    """
+    Fetch a domain url_adapter object, and bind it to according domain
+    """
+    domain = application.domains.get(_domain_name, {})
+    if domain.get('domain', ''):
+        adapter = url_map.bind(domain['host'], url_scheme=domain.get('scheme', 'http'))
+    else:
+        adapter = url_map.bind_to_environ(request.environ)
+    return adapter
+
 def url_for(endpoint, **values):
     if inspect.isfunction(endpoint):
         point = endpoint.__module__ + '.' + endpoint.__name__
@@ -167,10 +179,15 @@ def url_for(endpoint, **values):
                     endpoint = v + endpoint[len(k):]
                     break
         point = endpoint
+    _domain_name = values.pop('_domain_name', 'default')
     _external = values.pop('_external', False)
+    domain = application.domains.get(_domain_name, {})
+    if not _external:
+        _external = domain.get('display', False)
     if point in rules.__url_names__:
         point = rules.__url_names__[point]
-    return local.url_adapter.build(point, values, force_external=_external)
+    adapter = get_url_adapter(_domain_name)
+    return adapter.build(point, values, force_external=_external)
 
 def get_app_dir(app):
     """
@@ -296,6 +313,9 @@ class Dispatcher(object):
         self.install_settings(self.modules['settings'])
         Dispatcher.settings = settings
         
+        #process domains
+        self.process_domains(settings)
+        
         #setup log
         self.set_log()
         
@@ -310,7 +330,6 @@ class Dispatcher(object):
         
         dispatch.call(self, 'after_init_apps')
 
-        Dispatcher.url_map = url_map
         self.install_views(self.modules['views'])
         #process dispatch hooks
         self.dispatch_hooks()
@@ -400,6 +419,17 @@ class Dispatcher(object):
                 handler.setFormatter(fmt)
                 log.addHandler(handler)
                 
+    def process_domains(self, settings):
+        from urlparse import urlparse
+
+        self.domains = {}
+        
+        for k, v in settings.DOMAINS.iteritems():
+            _domain = urlparse(v['domain'])
+            self.domains[k] = {'domain':v.get('domain'), 'domain_parse':_domain, 
+                'host':_domain.netloc,
+                'scheme':_domain.scheme or 'http', 'display':v.get('display', False)}
+        
     def get_file(self, filename, dir='static'):
         """
         get_file will search from apps directory
@@ -462,7 +492,7 @@ class Dispatcher(object):
     def not_found(self, e):
         if self.debug:
             urls = []
-            for r in self.url_map.iter_rules():
+            for r in url_map.iter_rules():
                 if r.methods:
                     methods = ' '.join(list(r.methods))
                 else:
@@ -792,11 +822,10 @@ class Dispatcher(object):
     def __call__(self, environ, start_response):
         local.request = req = Request(environ)
         local.response = res = Response(content_type='text/html')
-        local.url_adapter = adapter = url_map.bind_to_environ(environ)
         
+        url_adapter = get_url_adapter('default')
         try:
-            endpoint, values = adapter.match()
-            
+            endpoint, values = url_adapter.match()
             mod, handler_cls, handler = self.prepare_request(req, endpoint)
             
             #process static

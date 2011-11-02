@@ -884,7 +884,7 @@ class DetailTableLayout(object):
         buf = Buf()
         table = None
         fieldset = None
-        first = False
+        first = True
         for fields in self.layout:
             if not isinstance(fields, (tuple, list)):
                 if fields.startswith('--') and fields.endswith('--'):
@@ -900,7 +900,7 @@ class DetailTableLayout(object):
                     
                     buf << '<table class="table width100"><tbody>'
                     table = True
-                    first = True
+                    first = False
                     continue
                 else:
                     fields = [fields]
@@ -937,9 +937,10 @@ class DetailView(object):
         self.fields_convert_map = fields_convert_map or {}
         self.table_class_attr = table_class_attr
         self.layout = layout or get_layout(model, meta)
+        self.layout_class = layout_class
         if isinstance(self.layout, (str, unicode)):
             self.layout_class = layout_class or DetailLayout
-        else:
+        elif isinstance(self.layout, (tuple, list)):
             self.layout_class = layout_class or DetailTableLayout
         self.template_data = template_data or {}
         self.result_fields = Storage({})
@@ -1629,7 +1630,8 @@ class ListView(SimpleListView):
     def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
-        total_fields=None, template_data=None, default_column_width=100, meta='Table'):
+        total_fields=None, template_data=None, default_column_width=100, 
+            default_count_condition=None, meta='Table'):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -1653,6 +1655,7 @@ class ListView(SimpleListView):
         self.template_data = template_data or {}
         self.default_column_width = default_column_width
         self.downloader = GenericFileServing()
+        self.default_count_condition = default_count_condition
         
         self.init()
         
@@ -1680,7 +1683,7 @@ class ListView(SimpleListView):
             if isinstance(query, Select):
                 self.total = self.model.count(query._whereclause)
             else:
-                self.total = query.count()
+                self.total = query.filter(self.default_count_condition).count()
         else:
             query = self.query_range(self.pageno, self.pagination)
         return query
@@ -1706,7 +1709,7 @@ class ListView(SimpleListView):
             'count':10,
         """
         from uliweb.orm import do_
-        result = {}
+        result = {'total':self.total, 'table_id':self.id}
         s = []
         if head:
             if self.table_width:
@@ -1718,7 +1721,6 @@ class ListView(SimpleListView):
             s.extend(self.create_table_head(table))
             s.append('</thead>')
             s.append('<tbody>')
-            result = {'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
         
         if body:
             self.rows_num = 0
@@ -1748,7 +1750,7 @@ class ListView(SimpleListView):
                 total = self.render_total(table, json_body)
                 if total:
                     s.append(dict(zip(table['fields'], total)))
-                return {'total':self.total, 'rows':s}
+                result['rows'] = s
             else:
                 s.extend(self.render_total(table))
             
@@ -1756,7 +1758,8 @@ class ListView(SimpleListView):
             s.append('</tbody>')
             s.append('</table>')
         
-        result['table'] = '\n'.join(s)
+        if not json_body:
+            result['table'] = '\n'.join(s)
         return result
     
     def objects(self):

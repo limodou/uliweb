@@ -2,7 +2,7 @@ import os
 import re
 from uliweb.utils.common import log
 from uliweb.core.template import *
-from uliweb.contrib.staticfiles import url_for_static
+from uliweb import functions
 
 r_links = re.compile('<link\s+.*?\s*href\s*=\s*"?(.*?)["\s>]|<script\s+.*?\s*src\s*=\s*"?(.*?)["\s>]', re.I)
 r_head = re.compile('(?i)<head>(.*?)</head>', re.DOTALL)
@@ -189,7 +189,7 @@ class HtmlMerge(object):
                 if '{{' in link and '}}' in link:
                     link = template(link, self.env)
                 if link.endswith('.js') or link.endswith('.css'):
-                    _link = url_for_static(link)
+                    _link = functions.url_for_static(link)
                 else:
                     _link = link
                 if not link in r[_type] and not _link in existlinks:
@@ -231,16 +231,16 @@ class HtmlMerge(object):
                 else:
                     link, media = x, None
                 if link.endswith('.js'):
-                    link = url_for_static(link)
+                    link = functions.url_for_static(link)
                     result.append('<script type="text/javascript" src="%s"></script>' % link)
                 elif link.endswith('.css'):
-                    link = url_for_static(link)
+                    link = functions.url_for_static(link)
                     if media:
                         result.append('<link rel="stylesheet" type="text/css" href="%s" media="%s"/>' % (link, media))
                     else:
                         result.append('<link rel="stylesheet" type="text/css" href="%s"/>' % link)
                 elif link.endswith('.less'):
-                    link = url_for_static(link)
+                    link = functions.url_for_static(link)
                     result.append('<link rel="stylesheet/less" href="%s"/>' % link)
                 else:
                     result.append(link)
