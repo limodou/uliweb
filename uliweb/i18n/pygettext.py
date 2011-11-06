@@ -221,30 +221,38 @@ escapes = []
 
 def make_escapes(pass_iso8859):
     global escapes
-    if pass_iso8859:
-        # Allow iso-8859 characters to pass through so that e.g. 'msgid
-        # "H?e"' would result not result in 'msgid "H\366he"'.  Otherwise we
-        # escape any character outside the 32..126 range.
-        mod = 128
-    else:
-        mod = 256
-    for i in range(256):
-        if 32 <= (i % mod) <= 126:
-            escapes.append(chr(i))
-        else:
-            escapes.append("\\%03o" % i)
-    escapes[ord('\\')] = '\\\\'
-    escapes[ord('\t')] = '\\t'
-    escapes[ord('\r')] = '\\r'
-    escapes[ord('\n')] = '\\n'
-    escapes[ord('\"')] = '\\"'
+#    if pass_iso8859:
+#        # Allow iso-8859 characters to pass through so that e.g. 'msgid
+#        # "H?e"' would result not result in 'msgid "H\366he"'.  Otherwise we
+#        # escape any character outside the 32..126 range.
+#        mod = 128
+#    else:
+#        mod = 256
+#    for i in range(256):
+#        if 32 <= (i % mod) <= 126:
+#            escapes.append(chr(i))
+#        else:
+#            escapes.append("\\%03o" % i)
+#    escapes[ord('\\')] = '\\\\'
+#    escapes[ord('\t')] = '\\t'
+#    escapes[ord('\r')] = '\\r'
+#    escapes[ord('\n')] = '\\n'
+#    escapes[ord('\"')] = '\\"'
 
+__escapes__ = {}
+__escapes__['\\'] = '\\\\'
+__escapes__['\t'] = '\\t'
+__escapes__['\r'] = '\\r'
+__escapes__['\n'] = '\\n'
+__escapes__['\"'] = '\\"'
 
 def escape(s):
-    global escapes
+#    global escapes
+    if isinstance(s, unicode):
+        s = s.encode('utf-8')
     s = list(s)
     for i in range(len(s)):
-        s[i] = escapes[ord(s[i])]
+        s[i] = __escapes__.get(s[i], s[i])
     return EMPTYSTRING.join(s)
 
 
@@ -749,7 +757,7 @@ def main():
             files = arg
 
     # calculate escapes
-    make_escapes(options.escape)
+#    make_escapes(options.escape)
 
     # calculate all keywords
     options.keywords.extend(default_keywords)
@@ -866,7 +874,7 @@ def extrace_files(files, outputfile, opts=None):
     
     options = Options()
 
-    make_escapes(options.escape)
+#    make_escapes(options.escape)
     options.keywords.extend(default_keywords)
     for k, v in opts.items():
         if v and hasattr(options, k):

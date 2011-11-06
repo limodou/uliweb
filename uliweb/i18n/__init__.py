@@ -8,6 +8,7 @@ import os.path
 import copy
 import threading
 import locale
+from uliweb.utils.common import safe_unicode
 
 from lazystr import lazy
 
@@ -150,23 +151,23 @@ def ldngettext(domain, msgid1, msgid2, n):
     return t.lngettext(msgid1, msgid2, n)
 
 def gettext(message):
-    return dgettext(_domain, message)
+    return dgettext(_domain, safe_unicode(message))
 
 def lgettext(message):
-    return ldgettext(_domain, message)
+    return ldgettext(_domain, safe_unicode(message))
 
 def ngettext(msgid1, msgid2, n):
-    return dngettext(_domain, msgid1, msgid2, n)
+    return dngettext(_domain, safe_unicode(msgid1), safe_unicode(msgid2), n)
 
 def lngettext(msgid1, msgid2, n):
-    return ldngettext(_domain, msgid1, msgid2, n)
+    return ldngettext(_domain, safe_unicode(msgid1), safe_unicode(msgid2), n)
 
 def ugettext(message):
     try:
         t = translation(_domain)
     except IOError:
         return message
-    return t.ugettext(message)
+    return t.ugettext(safe_unicode(message))
 
 def ungettext(msgid1, msgid2, n):
     try:
@@ -176,7 +177,7 @@ def ungettext(msgid1, msgid2, n):
             return msgid1
         else:
             return msgid2
-    return t.ungettext(msgid1, msgid2, n)
+    return t.ungettext(safe_unicode(msgid1), safe_unicode(msgid2), n)
 
 ngettext_lazy = lazy(ngettext)
 gettext_lazy = lazy(gettext)

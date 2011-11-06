@@ -332,7 +332,7 @@ class Out(object):
 
 class Template(object):
     def __init__(self, text='', vars=None, env=None, dirs=None, 
-        default_template=None, use_temp=False, compile=None, skip_error=False):
+        default_template=None, use_temp=False, compile=None, skip_error=False, encoding='utf-8'):
         self.text = text
         self.filename = None
         self.vars = vars or {}
@@ -351,6 +351,7 @@ class Template(object):
         self.exec_env = {}
         self.root = self
         self.skip_error = skip_error
+        self.encoding = encoding
         
         for k, v in __nodes__.iteritems():
             if hasattr(v, 'init'):
@@ -462,7 +463,11 @@ class Template(object):
             in_tag = not in_tag
         if extend:
             self._parse_extend(extend)
-        return reindent(str(self.content))
+        if self.encoding:
+            pre = '#coding=%s\n' % self.encoding
+        else:
+            pre = ''
+        return reindent(pre + str(self.content))
     
     def _parse_template(self, content, var):
         if var in self.vars:
@@ -549,16 +554,11 @@ class Template(object):
                 fin = file(f, 'r')
                 modified = False
                 files = [self.filename]
-                while 1:
-                    line = fin.readline()
-                    if not line:
-                        break
-                    if line.startswith('#'):
-                        if line.startswith('#uliweb-template-files:'):
-                            files.extend(line[1:].split())
-                            break
-                    else:
-                        break
+                line = fin.readline()
+                if line.startswith('#uliweb-template-files:'):
+                    files.extend(line[1:].split())
+                else:
+                    fin.seek(0)
                 
                 for x in files:
                     if os.path.getmtime(x) > os.path.getmtime(f):
@@ -566,7 +566,6 @@ class Template(object):
                         break
                     
                 if not modified:
-                    fin.seek(0)
                     text = fin.read()
                     fin.close()
                     return True, f, text
@@ -582,14 +581,13 @@ class Template(object):
             f = get_temp_template(filename)
             try:
                 fo = file(f, 'wb')
-                fo.write('#coding=utf-8\n')
                 fo.write('#uliweb-template-files:%s\n' % ' '.join(self.depend_files))
                 fo.write(code)
                 fo.close()
             except:
                 pass
         
-        return self._run('#coding=utf-8\n' + code, filename or 'template')
+        return self._run(code, filename or 'template')
         
     def _run(self, code, filename):
         def f(_vars, _env):
