@@ -547,11 +547,18 @@ class Template(object):
             f = get_temp_template(self.filename)
             if os.path.exists(f):
                 fin = file(f, 'r')
-                line = fin.readline()
                 modified = False
                 files = [self.filename]
-                if line.startswith('#'):
-                    files.extend(line[1:].split())
+                while 1:
+                    line = fin.readline()
+                    if not line:
+                        break
+                    if line.startswith('#'):
+                        if line.startswith('#uliweb-template-files:'):
+                            files.extend(line[1:].split())
+                            break
+                    else:
+                        break
                 
                 for x in files:
                     if os.path.getmtime(x) > os.path.getmtime(f):
@@ -559,6 +566,7 @@ class Template(object):
                         break
                     
                 if not modified:
+                    fin.seek(0)
                     text = fin.read()
                     fin.close()
                     return True, f, text
@@ -574,13 +582,14 @@ class Template(object):
             f = get_temp_template(filename)
             try:
                 fo = file(f, 'wb')
-                fo.write('#%s\n' % ' '.join(self.depend_files))
+                fo.write('#coding=utf-8\n')
+                fo.write('#uliweb-template-files:%s\n' % ' '.join(self.depend_files))
                 fo.write(code)
                 fo.close()
             except:
                 pass
         
-        return self._run(code, filename or 'template')
+        return self._run('#coding=utf-8\n' + code, filename or 'template')
         
     def _run(self, code, filename):
         def f(_vars, _env):
