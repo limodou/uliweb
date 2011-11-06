@@ -19,6 +19,7 @@ from uliweb.utils.common import (pkg, log, sort_list, import_attr,
 import uliweb.utils.pyini as pyini
 from uliweb.i18n import gettext_lazy
 from uliweb.utils.localproxy import LocalProxy, Global
+from uliweb import UliwebError
 
 #from rules import Mapping, add_rule
 import rules
@@ -52,7 +53,7 @@ class Decorators(object):
         if name in self.__decorators__:
             return self.__decorators__[name]
         if name not in settings.DECORATORS:
-            raise Exception, "decorator %s is not existed!" % name
+            raise UliwebError("decorator %s is not existed!" % name)
         func = import_attr(settings.DECORATORS.get(name))
         self.__decorators__[name] = func
         return func
@@ -66,7 +67,7 @@ class Functions(object):
         if name in self.__functions__:
             return self.__functions__[name]
         if name not in settings.FUNCTIONS:
-            raise Exception, "function %s is not existed!" % name
+            raise UliwebError("function %s is not existed!" % name)
         func = import_attr(settings.FUNCTIONS.get(name))
         self.__functions__[name] = func
         return func
@@ -116,7 +117,7 @@ def function(fname, *args, **kwargs):
         else:
             return import_attr(func)
     else:
-        raise Exception, "Can't find the function [%s] in settings" % fname
+        raise UliwebError("Can't find the function [%s] in settings" % fname)
  
 def json(data, unicode=False):
     from js import json_dumps
@@ -223,7 +224,9 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
     if os.path.exists(local_inifile):
         x = cache_get(local_inifile, lambda x:pyini.Ini(x), 'ini')
         if x and 'GLOBAL' in x:
-            apps = x.GLOBAL.get('INSTALLED_APPS', apps)
+            for i in x.GLOBAL.get('INSTALLED_APPS', []):
+                if i not in apps:
+                    apps.append(i)
     if not apps and os.path.exists(apps_dir):
         for p in os.listdir(apps_dir):
             if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS', '.git'] and not p.startswith('.') and not p.startswith('_'):
@@ -327,12 +330,13 @@ class Dispatcher(object):
         
         #begin to start apps
         self.install_apps()
-        
+        #process binds
+        self.install_binds()
         dispatch.call(self, 'after_init_apps')
-
+        #process views
         self.install_views(self.modules['views'])
-        #process dispatch hooks
-        self.dispatch_hooks()
+        #process exposes
+        self.install_exposes()
         
         self.debug = settings.GLOBAL.get('DEBUG', False)
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
@@ -408,7 +412,7 @@ class Dispatcher(object):
                     if h in handlers:
                         log.addHandler(handlers[h])
                     else:
-                        raise Exception, "Log Handler %s is not defined yet!"
+                        raise UliwebError("Log Handler %s is not defined yet!")
                         sys.exit(1)
             elif 'format' in v:
                 if v['format'] not in formatters:
@@ -748,7 +752,7 @@ class Dispatcher(object):
                 myimport(p)
             except ImportError, e:
                 pass
-            except Exception, e:
+            except BaseException, e:
                 log.exception(e)
             
     def install_settings(self, s):
@@ -761,7 +765,7 @@ class Dispatcher(object):
         if not settings.GLOBAL.FILESYSTEM_ENCODING:
             settings.GLOBAL.FILESYSTEM_ENCODING = sys.getfilesystemencoding() or settings.GLOBAL.DEFAULT_ENCODING
             
-    def dispatch_hooks(self):
+    def install_binds(self):
         #process DISPATCH hooks
         d = settings.get('BINDS', {})
         for func, args in d.iteritems():
@@ -781,8 +785,9 @@ class Dispatcher(object):
                 is_wrong = True
             if is_wrong:
                 log.error('BINDS definition should be "function=topic" or "function=topic, {"args":value1,...}"')
-                raise Exception, 'BINDS definition [%s=%r] is not right' % (func, args)
+                raise UliwebError('BINDS definition [%s=%r] is not right' % (func, args))
                 
+    def install_exposes(self):
         d = settings.get('EXPOSES', {})
         for name, args in d.iteritems():
             if not args:
@@ -806,7 +811,7 @@ class Dispatcher(object):
                 is_wrong = True
             if is_wrong:
                 log.error('EXPOSES definition should be "name=url, endpoint" or "name=url, endpoint, {"args":value1,...}"')
-                raise Exception, 'EXPOSES definition [%s=%r] is not right' % (name, args)
+                raise UliwebError('EXPOSES definition [%s=%r] is not right' % (name, args))
                 
     def get_template_dirs(self):
         """

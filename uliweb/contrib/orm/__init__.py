@@ -1,7 +1,5 @@
-from uliweb.core.dispatch import bind
 import uliweb
 
-@bind('after_init_apps')
 def startup(sender):
     from uliweb import orm
     from uliweb.core.SimpleFrame import __app_alias__

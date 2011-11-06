@@ -230,15 +230,15 @@ class ExportStaticCommand(Command):
     
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import copy_dir_with_check
-
+        from uliweb import get_apps
+        
         if not args:
             print >>sys.stderr, "Error: outputdir should be a directory and existed"
             sys.exit(0)
         else:
             outputdir = args[0]
 
-        application = SimpleFrame.Dispatcher(project_dir=global_options.project, start=False)
-        apps = application.apps
+        apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in apps]
         self.options = options
         self.global_options = global_options
@@ -274,7 +274,43 @@ class ExportStaticCommand(Command):
             return True
             
 register_command(ExportStaticCommand)
+    
+class ExportCommand(Command):
+    name = 'export'
+    help = 'Export all installed apps files to output directory.'
+    args = 'output_directory'
+    check_apps_dirs = True
+    option_list = (
+        make_option('--with-static', dest='with_static', action='store_false', 
+            help='Export files also include static files.'),
+    )
+    has_options = True
+
+    def handle(self, options, global_options, *args):
+        from uliweb.utils.common import extract_dirs
+        from uliweb import get_apps
         
+        if not args:
+            print >>sys.stderr, "Error: outputdir should be a directory and existed"
+            sys.exit(0)
+        else:
+            outputdir = args[0]
+    
+        exclude = []
+        if not options.with_static:
+            exclude = ['static']
+        
+        apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        if not os.path.exists(outputdir):
+            os.makedirs(outputdir)
+        for app in apps:
+            dest = os.path.join(outputdir, *app.split('.'))
+            if global_options.verbose:
+                print 'Export %s... to %s' % (app, dest)
+            extract_dirs(app, '', dest, verbose=global_options.verbose, exclude=exclude)
+    
+register_command(ExportCommand)
+
 #class ExtractUrlsCommand(Command):
 #    name = 'extracturls'
 #    help = 'Extract all url mappings from view modules to a specified file.'
@@ -399,7 +435,7 @@ class RunserverCommand(Command):
         from uliweb import get_apps
 
         if self.develop:
-            include_apps = ['uliweb.contrib.develop']
+            include_apps = ['plugs.develop']
             app = make_application(options.debug, project_dir=global_options.project, 
                         include_apps=include_apps)
         else:
