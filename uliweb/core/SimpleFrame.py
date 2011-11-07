@@ -119,14 +119,9 @@ def function(fname, *args, **kwargs):
     else:
         raise UliwebError("Can't find the function [%s] in settings" % fname)
  
-def json(data, unicode=False):
+def json(data):
     from js import json_dumps
         
-    if unicode:
-        ensure_ascii = True
-    else:
-        ensure_ascii = False
-    
     if callable(data):
         @wraps(data)
         def f(*arg, **kwargs):

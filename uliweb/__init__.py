@@ -19,3 +19,4 @@ from uliweb.core.SimpleFrame import (Request, Response, redirect, error, json,
         POST, GET, url_for, expose, get_app_dir, get_apps, function, decorators,
         functions, response, request, settings, application,
     )
+from uliweb.core.js import json_dumps
