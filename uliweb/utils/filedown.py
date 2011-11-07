@@ -5,8 +5,11 @@ from zlib import adler32
 import mimetypes
 from werkzeug.http import http_date, is_resource_modified
 from werkzeug import Response, wrap_file
+from werkzeug.exceptions import NotFound
 
 def _opener(filename):
+    if not os.path.exists(filename):
+        raise NotFound
     return (
         open(filename, 'rb'),
         datetime.utcfromtimestamp(os.path.getmtime(filename)),
