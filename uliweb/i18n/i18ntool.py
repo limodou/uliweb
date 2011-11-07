@@ -25,10 +25,24 @@ def _get_outputfile(path, locale='en'):
 def _process(path, locale, options):
     from pygettext import extrace_files
     from po_merge import merge
+    from uliweb.utils import pyini
 
     output = _get_outputfile(path, locale=locale)
     try:
-        extrace_files(path, output, {'verbose':options['verbose']})
+        if options['template']:
+            x = pyini.Ini(options['template'])
+        else:
+            x = pyini.Ini()
+        vars = {}
+        vars['First_Author'] = x.get_var('I18N/First_Author', 'FIRST AUTHOR <EMAIL@ADDRESS>')
+        vars['Project_Id_Version'] = x.get_var('I18N/Project_Id_Version', 'PACKAGE VERSION')
+        vars['Last_Translator'] = x.get_var('I18N/Last_Translator', 'FULL NAME <EMAIL@ADDRESS>')
+        vars['Language_Team'] = x.get_var('I18N/Language_Team', 'LANGUAGE <LL@li.org>')
+        vars['Content_Type_Charset'] = x.get_var('I18N/Content_Type_Charset', 'utf-8')
+        vars['Content_Transfer_Encoding'] = x.get_var('I18N/Content_Transfer_Encoding', '8bit')
+        vars['Plural_Forms'] = x.get_var('I18N/Plural_Forms', 'nplurals=1; plural=0;')
+        
+        extrace_files(path, output, {'verbose':options['verbose']}, vars=vars)
         print 'Success! output file is %s' % output
         merge(output[:-4]+'.po', output)
     except:
@@ -51,10 +65,12 @@ class I18nCommand(Command):
             help='If set, then extract translation messages from uliweb.'),
         make_option('-l', dest='locale', default='en',
             help='Target locale. Default is "en".'),
+        make_option('-t', '--template', dest='template',
+            help='PO variables definition, such as: charset, translater, etc.'),
     )
     
     def handle(self, options, global_options, *args):
-        opts = {'verbose':global_options.verbose}
+        opts = {'verbose':global_options.verbose, 'template':options.template}
         if options.project:
             _process(global_options.project, options.locale, opts)
         elif options.apps or args:
