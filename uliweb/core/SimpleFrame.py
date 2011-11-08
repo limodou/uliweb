@@ -762,27 +762,38 @@ class Dispatcher(object):
             
     def install_binds(self):
         #process DISPATCH hooks
+        #BINDS format
+        #func = topic              #bind_name will be the same with function
+        #bind_name = topic, func        
+        #bind_name = topic, func, {args}
         d = settings.get('BINDS', {})
-        for func, args in d.iteritems():
+        for bind_name, args in d.iteritems():
             if not args:
                 continue
             is_wrong = False
             if isinstance(args, (tuple, list)):
-                if len(args) != 2:
+                if len(args) == 2:
+                    dispatch.bind(args[0])(args[1])
+                elif len(args) == 3:
+                    if not isinstance(args[2], dict):
+                        is_wrong = True
+                    else:
+                        dispatch.bind(args[0], **args[2])(args[1])
+                else:
                     is_wrong = True
-                if not isinstance(args[1], dict):
-                    is_wrong = True
-                if not is_wrong:
-                    dispatch.bind(args[0], **args[1])(func)
             elif isinstance(args, (str, unicode)):
-                dispatch.bind(args)(func)
+                dispatch.bind(args)(bind_name)
             else:
                 is_wrong = True
             if is_wrong:
-                log.error('BINDS definition should be "function=topic" or "function=topic, {"args":value1,...}"')
+                log.error('BINDS definition should be "function=topic" or "bind_name=topic, function" or "bind_name=topic, function, {"args":value1,...}"')
                 raise UliwebError('BINDS definition [%s=%r] is not right' % (func, args))
                 
     def install_exposes(self):
+        #EXPOSES format
+        #endpoint = topic              #bind_name will be the same with function
+        #expose_name = topic, func        
+        #expose_name = topic, func, {args}
         d = settings.get('EXPOSES', {})
         for name, args in d.iteritems():
             if not args:
@@ -790,22 +801,20 @@ class Dispatcher(object):
             is_wrong = False
             if isinstance(args, (tuple, list)):
                 if len(args) == 2:
-                    url, method = args
-                    kwargs = {'name':name}
+                    expose(args[0], name=name)(args[1])
                 elif len(args) == 3:
-                    url, method, kwargs = args
-                    if not isinstance(kwargs, dict):
+                    if not isinstance(args[2], dict):
                         is_wrong = True
                     else:
-                        kwargs['name'] = name
+                        expose(args[0], name=name, **args[2])(args[1])
                 else:
                     is_wrong = True
-                if not is_wrong:
-                    expose(url, **kwargs)(method)
+            elif isinstance(args, (str, unicode)):
+                expose(args)(name)
             else:
                 is_wrong = True
             if is_wrong:
-                log.error('EXPOSES definition should be "name=url, endpoint" or "name=url, endpoint, {"args":value1,...}"')
+                log.error('EXPOSES definition should be "endpoint=url" or "name=url, endpoint" or "name=url, endpoint, {"args":value1,...}"')
                 raise UliwebError('EXPOSES definition [%s=%r] is not right' % (name, args))
                 
     def get_template_dirs(self):
