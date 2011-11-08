@@ -104,24 +104,3 @@ class JSONEncoder(object):
     
 def json_dumps(obj, unicode=False, **kwargs):
     return JSONEncoder(unicode=unicode, default=simple_value, **kwargs).encode(obj)
-
-def urlencode(data):
-    from uliweb.utils.common import simple_value
-    import urllib
-    
-    s = []
-    if isinstance(data, dict):
-        items = data.iteritems()
-    elif isinstance(data, (tuple, list)):
-        items = data
-    else:
-        raise Exception, "Can't support this data type %r" % data
-    
-        for k, v in items:
-            if isinstance(v, (tuple, list)):
-                for x in v:
-                    s.append((k, simple_value(x)))
-            else:
-                s.append((k, simple_value(v)))
-    return urllib.urlencode(s)
-
