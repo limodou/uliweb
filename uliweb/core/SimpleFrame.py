@@ -221,7 +221,7 @@ def get_app_depends(app, existed_apps=None):
     configfile = os.path.join(get_app_dir(app), 'config.ini')
     if os.path.exists(configfile):
         x = pyini.Ini(configfile)
-        apps = x.get_var('DEFAULT/REQUIRED_APPS', [])
+        apps = x.get_var('DEPENDS/REQUIRED_APPS', [])
         for i in apps:
             if i not in s:
                 for j in get_app_depends(i, s):
