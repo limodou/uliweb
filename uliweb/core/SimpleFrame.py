@@ -205,54 +205,54 @@ def get_app_dir(app):
         __app_dirs__[app] = path
         return path
 
+def get_app_depends(app, existed_apps=None):
+    if existed_apps is None:
+        s = set()
+    else:
+        s = existed_apps
+
+    if app in s:
+        raise StopIteration
+
+    if isinstance(app, (tuple, list)):
+        app, name = app
+        __app_alias__[name+'.'] = app + '.'
+
+    configfile = os.path.join(get_app_dir(app), 'config.ini')
+    if os.path.exists(configfile):
+        x = pyini.Ini(configfile)
+        apps = x.get_var('DEFAULT/REQUIRED_APPS', [])
+        for i in apps:
+            if i not in s:
+                for j in get_app_depends(i, s):
+                    yield i
+    s.add(app)
+    yield app
+
 def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
+
     include_apps = include_apps or []
     inifile = norm_path(os.path.join(apps_dir, settings_file))
     apps = []
+    visited = set()
     if not os.path.exists(apps_dir):
         return apps
     if os.path.exists(inifile):
         x = cache_get(inifile, lambda x:pyini.Ini(x), 'ini')
         if x:
-            apps = x.GLOBAL.get('INSTALLED_APPS', [])
+            for app in x.GLOBAL.get('INSTALLED_APPS', []):
+                dd = list(get_app_depends(app, visited))
+                apps.extend(dd)
+
     local_inifile = norm_path(os.path.join(apps_dir, local_settings_file))
     if os.path.exists(local_inifile):
         x = cache_get(local_inifile, lambda x:pyini.Ini(x), 'ini')
         if x and 'GLOBAL' in x:
-            for i in x.GLOBAL.get('INSTALLED_APPS', []):
-                if i not in apps:
-                    apps.append(i)
-    if not apps and os.path.exists(apps_dir):
-        for p in os.listdir(apps_dir):
-            if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS', '.git'] and not p.startswith('.') and not p.startswith('_'):
-                apps.append(p)
-    
-    #process app alias
-    #the app alias defined as ('current package name', 'alias appname')
-    for i, a in enumerate(apps):
-        if isinstance(a, (tuple, list)):
-            apps[i] = a[0]
-            __app_alias__[a[1]+'.'] = a[0] + '.'
-            
-    apps.extend(include_apps)
-    #process dependencies
-    s = apps[:]
-    visited = set()
-    while s:
-        p = s.pop()
-        if p in visited:
-            continue
-        else:
-            configfile = os.path.join(get_app_dir(p), 'config.ini')
-            
-            if os.path.exists(configfile):
-                x = pyini.Ini(configfile)
-                for i in x.get_var('DEFAULT/REQUIRED_APPS', []):
-                    if i not in apps:
-                        apps.append(i)
-                    if i not in visited:
-                        s.append(i)
-            visited.add(p)
+            for app in x.GLOBAL.get('INSTALLED_APPS', []):
+                apps.extend(list(get_app_depends(app, visited)))
+
+    for app in include_apps:
+        apps.extend(list(get_app_depends(app, visited)))
 
     return apps
 
