@@ -1708,7 +1708,8 @@ class ListView(SimpleListView):
             'count':10,
         """
         from uliweb.orm import do_
-        result = {'total':self.total, 'table_id':self.id}
+        result = {'total':self.total, 'table_id':self.id, 'pageno':self.pageno+1,
+            'page_rows':self.rows_per_page}
         s = []
         if head:
             if self.table_width:
