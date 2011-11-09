@@ -1,4 +1,5 @@
 import uliweb
+from uliweb.utils.common import safe_str
 from uliweb.orm import get_model
 
 Role = get_model('role')
@@ -17,7 +18,7 @@ for name, v in r.items():
         description, reserve = v, True
     role = Role.get(Role.c.name==name)
     if not role:
-        role = Role(name=name, description=description, reserve=reserve)
+        role = Role(name=safe_str(name), description=safe_str(description), reserve=reserve)
     else:
         role.update(description=description, reserve=reserve)
     role.save()
