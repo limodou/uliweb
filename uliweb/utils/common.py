@@ -75,7 +75,13 @@ def extract_file(module, path, dist, verbose=False):
     if verbose:
         log.info('Copy %s to %s' % (inf, dist))
   
-def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None):
+def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, recursion=True):
+    """
+    mod name
+    path mod path
+    dst output directory
+    resursion True will extract all sub module of mod
+    """
     default_exclude = ['.svn', '_svn', '.git']
     default_exclude_ext = ['.pyc', '.pyo', '.bak', '.tmp']
     exclude = exclude or []
@@ -90,7 +96,8 @@ def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None):
             continue
         fpath = os.path.join(path, r)
         if pkg.resource_isdir(mod, fpath):
-            extract_dirs(mod, fpath, os.path.join(dst, r), verbose, exclude, exclude_ext)
+            if recursion:
+                extract_dirs(mod, fpath, os.path.join(dst, r), verbose, exclude, exclude_ext)
         else:
             ext = os.path.splitext(fpath)[1]
             if ext in exclude_ext or ext in default_exclude_ext:

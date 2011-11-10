@@ -304,11 +304,21 @@ class ExportCommand(Command):
         if not os.path.exists(outputdir):
             os.makedirs(outputdir)
         for app in apps:
-            dest = os.path.join(outputdir, *app.split('.'))
-            if global_options.verbose:
-                print 'Export %s... to %s' % (app, dest)
-            extract_dirs(app, '', dest, verbose=global_options.verbose, exclude=exclude)
-    
+            dirs = app.split('.')
+            mod = []
+            dest = outputdir
+            for m in dirs:
+                mod.append(m)
+                dest = os.path.join(dest, m)
+                module = '.'.join(mod)
+                if global_options.verbose:
+                    print 'Export %s to %s ...' % (module, dest)
+                if module == app:
+                    recursion = True
+                else:
+                    recursion = False
+                extract_dirs(module, '', dest, verbose=global_options.verbose, exclude=exclude, recursion=recursion)
+                
 register_command(ExportCommand)
 
 #class ExtractUrlsCommand(Command):

@@ -225,7 +225,7 @@ def get_app_depends(app, existed_apps=None):
         for i in apps:
             if i not in s:
                 for j in get_app_depends(i, s):
-                    yield i
+                    yield j
     s.add(app)
     yield app
 
@@ -241,8 +241,7 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
         x = cache_get(inifile, lambda x:pyini.Ini(x), 'ini')
         if x:
             for app in x.GLOBAL.get('INSTALLED_APPS', []):
-                dd = list(get_app_depends(app, visited))
-                apps.extend(dd)
+                apps.extend(list(get_app_depends(app, visited)))
 
     local_inifile = norm_path(os.path.join(apps_dir, local_settings_file))
     if os.path.exists(local_inifile):
@@ -787,7 +786,7 @@ class Dispatcher(object):
                 is_wrong = True
             if is_wrong:
                 log.error('BINDS definition should be "function=topic" or "bind_name=topic, function" or "bind_name=topic, function, {"args":value1,...}"')
-                raise UliwebError('BINDS definition [%s=%r] is not right' % (func, args))
+                raise UliwebError('BINDS definition [%s=%r] is not right' % (bind_name, args))
                 
     def install_exposes(self):
         #EXPOSES format
