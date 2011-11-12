@@ -7,7 +7,7 @@ __author__ = 'limodou'
 __author_email__ = 'limodou@gmail.com'
 __url__ = 'http://code.google.com/p/uliweb'
 __license__ = 'BSD'
-version = '0.0.1a6'
+version = __version__ = '0.0.1a7'
 
 import os, sys
 workpath = os.path.dirname(__file__)

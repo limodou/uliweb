@@ -151,7 +151,7 @@ Goals
 """
 
 setup(name='Uliweb',
-      version='0.0.1a6',
+      version=uliweb.__version__,
       description="Easy python web framework",
       long_description=__doc__,
       classifiers=[
@@ -165,7 +165,6 @@ setup(name='Uliweb',
         "Programming Language :: Python :: 2.7",
       ],
       packages = ['uliweb'],
-#      install_requires = ['SQLAlchemy', 'pytz'],
       platforms = 'any',
       keywords='wsgi web framework',
       author=uliweb.__author__,
