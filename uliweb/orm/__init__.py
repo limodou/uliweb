@@ -206,7 +206,7 @@ def create_all(db=None):
     global __models__
     for cls in __models__.values():
         if not cls['created'] and cls['model']:
-            cls['model'].bind(db.metadata, auto_create=True)
+            cls['model'].bind(db.metadata, auto_create=__auto_create__)
             cls['created'] = True
         
 def set_model(model, tablename=None, created=None):
