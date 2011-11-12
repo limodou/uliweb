@@ -250,6 +250,11 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
             for app in x.GLOBAL.get('INSTALLED_APPS', []):
                 apps.extend(list(get_app_depends(app, visited)))
 
+    if not apps and os.path.exists(apps_dir):
+        for p in os.listdir(apps_dir):
+            if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS', '.git'] and not p.startswith('.') and not p.startswith('_'):
+                apps.append(p)
+    
     for app in include_apps:
         apps.extend(list(get_app_depends(app, visited)))
 

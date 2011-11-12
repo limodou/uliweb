@@ -203,7 +203,7 @@ class SupportCommand(Command):
     name = 'support'
     help = 'Add special support to existed project, such as: gae, dotcloud'
     args = 'supported_type'
-    check_apps_dirs = True
+    check_apps_dirs = False
 
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import extract_dirs
@@ -287,12 +287,14 @@ register_command(ExportStaticCommand)
     
 class ExportCommand(Command):
     name = 'export'
-    help = 'Export all installed apps files to output directory.'
-    args = 'output_directory'
+    help = 'Export all installed apps or specified module source files to output directory.'
+    args = '[module1 module2]'
     check_apps_dirs = True
     option_list = (
         make_option('--with-static', dest='with_static', action='store_false', 
             help='Export files also include static files.'),
+        make_option('-d', dest='outputdir',  
+            help='Output directory of exported files.'),
     )
     has_options = True
 
@@ -300,17 +302,20 @@ class ExportCommand(Command):
         from uliweb.utils.common import extract_dirs
         from uliweb import get_apps
         
-        if not args:
-            print >>sys.stderr, "Error: outputdir should be a directory and existed"
+        if not options.outputdir:
+            print >>sys.stderr, "Error: please give the output directory with '-d outputdir' argument"
             sys.exit(0)
         else:
-            outputdir = args[0]
+            outputdir = options.outputdir
     
         exclude = []
         if not options.with_static:
             exclude = ['static']
         
-        apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        if not args:
+            apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        else:
+            apps = args
         if not os.path.exists(outputdir):
             os.makedirs(outputdir)
         for app in apps:
