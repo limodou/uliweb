@@ -4,8 +4,6 @@ Uliweb Introduction
 
 :Author: Limodou <limodou@gmail.com>
 
-.. contents:: 
-
 About Uliweb
 ----------------
 
