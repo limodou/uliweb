@@ -2,7 +2,6 @@ from uliweb.middleware import Middleware
 from weto.session import Session, SessionCookie
 
 class SessionMiddle(Middleware):
-    ORDER = 50
     def __init__(self, application, settings):
         from datetime import timedelta
         self.options = dict(settings.get('SESSION_STORAGE', {}))

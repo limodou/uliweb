@@ -1,6 +1,3 @@
-from uliweb.core.dispatch import bind
-
-@bind('prepare_default_env')
 def prepare_default_env(sender, env):
     env['get_flashed_messages'] = get_flashed_messages
     env['flash'] = flash

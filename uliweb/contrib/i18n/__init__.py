@@ -1,4 +1,3 @@
-from uliweb.core.dispatch import bind
 from uliweb.i18n import format_locale
 from uliweb.i18n import ugettext_lazy as _
 
@@ -10,7 +9,7 @@ LANGUAGES = {}
 for k, v in _LANGUAGES.items():
     LANGUAGES[format_locale(k)] = v
 
-def startup(sender):
+def startup_installed(sender):
     """
     @LANGUAGE_CODE
     """

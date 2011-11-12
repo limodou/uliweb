@@ -1,6 +1,3 @@
-from uliweb.core.dispatch import bind
-
-@bind('startup_installed')
 def startup_installed(sender):
     from uliweb.utils.date import set_timezone, set_local_timezone
     

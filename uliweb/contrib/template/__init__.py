@@ -1,7 +1,4 @@
-from uliweb.core.dispatch import bind
-
-@bind('startup_installed')
-def startup(sender):
+def startup_installed(sender):
     from uliweb.core import template
     from tags import LinkNode, UseNode
     

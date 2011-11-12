@@ -1,12 +1,9 @@
-from uliweb.core.dispatch import bind
 from uliweb.core.SimpleFrame import expose
 
-@bind('startup_installed')
 def startup_installed(sender):
-    url = sender.settings.wsgi_middleware_staticfiles.STATIC_URL.rstrip('/')
+    url = sender.settings.GLOBAL.STATIC_URL.rstrip('/')
     expose('%s/<path:filename>' % url, static=True)(static)
     
-@bind('prepare_default_env')
 def prepare_default_env(sender, env):
     env['url_for_static'] = url_for_static
     

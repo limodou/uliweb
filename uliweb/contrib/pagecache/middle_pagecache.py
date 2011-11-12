@@ -3,8 +3,6 @@ from werkzeug.http import http_date
 from time import time
 
 class PageCacheMiddle(Middleware):
-    ORDER = 10
-
     def compute_etag(self, data):
         import hashlib
         

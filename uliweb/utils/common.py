@@ -208,48 +208,6 @@ def wraps(src):
     
     return _f
 
-def sort_list(alist, default=500, duplicate=False):
-    """
-    Sort a list, each element could be a tuple (order, value) or just a value
-    for example:
-        ['abc', (50, 'cde')]
-    you can put a default argument to it, if there is no order of a element, then
-    the order of this element will be the default value.
-    All elements will be sorted according the order value, and the same order
-    value elements will be sorted in the definition of the element
-    
-    if duplicate is True:
-        will remove the duplicated keys
-    
-    >>> sort_list(['a', 'c', 'b'])
-    ['a', 'c', 'b']
-    >>> sort_list([(100, 'a'), 'c', 'd', (50, 'b')])
-    ['b', 'a', 'c', 'd']
-    >>> sort_list([(100, 'a'), (100, 'c'), 'd', (100, 'b')])
-    ['a', 'c', 'b', 'd']
-    >>> sort_list([(100, 'a'), (100, 'c'), 'd', (100, 'b'), (200, 'a')])
-    ['c', 'b', 'a', 'd']
-    """
-    d = {}
-    for v in alist:
-        if isinstance(v, (tuple, list)):
-            n, s = v[0], v[1]
-        else:
-            n, s = default, v
-        p = d.setdefault(n, [])
-        if duplicate:
-            p.append(s)
-        else:
-            for v in d.values():
-                if s in v:
-                    v.remove(s)
-                    break
-            p.append(s)
-    t = []
-    for k in sorted(d.keys()):
-        t.extend(d[k])
-    return t
-
 def timeit(func):
     log = logging.getLogger('uliweb.app')
     import time

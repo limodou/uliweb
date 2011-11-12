@@ -65,7 +65,7 @@ def install_config(apps_dir):
                     sys.path.insert(0, p)
                     
 def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps=None, debug_console=True, settings_file='settings.ini', start=True):
-    from uliweb.utils.common import sort_list
+    from uliweb.utils.common import import_attr
     
     if project_dir:
         apps_dir = os.path.normpath(os.path.join(project_dir, 'apps'))
@@ -80,25 +80,35 @@ def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps
     #settings global application object
     uliweb.application = app
     
-    if uliweb.settings.GLOBAL.WSGI_MIDDLEWARES:
-        s = sort_list(uliweb.settings.GLOBAL.WSGI_MIDDLEWARES, default=500)
-        for w in reversed(s):
-            if w in uliweb.settings:
-                args = uliweb.settings[w].dict()
+    #process wsgi middlewares
+    middlewares = []
+    parameters = {}
+    for name, v in uliweb.settings.get('WSGI_MIDDLEWARES', {}).iteritems():
+        order, kwargs = 500, {}
+        if not v:
+            continue
+        if isinstance(v, (list, tuple)):
+            if len(v) > 3:
+                logging.error('WSGI_MIDDLEWARE %s difinition is not right' % name)
+                raise uliweb.UliwebError('WSGI_MIDDLEWARE %s difinition is not right' % name)
+            cls = v[0]
+            if len(v) == 2:
+                if isinstance(v[1], int):
+                    order = v[1]
+                else:
+                    kwargs = v[1]
             else:
-                args = None
-            if args:
-                klass = args.pop('CLASS', None) or args.pop('class', None)
-                if not klass:
-                    logging.error('Error: There is no a CLASS option in this WSGI Middleware [%s].' % w)
-                    continue
-                modname, clsname = klass.rsplit('.', 1)
-                try:
-                    mod = __import__(modname, {}, {}, [''])
-                    c = getattr(mod, clsname)
-                    app = c(app, **args)
-                except Exception, e:
-                    log.exception(e)
+                order, kwargs = v[1], v[2]
+        else:
+            cls = v
+        middlewares.append((order, name))
+        parameters[name] = cls, kwargs
+        
+    middlewares.sort(cmp=lambda x, y: cmp(x[0], y[0]))
+    for name in reversed([x[1] for x in middlewares]):
+        clspath, kwargs = parameters[name]
+        cls = import_attr(clspath)
+        app = cls(app, **kwargs)
                 
     debug_flag = uliweb.settings.GLOBAL.DEBUG
     if debug or (debug is None and debug_flag):

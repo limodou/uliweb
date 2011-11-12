@@ -14,7 +14,7 @@ from werkzeug.routing import Map
 import template
 from storage import Storage
 import dispatch
-from uliweb.utils.common import (pkg, log, sort_list, import_attr, 
+from uliweb.utils.common import (pkg, log, import_attr, 
     myimport, wraps, norm_path, cache_get)
 import uliweb.utils.pyini as pyini
 from uliweb.i18n import gettext_lazy
@@ -331,6 +331,8 @@ class Dispatcher(object):
         self.install_views(self.modules['views'])
         #process exposes
         self.install_exposes()
+        #process middlewares
+        Dispatcher.middlewares = self.install_middlewares()
         
         self.debug = settings.GLOBAL.get('DEBUG', False)
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
@@ -815,7 +817,37 @@ class Dispatcher(object):
             if is_wrong:
                 log.error('EXPOSES definition should be "endpoint=url" or "name=url, endpoint" or "name=url, endpoint, {"args":value1,...}"')
                 raise UliwebError('EXPOSES definition [%s=%r] is not right' % (name, args))
-                
+       
+    def install_middlewares(self):
+        #middleware process
+        #middleware can be defined as
+        #middleware_name = middleware_class_path[, order]
+        #middleware_name = <empty> will be skip
+        middlewares = []
+        index = {}
+        for middleware_name, middleware_path in settings.get('MIDDLEWARES', {}).iteritems():
+            if not middleware_path:
+                continue
+            if isinstance(middleware_path, (list, tuple)):
+                if len(middleware_path) != 2:
+                    raise UliwebError('Middleware %s difinition is not right, should be "middleware_name = middleware_path[,order]"')
+                middleware_path, order = middleware_path
+                cls = import_attr(middleware_path)
+            else:
+                cls = import_attr(middleware_path)
+                order = 500
+            #process duplication of middleware, later will replace former
+            x = index.get(middleware_name, None)
+            if x is not None:
+                del middlewares[x]
+            middlewares.append((order, cls))
+            #remember the middleware index, so that can be used for easily remove
+            index[middleware_name] = len(middlewares) - 1
+        
+        middlewares.sort(cmp=lambda x, y: cmp(x[0], y[0]))
+            
+        return [x[1] for x in middlewares]
+    
     def get_template_dirs(self):
         """
         Get templates directory from apps, but in reversed order, so the same named template
@@ -844,29 +876,10 @@ class Dispatcher(object):
                 _clses = {}
                 _inss = {}
 
-                #middleware process request
-                middlewares = settings.GLOBAL.get('MIDDLEWARE_CLASSES', [])
-                s = []
-                for middleware in middlewares:
-                    try:
-                        order = None
-                        if isinstance(middleware, tuple):
-                            order, middleware = middleware
-                        cls = import_attr(middleware)
-                        if order is None:
-                            order = getattr(cls, 'ORDER', 500)
-                        s.append((order, middleware))
-                    except ImportError, e:
-                        log.exception(e)
-                        error("Can't import the middleware %s" % middleware)
-                    _clses[middleware] = cls
-                middlewares = sort_list(s)
-                
-                for middleware in middlewares:
-                    cls = _clses[middleware]
+                for cls in self.middlewares:
                     if hasattr(cls, 'process_request'):
                         ins = cls(self, settings)
-                        _inss[middleware] = ins
+                        _inss[cls] = ins
                         response = ins.process_request(req)
                         if response is not None:
                             break
@@ -876,10 +889,9 @@ class Dispatcher(object):
                         response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
                         
                     except Exception, e:
-                        for middleware in reversed(middlewares):
-                            cls = _clses[middleware]
+                        for cls in reversed(self.middlewares):
                             if hasattr(cls, 'process_exception'):
-                                ins = _inss.get(middleware)
+                                ins = _inss.get(cls)
                                 if not ins:
                                     ins = cls(self, settings)
                                 response = ins.process_exception(req, e)
@@ -890,10 +902,9 @@ class Dispatcher(object):
                 else:
                     response = res
                     
-                for middleware in reversed(middlewares):
-                    cls = _clses[middleware]
+                for cls in reversed(self.middlewares):
                     if hasattr(cls, 'process_response'):
-                        ins = _inss.get(middleware)
+                        ins = _inss.get(cls)
                         if not ins:
                             ins = cls(self, settings)
                         response = ins.process_response(req, response)

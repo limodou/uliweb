@@ -95,7 +95,7 @@ def call(sender, topic, *args, **kwargs):
         if not _f:
             try:
                 _f = import_attr(f['func_name'])
-            except ImportError:
+            except (ImportError, AttributeError) as e:
                 logging.error("Can't import function %s" % f['func_name'])
                 raise
             f['func'] = _f

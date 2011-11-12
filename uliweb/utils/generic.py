@@ -6,7 +6,7 @@ import os, sys
 import time
 from uliweb.orm import get_model, Model, Result
 import uliweb.orm as orm
-from uliweb import function, redirect, json
+from uliweb import function, redirect, json, functions
 from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
 from uliweb.contrib.upload import FileServing
@@ -493,8 +493,6 @@ class AddView(object):
         return DummyForm(data=self.data, **self.form_args)
     
     def process_files(self, data):
-        from uliweb.contrib.upload import save_file
-        
         flag = False
     
         fields_list = self.get_fields()
@@ -502,7 +500,7 @@ class AddView(object):
             if isinstance(f['prop'], orm.FileProperty):
                 if f['name'] in data and data[f['name']]:
                     fobj = data[f['name']]
-                    data[f['name']] = save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
+                    data[f['name']] = functions.save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
                     flag = True
                     
         return flag
@@ -530,7 +528,7 @@ class AddView(object):
         if json_result:
             return to_json_result(True, self.success_msg, self.on_success_data(obj))
         else:
-            flash = function('flash')
+            flash = functions.flash
             flash(self.success_msg)
             if self.ok_url:
                 return redirect(get_url(self.ok_url, id=obj.id))
@@ -546,7 +544,7 @@ class AddView(object):
         if json_result:
             return to_json_result(False, self.fail_msg, self.form.errors)
         else:
-            flash = function('flash')
+            flash = functions.flash
             flash(self.fail_msg, 'error')
             return d
     
@@ -659,7 +657,7 @@ class EditView(AddView):
         if json_result:
             return to_json_result(True, msg, self.on_success_data(self.obj), modified=r)
         else:
-            flash = function('flash')
+            flash = functions.flash
             flash(msg)
             if self.ok_url:
                 return redirect(get_url(self.ok_url, self.obj.id))
@@ -675,7 +673,7 @@ class EditView(AddView):
         if json_result:
             return to_json_result(False, self.fail_msg, self.form.errors)
         else:
-            flash = function('flash')
+            flash = functions.flash
             flash(self.fail_msg, 'error')
             return d
 
@@ -996,7 +994,7 @@ class DeleteView(object):
         self.post_delete = post_delete
         
     def run(self, json_result=False):
-        flash = function('flash')
+        flash = functions.flash
 
         if self.validator:
             msg = self.validator(self.obj)
@@ -1962,7 +1960,7 @@ class QueryView(object):
         if isinstance(self.model, str):
             self.model = get_model(self.model)
             
-        flash = function('flash')
+        flash = functions.flash
         
         if not self.form:
             self.form = self.make_form()
