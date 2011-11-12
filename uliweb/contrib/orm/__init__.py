@@ -1,6 +1,6 @@
 import uliweb
 
-def startup(sender):
+def after_init_apps(sender):
     from uliweb import orm
     from uliweb.core.SimpleFrame import __app_alias__
     

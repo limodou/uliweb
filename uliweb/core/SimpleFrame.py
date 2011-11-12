@@ -845,7 +845,8 @@ class Dispatcher(object):
                 middleware_path = v[0]
                 if len(v) == 2:
                     order = v[1]
-
+            else:
+                middleware_path = v
             cls = import_attr(middleware_path)
             
             if order is None:
