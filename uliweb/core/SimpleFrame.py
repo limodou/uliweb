@@ -826,6 +826,10 @@ class Dispatcher(object):
         middlewares = []
         index = {}
         for middleware_name, v in settings.get('MIDDLEWARES', {}).iteritems():
+            #process duplication of middleware, later will replace former
+            if middleware_name in index:
+                middlewares.pop(middleware_name)
+
             if not v:
                 continue
             
@@ -841,10 +845,6 @@ class Dispatcher(object):
             
             if order is None:
                 order = getattr(cls, 'ORDER', 500)
-            #process duplication of middleware, later will replace former
-            x = index.get(middleware_name, None)
-            if x is not None:
-                del middlewares[x]
             middlewares.append((order, cls))
             #remember the middleware index, so that can be used for easily remove
             index[middleware_name] = len(middlewares) - 1
