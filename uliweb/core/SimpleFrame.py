@@ -825,17 +825,22 @@ class Dispatcher(object):
         #middleware_name = <empty> will be skip
         middlewares = []
         index = {}
-        for middleware_name, middleware_path in settings.get('MIDDLEWARES', {}).iteritems():
-            if not middleware_path:
+        for middleware_name, v in settings.get('MIDDLEWARES', {}).iteritems():
+            if not v:
                 continue
-            if isinstance(middleware_path, (list, tuple)):
-                if len(middleware_path) != 2:
-                    raise UliwebError('Middleware %s difinition is not right, should be "middleware_name = middleware_path[,order]"')
-                middleware_path, order = middleware_path
-                cls = import_attr(middleware_path)
-            else:
-                cls = import_attr(middleware_path)
-                order = 500
+            
+            order = None
+            if isinstance(v, (list, tuple)):
+                if len(v) > 2:
+                    raise UliwebError('Middleware %s difinition is not right' % middleware_name)
+                middleware_path = v[0]
+                if len(v) == 2:
+                    order = v[1]
+
+            cls = import_attr(middleware_path)
+            
+            if order is None:
+                order = getattr(cls, 'ORDER', 500)
             #process duplication of middleware, later will replace former
             x = index.get(middleware_name, None)
             if x is not None:
