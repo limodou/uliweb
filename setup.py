@@ -109,14 +109,21 @@ Features
 
   Uliweb supports static file access directly, and it can also process HTTP_IF_MODIFIED_SINCE and return static file content in trunk.
 
-Goals
+Principle
 ----------
 
 * Simple and easy to use web framework.
+* Reusability and configurable are the main ideas about Uliweb.
 * The web framework should be flexiable and easy to extend.
-* The web framework should be able to be deployed in different platforms.
-* Provision of enough sample code.
-* Provision of concise and easy to understand documentation.
+
+Links
+--------
+
+* Plugs is a Uliweb apps collection project, you can visit it at https://github.com/limodou/plugs
+* uliweb-doc is a documentation project of Uliweb, you can visit it at https://github.com/limodou/uliweb-doc, 
+  and you can also read the compiled documentation at http://uliweb.rtfd.org
+* uliwebzone is a community project of Uliweb, you can visit it at https://github.com/limodou/uliwebzone, 
+  and you can also see online demo which hosted in dotcloud http://www.uliweb.dotcloud.com/.
 """
 
 setup(name='Uliweb',
