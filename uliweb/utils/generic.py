@@ -6,10 +6,10 @@ import os, sys
 import time
 from uliweb.orm import get_model, Model, Result
 import uliweb.orm as orm
-from uliweb import function, redirect, json, functions
+from uliweb import redirect, json, functions
 from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
-from uliweb.contrib.upload import FileServing
+from uliweb.contrib.upload import FileServing, FilenameConverter
 
 __default_fields_builds__ = {}
 class __default_value__(object):pass
@@ -1033,6 +1033,7 @@ class GenericFileServing(FileServing):
         'x_file_prefix': ('GENERIC/X_FILE_PREFIX', '/gdownload'),
         'to_path': ('GENERIC/TO_PATH', './files'),
         'buffer_size': ('GENERIC/BUFFER_SIZE', 4096),
+        '_filename_converter': ('UPLOAD/FILENAME_CONVERTER',  FilenameConverter),
     }
 
 class SimpleListView(object):

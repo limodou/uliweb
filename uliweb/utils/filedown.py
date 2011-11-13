@@ -25,11 +25,14 @@ def _generate_etag(mtime, file_size, real_filename):
 
 def filedown(environ, filename, cache=True, cache_timeout=None, 
     action=None, real_filename=None, x_sendfile=False,
-    x_header_name=None, x_filename=None, default_mimetype='application/octet-stream'):
+    x_header_name=None, x_filename=None, fileobj=None,
+    default_mimetype='application/octet-stream'):
     """
-    filename is used for display in download
-    real_filename if used for the real file location
-    x_urlfile is only used in x-sendfile, and be set to x-sendfile header
+    @param filename: is used for display in download
+    @param real_filename: if used for the real file location
+    @param x_urlfile: is only used in x-sendfile, and be set to x-sendfile header
+    @param fileobj: if provided, then returned as file content 
+    @type fileobj: (fobj, mtime, size)
     
     filedown now support web server controlled download, you should set
     xsendfile=True, and add x_header, for example:
@@ -58,7 +61,11 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
         return Response('', status=200, headers=headers,
             direct_passthrough=True)
     else:
-        f, mtime, file_size = _opener(real_filename)
+        #process fileobj
+        if fileobj:
+            f, mtime, file_size = fileobj
+        else:
+            f, mtime, file_size = _opener(real_filename)
         headers.append(('Date', http_date()))
     
         if cache:
