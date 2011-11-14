@@ -1,4 +1,4 @@
-from uliweb.middleware import Middleware
+from uliweb import Middleware
 import threading
 from uliweb.orm import Begin, Commit, Rollback
 

@@ -1,4 +1,4 @@
-from uliweb.middleware import Middleware
+from uliweb import Middleware
 from weto.session import Session, SessionCookie
 
 class SessionMiddle(Middleware):

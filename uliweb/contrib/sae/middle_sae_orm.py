@@ -1,5 +1,5 @@
 from uliweb import settings
-from uliweb.middleware import Middleware
+from uliweb import Middleware
 from uliweb.orm import get_connection
 
 class DBConnectionMiddle(Middleware):

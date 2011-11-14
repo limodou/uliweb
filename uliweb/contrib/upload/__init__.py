@@ -26,9 +26,18 @@ class UUIDFilenameConverter(object):
 class MD5FilenameConverter(object):
     @staticmethod
     def convert(filename):
-        import uuid
+        try:
+            from hashlib import md5
+        except ImportError:
+            from md5 import md5
+
         _f, ext = os.path.splitext(filename)
-        return uuid.uuid1().hex + ext
+        f = md5(
+                    md5("%f%s%f%s" % (time.time(), id({}), random.random(),
+                                      getpid())).hexdigest(), 
+                ).hexdigest()
+        
+        return f + ext
     
 class FileServing(object):
     options = {

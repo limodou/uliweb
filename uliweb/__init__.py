@@ -20,3 +20,19 @@ from uliweb.core.SimpleFrame import (Request, Response, redirect, error, json,
         functions, response, request, settings, application, NotFound, HTTPException,
     )
 from uliweb.core.js import json_dumps
+
+class Middleware(object):
+    ORDER = 500
+    
+    def __init__(self, application, settings):
+        self.application = application
+        self.settings = settings
+        
+#    def process_request(self, request):
+#        pass
+#    
+#    def process_response(self, request, response):
+#        pass
+#    
+#    def process_exception(self, request, exception):
+#        pass

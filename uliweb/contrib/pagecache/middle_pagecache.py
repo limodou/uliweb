@@ -1,4 +1,4 @@
-from uliweb.middleware import Middleware
+from uliweb import Middleware
 from werkzeug.http import http_date
 from time import time
 

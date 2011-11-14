@@ -1,4 +1,4 @@
-from uliweb.middleware import Middleware
+from uliweb import Middleware
 
 class AuthMiddle(Middleware):
     ORDER = 100
