@@ -10,16 +10,26 @@ accept_language_re = re.compile(r'''
         ''', re.VERBOSE)
 
 def get_language_from_request(request, settings):
-    #check session first
+    #check query_string, and the key will be defined in settings.ini
+    #now only support GET method
+    url_lang_key = settings.get_var('I18N/URL_LANG_KEY')
+    if url_lang_key:
+        lang = request.GET.get(url_lang_key)
+        if lang:
+            return lang
+
+    #check session
     if hasattr(request, 'session'):
         lang = request.session.get('uliweb_language')
         if lang:
             return lang
 
+    #check cookie
     lang = request.cookies.get(settings.I18N.LANGUAGE_COOKIE_NAME)
     if lang:
         return lang
 
+    #check browser HTTP_ACCEPT_LANGUAGE head
     accept = request.environ.get('HTTP_ACCEPT_LANGUAGE', None)
     if not accept:
         return settings.I18N.get('LANGUAGE_CODE')
@@ -35,6 +45,7 @@ def get_language_from_request(request, settings):
         if normalized in languages:
             return normalized
 
+    #return default lanaguage
     return settings.I18N.get('LANGUAGE_CODE')
 
 def parse_accept_lang_header(lang_string):

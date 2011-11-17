@@ -88,7 +88,13 @@ def write_msg(comments, msgid, msgstr):
         s.append('msgstr ' + msgstr + '\n\n')
     return ''.join(s)
 
-def merge(file1, file2):
+def merge(file1, file2, exact=False):
+    """
+    @param file1: target filename
+    @param file2: source filename
+    @param exact: a flag, if True, then will remove all entries existed in target 
+                  but not existed in source
+    """
     import shutil
     if not os.path.exists(file1):
         shutil.copyfile(file2, file1)
@@ -116,6 +122,7 @@ def merge(file1, file2):
     string_count = 0
     update_count = 0
     untranslated = 0
+    removed = 0
     f1 = file(infile)
     lineno = 1
     while 1:
@@ -141,9 +148,11 @@ def merge(file1, file2):
                         else:
                             comments = new_comments
                     
-#                    else:
-#                        if msgid != '""' and msgstr == '""':
-#                            untranslated += 1
+                else:
+                    #if taget is not in source, then if exact==True, will remove it
+                    if exact:
+                        removed += 1
+                        continue
             outfile.write(write_msg(comments, msgid, msgstr))
         if msgid != '""' and (msgstr == '""' or msgstr == ('""', '""')):
             untranslated += 1
@@ -165,9 +174,9 @@ def merge(file1, file2):
     if string_count == 0:
         print '0 strings updated.'
     else:
-        print('%d strings updated. '
+        print('%d strings updated. %d strings removed. '
             '%d of %d strings are still untranslated (%.0f%%).' %
-            (update_count, untranslated, string_count,
+            (update_count, removed, untranslated, string_count,
             100.0 * untranslated / string_count))
     
 def main(argv):

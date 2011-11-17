@@ -44,7 +44,7 @@ def _process(path, locale, options):
         
         extrace_files(path, output, {'verbose':options['verbose']}, vars=vars)
         print 'Success! output file is %s' % output
-        merge(output[:-4]+'.po', output)
+        merge(output[:-4]+'.po', output, options['exact'])
     except:
         raise
  
@@ -65,12 +65,15 @@ class I18nCommand(Command):
             help='If set, then extract translation messages from uliweb.'),
         make_option('-l', dest='locale', default='en',
             help='Target locale. Default is "en".'),
+        make_option('--exact', dest='exact', action='store_true', default=False,
+            help='If set, then all entries existed in old .po file but not existed in new .pot will be removed.'),
         make_option('-t', '--template', dest='template',
             help='PO variables definition, such as: charset, translater, etc.'),
     )
     
     def handle(self, options, global_options, *args):
-        opts = {'verbose':global_options.verbose, 'template':options.template}
+        opts = {'verbose':global_options.verbose, 'template':options.template,
+            'exact':options.exact}
         if options.project:
             _process(global_options.project, options.locale, opts)
         elif options.apps or args:
