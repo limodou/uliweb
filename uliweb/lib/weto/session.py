@@ -107,12 +107,13 @@ class Session(dict):
     def _is_modified(self):
         return self._old_value != dict(self)
     
-    def save(self):
-        flag = False
-        if not self.deleted and self.force and (bool(self) or (not bool(self) and self._is_modified())):
-            flag = True
-        elif not self.deleted and not self.force and self._is_modified():
-            flag = True
+    def save(self, force=False):
+        flag = force
+        if not flag:
+            if not self.deleted and self.force and (bool(self) or (not bool(self) and self._is_modified())):
+                flag = True
+            elif not self.deleted and not self.force and self._is_modified():
+                flag = True
 #        if not self.deleted and (bool(self) or (not bool(self) and self._is_modified())):
         if flag:
             self.key = self.key or _get_id()
