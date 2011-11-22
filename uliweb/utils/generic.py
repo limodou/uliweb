@@ -368,8 +368,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                 else:
                     display = str(v)
             elif isinstance(prop, orm.FileProperty):
-                from uliweb.contrib.upload import get_url
-                url = get_url(value)
+                url = functions.get_href(value)
                 if url:
                     display = str(Tag('a', value, href=url))
                 else:
