@@ -4,7 +4,7 @@ def safe_str(s, encoding='utf-8'):
     if isinstance(s, unicode):
         return s.encode(encoding)
     else:
-        return s
+        return str(s)
 
 class Build(object):
     def __init__(self, **kwargs):

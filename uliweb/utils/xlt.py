@@ -251,6 +251,7 @@ class ExcelWriter(object):
         r = urlparse.urlparse(link)
         if not r.scheme and self.domain:
             link = self.domain + link
+        title = title.replace('"', '')
         self.sh.write(row, col, Formula('HYPERLINK("%s";"%s")' % (link, title)), style)
         
 if __name__ == '__main__':
