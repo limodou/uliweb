@@ -9,6 +9,7 @@ import uliweb.orm as orm
 from uliweb import redirect, json, functions
 from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
+from sqlalchemy.engine.base import RowProxy
 from uliweb.contrib.upload import FileServing, FilenameConverter
 
 __default_fields_builds__ = {}
@@ -381,7 +382,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
     if isinstance(display, unicode):
         display = display.encode('utf-8')
     if display is None:
-        display = '&nbsp;'
+        display = ''
         
     return Storage({'label':label, 'value':value, 'display':display, 'name':name})
 
@@ -1244,6 +1245,7 @@ class SimpleListView(object):
        
     def get_data(self, query, table, fields_convert_map, encoding='utf-8', plain=True):
         from uliweb.utils.common import safe_unicode
+        from uliweb.orm import do_
 
         fields_convert_map = fields_convert_map or {}
         d = self.fields_convert_map.copy() 
@@ -1265,24 +1267,19 @@ class SimpleListView(object):
                 if not isinstance(record, (tuple, list)):
                     record = list(record)
                 record = dict(zip(table['fields'], record))
+            if isinstance(record, orm.Model):
+                model = record.__class__
+            else:
+                model = None
                 
             for i, x in enumerate(table['fields_list']):
-                name = x['name']
-                if isinstance(record, dict):
-                    value = get_value(name, record[name], record)
-                elif isinstance(record, orm.Model):
-                    if plain:
-                        if hasattr(record, name):
-                            value = safe_unicode(record.get_display_value(name), encoding)
-                        else:
-                            value = ''
-                    else:
-                        if hasattr(record.__class__, name):
-                            field = getattr(record.__class__, name)
-                        else:
-                            field = x
-                        v = make_view_field(field, record, fields_convert_map=d)
-                        value = safe_unicode(v['display'], encoding)
+                if model and hasattr(model, x['name']):
+                    field = getattr(model, x['name'])
+                else:
+                    field = x
+                    field['value'] = record[x['name']]
+                v = make_view_field(field, record, fields_convert_map=d)
+                value = safe_unicode(v['display'], encoding)
                 row.append(value)
                 
             yield row
