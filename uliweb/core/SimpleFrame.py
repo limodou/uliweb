@@ -12,6 +12,7 @@ from werkzeug.exceptions import HTTPException, NotFound
 from werkzeug.routing import Map
 
 import template
+from js import json_dumps
 from storage import Storage
 import dispatch
 from uliweb.utils.common import (pkg, log, import_attr, 
@@ -120,8 +121,6 @@ def function(fname, *args, **kwargs):
         raise UliwebError("Can't find the function [%s] in settings" % fname)
  
 def json(data):
-    from js import json_dumps
-        
     if callable(data):
         @wraps(data)
         def f(*arg, **kwargs):
@@ -661,6 +660,7 @@ class Dispatcher(object):
         local_env['json'] = json
         local_env['function'] = function
         local_env['functions'] = functions
+        local_env['json_dumps'] = json_dumps
         
         return self.get_env(local_env)
        

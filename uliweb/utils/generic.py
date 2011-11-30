@@ -1249,6 +1249,9 @@ class SimpleListView(object):
         d = self.fields_convert_map.copy() 
         d.update(fields_convert_map)
         
+        if isinstance(query, Select):
+            query = do_(query)
+        
         def get_value(name, value, record):
             convert = d.get(name)
             if convert:

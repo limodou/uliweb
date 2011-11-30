@@ -161,7 +161,7 @@ class BaseField(object):
             return str(self.build(name=self.name, value=value, id=self.id, **self.html_attrs))
 
     def get_label(self, delimeter=True, **kwargs):
-        if not self.label:
+        if self.label is None:
             label = capitalize(self.name)
         else:
             label = self.label
