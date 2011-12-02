@@ -9,7 +9,6 @@ import uliweb.orm as orm
 from uliweb import redirect, json, functions
 from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
-from sqlalchemy.engine.base import RowProxy
 from uliweb.contrib.upload import FileServing, FilenameConverter
 
 __default_fields_builds__ = {}
@@ -1273,8 +1272,11 @@ class SimpleListView(object):
                 model = None
                 
             for i, x in enumerate(table['fields_list']):
-                if model and hasattr(model, x['name']):
-                    field = getattr(model, x['name'])
+                if model:
+                    if hasattr(model, x['name']):
+                        field = getattr(model, x['name'])
+                    else:
+                        field = x
                 else:
                     field = x
                     field['value'] = record[x['name']]
