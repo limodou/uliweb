@@ -84,7 +84,7 @@ class FileServing(object):
         s = settings.GLOBAL
         if convert:
             _p, _f = os.path.split(filename)
-            _filename = os.path.join(_p, self.filename_convert(filename))
+            _filename = os.path.join(_p, self.filename_convert(_f))
         else:
             _filename = filename
         nfile = safe_unicode(_filename, s.HTMLPAGE_ENCODING)

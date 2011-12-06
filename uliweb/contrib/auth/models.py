@@ -40,6 +40,13 @@ def check_password(raw_password, enc_password):
     algo, salt, hsh = enc_password.split('$')
     return hsh == get_hexdigest(algo, salt, raw_password)
 
+def encrypt_password(raw_password):
+    import random
+    algo = 'sha1'
+    salt = get_hexdigest(algo, str(random.random()), str(random.random()))[:5]
+    hsh = get_hexdigest(algo, salt, raw_password)
+    return '%s$%s$%s' % (algo, salt, hsh)
+
 class User(Model):
     username = Field(str, verbose_name=_('Username'), max_length=30, unique=True, index=True, nullable=False)
     nickname = Field(str, verbose_name=_('Nick Name'), max_length=30)
@@ -53,11 +60,7 @@ class User(Model):
     locked = Field(bool, verbose_name=_('Lock Status'))
     
     def set_password(self, raw_password):
-        import random
-        algo = 'sha1'
-        salt = get_hexdigest(algo, str(random.random()), str(random.random()))[:5]
-        hsh = get_hexdigest(algo, salt, raw_password)
-        self.password = '%s$%s$%s' % (algo, salt, hsh)
+        self.password = encrypt_password(raw_password)
         self.save()
     
     def check_password(self, raw_password):

@@ -95,6 +95,12 @@ class Command(object):
         """
         parser = self.create_parser(prog_name, subcommand)
         parser.print_help()
+        
+    def get_apps(self, global_options, include_apps=None):
+        from uliweb.core.SimpleFrame import get_apps
+        
+        return get_apps(global_options.apps_dir, include_apps=include_apps, 
+            settings_file=global_options.settings, local_settings_file=global_options.local_settings)
     
     def run_from_argv(self, prog, subcommand, global_options, argv):
         """
@@ -108,10 +114,8 @@ class Command(object):
         
     def execute(self, args, options, global_options):
         from uliweb.utils.common import check_apps_dir
-        from uliweb.core.SimpleFrame import get_apps
 
         #add apps_dir to global_options and insert it to sys.path
-        global_options.project = '.'
         global_options.apps_dir = apps_dir = os.path.normpath(os.path.join(global_options.project, 'apps'))
         if apps_dir not in sys.path:
             sys.path.insert(0, apps_dir)
@@ -119,7 +123,8 @@ class Command(object):
         if self.check_apps_dirs:
             check_apps_dir(global_options.apps_dir)
         if self.check_apps and args: #then args should be apps
-            all_apps = get_apps(global_options.apps_dir)
+            all_apps = self.get_apps(global_options)
+            print '===========', all_apps
             apps = args
             args = []
             for p in apps:
@@ -179,8 +184,12 @@ class ApplicationCommandManager(Command):
             help='Settings file name. Default is "settings.ini".'),
         make_option('-L', '--local_settings', dest='local_settings', default='local_settings.ini',
             help='Local settings file name. Default is "local_settings.ini".'),
+        make_option('--project', default='.', dest='project',
+            help='Your project directory, default is current directory.'),
         make_option('--pythonpath', default='',
             help='A directory to add to the Python path, e.g. "/home/myproject".'),
+#        make_option('--include-apps', default=[], dest='include_apps',
+#            help='Including extend apps when execute the command.'),
     )
     help = ''
     args = ''

@@ -300,7 +300,6 @@ class ExportCommand(Command):
 
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import extract_dirs
-        from uliweb import get_apps
         
         if not options.outputdir:
             print >>sys.stderr, "Error: please give the output directory with '-d outputdir' argument"
@@ -313,7 +312,7 @@ class ExportCommand(Command):
             exclude = ['static']
         
         if not args:
-            apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+            apps = self.get_apps(global_options)
         else:
             apps = args
         if not os.path.exists(outputdir):
@@ -383,8 +382,7 @@ class CallCommand(Command):
             command = args[0]
             
         if not options.appname:
-            from uliweb import get_apps
-            apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+            apps = self.get_apps(global_options)
         else:
             apps = [options.appname]
         exe_flag = False
@@ -457,7 +455,6 @@ class RunserverCommand(Command):
     
     def handle(self, options, global_options, *args):
         from werkzeug.serving import run_simple
-        from uliweb import get_apps
 
         if self.develop:
             include_apps = ['plugs.develop']
@@ -466,7 +463,7 @@ class RunserverCommand(Command):
         else:
             app = make_application(options.debug, project_dir=global_options.project)
             include_apps = []
-        extra_files = collect_files(global_options.apps_dir, get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)+include_apps)
+        extra_files = collect_files(global_options.apps_dir, self.get_apps(global_options, include_apps))
         
         if options.ssl:
             from OpenSSL import SSL

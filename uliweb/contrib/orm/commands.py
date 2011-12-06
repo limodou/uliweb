@@ -543,13 +543,13 @@ class DbinitdCommand(Command):
     check_apps = True
 
     def handle(self, options, global_options, *args):
-        from uliweb.core.SimpleFrame import get_apps, get_app_dir, Dispatcher
+        from uliweb.core.SimpleFrame import get_app_dir, Dispatcher
         from uliweb import orm
 
         app = Dispatcher(project_dir=global_options.project, start=False)
 
         if not args:
-            apps_list = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+            apps_list = self.get_apps(global_options.apps_dir)
         else:
             apps_list = args
         
@@ -583,7 +583,7 @@ class SqldotCommand(Command):
         if args:
             apps = args
         else:
-            apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+            apps = self.get_apps(global_options)
         
         engine = get_engine(global_options.apps_dir)
         

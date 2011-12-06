@@ -229,7 +229,6 @@ def get_app_depends(app, existed_apps=None):
     yield app
 
 def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
-
     include_apps = include_apps or []
     inifile = norm_path(os.path.join(apps_dir, settings_file))
     apps = []
@@ -258,6 +257,38 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
         apps.extend(list(get_app_depends(app, visited)))
 
     return apps
+
+def get_settings(project_dir, include_apps=None, settings_file='settings.ini', 
+    local_settings_file='local_settings.ini', default_settings=None):
+    apps_dir = os.path.join(project_dir, 'apps')
+    apps = get_apps(apps_dir)
+    settings = []
+    inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
+    settings.insert(0, inifile)
+    for p in apps:
+        path = get_app_dir(p)
+        #deal with settings
+        inifile =os.path.join(get_app_dir(p), 'settings.ini')
+        if os.path.exists(inifile):
+            settings.append(inifile)
+    
+    set_ini = os.path.join(apps_dir, settings_file)
+    if os.path.exists(set_ini):
+        settings.append(set_ini)
+    
+    local_set_ini = os.path.join(apps_dir, local_settings_file)
+    if os.path.exists(local_set_ini):
+        settings.append(local_set_ini)
+
+    x = pyini.Ini()
+    for v in settings:
+        x.read(v)
+    x.update(default_settings or {})
+    
+    #process FILESYSTEM_ENCODING
+    if not x.GLOBAL.FILESYSTEM_ENCODING:
+        x.GLOBAL.FILESYSTEM_ENCODING = sys.getfilesystemencoding() or x.GLOBAL.DEFAULT_ENCODING
+    return x
 
 class Loader(object):
     def __init__(self, tmpfilename, vars, env, dirs, notest=False):
