@@ -549,7 +549,7 @@ class DbinitdCommand(Command):
         app = Dispatcher(project_dir=global_options.project, start=False)
 
         if not args:
-            apps_list = self.get_apps(global_options.apps_dir)
+            apps_list = self.get_apps(global_options)
         else:
             apps_list = args
         
@@ -576,7 +576,7 @@ class SqldotCommand(Command):
     check_apps = True
     
     def handle(self, options, global_options, *args):
-        from uliweb.core.SimpleFrame import get_apps, Dispatcher
+        from uliweb.core.SimpleFrame import Dispatcher
         from graph import generate_dot
 
         app = Dispatcher(project_dir=global_options.project, start=False)
