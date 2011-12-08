@@ -895,7 +895,7 @@ class Dispatcher(object):
         Get templates directory from apps, but in reversed order, so the same named template
         file will be overrided by latter defined app
         """
-        template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in reversed(self.apps)] + (settings.GLOBAL.TEMPLATE_DIRS or [])
+        template_dirs = [os.path.join(get_app_dir(p), 'templates') for p in reversed(self.apps)] + ([os.path.join(self.project_dir, x) for x in settings.GLOBAL.TEMPLATE_DIRS or []])
         return template_dirs
     
     def get_templateplugins_dirs(self):
