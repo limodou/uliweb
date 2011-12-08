@@ -291,7 +291,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
     if not isinstance(prop, orm.Property):  
         if old_value is __default_value__:
             value = prop.get('value', '')
-        display = prop.get('display', '')
+        display = prop.get('display', value)
         label = prop.get('label', '') or prop.get('verbose_name', '')
         name = prop.get('name', '')
         convert = prop.get('convert', None)
@@ -1281,7 +1281,8 @@ class SimpleListView(object):
                     field = x
                     field['value'] = record[x['name']]
                 v = make_view_field(field, record, fields_convert_map=d)
-                value = safe_unicode(v['display'], encoding)
+                value = v['display']
+                #value = safe_unicode(v['display'], encoding)
                 row.append(value)
                 
             yield row

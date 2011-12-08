@@ -8,9 +8,14 @@ log = logging
 def safe_import(path):
     module = path.split('.')
     g = __import__(module[0], {}, {}, [''])
+    s = [module[0]]
     for i in module[1:]:
         mod = g
-        g = getattr(mod, i)
+        if hasattr(mod, i):
+            g = getattr(mod, i)
+        else:
+            s.append(i)
+            g = __import__('.'.join(s), {}, {}, [''])
     return mod, g
         
 def import_mod_attr(path):
