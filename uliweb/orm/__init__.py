@@ -41,7 +41,14 @@ Local.conn = None
 _default_metadata = MetaData()
 
 class Error(Exception):pass
-class NotFound(Error):pass
+class NotFound(Error):
+    def __init__(self, message, model, id):
+        self.message = message
+        self.model = model
+        self.id = id
+        
+    def __str__(self):
+        return "%s(%s) instance can't be found" % (model.__name__, str(id))
 class ReservedWordError(Error):pass
 class ModelInstanceError(Error):pass
 class DuplicatePropertyError(Error):
@@ -879,7 +886,7 @@ class ReferenceProperty(Property):
                 d = self.reference_class.c[self.reference_fieldname]
                 instance = self.reference_class.get(d==reference_id)
                 if instance is None:
-                    raise NotFound('ReferenceProperty %s failed to be resolved' % self.reference_fieldname)
+                    raise NotFound('ReferenceProperty %s failed to be resolved' % self.reference_fieldname, self.reference_class, reference_id)
                 setattr(model_instance, self._resolved_attr_name(), instance)
                 return instance
         else:
@@ -1950,7 +1957,7 @@ class Model(object):
     def get_or_notfound(cls, condition=None):
         obj = cls.get(condition)
         if not obj:
-            raise NotFound, "Can't found the object"
+            raise NotFound("Can't found the object", cls, condition)
         return obj
     
     @classmethod
