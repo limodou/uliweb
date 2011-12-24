@@ -627,7 +627,7 @@ class Dispatcher(object):
         result1 = None
         if hasattr(mod, '__end__'):
             f = getattr(mod, '__end__')
-            result1, env = self._call_function(f, request, response, env)
+            result1 = self._call_function(f, request, response, env)
             if result1 is not None:
                 return wrap(result1, request, response, env)
         
