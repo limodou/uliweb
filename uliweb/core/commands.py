@@ -124,7 +124,6 @@ class Command(object):
             check_apps_dir(global_options.apps_dir)
         if self.check_apps and args: #then args should be apps
             all_apps = self.get_apps(global_options)
-            print '===========', all_apps
             apps = args
             args = []
             for p in apps:

@@ -1039,7 +1039,7 @@ class SimpleListView(object):
     def __init__(self, fields=None, query=None, cache_file=None, 
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
         table_class_attr='table', table_width=False, pagination=True, total_fields=None, 
-        template_data=None, default_column_width=100, total=None, manual=False):
+        template_data=None, default_column_width=100, total=None, manual=False, render=None):
         """
         Pass a data structure to fields just like:
             [
@@ -1071,6 +1071,7 @@ class SimpleListView(object):
         self.default_column_width = default_column_width
         self.manual = manual
         self.downloader = GenericFileServing()
+        self.render_func = render
         
     def create_total_infos(self, total_fields):
         if total_fields:
@@ -1142,7 +1143,7 @@ class SimpleListView(object):
                     v = str(v) or '&nbsp;'
                     s.append('<td>%s</td>' % v)
                 s.append('</tr>')
-        return s
+        return ''.join(s)
     
     def query_all(self):
         return self.query_range(0, pagination=False)
@@ -1405,12 +1406,11 @@ class SimpleListView(object):
                     r.append((x['name'], v['display']))
                     
                 if json_body:
-                    _r = self.json_body_render(r)
-                    if 'id' not in _r and hasattr(record, 'id'):
-                        _r['id'] = getattr(record, 'id')
-                    s.append(_r)
+                    render_func = self.render_func or self.json_body_render
+                    s.append(render_func(r, record))
                 else:
-                    s.extend(self.default_body_render(r))
+                    render_func = self.render_func or self.default_body_render
+                    s.append(render_func(r, record))
                 self.cal_total(table, record)
             if json_body:
                 total = self.render_total(table, json_body)
@@ -1418,7 +1418,7 @@ class SimpleListView(object):
                     s.append(dict(zip(table['fields'], total)))
                 return {'total':self.total, 'rows':s}
             else:
-                s.extend(self.render_total(table))
+                s.append(self.render_total(table))
         
         if head:
             s.append('</tbody>')
@@ -1427,17 +1427,20 @@ class SimpleListView(object):
         result['table'] = '\n'.join(s)
         return result
     
-    def json_body_render(self, record):
-        return dict(record)
+    def json_body_render(self, data, record):
+        d = dict(data)
+        if 'id' not in d and hasattr(record, 'id'):
+            d['id'] = getattr(record, 'id')
+        return d
         
-    def default_body_render(self, record):
+    def default_body_render(self, data, record):
         from uliweb.core.html import Tag
         
         s = ['<tr>']
-        for n, f in record:
+        for n, f in data:
             s.append(str(Tag('td', f)))
         s.append('</tr>')
-        return s
+        return ''.join(s)
 
     def make_view_field(self, field, record, fields_convert_map):
         fields_convert_map = fields_convert_map or {}
@@ -1632,7 +1635,7 @@ class ListView(SimpleListView):
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
         total_fields=None, template_data=None, default_column_width=100, 
-        meta='Table'):
+        meta='Table', render=None):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -1656,6 +1659,7 @@ class ListView(SimpleListView):
         self.template_data = template_data or {}
         self.default_column_width = default_column_width
         self.downloader = GenericFileServing()
+        self.render_func = render
         
         self.init()
         
@@ -1740,12 +1744,11 @@ class ListView(SimpleListView):
                     r.append((x['name'], v['display']))
                     
                 if json_body:
-                    _r = self.json_body_render(r)
-                    if 'id' not in _r and hasattr(record, 'id'):
-                        _r['id'] = getattr(record, 'id')
-                    s.append(_r)
+                    render_func = self.render_func or self.json_body_render
+                    s.append(render_func(r, record))
                 else:
-                    s.extend(self.default_body_render(r))
+                    render_func = self.render_func or self.default_body_render
+                    s.append(render_func(r, record))
                 self.cal_total(table, record)
             if json_body:
                 total = self.render_total(table, json_body)
@@ -1753,7 +1756,7 @@ class ListView(SimpleListView):
                     s.append(dict(zip(table['fields'], total)))
                 result['rows'] = s
             else:
-                s.extend(self.render_total(table))
+                s.append(self.render_total(table))
             
         if head:
             s.append('</tbody>')
