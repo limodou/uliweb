@@ -1539,7 +1539,7 @@ class SimpleListView(object):
             
         return s
         
-    def get_columns(self):
+    def get_columns(self, frozen=None):
         from uliweb.utils.common import simple_value
     
         table = self.table_info()
@@ -1607,7 +1607,9 @@ class SimpleListView(object):
                 else:
                     kwargs['width'] = _f.pop('width', self.default_column_width)
                 kwargs.update(_f)
-                s.append(kwargs)
+                frozen_flag = kwargs.pop('frozen', False)
+                if frozen is None or frozen_flag is frozen:
+                    s.append(kwargs)
                 
                 i = j
             clear_fields(fields)
