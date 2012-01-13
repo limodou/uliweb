@@ -6,7 +6,7 @@ import os, sys
 import time
 from uliweb.orm import get_model, Model, Result
 import uliweb.orm as orm
-from uliweb import redirect, json, functions
+from uliweb import redirect, json, functions, UliwebError
 from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
 from uliweb.contrib.upload import FileServing, FilenameConverter
@@ -117,10 +117,16 @@ class RemoteField(BaseField):
         _attrs.update(html_attrs or {})
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=_attrs, help_string=help_string, build=build, **kwargs)
             
-def get_fields(model, fields, meta):
+def get_fields(model, fields, meta=None):
+    """
+    Acording to model and fields to get fields list
+    Each field element is a two elements tuple, just like:
+        (name, field_obj)
+    """
+    model = get_model(model)
     if fields is not None:
         f = fields
-    elif hasattr(model, meta):
+    elif meta and hasattr(model, meta):
         m = getattr(model, meta)
         if hasattr(m, 'fields'):
             f = m.fields
@@ -140,7 +146,7 @@ def get_fields(model, fields, meta):
         elif isinstance(x, dict):
             field = x.copy()
         else:
-            raise Exception, 'Field definition is not right, it should be just like (field_name, form_field_obj)'
+            raise UliwebError('Field definition is not right, it should be just like (field_name, form_field_obj)')
         
         if 'prop' not in field:
             if hasattr(model, field['name']):
@@ -384,6 +390,25 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
         display = ''
         
     return Storage({'label':label, 'value':value, 'display':display, 'name':name})
+
+def get_view_field(model, field_name, obj=None, types_convert_map=None, fields_convert_map=None, value=__default_value__):
+    m = get_model(model)
+    field = getattr(m, field_name)
+    r = make_view_field(field, obj=obj, types_convert_map=types_convert_map, fields_convert_map=fields_convert_map, value=value)
+    return r
+    
+def get_field_display(model, field_name, obj=None, types_convert_map=None, fields_convert_map=None, value=__default_value__):
+    m = get_model(model)
+    field = getattr(m, field_name)
+    return make_view_field(field, obj=obj, types_convert_map=types_convert_map, fields_convert_map=fields_convert_map, value=value)['display']
+
+def get_model_display(model, obj, fields=None, types_convert_map=None, fields_convert_map=None, data=None):
+    data = data or {}
+    r = Storage({})
+    for name, field in get_fields(model, fields):
+        value = data.get(name, __default_value__)
+        r[name] = make_view_field(field, obj=obj, types_convert_map=types_convert_map, fields_convert_map=fields_convert_map, value=value)
+    return r
 
 class AddView(object):
     success_msg = _('The information has been saved successfully!')
