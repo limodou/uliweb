@@ -407,6 +407,10 @@ def collect_files(apps_dir, apps):
         os.path.join(apps_dir, 'local_settings.ini')]
     
     def f(path):
+        if not os.path.exists(path):
+            log.error("Path %s is not existed!" % path)
+            return
+        
         for r in os.listdir(path):
             if r in ['.svn', '_svn', '.git'] or r.startswith('.'):
                 continue

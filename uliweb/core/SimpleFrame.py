@@ -196,6 +196,7 @@ def get_app_dir(app):
         try:
             path = pkg.resource_filename(p[0], '')
         except ImportError, e:
+            log.error("Can't import app %s" % p[0])
             log.exception(e)
             path = ''
         if len(p) > 1:
@@ -723,6 +724,10 @@ class Dispatcher(object):
         settings.insert(0, inifile)
         
         def enum_views(views_path, appname, subfolder=None, pattern=None):
+            if not os.path.exists(views_path):
+                log.error("Can't found the app %s path, please check if the path is right" % appname)
+                return
+                 
             for f in os.listdir(views_path):
                 fname, ext = os.path.splitext(f)
                 if os.path.isfile(os.path.join(views_path, f)) and ext in ['.py', '.pyc', '.pyo'] and fname!='__init__':

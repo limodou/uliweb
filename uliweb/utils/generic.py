@@ -179,8 +179,14 @@ def to_json_result(success, msg='', d=None, **kwargs):
 def make_form_field(field, model, field_cls=None, builds_args_map=None):
     import uliweb.form as form
     
+    model = get_model(model)
     field_type = None
-    if 'field' in field and isinstance(field['field'], BaseField): #if the prop is already Form.BaseField, so just return it
+    if isinstance(field, (str, unicode)):
+        prop = getattr(model, field)
+        if not prop:
+            raise UliwebError("Can't find attribute in Model(%r)" % model)
+        field = {'prop':prop}
+    elif 'field' in field and isinstance(field['field'], BaseField): #if the prop is already Form.BaseField, so just return it
         return field['field']
     
     prop = field['prop']
