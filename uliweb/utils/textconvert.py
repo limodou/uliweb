@@ -4,6 +4,8 @@ import cgi
 
 re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)|(?P<protocal>(^|\s*)(http|ftp|https)://[\w\-\.,@?^=%&amp;:/~\+#]+)', re.S|re.M|re.I)
 def text2html(text, tabstop=4):
+    if not text:
+        return ''
     def do_sub(m):
         c = m.groupdict()
         if c['htmlchars']:

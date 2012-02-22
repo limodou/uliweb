@@ -535,11 +535,11 @@ class AddView(object):
                     
         return flag
     
-    def on_success_data(self, obj):
+    def on_success_data(self, obj, data):
         if self.success_data is True:
             return obj.to_dict()
         elif callable(self.success_data):
-            return self.success_data(obj)
+            return self.success_data(obj, data)
         else:
             return None
     
@@ -556,7 +556,7 @@ class AddView(object):
             self.post_save(obj, d)
                 
         if json_result:
-            return to_json_result(True, self.success_msg, self.on_success_data(obj))
+            return to_json_result(True, self.success_msg, self.on_success_data(obj, d))
         else:
             flash = functions.flash
             flash(self.success_msg)
@@ -685,7 +685,7 @@ class EditView(AddView):
             msg = _("The object has not been changed.")
         
         if json_result:
-            return to_json_result(True, msg, self.on_success_data(self.obj), modified=r)
+            return to_json_result(True, msg, self.on_success_data(self.obj, d), modified=r)
         else:
             flash = functions.flash
             flash(msg)

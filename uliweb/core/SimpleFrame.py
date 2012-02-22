@@ -125,10 +125,10 @@ def json(data):
         @wraps(data)
         def f(*arg, **kwargs):
             ret = data(*arg, **kwargs)
-            return Response(json_dumps(ret), content_type='application/json; charset=utf-8')
+            return Response(json_dumps(ret), content_type='text/html; charset=utf-8')
         return f
     else:
-        return Response(json_dumps(data), content_type='application/json; charset=utf-8')
+        return Response(json_dumps(data), content_type='text/html; charset=utf-8')
 
 def expose(rule=None, **kwargs):
     e = rules.Expose(rule, **kwargs)
