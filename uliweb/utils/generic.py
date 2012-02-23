@@ -171,10 +171,12 @@ def get_url(ok_url, *args, **kwargs):
     else:
         return ok_url.format(*args, **kwargs)
 
-def to_json_result(success, msg='', d=None, **kwargs):
+def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
+    json_func = json_func or json
+    
     t = {'success':success, 'message':str(msg), 'data':d}
     t.update(kwargs)
-    return json(t)
+    return json_func(t)
     
 def make_form_field(field, model, field_cls=None, builds_args_map=None):
     import uliweb.form as form
@@ -426,7 +428,7 @@ class AddView(object):
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None, file_replace=True, template_data=None, 
         success_data=None, meta='AddForm', get_form_field=None, post_fail=None,
-        types_convert_map=None, fields_convert_map=None):
+        types_convert_map=None, fields_convert_map=None, json_func=None):
 
         self.model = get_model(model)
         self.meta = meta
@@ -456,6 +458,7 @@ class AddView(object):
         self.success_data = success_data
         self.types_convert_map = types_convert_map
         self.fields_convert_map = fields_convert_map
+        self.json_func = json_func or json
         self.form = self.make_form(form)
         
     def get_fields(self):
@@ -556,7 +559,7 @@ class AddView(object):
             self.post_save(obj, d)
                 
         if json_result:
-            return to_json_result(True, self.success_msg, self.on_success_data(obj, d))
+            return to_json_result(True, self.success_msg, self.on_success_data(obj, d), json_func=self.json_func)
         else:
             flash = functions.flash
             flash(self.success_msg)
@@ -572,7 +575,7 @@ class AddView(object):
         log = logging.getLogger('uliweb.app')
         log.debug(self.form.errors)
         if json_result:
-            return to_json_result(False, self.fail_msg, self.form.errors)
+            return to_json_result(False, self.fail_msg, self.form.errors, json_func=self.json_func)
         else:
             flash = functions.flash
             flash(self.fail_msg, 'error')
@@ -685,7 +688,7 @@ class EditView(AddView):
             msg = _("The object has not been changed.")
         
         if json_result:
-            return to_json_result(True, msg, self.on_success_data(self.obj, d), modified=r)
+            return to_json_result(True, msg, self.on_success_data(self.obj, d), modified=r, json_func=self.json_func)
         else:
             flash = functions.flash
             flash(msg)
@@ -701,7 +704,7 @@ class EditView(AddView):
         log = logging.getLogger('uliweb.app')
         log.debug(self.form.errors)
         if json_result:
-            return to_json_result(False, self.fail_msg, self.form.errors)
+            return to_json_result(False, self.fail_msg, self.form.errors, json_func=self.json_func)
         else:
             flash = functions.flash
             flash(self.fail_msg, 'error')
@@ -1008,11 +1011,13 @@ class DetailView(object):
 class DeleteView(object):
     success_msg = _('The object has been deleted successfully!')
 
-    def __init__(self, model, ok_url='', fail_url='', condition=None, obj=None, pre_delete=None, post_delete=None, validator=None):
+    def __init__(self, model, ok_url='', fail_url='', condition=None, obj=None, 
+        pre_delete=None, post_delete=None, validator=None, json_func=None):
         self.model = get_model(model)
         self.condition = condition
         self.obj = obj
         self.validator = validator
+        self.json_func = json_func or json
         if not obj:
             self.obj = self.model.get(self.condition)
         else:
@@ -1030,7 +1035,7 @@ class DeleteView(object):
             msg = self.validator(self.obj)
             if msg:
                 if json_result:
-                    return to_json_result(False, msg)
+                    return to_json_result(False, msg, json_func=self.json_func)
                 else:
                     flash(msg, 'error')
                     return redirect(self.fail_url)
@@ -1042,7 +1047,7 @@ class DeleteView(object):
             self.post_delete()
         
         if json_result:
-            return to_json_result(True, self.success_msg)
+            return to_json_result(True, self.success_msg, json_func=self.json_func)
         else:
             flash(self.success_msg)
             return redirect(self.ok_url)

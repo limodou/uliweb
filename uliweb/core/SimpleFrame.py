@@ -120,15 +120,18 @@ def function(fname, *args, **kwargs):
     else:
         raise UliwebError("Can't find the function [%s] in settings" % fname)
  
-def json(data):
+def json(data, **json_kwargs):
+    if 'content_type' not in json_kwargs:
+        json_kwargs['content_type'] = 'application/json; charset=utf-8'
+        
     if callable(data):
         @wraps(data)
         def f(*arg, **kwargs):
             ret = data(*arg, **kwargs)
-            return Response(json_dumps(ret), content_type='text/html; charset=utf-8')
+            return Response(json_dumps(ret), **json_kwargs)
         return f
     else:
-        return Response(json_dumps(data), content_type='text/html; charset=utf-8')
+        return Response(json_dumps(data), **json_kwargs)
 
 def expose(rule=None, **kwargs):
     e = rules.Expose(rule, **kwargs)
