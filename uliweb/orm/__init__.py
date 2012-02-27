@@ -1081,17 +1081,21 @@ class Result(object):
         return self.result
     
     def run(self, limit=0):
+        query = self.get_query()
+        #add limit support
+        if limit > 0:
+            query = getattr(query, 'limit')(limit)
+        self.result = do_(query)
+        return self.result
+    
+    def get_query(self):
         if self.condition is not None:
             query = select(self.columns, self.condition)
         else:
             query = select(self.columns)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
-        #add limit support
-        if limit > 0:
-            query = getattr(query, 'limit')(limit)
-        self.result = do_(query)
-        return self.result
+        return query
     
     def one(self):
         self.run(1)
@@ -1293,6 +1297,13 @@ class ManyResult(Result):
         return self
         
     def run(self, limit=0):
+        query = self.get_query()
+        if limit > 0:
+            query = getattr(query, 'limit')(limit)
+        self.result = do_(query)
+        return self.result
+        
+    def get_query(self):
         if self.with_relation_name:
             columns = [self.table] + self.columns
         else:
@@ -1300,11 +1311,8 @@ class ManyResult(Result):
         query = select(columns, (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
-        if limit > 0:
-            query = getattr(query, 'limit')(limit)
-        self.result = do_(query)
-        return self.result
-        
+        return query
+    
     def one(self):
         self.run(1)
         if not self.result:
