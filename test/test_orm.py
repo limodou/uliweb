@@ -329,10 +329,10 @@ def test_floatproperty():
     >>> a = Test1(f=23.123456789)
     >>> a.save()
     True
-    >>> a
-    <Test1 {'f':23.123456788999999,'id':1}>
-    >>> Test1.get(1)
-    <Test1 {'f':23.123456788999999,'id':1}>
+    >>> a # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    <Test1 {'f':23.12345678...,'id':1}>
+    >>> Test1.get(1) # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    <Test1 {'f':23.12345678...,'id':1}>
     >>> a.f = 0.000000001 #test float zero
     >>> a.f
     0.0
@@ -424,14 +424,14 @@ def test_to_dict():
     >>> a.integer = 200
     >>> a.float = 200.02
     >>> a.decimal = decimal.Decimal("10.2")
-    >>> a.to_dict()
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': None}
+    >>> a.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02..., 'boolean': True, 'integer': 200, 'id': None}
     >>> a.save()
     True
-    >>> a
-    <Test {'string':u'limodou','boolean':True,'integer':200,'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'float':200.02000000000001,'decimal':Decimal('10.2'),'id':1}>
-    >>> a.to_dict()
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02000000000001, 'boolean': True, 'integer': 200, 'id': 1}
+    >>> a # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    <Test {'string':u'limodou','boolean':True,'integer':200,'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'float':200.02...,'decimal':Decimal('10.2'),'id':1}> 
+    >>> a.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02..., 'boolean': True, 'integer': 200, 'id': 1}
     """
     
 def test_match():
@@ -939,8 +939,8 @@ def test_decimal_float():
     >>> a.decimal = decimal.Decimal("10.2")
     >>> a.save()
     True
-    >>> a
-    <Test {'float':200.02000000000001,'decimal':Decimal('10.2'),'id':1}>
+    >>> a # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    <Test {'float':200.02...,'decimal':Decimal('10.2'),'id':1}>
     """
 
 def test_many2many_save_and_update():
@@ -1076,6 +1076,50 @@ def test_pickle():
     >>> b = User.get(1)
     >>> print b.memo
     {'age': 30}
+    """
+
+def test_default_query():
+    """
+    Test auto and auto_add parameter of property
+    
+    >>> db = get_connection('sqlite://')
+    >>> #db.echo = True
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     @classmethod
+    ...     def default_query(cls, query):
+    ...         return query.order_by(cls.c.name.asc())
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20, auto=True, auto_add=True, default='limodou')
+    ...     group = ManyToMany('group')
+    ...     year = Field(int)
+    ...     @classmethod
+    ...     def default_query(cls, query):
+    ...         return query.filter(cls.c.username=='a')
+    >>> a = User(username='a', year=10)
+    >>> a.save()
+    True
+    >>> b = User(username='b', year=9)
+    >>> b.save()
+    True
+    >>> print list(User.all())
+    [<User {'username':u'a','year':10,'id':1}>]
+    >>> print list(User.all().without())
+    [<User {'username':u'a','year':10,'id':1}>, <User {'username':u'b','year':9,'id':2}>]
+    >>> g1 = Group(name='b')
+    >>> g1.save()
+    True
+    >>> a.group.add(g1)
+    True
+    >>> g2 = Group(name='a')
+    >>> g2.save()
+    True
+    >>> a.group.add(g2)
+    True
+    >>> print list(a.group)
+    [<Group {'name':u'a','id':2}>, <Group {'name':u'b','id':1}>]
     """
     
 #if __name__ == '__main__':

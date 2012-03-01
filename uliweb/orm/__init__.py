@@ -310,7 +310,7 @@ class ModelMetaclass(type):
         #if there is already defined primary_key, the id will not be primary_key
         has_primary_key = bool([v for v in cls.properties.itervalues() if 'primary_key' in v.kwargs])
         
-        #add __without_id__ attribute to model, if set it, uliorm will not
+        #add ___id__ attribute to model, if set it, uliorm will not
         #create 'id' field for the model
         without_id = getattr(cls, '__without_id__', False)
         if 'id' not in cls.properties and not without_id:
@@ -1016,6 +1016,7 @@ class Result(object):
         self.args = args
         self.kwargs = kwargs
         self.result = None
+        self.default_query_flag = True
         
     def all(self):
         return self
@@ -1080,6 +1081,11 @@ class Result(object):
             self.result = do_(self.model.table.update().values(**kwargs))
         return self.result
     
+    def without(self, flag='default_query'):
+        if flag == 'default_query':
+            self.default_query_flag = False
+        return self
+    
     def run(self, limit=0):
         query = self.get_query()
         #add limit support
@@ -1089,6 +1095,12 @@ class Result(object):
         return self.result
     
     def get_query(self):
+        #user can define default_query, and default_query 
+        #should be class method
+        if self.default_query_flag:
+            _f = getattr(self.model, 'default_query', None)
+            if _f:
+                _f(self)
         if self.condition is not None:
             query = select(self.columns, self.condition)
         else:
@@ -1144,6 +1156,7 @@ class ReverseResult(Result):
         self.args = args
         self.kwargs = kwargs
         self.result = None
+        self.default_query_flag = True
         
     def has(self, *objs):
         ids = get_objs_columns(objs)
@@ -1194,6 +1207,7 @@ class ManyResult(Result):
         self.result = None
         self.with_relation_name = None
         self.through_model = through_model
+        self.default_query_flag = True
         
     def get(self, condition=None):
         if not isinstance(condition, ColumnElement):
@@ -1306,6 +1320,12 @@ class ManyResult(Result):
         return self.result
         
     def get_query(self):
+        #user can define default_query, and default_query 
+        #should be class method
+        if self.default_query_flag:
+            _f = getattr(self.modelb, 'default_query', None)
+            if _f:
+                _f(self)
         if self.with_relation_name:
             columns = [self.table] + self.columns
         else:
