@@ -1204,6 +1204,8 @@ class ManyResult(Result):
     def add(self, *objs):
         new_objs = []
         for x in objs:
+            if not x:
+                continue
             if isinstance(x, (tuple, list)):
                 new_objs.extend(x)
             else:
