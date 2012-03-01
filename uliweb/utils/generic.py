@@ -428,7 +428,8 @@ class AddView(object):
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None, file_replace=True, template_data=None, 
         success_data=None, meta='AddForm', get_form_field=None, post_fail=None,
-        types_convert_map=None, fields_convert_map=None, json_func=None):
+        types_convert_map=None, fields_convert_map=None, json_func=None,
+        file_convert=True):
 
         self.model = get_model(model)
         self.meta = meta
@@ -459,6 +460,7 @@ class AddView(object):
         self.types_convert_map = types_convert_map
         self.fields_convert_map = fields_convert_map
         self.json_func = json_func or json
+        self.file_convert = file_convert
         self.form = self.make_form(form)
         
     def get_fields(self):
@@ -533,7 +535,9 @@ class AddView(object):
             if isinstance(f['prop'], orm.FileProperty):
                 if f['name'] in data and data[f['name']]:
                     fobj = data[f['name']]
-                    data[f['name']] = functions.save_file(fobj['filename'], fobj['file'], replace=self.file_replace)
+                    data[f['name']] = functions.save_file(fobj['filename'], 
+                        fobj['file'], replace=self.file_replace, 
+                        convert=self.file_convert)
                     flag = True
                     
         return flag

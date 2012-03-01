@@ -121,11 +121,11 @@ class FileServing(object):
             x_sendfile=bool(self.x_sendfile), x_header_name=self.x_header_name, 
             x_filename=x_filename, real_filename=real_filename)
      
-    def save_file(self, filename, fobj, replace=False):
+    def save_file(self, filename, fobj, replace=False, convert=True):
         from uliweb.utils import files
         
         #get full path and converted filename
-        fname = self.get_filename(filename, True, convert=True)
+        fname = self.get_filename(filename, True, convert=convert)
         #save file and get the changed filename, because the filename maybe change when
         #there is duplicate filename(replace=False, if replace=True, then the filename
         #will not changed
@@ -135,18 +135,18 @@ class FileServing(object):
         #create new filename according fname2 and filename, the result should be unicode
         return norm_filename(os.path.join(os.path.dirname(filename), files.unicode_filename(fname2, s.FILESYSTEM_ENCODING)))
     
-    def save_file_field(self, field, replace=False, filename=None):
+    def save_file_field(self, field, replace=False, filename=None, convert=True):
         filename = filename or field.data.filename
-        fname = self.save_file(filename, field.data.file, replace)
+        fname = self.save_file(filename, field.data.file, replace, convert)
         field.data.filename = fname
         return fname
             
-    def save_image_field(self, field, resize_to=None, replace=False, filename=None):
+    def save_image_field(self, field, resize_to=None, replace=False, filename=None, convert=True):
         from uliweb.utils.image import resize_image
         if resize_to:
             field.data.file = resize_image(field.data.file, resize_to)
         filename = filename or field.data.filename
-        fname = self.save_file(filename, field.data.file, replace)
+        fname = self.save_file(filename, field.data.file, replace, convert)
         field.data.filename = fname
         return fname
             
@@ -194,14 +194,14 @@ def file_serving(filename):
 def get_filename(filename, filesystem=False):
     return get_backend().get_filename(filename, filesystem)
 
-def save_file(filename, fobj, replace=False):
-    return get_backend().save_file(filename, fobj, replace)
+def save_file(filename, fobj, replace=False, convert=True):
+    return get_backend().save_file(filename, fobj, replace, convert)
     
-def save_file_field(field, replace=False, filename=None):
-    return get_backend().save_file_field(field, replace, filename)
+def save_file_field(field, replace=False, filename=None, convert=True):
+    return get_backend().save_file_field(field, replace, filename, convert)
         
-def save_image_field(field, resize_to=None, replace=False, filename=None):
-    return get_backend().save_image_field(field, resize_to, replace, filename)
+def save_image_field(field, resize_to=None, replace=False, filename=None, convert=True):
+    return get_backend().save_image_field(field, resize_to, replace, filename, convert)
         
 def delete_filename(filename):
     return get_backend().delete_filename(filename)
