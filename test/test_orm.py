@@ -1120,6 +1120,8 @@ def test_default_query():
     True
     >>> print list(a.group)
     [<Group {'name':u'a','id':2}>, <Group {'name':u'b','id':1}>]
+    >>> print list(a.group.without())
+    [<Group {'name':u'b','id':1}>, <Group {'name':u'a','id':2}>]
     """
     
 #if __name__ == '__main__':
