@@ -1177,13 +1177,15 @@ class SimpleListView(object):
                 for v in self.get_total(table):
                     v = str(v)
                     s.append(v)
+                return s
             else:
                 s.append('<tr class="sum">')
                 for v in self.get_total(table):
                     v = str(v) or '&nbsp;'
                     s.append('<td>%s</td>' % v)
                 s.append('</tr>')
-        return ''.join(s)
+                return ''.join(s)
+        return ''
     
     def query_all(self):
         return self.query_range(0, pagination=False)
@@ -1585,6 +1587,8 @@ class SimpleListView(object):
         table = self.table_info()
         
         columns = []
+        if frozen:
+            columns = [[]]
         fields = []
         max_rowspan = 0
         for i, f in enumerate(table['fields_name']):
@@ -1655,7 +1659,10 @@ class SimpleListView(object):
             clear_fields(fields)
             n = len(fields)
             y += 1
-            columns.append(s)
+            if frozen:
+                columns[0].extend(s)
+            else:
+                columns.append(s)
             
         return columns
 
