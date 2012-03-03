@@ -102,6 +102,11 @@ class Command(object):
         return get_apps(global_options.apps_dir, include_apps=include_apps, 
             settings_file=global_options.settings, local_settings_file=global_options.local_settings)
     
+    def get_application(self, global_options):
+        from uliweb.manage import make_application
+        
+        return make_application(project_dir=global_options.project, start=False, debug_console=False, debug=False)
+        
     def run_from_argv(self, prog, subcommand, global_options, argv):
         """
         Set up any environment changes requested, then run this command.

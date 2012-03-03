@@ -249,7 +249,7 @@ class ExportStaticCommand(Command):
             outputdir = args[0]
 
         apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
-        dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in apps]
+        dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in reversed(apps)]
         self.options = options
         self.global_options = global_options
         copy_dir_with_check(dirs, outputdir, global_options.verbose, options.check, processor=self.process_file)
@@ -402,34 +402,24 @@ class CallCommand(Command):
             print "Error: Can't import the [%s], please check the file and try again." % command
 register_command(CallCommand)
  
-def collect_files(apps_dir, apps):
-    files = [os.path.join(apps_dir, 'settings.ini'), 
-        os.path.join(apps_dir, 'local_settings.ini')]
+class MakeCmdCommand(Command):
+    name = 'makecmd'
+    help = 'Created a commands.py to the apps or current directory.'
+    args = '[appname, appname, ...]'
+    check_apps = True
     
-    def f(path):
-        if not os.path.exists(path):
-            log.error("Path %s is not existed!" % path)
-            return
+    def handle(self, options, global_options, *args):
+        from uliweb.utils.common import extract_dirs
+        from uliweb import get_app_dir
         
-        for r in os.listdir(path):
-            if r in ['.svn', '_svn', '.git'] or r.startswith('.'):
-                continue
-            fpath = os.path.join(path, r)
-            if os.path.isdir(fpath):
-                f(fpath)
-            else:
-                ext = os.path.splitext(fpath)[1]
-                if ext in ['.py', '.ini']:
-                    files.append(fpath)
-    
-    from uliweb import get_app_dir
-    for p in apps:
-        path = get_app_dir(p)
-        files.append(os.path.join(path, 'config.ini'))
-        files.append(os.path.join(path, 'settings.ini'))
-        f(path)
-    return files
-        
+        if not args:
+            extract_dirs('uliweb', 'template_files/command', '.', verbose=global_options.verbose)
+        else:
+            for f in args:
+                p = get_app_dir(f)
+                extract_dirs('uliweb', 'template_files/command', p, verbose=global_options.verbose)
+register_command(MakeCmdCommand)
+
 class RunserverCommand(Command):
     name = 'runserver'
     help = 'Start a new development server.'
@@ -523,6 +513,93 @@ class ShellCommand(Command):
         interact(self.banner, local=namespace)
 register_command(ShellCommand)
 
+class FindCommand(Command):
+    name = 'find'
+    help = 'Find objects in uliweb, such as: view, template, static file etc.'
+    args = ''
+    check_apps_dirs = True
+    has_options = True
+    option_list = (
+        make_option('-t', '--template', dest='template', 
+            help='Find template file path according template filename.'),
+        make_option('-u', '--url', dest='url', 
+            help='Find views function path according url.'),
+        make_option('-c', '--static', dest='static', 
+            help='Find static file path according static filename.'),
+    )
+    
+    def handle(self, options, global_options, *args):
+        self.get_application(global_options)
+        if options.url:
+            self._find_url(options.url)
+        elif options.template:
+            self._find_template(options.template)
+        elif options.static:
+            self._find_static(global_options, options.static)
+        
+    def _find_url(self, url):
+        from uliweb.core.SimpleFrame import url_map
+        from werkzeug.test import EnvironBuilder
+        from uliweb import NotFound
+        
+        builder = EnvironBuilder(url)
+        env = builder.get_environ()
+        
+        url_adapter = url_map.bind_to_environ(env)
+        try:
+            endpoint, values = url_adapter.match()
+            print '%s' % (url, endpoint)
+        except NotFound:
+            print 'Not Found'
+
+    def _find_template(self, template):
+        from uliweb import application
+        from uliweb.core.template import get_templatefile
+        
+        filename = get_templatefile(template, application.template_dirs)
+        print '%s' % (filename or 'Not Found')
+        
+    def _find_static(self, global_options, static):
+        from uliweb import get_app_dir
+        
+        apps = self.get_apps(global_options)
+        
+        for appname in reversed(apps):
+            path = os.path.join(get_app_dir(appname), 'static', static)
+            if os.path.exists(path):
+                print '%s' % path
+                return
+        print 'Not Found'
+register_command(FindCommand)
+
+def collect_files(apps_dir, apps):
+    files = [os.path.join(apps_dir, 'settings.ini'), 
+        os.path.join(apps_dir, 'local_settings.ini')]
+    
+    def f(path):
+        if not os.path.exists(path):
+            log.error("Path %s is not existed!" % path)
+            return
+        
+        for r in os.listdir(path):
+            if r in ['.svn', '_svn', '.git'] or r.startswith('.'):
+                continue
+            fpath = os.path.join(path, r)
+            if os.path.isdir(fpath):
+                f(fpath)
+            else:
+                ext = os.path.splitext(fpath)[1]
+                if ext in ['.py', '.ini']:
+                    files.append(fpath)
+    
+    from uliweb import get_app_dir
+    for p in apps:
+        path = get_app_dir(p)
+        files.append(os.path.join(path, 'config.ini'))
+        files.append(os.path.join(path, 'settings.ini'))
+        f(path)
+    return files
+        
 def main():
     from uliweb.core.commands import execute_command_line
     
