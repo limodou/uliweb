@@ -131,3 +131,67 @@ class TemplateLayout(Layout):
         text = f.read()
         f.close()
         return str(uaml.Parser(text, self.writer))
+    
+class BootstrapFormWriter(FormWriter):
+    
+    def begin_form(self, indent, value, **kwargs):
+        if kwargs.get('class', None):
+            self.form.html_attrs['_class'] = kwargs['class']
+        self.form.html_attrs['_class'] = self.form.html_attrs['_class'] + ' form-horizontal'
+        return indent * ' ' + self.form.form_begin
+        
+    def begin_buttons(self, indent, value, **kwargs):
+        kwargs['_class'] = 'type-button form-actions'
+        return indent * ' ' + begin_tag('div', **kwargs)
+        
+    def do_field(self, indent, value, **kwargs):
+        field_name = kwargs['name']
+        field = getattr(self.form, field_name)
+        error = field.error
+        obj = self.form.fields[field_name]
+        help_string = kwargs.get('help_string', None) or field.help_string
+        if 'label' in kwargs:
+            label = kwargs['label']
+        else:
+            label = obj.label
+        if label:
+            obj.label = label
+            label_text = obj.get_label(_class='field')
+        else:
+            label_text = ''
+            
+        _class = self.get_class(obj) + " control-group"
+        if label_text == '':
+            _class = _class + " nolabel"
+        if error:
+            _class = _class + ' error'
+        if self.is_hidden(obj):
+            return str(field)
+        
+        div_group = Tag('div', _class=_class, id='div_'+obj.id)
+        with div_group: 
+            if self.get_widget_name(obj) == 'Checkbox':
+                div_group << "&nbsp"
+            else:
+                div_group << label_text
+                
+            div = Tag('div', _class='controls')
+            with div:
+                if self.get_widget_name(obj) == 'Checkbox':
+                    div << field
+                    div << label_text
+                else:
+                    div << field                    
+                div << Tag('div', _class="help help-block", _value=help_string)
+                if error:
+                    div << Tag('div', _class="message help-block", _value=error)
+                    
+            div_group << str(div)
+        return indent*' ' + str(div_group)              
+            
+class BootstrapTemplateLayout(TemplateLayout):
+    def __init__(self, form, layout=None, writer=None):
+        self.form = form
+        self.layout = layout
+        self.writer = BootstrapFormWriter(form)
+    

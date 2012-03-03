@@ -1,7 +1,7 @@
 from __future__ import with_statement
 from uliweb.i18n import gettext_lazy as _
 
-__all__ = ['Layout', 'TableLayout', 'CSSLayout', 'YamlLayout']
+__all__ = ['Layout', 'TableLayout', 'CSSLayout', 'YamlLayout', 'BootstrapLayout']
 
 from uliweb.core.html import Buf, Tag
 
@@ -44,6 +44,8 @@ class TableLayout(Layout):
         ('Select', 'RadioSelect'):'type-select',
         ('Radio', 'Checkbox'):'type-check',
         }
+    form_class = 'tform'
+    buttons_line_class = 'type-button'
     
     def __init__(self, form, layout=None, label_fix=False):
         self.form = form
@@ -110,14 +112,14 @@ class TableLayout(Layout):
         return tr
 
     def buttons_line(self, buttons, n):
-        div = Tag('div', _class="type-button")
+        div = Tag('div', _class=self.buttons_line_class)
         with div:
             div << buttons
         return div
         
     def html(self):
-        if 'tform' not in self.form.html_attrs['_class']:
-            self.form.html_attrs['_class'] = 'tform'
+        if self.form_class not in self.form.html_attrs['_class']:
+            self.form.html_attrs['_class'] = self.form_class
         if self.layout:
             m = []
             for line in self.layout:
@@ -192,6 +194,75 @@ class TableLayout(Layout):
 #                
 #            buf << self.form.form_end
 #        return str(buf)
+    
+class BootstrapTableLayout(TableLayout):
+    field_classes = {
+        ('Text', 'Password', 'TextArea'):'type-text',
+        ('Button', 'Submit', 'Reset'):'type-button',
+        ('Select', 'RadioSelect'):'type-select',
+        ('Radio', 'Checkbox'):'type-check',
+        }
+    
+    form_class = 'form-horizontal'
+    buttons_line_class = 'type-button form-actions'
+    
+    def get_class(self, f):
+        name = f.build.__name__
+        _class = 'type-text'
+        for k, v in self.field_classes.items():
+            if name in k:
+                _class = v
+                break
+        return _class
+
+    def line(self, fields, n):
+        _x = 0
+        for _f in fields:
+            if isinstance(_f, (str, unicode)):
+                _x += 1
+            elif isinstance(_f, dict):
+                _x += _f.get('colspan', 1)
+            else:
+                raise Exception, 'Colume definition is not right, only support string or dict'
+
+        tr = Tag('tr')
+        with tr:
+            for x in fields:
+                _span = n / _x
+                if isinstance(x, (str, unicode)):
+                    name = x
+                elif isinstance(x, dict):
+                    name = x['name']
+                    _span = _span * x.get('colspan', 1)
+
+                f = getattr(self.form, name)
+                obj = self.form.fields[name]
+                _class = self.get_class(obj) + " control-group"
+                if f.error:
+                    _class = _class + ' error'
+                
+                with tr.td(colspan=_span, width='%d%%' % (100*_span/n,), valign='top'):
+                    with tr.div(_class=_class, id='div_'+obj.id):
+                        if self.get_widget_name(obj) == 'Checkbox':
+                            tr << "&nbsp"
+                        else:
+                            if self.label_fix:
+                                tr << f.field.get_label(_class='field label_fix')
+                            else:
+                                tr << f.label                            
+                            
+                        div = Tag('div', _class='controls')
+                        with div:
+                            if self.get_widget_name(obj) == 'Checkbox':
+                                div << f
+                                div << f.label
+                            else:
+                                div << f                    
+                            div << Tag('div', _class="help help-block", _value= f.help_string or '')
+                            if f.error:
+                                div << Tag('div', _class="message help-block", _value=f.error)
+                        tr << str(div)
+        return tr
     
 class CSSLayout(Layout):
     def line(self, obj, label, input, help_string='', error=None):
@@ -416,3 +487,58 @@ class YamlLayout(Layout):
                 else:
                     buf << self.line(obj, f.label, f, f.help_string, f.error)
                     
+                    
+
+class BootstrapLayout(YamlLayout):
+    
+    def line(self, obj, label, input, help_string='', error=None):
+        _class = self.get_class(obj) + " control-group"
+        if error:
+            _class = _class + ' error'
+        
+        if self.get_widget_name(obj) == 'RadioSelect':
+            obj.build = YamlRadioSelect
+            fs = Tag('fieldset')
+            fs << Tag('legend', label)
+            fs << input
+            return fs
+        else:
+            div_group = Tag('div', _class=_class, id='div_'+obj.id)
+            with div_group: 
+                if self.get_widget_name(obj) == 'Checkbox':
+                    div_group << "&nbsp"
+                else:
+                    div_group << label
+                    
+                div = Tag('div', _class='controls')
+                with div:
+                    if self.get_widget_name(obj) == 'Checkbox':
+                        div << input
+                        div << label
+                    else:
+                        div << input                    
+                    div << Tag('div', _class="help help-block", _value=help_string)
+                    if error:
+                        div << Tag('div', _class="message help-block", _value=error)
+                        
+                div_group << str(div)
+            return str(div_group)
+    
+    def buttons_line(self, buttons):
+        div = Tag('div', _class="type-button form-actions")
+        with div:
+            div << buttons
+        return div
+                    
+    def html(self):
+        buf = Buf()
+        if 'form-horizontal' not in self.form.html_attrs['_class']:
+            self.form.html_attrs['_class'] = 'form-horizontal'
+        buf << self.form.form_begin
+        if not self.layout:
+            self.layout = [name for name, obj in self.form.fields_list]
+        self.process_layout(buf)
+        
+        buf << self.buttons_line(self.form.get_buttons())
+        buf << self.form.form_end
+        return str(buf)

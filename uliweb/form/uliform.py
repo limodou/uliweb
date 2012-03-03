@@ -854,7 +854,7 @@ class Form(object):
 
     __metaclass__ = FormMetaclass
 
-    layout_class = YamlLayout
+    layout_class = BootstrapLayout
     layout = None
     layout_class_args = {}
     fieldset = False
