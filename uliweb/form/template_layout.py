@@ -141,7 +141,7 @@ class BootstrapFormWriter(FormWriter):
         return indent * ' ' + self.form.form_begin
         
     def begin_buttons(self, indent, value, **kwargs):
-        kwargs['_class'] = 'type-button form-actions'
+        kwargs['_class'] = 'form-actions'
         return indent * ' ' + begin_tag('div', **kwargs)
         
     def do_field(self, indent, value, **kwargs):
@@ -156,7 +156,7 @@ class BootstrapFormWriter(FormWriter):
             label = obj.label
         if label:
             obj.label = label
-            label_text = obj.get_label(_class='field')
+            label_text = obj.get_label(_class='control-label')
         else:
             label_text = ''
             

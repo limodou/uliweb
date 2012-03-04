@@ -249,7 +249,7 @@ class BootstrapTableLayout(TableLayout):
                             if self.label_fix:
                                 tr << f.field.get_label(_class='field label_fix')
                             else:
-                                tr << f.label                            
+                                tr << f.get_label(_class='control-label')                            
                             
                         div = Tag('div', _class='controls')
                         with div:
