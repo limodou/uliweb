@@ -508,7 +508,7 @@ class BootstrapLayout(YamlLayout):
                 if self.get_widget_name(obj) == 'Checkbox':
                     div_group << "&nbsp"
                 else:
-                    div_group << label
+                    div_group << obj.get_label(_class='control-label')
                     
                 div = Tag('div', _class='controls')
                 with div:
@@ -517,7 +517,7 @@ class BootstrapLayout(YamlLayout):
                         div << label
                     else:
                         div << input                    
-                    div << Tag('div', _class="help help-block", _value=help_string)
+                    div << Tag('p', _class="help help-block", _value=help_string)
                     if error:
                         div << Tag('div', _class="message help-block", _value=error)
                         

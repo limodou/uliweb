@@ -548,7 +548,7 @@ class FindCommand(Command):
         url_adapter = url_map.bind_to_environ(env)
         try:
             endpoint, values = url_adapter.match()
-            print '%s' % (url, endpoint)
+            print '%s' % endpoint
         except NotFound:
             print 'Not Found'
 

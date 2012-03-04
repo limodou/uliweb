@@ -61,11 +61,14 @@ class FieldProxy(object):
         
     @property
     def label(self):
+        return self.get_label()
+    
+    def get_label(self, _class='field'):
         if self.field.__class__ is BooleanField:
             delimeter = False
         else:
             delimeter = True
-        return self.field.get_label(_class='field', delimeter=delimeter)
+        return self.field.get_label(_class=_class, delimeter=delimeter)
     
     @property
     def help_string(self):
