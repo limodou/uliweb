@@ -64,7 +64,12 @@ def install_config(apps_dir):
                 if not p in sys.path:
                     sys.path.insert(0, p)
                     
-def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps=None, debug_console=True, settings_file='settings.ini', start=True):
+def make_application(debug=None, apps_dir='apps', project_dir=None, 
+    include_apps=None, debug_console=True, settings_file='settings.ini', 
+    local_settings_file='local_settings.ini', start=True):
+    """
+    Make an application object
+    """
     from uliweb.utils.common import import_attr
     
     if project_dir:
@@ -75,7 +80,8 @@ def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps
         
     install_config(apps_dir)
     
-    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps, settings_file=settings_file, start=start)
+    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps, 
+        settings_file=settings_file, local_settings_file=local_settings_file, start=start)
     
     #settings global application object
     uliweb.application = app
@@ -117,6 +123,13 @@ def make_application(debug=None, apps_dir='apps', project_dir=None, include_apps
         from werkzeug.debug import DebuggedApplication
         app = DebuggedApplication(app, debug_console)
     return app
+
+def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
+    settings_file='settings.ini', local_settings_file='local_settings.ini'):
+    return make_application(apps_dir=apps_dir, project_dir=project_dir,
+        include_apps=include_apps, debug_console=False, debug=False,
+        settings_file=settings_file, local_settings_file=local_settings_file,
+        start=False)
 
 class MakeAppCommand(Command):
     name = 'makeapp'
@@ -453,9 +466,12 @@ class RunserverCommand(Command):
         if self.develop:
             include_apps = ['plugs.develop']
             app = make_application(options.debug, project_dir=global_options.project, 
-                        include_apps=include_apps)
+                        include_apps=include_apps, settings_file=global_options.settings,
+                        local_settings_file=global_options.local_settings)
         else:
-            app = make_application(options.debug, project_dir=global_options.project)
+            app = make_application(options.debug, project_dir=global_options.project,
+                settings_file=global_options.settings,
+                local_settings_file=global_options.local_settings)
             include_apps = []
         extra_files = collect_files(global_options.apps_dir, self.get_apps(global_options, include_apps))
         

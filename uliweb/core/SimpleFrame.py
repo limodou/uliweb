@@ -323,7 +323,10 @@ class Loader(object):
     
 class Dispatcher(object):
     installed = False
-    def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, start=True, default_settings=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
+    def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, 
+        start=True, default_settings=None, settings_file='settings.ini', 
+        local_settings_file='local_settings.ini'):
+            
         __global__.application = self
         self.debug = False
         self.include_apps = include_apps or []

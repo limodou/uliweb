@@ -6,7 +6,7 @@
 
 
 __all__ = ['Field', 'get_connection', 'Model', 'create_all',
-    'set_debug_query', 'set_auto_create', 'set_connection', 'get_model',
+    'set_debug_query', 'set_auto_create', 'set_connection', 'get_model', 'set_model',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'PICKLE', 
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
@@ -20,7 +20,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'create_all',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback']
 
 __default_connection__ = None  #global connection instance
-__auto_create__ = True
+__auto_create__ = False
 __debug_query__ = None
 __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
