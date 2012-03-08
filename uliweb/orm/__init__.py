@@ -677,10 +677,10 @@ class TimeProperty(DateTimeProperty):
         return value
 
     def convert(self, value):
-        if not value:
+        if value is None:
             return None
         d = date.to_time(value, format=self.format)
-        if d:
+        if d is not None:
             return d
         raise BadValueError('The time value is not a valid format')
     
