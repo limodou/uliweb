@@ -599,7 +599,6 @@ class AddView(object):
         
         flag = self.form.validate(request.values, request.files)
         if flag:
-            print self.form.data
             d = self.default_data.copy()
             d.update(self.form.data)
             return self.on_success(d, json_result)
