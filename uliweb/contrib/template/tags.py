@@ -25,7 +25,7 @@ class LinkNode(Node):
         template.add_exec_env('link', LinkNode.link)
         template.add_exec_env('__links__', {'toplinks':[], 'bottomlinks':[]})
         
-    def render(self):
+    def __str__(self):
         return 'link(_env, %s)\n' % self.value
     
     def __repr__(self):
@@ -59,7 +59,7 @@ class UseNode(LinkNode):
         template.add_exec_env('use', UseNode.use)
         template.add_exec_env('__links__', {'toplinks':[], 'bottomlinks':[]})
 
-    def render(self):
+    def __str__(self):
         return 'use(_vars, _env, %s)\n' % self.value
     
     def __repr__(self):

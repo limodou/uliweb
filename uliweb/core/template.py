@@ -130,72 +130,94 @@ class Node(object):
         self.template = template
         
     def __str__(self):
-        return self.render()
-        
-    def render(self):
         if self.value:
             return self.value
         else:
             return ''
         
+    def __repr__(self):
+        return self.__str__()
+        
 class BlockNode(Node):
     block = 1
-    def __init__(self, name='', content=None, template=None):
+    def __init__(self, name='', content=None):
         self.nodes = []
         self.name = name
         self.content = content
-        self.template = template
-        
-    def add(self, node):
-        self.nodes.append(node)
-        
-    def merge(self, content):
-        self.nodes.extend(content.nodes)
-    
-    def output(self, vars):
-        s = []
-        for x in self.nodes:
-            if isinstance(x, BlockNode):
-                if x.name in vars:
-                    s.append(vars[x.name].output(vars))
-                else:
-                    s.append(x.output(vars))
-            else:
-                s.append(str(x))
-        return ''.join(s)
-    
-    def __repr__(self):
-        s = ['{{block %s}}' % self.name]
-        for x in self.nodes:
-            s.append(str(x))
-        s.append('{{end}}')
-        return ''.join(s)
-    
-    def render(self):
-        if self.name in self.content.vars and self is not self.content.vars[self.name]:
-            return str(self.content.vars[self.name])
-        else:
-            s = []
-            for x in self.nodes:
-                if not x.__class__ is BlockNode:
-                    s.append(str(x))
-            return ''.join(s)
-
-class Content(BlockNode):
-    def __init__(self):
-        self.nodes = []
-        self.vars = {}
-        self.begin = []
-        self.end = []
         
     def add(self, node):
         self.nodes.append(node)
         if isinstance(node, BlockNode):
-            self.vars[node.name] = node
+            v = self.content.root.block_vars.setdefault(node.name, [])
+            v.append(node)
         
     def merge(self, content):
         self.nodes.extend(content.nodes)
-        self.vars.update(content.vars)
+    
+    def __repr__(self):
+        s = ['{{block %s}}' % self.name]
+        for x in self.nodes:
+            s.append(repr(x))
+        s.append('{{end}}')
+        return ''.join(s)
+    
+    def __str__(self):
+        return self.render()
+
+    def render(self, top=True):
+        """
+        Top: if output the toppest block node
+        """
+        if top and self.name in self.content.root.block_vars and self is not self.content.root.block_vars[self.name][-1]:
+            return self.content.root.block_vars[self.name][-1].render(False)
+        
+        s = []
+        for x in self.nodes:
+            if isinstance(x, BlockNode):
+                if x.name in self.content.root.block_vars:
+                    s.append(str(self.content.root.block_vars[x.name][-1]))
+                else:
+                    s.append(str(x))
+            else:
+                s.append(str(x))
+        return ''.join(s)
+        
+class SuperNode(Node):
+    def __init__(self, parent, content):
+        self.parent = parent
+        self.content = content
+        
+    def __str__(self):
+        for i, v in enumerate(self.content.root.block_vars[self.parent.name]):
+            if self.parent is v:
+                if i > 0:
+                    return self.content.root.block_vars[self.parent.name][i-1].render(False)
+        return ''
+    
+    def __repr__(self):
+        return '{{super}}'
+
+class Content(BlockNode):
+    def __init__(self, root=None):
+        self.nodes = []
+        self.block_vars = {}
+        self.begin = []
+        self.end = []
+        self.root = root or self
+        
+    def add(self, node):
+        self.nodes.append(node)
+        if isinstance(node, BlockNode):
+            if node.name:
+                v = self.block_vars.setdefault(node.name, [])
+                v.append(node)
+        
+    def merge(self, content):
+        self.nodes.extend(content.nodes)
+        for k, v in content.block_vars.items():
+            d = self.block_vars.setdefault(k, [])
+            d.extend(v)
+        content.root = self.root
         
     def clear_content(self):
         self.nodes = []
@@ -203,20 +225,14 @@ class Content(BlockNode):
     def __str__(self):
         s = self.begin[:]
         for x in self.nodes:
-            if x.__class__ is BlockNode:
-                if x.name in self.vars:
-                    s.append(self.vars[x.name].output(self.vars))
-                else:
-                    s.append(x.output(self.vars))
-            else:
-                s.append(str(x))
+            s.append(str(x))
         s.extend(self.end)
         return ''.join(s)
     
     def __repr__(self):
         s = []
         for x in self.nodes:
-            s.append(str(x))
+            s.append(repr(x))
         return ''.join(s)
 
 class Context(object):
@@ -417,7 +433,7 @@ class Template(object):
                     if name in __nodes__:
                         node_cls = __nodes__[name]
                         #this will pass top template instance and top content instance to node_cls
-                        node = node_cls(value.strip(), self.root.content, self.root)
+                        node = node_cls(value.strip(), self.content)
                         if node.block:
                             top.add(node)
                             self.stack.append(node)
@@ -425,6 +441,11 @@ class Template(object):
                             buf = str(node)
                             if buf:
                                 top.add(buf)
+                    elif name == 'super':
+                        t = self.stack[-1]
+                        if isinstance(t, BlockNode):
+                            node = SuperNode(t, self.content)
+                            top.add(node)
                     elif name == 'end':
                         self.stack.pop()
                     elif name == '=':
