@@ -197,18 +197,18 @@ class TableLayout(Layout):
     
 class BootstrapTableLayout(TableLayout):
     field_classes = {
-        ('Text', 'Password', 'TextArea'):'type-text',
-        ('Button', 'Submit', 'Reset'):'type-button',
-        ('Select', 'RadioSelect'):'type-select',
-        ('Radio', 'Checkbox'):'type-check',
+        ('Text', 'Password', 'TextArea'):'input-xlarge',
+        ('Button', 'Submit', 'Reset', 'Checkbox', 'Hidden', 'File'):'',
+        ('Select', 'RadioSelect'):'',
+        ('Radio',):'radio',
         }
     
     form_class = 'form-horizontal'
-    buttons_line_class = 'type-button form-actions'
+    buttons_line_class = 'form-actions'
     
     def get_class(self, f):
         name = f.build.__name__
-        _class = 'type-text'
+        _class = ''
         for k, v in self.field_classes.items():
             if name in k:
                 _class = v
@@ -237,7 +237,7 @@ class BootstrapTableLayout(TableLayout):
 
                 f = getattr(self.form, name)
                 obj = self.form.fields[name]
-                _class = self.get_class(obj) + " control-group"
+                _class = "control-group"
                 if f.error:
                     _class = _class + ' error'
                 
@@ -422,7 +422,6 @@ class YamlLayout(Layout):
         if self.get_widget_name(obj) == 'RadioSelect':
             obj.build = YamlRadioSelect
             fs = Tag('fieldset')
-            fs << Tag('legend', label)
             fs << input
             return fs
         else:
@@ -490,34 +489,33 @@ class YamlLayout(Layout):
                     
 
 class BootstrapLayout(YamlLayout):
+    field_classes = {
+        ('Text', 'Password', 'TextArea'):'input-xlarge',
+        ('Button', 'Submit', 'Reset', 'Checkbox', 'File', 'Hidden'):'',
+        ('Select', 'RadioSelect'):'',
+        ('Radio',):'radio',
+        }
     
     def line(self, obj, label, input, help_string='', error=None):
-        _class = self.get_class(obj) + " control-group"
+        _class = "control-group"
         if error:
             _class = _class + ' error'
         
-        if self.get_widget_name(obj) == 'RadioSelect':
-            obj.build = YamlRadioSelect
-            fs = Tag('fieldset')
-            fs << Tag('legend', label)
-            fs << input
-            return fs
-        else:
-            div_group = Tag('div', _class=_class, id='div_'+obj.id)
-            with div_group: 
-                div_group << obj.get_label(_class='control-label')
-                div = Tag('div', _class='controls')
-                with div:
-                    div << input                    
-                    div << Tag('p', _class="help help-block", _value=help_string)
-                    if error:
-                        div << Tag('div', _class="message help-block", _value=error)
-                        
-                div_group << str(div)
-            return str(div_group)
+        div_group = Tag('div', _class=_class, id='div_'+obj.id)
+        with div_group: 
+            div_group << obj.get_label(_class='control-label')
+            div = Tag('div', _class='controls')
+            with div:
+                div << input                    
+                div << Tag('p', _class="help help-block", _value=help_string)
+                if error:
+                    div << Tag('div', _class="message help-block", _value=error)
+                    
+            div_group << str(div)
+        return str(div_group)
     
     def buttons_line(self, buttons):
-        div = Tag('div', _class="type-button form-actions")
+        div = Tag('div', _class="form-actions")
         with div:
             div << buttons
         return div

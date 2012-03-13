@@ -104,13 +104,14 @@ class RadioSelect(Select):
     def to_html(self):
         s = []
         for v, caption in self.choices:
-            args = {'value': v}
-            id = args.setdefault('id', 'radio_%d' % self.get_id())
-            args['name'] = self.kwargs.get('name')
+            args = {'value' : v}
+            kwargs = self.kwargs.copy()
+            args['name'] = kwargs.pop('name')
+            args['id'] = kwargs.pop('id')
             if v == self.value:
                 args['checked'] = None
-            s.append(str(Radio(**args)))
-            s.append(str(Tag('label', caption, _for=id)))
+            r = str(Radio(**args))
+            s.append(str(Tag('label', r+caption, **kwargs)))
         return ''.join(s)
     
     def get_id(self):

@@ -121,7 +121,7 @@ class BaseField(object):
         elif 'class' in self.html_attrs:
             _cls = 'class'
         if _cls:
-            self.html_attrs['class'] = ' '.join([self.html_attrs[_cls], self.field_css_class])
+            self.html_attrs['class'] = ' '.join([self.html_attrs.pop(_cls), self.field_css_class])
         else:
             self.html_attrs['class'] = ' '.join([self.field_css_class])
         
@@ -977,7 +977,7 @@ class Form(object):
     def get_buttons(self):
         b = Buf()
         if self._buttons is None:
-            b << [Submit(value=_('Submit'), _class="button", name="submit")]
+            b << [Button(value=_('Submit'), _class="btn btn-primary", name="submit", type="submit")]
         else:
             b << self._buttons
         return str(b)
