@@ -160,6 +160,9 @@ class HtmlMerge(object):
                 for v in r_links.findall(head):
                     link = v[0] or v[1]
                     links.append(link)
+            else:
+                head = ''
+                start, end = 0, 0
             result = self.assemble(self._clean_collection(links))
             if result['toplinks'] or result['bottomlinks']:
                 top = result['toplinks'] or ''
