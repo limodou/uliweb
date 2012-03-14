@@ -1389,7 +1389,14 @@ class ManyResult(Result):
         
 class ManyToMany(ReferenceProperty):
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
-        reference_fieldname=None, reversed_fieldname=None, required=False, through=None, **attrs):
+        reference_fieldname=None, reversed_fieldname=None, required=False, through=None, 
+        through_reference_fieldname=None, through_reversed_fieldname=None, **attrs):
+        """
+        Definition of ManyToMany property
+        
+        :param through_field_from: relative to field of A 
+        :param through_field_to: relative to field of B 
+        """
             
         super(ManyToMany, self).__init__(reference_class=reference_class,
             verbose_name=verbose_name, collection_name=collection_name, 
@@ -1397,6 +1404,8 @@ class ManyToMany(ReferenceProperty):
     
         self.reversed_fieldname = reversed_fieldname or 'id'
         self.through = through
+        self.through_reference_fieldname = through_reference_fieldname
+        self.through_reversed_fieldname = through_reversed_fieldname
 
     def create(self, cls):
 #        if self.through:
@@ -1458,13 +1467,26 @@ class ManyToMany(ReferenceProperty):
                 raise KindError('through must be Model or available table name')
             self.through = get_model(self.through)
             for k, v in self.through.properties.items():
+                find = False
                 if isinstance(v, ReferenceProperty):
                     if self.model_class is v.reference_class:
-                        self.fielda = k
-                        self.reversed_fieldname = v.reference_fieldname
+                        if self.through_reversed_fieldname:
+                            if k == self.through_reversed_fieldname:
+                                find = True
+                        else:
+                            find = True
+                        if find:
+                            self.fielda = k
+                            self.reversed_fieldname = v.reference_fieldname
                     elif self.reference_class is v.reference_class:
-                        self.fieldb = k
-                        self.reference_fieldname = v.reference_fieldname
+                        if self.through_reference_fieldname:
+                            if k == self.through_reference_fieldname:
+                                find = True
+                        else:
+                            find = True
+                        if find:
+                            self.fieldb = k
+                            self.reference_fieldname = v.reference_fieldname
             if not hasattr(self.through, self.fielda):
                 raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fielda, self.through))
             if not hasattr(self.through, self.fieldb):
