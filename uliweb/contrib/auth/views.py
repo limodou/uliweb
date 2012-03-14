@@ -11,7 +11,7 @@ def login():
     form = LoginForm()
     
     if request.method == 'GET':
-        form.next.data = request.GET.get('next', '/')
+        form.next.data = request.GET.get('next', request.referrer or '/')
         return {'form':form, 'msg':''}
     if request.method == 'POST':
         flag = form.validate(request.params)
