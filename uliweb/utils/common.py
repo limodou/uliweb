@@ -7,7 +7,7 @@ log = logging
 
 def safe_import(path):
     module = path.split('.')
-    g = __import__(module[0], {}, {}, [''])
+    g = __import__(module[0], fromlist=['*'])
     s = [module[0]]
     for i in module[1:]:
         mod = g
@@ -15,12 +15,12 @@ def safe_import(path):
             g = getattr(mod, i)
         else:
             s.append(i)
-            g = __import__('.'.join(s), {}, {}, [''])
+            g = __import__('.'.join(s), fromlist=['*'])
     return mod, g
         
 def import_mod_attr(path):
     module, func = path.rsplit('.', 1)
-    mod = __import__(module, {}, {}, [''])
+    mod = __import__(module, fromlist=['*'])
     f = getattr(mod, func)
     return mod, f
 
@@ -29,7 +29,7 @@ def import_attr(func):
     return f
 
 def myimport(module):
-    mod = __import__(module, {}, {}, [''])
+    mod = __import__(module, fromlist=['*'])
     return mod
 
 def install(packages):
