@@ -1901,7 +1901,11 @@ class Model(object):
         s = []
         for k, v in self._fields_list:
             if not isinstance(v, ManyToMany):
-                s.append('%r:%r' % (k, getattr(self, k, None)))
+                t = getattr(self, k, None)
+                if isinstance(v, Reference):
+                    s.append('%r:<Reference %s...>' % (k, v.__class__.__name__))
+                else:
+                    s.append('%r:%r' % (k, t))
         return ('<%s {' % self.__class__.__name__) + ','.join(s) + '}>'
     
     def __str__(self):
