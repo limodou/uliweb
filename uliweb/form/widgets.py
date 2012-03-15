@@ -28,6 +28,7 @@ class Build(object):
 
 class Text(Build):
     type = 'text'
+    tag = 'input'
 
     def __init__(self, **kwargs):
         super(Text, self).__init__(**kwargs)
@@ -35,7 +36,7 @@ class Text(Build):
     def to_html(self):
         args = self.kwargs.copy()
         args.setdefault('type', self.type)
-        return str(Tag('input', '', **args))
+        return str(Tag(self.tag, '', **args))
 
 class Password(Text): type = 'password'
 class TextArea(Build):
@@ -49,7 +50,12 @@ class TextArea(Build):
         args.setdefault('cols', 40)
         return str(Tag('textarea', self.value, **args))
 class Hidden(Text): type = 'hidden'
-class Button(Text): type = 'button'
+class Button(Build): 
+    def to_html(self):
+        args = self.kwargs.copy()
+        value = args.pop('value', None)
+        return str(Tag('button', value, **args))
+    
 class Submit(Text): type = 'submit'
 class Reset(Text): type = 'reset'
 class File(Text): type = 'file'
