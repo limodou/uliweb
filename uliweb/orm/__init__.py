@@ -1903,7 +1903,7 @@ class Model(object):
             if not isinstance(v, ManyToMany):
                 t = getattr(self, k, None)
                 if isinstance(v, Reference):
-                    s.append('%r:<Reference %s...>' % (k, v.__class__.__name__))
+                    s.append('%r:<%s...>' % (k, v.__class__.__name__))
                 else:
                     s.append('%r:%r' % (k, t))
         return ('<%s {' % self.__class__.__name__) + ','.join(s) + '}>'
