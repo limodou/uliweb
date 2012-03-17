@@ -1390,7 +1390,8 @@ class ManyResult(Result):
 class ManyToMany(ReferenceProperty):
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
         reference_fieldname=None, reversed_fieldname=None, required=False, through=None, 
-        through_reference_fieldname=None, through_reversed_fieldname=None, **attrs):
+        through_reference_fieldname=None, through_reversed_fieldname=None, 
+        reversed_manytomany_fieldname=None, **attrs):
         """
         Definition of ManyToMany property
         
@@ -1566,11 +1567,34 @@ class ManyToMany(ReferenceProperty):
             sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fieldb].in_(ids)))
             condition = self.model_class.c[self.reversed_fieldname].in_(sub_query)
             return condition
-            
+         
+    def join_in(self, *objs):
+        """
+        Create a join condition, connect A and C
+        """
+        if not objs:
+            return self.table.c[self.fielda]!=self.table.c[self.fielda]
+        else:
+            ids = get_objs_columns(objs, self.reference_fieldname)
+            return (self.table.c[self.fielda] == self.model_class.c[self.reversed_fieldname]) & (self.table.c[self.fieldb].in_(ids))
+   
+    def join_right_in(self, *objs):
+        """
+        Create a join condition, connect B and C
+        """
+        if not objs:
+            return self.table.c[self.fielda]!=self.table.c[self.fielda]
+        else:
+            ids = get_objs_columns(objs, self.reference_fieldname)
+            return (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fielda].in_(ids))
+    
     def filter(self, condition=None):
         sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & condition)
         condition = self.model_class.c[self.reversed_fieldname].in_(sub_query)
         return condition
+
+    def join_filter(self, condition=None):
+        return (self.table.c[self.fielda] == self.model_class.c[self.reversed_fieldname]) & (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & condition
         
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
@@ -1902,7 +1926,7 @@ class Model(object):
         for k, v in self._fields_list:
             if not isinstance(v, ManyToMany):
                 t = getattr(self, k, None)
-                if isinstance(v, Reference):
+                if isinstance(v, Reference) and t:
                     s.append('%r:<%s...>' % (k, v.__class__.__name__))
                 else:
                     s.append('%r:%r' % (k, t))

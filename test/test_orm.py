@@ -101,13 +101,13 @@ def test_3():
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> list(a1.test1.all())[0]
-    <Test1 {'test1':<Test {'username':u'limodou1','year':0,'id':1}>,'test2':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>
+    <Test1 {'test1':<ReferenceProperty...>,'test2':<ReferenceProperty...>,'name':u'user','id':1}>
     >>> a1.test1.count()
     2
     >>> list(a2.test2.all())
-    [<Test1 {'test1':<Test {'username':u'limodou1','year':0,'id':1}>,'test2':<Test {'username':u'limodou2','year':0,'id':2}>,'name':u'aaaa','id':2}>]
+    [<Test1 {'test1':<ReferenceProperty...>,'test2':<ReferenceProperty...>,'name':u'aaaa','id':2}>]
     >>> list(a1.test1.filter(Test1.c.name=='user'))
-    [<Test1 {'test1':<Test {'username':u'limodou1','year':0,'id':1}>,'test2':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>]
+    [<Test1 {'test1':<ReferenceProperty...>,'test2':<ReferenceProperty...>,'name':u'user','id':1}>]
     >>> b1.test1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.username = 'user'
@@ -141,7 +141,7 @@ def test_4():
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> list(a1.tttt.all())[0]   #here we use tttt but not test1_set
-    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>
+    <Test1 {'test':<ReferenceProperty...>,'name':u'user','id':1}>
     >>> a1.tttt.count()
     2
     >>> b3 = Test1(name='aaaa')
@@ -153,9 +153,9 @@ def test_4():
     >>> b3.save()
     True
     >>> b3
-    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'aaaa','id':3}>
+    <Test1 {'test':<ReferenceProperty...>,'name':u'aaaa','id':3}>
     >>> Test1.get(3)
-    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'aaaa','id':3}>
+    <Test1 {'test':<ReferenceProperty...>,'name':u'aaaa','id':3}>
     """
     
 #testing transaction
@@ -200,7 +200,7 @@ def test_6():
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.test1
-    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>
+    <Test1 {'test':<OneToOne...>,'name':u'user','id':1}>
     >>> b1.test
     <Test {'username':u'limodou1','year':0,'id':1}>
     """
@@ -312,12 +312,12 @@ def test_8():
     >>> for i in User.all():
     ...     print repr(i)
     <User {'username':u'a','parent':None,'id':1}>
-    <User {'username':u'b','parent':<User {'username':u'a','parent':None,'id':1}>,'id':2}>
-    <User {'username':u'c','parent':<User {'username':u'a','parent':None,'id':1}>,'id':3}>
+    <User {'username':u'b','parent':<ReferenceProperty...>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty...>,'id':3}>
     >>> for i in a.children.all():
     ...     print repr(i)
-    <User {'username':u'b','parent':<User {'username':u'a','parent':None,'id':1}>,'id':2}>
-    <User {'username':u'c','parent':<User {'username':u'a','parent':None,'id':1}>,'id':3}>
+    <User {'username':u'b','parent':<ReferenceProperty...>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty...>,'id':3}>
     """
     
 def test_floatproperty():
@@ -587,7 +587,7 @@ def test_reference_not_id():
     >>> b2.save()
     True
     >>> print repr(a1), repr(b1), repr(b2)
-    <Test {'username':u'limodou1','year':20,'id':1}> <Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':5,'name':u'user','id':1}> <Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':10,'name':u'aaaa','id':2}>
+    <Test {'username':u'limodou1','year':20,'id':1}> <Test1 {'test':<ReferenceProperty...>,'year':5,'name':u'user','id':1}> <Test1 {'test':<ReferenceProperty...>,'year':10,'name':u'aaaa','id':2}>
     >>> print repr(b2.test)
     <Test {'username':u'limodou1','year':20,'id':1}>
     >>> print b2._test_
@@ -597,15 +597,15 @@ def test_reference_not_id():
     >>> print a1.tttt.ids()
     [1, 2]
     >>> print list(Test1.all())
-    [<Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':5,'name':u'user','id':1}>, <Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':10,'name':u'aaaa','id':2}>]
+    [<Test1 {'test':<ReferenceProperty...>,'year':5,'name':u'user','id':1}>, <Test1 {'test':<ReferenceProperty...>,'year':10,'name':u'aaaa','id':2}>]
     >>> a1.tttt.clear(b2)
     >>> print list(Test1.all())
-    [<Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':5,'name':u'user','id':1}>]
+    [<Test1 {'test':<ReferenceProperty...>,'year':5,'name':u'user','id':1}>]
     >>> b3 = Test1(name='aaaa', year=10, test='limodou1')
     >>> b3.save()
     True
     >>> print repr(b3)
-    <Test1 {'test':<Test {'username':u'limodou1','year':20,'id':1}>,'year':10,'name':u'aaaa','id':2}>
+    <Test1 {'test':<ReferenceProperty...>,'year':10,'name':u'aaaa','id':2}>
     """
 
 def test_one2one_reference_field():
@@ -627,7 +627,7 @@ def test_one2one_reference_field():
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.test1
-    <Test1 {'test':<Test {'username':u'limodou1','year':0,'id':1}>,'name':u'user','id':1}>
+    <Test1 {'test':<OneToOne...>,'name':u'user','id':1}>
     >>> b1.test
     <Test {'username':u'limodou1','year':0,'id':1}>
     """
@@ -1195,6 +1195,48 @@ def test_default_query():
     [<Group {'name':u'a','id':2}>, <Group {'name':u'b','id':1}>]
     >>> print list(a.group.without())
     [<Group {'name':u'b','id':1}>, <Group {'name':u'a','id':2}>]
+    """
+    
+def test_manytomany_filter():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     groups = ManyToMany('group')
+    >>> a = User(username='user1')
+    >>> a.save()
+    True
+    >>> b = User(username='user2')
+    >>> b.save()
+    True
+    >>> g1 = Group(name='group1')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='group2')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='group3')
+    >>> g3.save()
+    True
+    >>> a.groups.add(g1, g2, g3)
+    True
+    >>> b.groups.add(g1, g2)
+    True
+    >>> print list(User.filter(User.groups.join_in(1,2)))
+    [<User {'username':u'user1','id':1}>, <User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>, <User {'username':u'user2','id':2}>]
+    >>> print list(User.filter(User.groups.join_in(1,2)).distinct())
+    [<User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>]
+    >>> print list(User.filter(User.groups.join_filter(Group.c.name=='group3')))
+    [<User {'username':u'user1','id':1}>]
+    >>> print list(User.filter(User.groups.filter(Group.c.name=='group3')))
+    [<User {'username':u'user1','id':1}>]
+    >>> print list(Group.filter(User.groups.join_filter(User.c.username=='user2')))
+    [<Group {'name':u'group1','id':1}>, <Group {'name':u'group2','id':2}>]
     """
     
 #if __name__ == '__main__':
