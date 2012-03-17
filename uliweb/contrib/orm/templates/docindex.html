@@ -1,0 +1,330 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Database Tables Sheet</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    </head>
+    
+    <style>
+    /* 
+    Eric Meyer's CSS Reset
+    http://meyerweb.com/eric/tools/css/reset/
+    v1.0 | 20080212
+    CSSresetr.com
+    */
+    html, body, div, span, applet, object, iframe,
+    h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+    a, abbr, acronym, address, big, cite, code,
+    del, dfn, em, font, img, ins, kbd, q, s, samp,
+    small, strike, strong, sub, sup, tt, var,
+    b, u, i, center,
+    dl, dt, dd, ol, ul, li,
+    fieldset, form, label, legend,
+    table, caption, tbody, tfoot, thead, tr, th, td {
+    	margin: 0;
+    	padding: 0;
+    	border: 0;
+    	outline: 0;
+    	font-size: 100%;
+    	vertical-align: baseline;
+    	background: transparent;
+    }
+    body {
+    	line-height: 1;
+    }
+    ol, ul {
+    	list-style: none;
+    }
+    blockquote, q {
+    	quotes: none;
+    }
+    blockquote:before, blockquote:after,
+    q:before, q:after {
+    	content: '';
+    	content: none;
+    }
+    
+    /* remember to define focus styles! */
+    :focus {
+    	outline: 0;
+    }
+    
+    /* remember to highlight inserts somehow! */
+    ins {
+    	text-decoration: none;
+    }
+    del {
+    	text-decoration: line-through;
+    }
+    
+    /* tables still need 'cellspacing="0"' in the markup */
+    table {
+    	border-collapse: collapse;
+    	border-spacing: 0;
+    }
+    #footer {clear:both;width:100%;border-top:1px solid #ccc;padding-top:20px;padding-bottom:20px;background:#dfdfdf;}
+       #footer p{text-align:center;font-size:12px;}
+    
+    
+    </style>
+	<style>
+[class^="icon-"], [class*=" icon-"] {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  vertical-align: text-top;
+  background-image:url("data:image/png;base64,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");
+  background-position: 14px 14px;
+  background-repeat: no-repeat;
+  *margin-right: .3em;
+  font-size:0;
+}
+
+[class^="icon-"]:last-child, [class*=" icon-"]:last-child {
+  *margin-left: 0;
+}
+
+.icon-ok {
+  background-position: -288px 0;
+}
+
+.icon-tag {
+  background-position: 0 -48px;
+}
+
+.icon-share {
+  background-position: -120px -72px;
+}
+
+.icon-star {
+  background-position: -120px 0;
+}
+
+.icon-list-alt {
+  background-position: -264px -24px;
+}
+   
+#content{padding-left:340px;padding-right:20px;margin-top:74px;width:auto;font-family:arial;color:#333;margin-bottom:100px}
+table {border-bottom:1px solid #ccc;border-right:1px solid #ccc;font-size:12px;width:100%;}
+th {background-color:#eee;color:#888;}
+td, th {padding:8px;border-top:1px solid #ccc;border-left:1px solid #ccc}
+#header {position:fixed;width:100%;top:0px;background-color:#e7eef8;border-bottom:4px solid #000;height:66px;}
+h1{font-size:30px;text-align:center;margin:20px;}
+h2{margin:20px 0px;border-bottom:3px solid #ccc;background-color:#08C;padding:10px;font-size:14px;color:#fff}
+h2 .inapp{font-size:10px;float:right;color:#ccc}
+h2 .inapp a {color:#ccc}
+ul.menu{position:fixed;left:0px;top:74px;width:320px;overflow-y:auto;font-size:12px;}
+ul.menu a{text-decoration:none;vertical-align: top;}
+ul.menu a:hover{text-decoration:underline;}
+li.sec {padding:8px;background-color:#eee}
+li.sec span{padding:8px;background-color:#08C;display:block;color:white;font-size:12px}
+li.item {margin-left:2px;padding:3px;}
+a{color:#444;text-decoration:underline}
+a:hover{color:#08C;text-decoration:underline}
+a.star{color:red;text-decoration:none;cursor:pointer;font-size:10px;background-color:red;padding-left:3px;color:#fff;display:inline-block;width:9px;height:12px;border-radius:100% 100%;}
+a.star:hover{color:#08C;text-decoration:none}
+
+tr.key{font-weight:bold}
+td.ref{cursor:pointer}
+.comment{font-size:12px;color:#666}
+.comment li {margin-left:10px;padding:2px 2px;}
+#tips{position:absolute;z-index:10001;display:none;}
+#tips_content{text-align:left;padding:3px;line-height:18px;color:#000;font-size:12px;border:1px solid #999;background:Khaki;}
+
+    </style>
+    <script>
+        var $ = function(name){ return document.getElementById(name) };
+        var tips = { 
+            opts : {
+                id : 'tips',
+                cls : 'a',
+                cid : 'tips_content',
+                tpl : '<div id="tips_content"></div>',
+                txt : 'test'
+            },
+            show : function (el) {
+                this.opts.txt = $(el).children[0].innerHTML;
+                var o = document.getElementById(this.opts.id)||'';
+                if (!o) {
+                    o = document.createElement('DIV');
+                    o.setAttribute("id", this.opts.id);
+                    o.className=this.opts.cls;
+                    o.innerHTML=this.opts.tpl;
+                    document.body.appendChild(o);
+                }
+                document.getElementById(this.opts.cid).innerHTML = this.opts.txt;
+                var cw = Math.max(document.body.clientWidth, document.documentElement.clientWidth);
+                var st = Math.max(document.body.scrollTop, document.documentElement.scrollTop);
+                var evt = window.event;
+                o.style.display = "block";
+                o.style.left = (evt.clientX + o.offsetWidth + 20 > cw) ? (evt.clientX - o.offsetWidth - 20) + "px" : (evt.clientX + 20) + "px";
+                o.style.top = (evt.clientY + document.body.scrollTop + o.clientHeight + 20 > 580) ? (evt.clientY - o.clientHeight + 50 + document.body.scrollTop) + "px" : (evt.clientY + 20 + st) + "px";
+                o=cw=st=null;
+            },
+            hide : function () {
+                document.getElementById(this.opts.id)&&(document.getElementById(this.opts.id).style.display = 'none');
+            }
+        };
+        var getElementsByClassName = function (className, tag, elm){
+        	if (document.getElementsByClassName) {
+        		getElementsByClassName = function (className, tag, elm) {
+        			elm = elm || document;
+        			var elements = elm.getElementsByClassName(className),
+        				nodeName = (tag)? new RegExp("\\b" + tag + "\\b", "i") : null,
+        				returnElements = [],
+        				current;
+        			for(var i=0, il=elements.length; i<il; i+=1){
+        				current = elements[i];
+        				if(!nodeName || nodeName.test(current.nodeName)) {
+        					returnElements.push(current);
+        				}
+        			}
+        			return returnElements;
+        		};
+        	}
+        	else if (document.evaluate) {
+        		getElementsByClassName = function (className, tag, elm) {
+        			tag = tag || "*";
+        			elm = elm || document;
+        			var classes = className.split(" "),
+        				classesToCheck = "",
+        				xhtmlNamespace = "http://www.w3.org/1999/xhtml",
+        				namespaceResolver = (document.documentElement.namespaceURI === xhtmlNamespace)? xhtmlNamespace : null,
+        				returnElements = [],
+        				elements,
+        				node;
+        			for(var j=0, jl=classes.length; j<jl; j+=1){
+        				classesToCheck += "[contains(concat(' ', @class, ' '), ' " + classes[j] + " ')]";
+        			}
+        			try	{
+        				elements = document.evaluate(".//" + tag + classesToCheck, elm, namespaceResolver, 0, null);
+        			}
+        			catch (e) {
+        				elements = document.evaluate(".//" + tag + classesToCheck, elm, null, 0, null);
+        			}
+        			while ((node = elements.iterateNext())) {
+        				returnElements.push(node);
+        			}
+        			return returnElements;
+        		};
+        	}
+        	else {
+        		getElementsByClassName = function (className, tag, elm) {
+        			tag = tag || "*";
+        			elm = elm || document;
+        			var classes = className.split(" "),
+        				classesToCheck = [],
+        				elements = (tag === "*" && elm.all)? elm.all : elm.getElementsByTagName(tag),
+        				current,
+        				returnElements = [],
+        				match;
+        			for(var k=0, kl=classes.length; k<kl; k+=1){
+        				classesToCheck.push(new RegExp("(^|\\s)" + classes[k] + "(\\s|$)"));
+        			}
+        			for(var l=0, ll=elements.length; l<ll; l+=1){
+        				current = elements[l];
+        				match = false;
+        				for(var m=0, ml=classesToCheck.length; m<ml; m+=1){
+        					match = classesToCheck[m].test(current.className);
+        					if (!match) {
+        						break;
+        					}
+        				}
+        				if (match) {
+        					returnElements.push(current);
+        				}
+        			}
+        			return returnElements;
+        		};
+        	}
+        	return getElementsByClassName(className, tag, elm);
+        };
+        function viewport()
+        {
+        var e = window
+        , a = 'inner';
+        if ( !( 'innerWidth' in window ) )
+        {
+        a = 'client';
+        e = document.documentElement || document.body;
+        }
+        return { width : e[ a+'Width' ] , height : e[ a+'Height' ] }
+        }
+        
+    </script>
+<body>
+  <div id="header">
+    <h1>Database Tables Sheet</h1>
+  </div>
+
+  <ul class='menu'>
+  {{ for menu in sorted(menus):}}
+        <li class="sec">
+        <span id="{{=menu['name']}}">{{=menu['name']}}</span>
+        <ul class="items">
+        {{ for item in menu['items']:}}
+            <li class='item'><i class="icon-list-alt"></i>&nbsp;<a href="#tt-{{=item['name']}}" title="{{=item['label']}}">{{=item['name']}}</a></li>
+            {{pass}}
+        </ul>
+        </li>
+        {{pass}}
+  </ul>
+  <div id="content">
+  
+  {{ for table in tables: }}
+      <a name="tt-{{= table['name']}}"></a>
+      <h2 id="h-{{= table['name']}}">{{= table['label'] }} 
+        {{if table['appname']:}}
+            <span class="inapp"> <a href="#app-{{= table['appname'] }}">{{= table['appname'] }}</a> </span> 
+        {{else:}} &nbsp; {{pass}}
+      </h2>
+      <div id="tb-{{= table['name']}}">
+          <table cellpadding="0" cellspacing="0"> 
+          <tr>
+              <th>P</th>
+              <th>Display</th>
+              <th>Fieldname</th>
+              <th>Data Type</th>
+              <th>Can be Null</th>
+              <th>Relation</th>
+          </tr>
+          {{ for field in sorted(table['fields'], key=lambda x:(not x['primary_key'], x['name'])): }}
+             <tr class="{{if field['primary_key']:}}key{{pass}}">
+                <td>{{if field['primary_key']:}} <i class="icon-tag" title="Yes">Y</i>  {{else:}} &nbsp; {{pass}}</td>
+                <td>{{= field['label']}} {{if field['star']:}} <a class="star" href="#comment-{{= table['name']}}-{{= field['name']}}" onmousemove="tips.show('comment-{{= table['name']}}-{{= field['name']}}')" onmouseout="tips.hide()">{{=field['star']}}</a> {{pass}}</td>
+                <td>{{= field['name']}}</td>
+                <td>{{= field['type']}}</td>
+                <td>{{if field['nullable']:}}<i class="icon-ok" title="True">True</i>  {{else:}} &nbsp; {{pass}}</td>
+                {{if field['reftable']:}}
+                    <td class="ref"><a href="#tt-{{= field['reftable']}}"><i class="icon-share"></i> {{= field['reftable']}}</a></td>
+                {{else:}} <td>&nbsp;</td> {{pass}}
+             </tr>
+          {{ pass }}
+        </table>
+		<div class="comment">
+		  <ul>
+		  {{ if table['choices'] : }} Description:<br/> {{pass}}
+          {{ for comment in table['choices']: }}
+			<li id="comment-{{= table['name']}}-{{=comment['fieldname']}}">{{=comment['index']}}.{{=comment['fieldlabel']}}:
+            <span>
+			{{ for i, value in comment['list']: }}
+			    ({{=repr(i)}},{{=value}}) 
+			{{ pass }}
+            </span>
+			</li>
+          {{ pass }}
+		  </ul>
+		</div>
+    </div>  
+    {{ pass }}
+  </div>  
+  <div id="footer">
+    This documentation is generated by Uliweb.
+  </div>
+<script>
+    var menu = getElementsByClassName('menu')[0];
+    menu.style.height = (viewport().height - 78)+'px';
+</script>
+  </body>
+</html>

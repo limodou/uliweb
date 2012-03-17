@@ -536,7 +536,7 @@ class LoadTableFileCommand(Command):
             log.exception("There are something wrong when loading table [%s]" % name)
             con.rollback()
 
-class DbinitdCommand(Command):
+class DbinitCommand(Command):
     name = 'dbinit'
     args = '<appname, appname, ...>'
     help = "Initialize database, it'll run the code in dbinit.py of each app. If no apps, then process the whole database."
@@ -590,3 +590,24 @@ class SqldotCommand(Command):
         tables = get_tables(global_options.apps_dir, None, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         print generate_dot(tables, apps)
         
+class SqlHtmlCommand(Command):
+    name = 'sqlhtml'
+    args = '<appname, appname, ...>'
+    help = "Create database documentation in HTML format. If no apps, then process the whole database."
+    check_apps = True
+    
+    def handle(self, options, global_options, *args):
+        from uliweb.core.SimpleFrame import Dispatcher
+        from gendoc import generate_html
+    
+        app = Dispatcher(project_dir=global_options.project, start=False)
+        if args:
+            apps = args
+        else:
+            apps = self.get_apps(global_options)
+        
+        engine = get_engine(global_options.apps_dir)
+        
+        tables = get_tables(global_options.apps_dir, apps, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        print generate_html(tables, apps)
+    
