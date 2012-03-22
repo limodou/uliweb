@@ -78,10 +78,13 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
     else:
         std = sys.stdout
     result = con.execute(table.select())
-    print >>std, '#',
+    fields = []
     for c in table.c:
-        print >>std, c.name,
-    print >>std
+        fields.append(c.name)
+    if not format:
+        print >>std, '#', ' '.join(fields)
+    elif format == 'txt':
+        print >>std, '#', ','.join(fields)
     for r in result:
         if not format:
             print >>std, r

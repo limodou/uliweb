@@ -6,7 +6,7 @@
 
 
 __all__ = ['Field', 'get_connection', 'Model', 'create_all',
-    'set_debug_query', 'set_auto_create', 'set_connection', 'get_model', 'set_model',
+    'set_debug_query', 'set_auto_create', 'set_auto_set_model', 'set_connection', 'get_model', 'set_model',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'PICKLE', 
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
@@ -21,6 +21,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'create_all',
 
 __default_connection__ = None  #global connection instance
 __auto_create__ = False
+__auto_set_model__ = True
 __debug_query__ = None
 __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
@@ -31,6 +32,7 @@ import datetime
 from uliweb.utils import date
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement
+from sqlalchemy.sql import exists as _exists
 from uliweb.core import dispatch
 import threading
 
@@ -64,6 +66,10 @@ def set_auto_create(flag):
     global __auto_create__
     __auto_create__ = flag
     
+def set_auto_set_model(flag):
+    global __auto_set_model__
+    __auto_set_model__ = flag
+
 def set_debug_query(flag):
     global __debug_query__
     __debug_query__ = flag
@@ -815,7 +821,7 @@ class ReferenceProperty(Property):
                 (isinstance(reference_class, type) and issubclass(reference_class, Model)) or
                 reference_class is _SELF_REFERENCE or
                 valid_model(reference_class)):
-            raise KindError('reference_class must be Model or _SELF_REFERENCE or available table name')
+            raise KindError('reference_class %r must be Model or _SELF_REFERENCE or available table name' % reference_class)
         self.reference_class = self.data_type = get_model(reference_class)
         
     def create(self, cls):
@@ -1998,6 +2004,9 @@ class Model(object):
                         cls.create()
                         set_model(cls, created=True)
                     else:
+                        set_model(cls)
+                else:
+                    if __auto_set_model__:
                         set_model(cls)
         finally:
             cls._lock.release()
