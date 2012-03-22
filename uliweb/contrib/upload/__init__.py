@@ -191,8 +191,8 @@ def get_backend():
 def file_serving(filename):
     return get_backend().download(filename)
 
-def get_filename(filename, filesystem=False):
-    return get_backend().get_filename(filename, filesystem)
+def get_filename(filename, filesystem=False, convert=False):
+    return get_backend().get_filename(filename, filesystem, convert=convert)
 
 def save_file(filename, fobj, replace=False, convert=True):
     return get_backend().save_file(filename, fobj, replace, convert)
