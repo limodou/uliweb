@@ -2,8 +2,9 @@
 import re
 import cgi
 
-re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)|(?P<protocal>(^|\s*)(http|ftp|https)://[\w\-\.,@?^=%&amp;:/~\+#]+)', re.S|re.M|re.I)
-def text2html(text, tabstop=4):
+re_string_html = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)|(?P<protocal>(^|\s*)(http|ftp|https)://[\w\-\.,@?^=%&amp;:/~\+#]+)', re.S|re.M|re.I)
+re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)', re.S|re.M|re.I)
+def text2html(text, tabstop=4, link=True):
     if not text:
         return ''
     def do_sub(m):
@@ -24,7 +25,10 @@ def text2html(text, tabstop=4):
             else:
                 prefix = ''
             return '%s<a href="%s">%s</a>' % (prefix, url, url)
-    return re.sub(re_string, do_sub, text)
+    if link:
+        return re.sub(re_string_html, do_sub, text)
+    else:
+        return re.sub(re_string, do_sub, text)
 
 if __name__ == '__main__':
     text=("I like python!\r\n"

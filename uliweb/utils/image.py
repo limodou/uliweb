@@ -28,10 +28,11 @@ def resize_image(fobj, size=(50, 50)):
     o.seek(0)
     return o
 
-def thumbnail_image(realfile, filename, size=(200, 75)):
+def thumbnail_image(realfile, filename, size=(200, 75), suffix=True):
     """
     :param: real input filename (string)
     :filename: relative input filename (string)
+    :param: suffix if True, then add '.thumbnail' to the end of filename
     
     return value should be a tuple, (saved_real_filename, saved_filename)
     """
@@ -47,10 +48,17 @@ def thumbnail_image(realfile, filename, size=(200, 75)):
     format = ext[1:].upper()
     if format == 'JPG':
         format = 'JPEG'
-    ofile = file + ".thumbnail" + ext
+    if suffix:
+        ofile = file + ".thumbnail" + ext
+    else:
+        ofile = realfile
     im.save(ofile, format)
     file1, ext1 = os.path.splitext(filename)
-    return ofile, file1 + ".thumbnail" + ext
+    if suffix:
+        ofile1 = file1 + ".thumbnail" + ext
+    else:
+        ofile1 = filename
+    return ofile, ofile1
 
 def resize_image_string(buf, size=(50, 50)):
     from StringIO import StringIO

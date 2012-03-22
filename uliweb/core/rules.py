@@ -1,5 +1,6 @@
 import os
 import inspect
+from uliweb.utils.common import log
 
 class ReservedKeyError(Exception):pass
 
@@ -16,7 +17,11 @@ reserved_keys = ['settings', 'redirect', 'application', 'request', 'response', '
 def add_rule(map, url, endpoint=None, **kwargs):
     from werkzeug.routing import Rule
     kwargs['endpoint'] = endpoint
-    map.add(Rule(url, **kwargs))
+    try:
+        map.add(Rule(url, **kwargs))
+    except ValueError as e:
+        log.info("Wrong url is %s" % url)
+        raise
             
 def merge_rules():
     s = []

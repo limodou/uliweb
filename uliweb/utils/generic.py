@@ -492,7 +492,7 @@ class AddView(object):
         return d
     
     def make_form(self, form):
-        from uliweb.form import Form, Submit
+        from uliweb.form import Form, Button
         
         if form:
             return form
@@ -500,11 +500,11 @@ class AddView(object):
         if self.form_cls:
             class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
-                DummyForm.form_buttons = Submit(value=_('Create'), _class=".submit")
+                DummyForm.form_buttons = Button(value=_('Create'), _class="btn btn-primary")
            
         else:
             class DummyForm(Form):
-                form_buttons = Submit(value=_('Create'), _class=".submit")
+                form_buttons = Button(value=_('Create'), _class="btn btn-primary")
             
         #add layout support
         layout = self.get_layout()
@@ -760,7 +760,7 @@ class EditView(AddView):
         return self.model.get(self.condition)
     
     def make_form(self, form):
-        from uliweb.form import Form, Submit
+        from uliweb.form import Form, Button
         
         if form:
             return form
@@ -768,11 +768,11 @@ class EditView(AddView):
         if self.form_cls:
             class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
-                DummyForm.form_buttons = Submit(value=_('Save'), _class=".submit")
+                DummyForm.form_buttons = Button(value=_('Save'), _class="btn btn-primary")
            
         else:
             class DummyForm(Form):
-                form_buttons = Submit(value=_('Save'), _class=".submit")
+                form_buttons = Button(value=_('Save'), _class="btn btn-primary")
             
         fields_list = self.get_fields()
         fields_name = [x['name'] for x in fields_list]
