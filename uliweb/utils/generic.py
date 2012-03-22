@@ -1973,7 +1973,7 @@ class QueryView(object):
         if self.form_cls:
             class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
-                DummyForm.form_buttons = form.Submit(value=_('Query'), _class=".submit")
+                DummyForm.form_buttons = form.Button(value=_('Query'), _class="btn bnt-primary")
             if not hasattr(DummyForm, 'layout_class'):
                 DummyForm.layout_class = QueryLayout
             if not hasattr(DummyForm, 'form_method'):
@@ -1984,7 +1984,7 @@ class QueryView(object):
             class DummyForm(form.Form):
                 layout_class = QueryLayout
                 form_method = 'GET'
-                form_buttons = form.Submit(value=_('Query'), _class=".submit")
+                form_buttons = form.Button(value=_('Query'), _class="btn bnt-primary")
 #                form_action = request.path
             
         #add layout support

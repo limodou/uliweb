@@ -80,5 +80,7 @@ def crop_resize(fobj, outfile, x, y, w, h, size=(50, 50)):
     r = image.crop((x, y, x+w, y+h))
     if size:
         rm = r.resize(size, Image.ANTIALIAS)
+    else:
+        rm = r
     rm.save(outfile, "JPEG")
     
