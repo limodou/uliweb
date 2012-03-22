@@ -500,11 +500,11 @@ class AddView(object):
         if self.form_cls:
             class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
-                DummyForm.form_buttons = Button(value=_('Create'), _class="btn btn-primary")
+                DummyForm.form_buttons = Button(value=_('Create'), _class="btn btn-primary", type='submit')
            
         else:
             class DummyForm(Form):
-                form_buttons = Button(value=_('Create'), _class="btn btn-primary")
+                form_buttons = Button(value=_('Create'), _class="btn btn-primary", type='submit')
             
         #add layout support
         layout = self.get_layout()
@@ -768,11 +768,11 @@ class EditView(AddView):
         if self.form_cls:
             class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
-                DummyForm.form_buttons = Button(value=_('Save'), _class="btn btn-primary")
+                DummyForm.form_buttons = Button(value=_('Save'), _class="btn btn-primary", type='submit')
            
         else:
             class DummyForm(Form):
-                form_buttons = Button(value=_('Save'), _class="btn btn-primary")
+                form_buttons = Button(value=_('Save'), _class="btn btn-primary", type='submit')
             
         fields_list = self.get_fields()
         fields_name = [x['name'] for x in fields_list]
@@ -1973,7 +1973,7 @@ class QueryView(object):
         if self.form_cls:
             class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):
-                DummyForm.form_buttons = form.Button(value=_('Query'), _class="btn bnt-primary")
+                DummyForm.form_buttons = form.Button(value=_('Query'), _class="btn bnt-primary", type='submit')
             if not hasattr(DummyForm, 'layout_class'):
                 DummyForm.layout_class = QueryLayout
             if not hasattr(DummyForm, 'form_method'):
@@ -1984,7 +1984,7 @@ class QueryView(object):
             class DummyForm(form.Form):
                 layout_class = QueryLayout
                 form_method = 'GET'
-                form_buttons = form.Button(value=_('Query'), _class="btn bnt-primary")
+                form_buttons = form.Button(value=_('Query'), _class="btn bnt-primary", type='submit')
 #                form_action = request.path
             
         #add layout support
