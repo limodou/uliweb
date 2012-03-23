@@ -28,7 +28,7 @@ def login():
         return {'form':form, 'msg':str(msg)}
 
 def register():
-    from uliweb.contrib.auth import create_user
+    from uliweb.contrib.auth import create_user, login
     from forms import RegisterForm
     
     form = RegisterForm()
@@ -41,6 +41,8 @@ def register():
         if flag:
             f, d = create_user(username=form.username.data, password=form.password.data)
             if f:
+                #add auto login support 2012/03/23
+                login(d)
                 next = request.POST.get('next', '/')
                 return redirect(next)
             else:

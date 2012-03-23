@@ -39,7 +39,10 @@ def create_user(username, password, **kwargs):
     
 def authenticate(username, password):
     User = get_model('user')
-    user = User.get(User.c.username==username)
+    if isinstance(username, (str, unicode)):
+        user = User.get(User.c.username==username)
+    else:
+        user = username
     if user:
         if user.check_password(password):
             return True, user
@@ -57,7 +60,10 @@ def login(username):
     
     User = get_model('user')
     
-    user = User.get(User.c.username==username)
+    if isinstance(username, (str, unicode)):
+        user = User.get(User.c.username==username)
+    else:
+        user = username
     user.last_login = now()
     user.save()
     request.session[_get_auth_key()] = user.id
