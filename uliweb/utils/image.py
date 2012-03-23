@@ -1,5 +1,7 @@
 import os
 
+QUALITY = 95
+
 def fix_filename(filename, suffix=''):
     """
     e.g.
@@ -15,7 +17,7 @@ def fix_filename(filename, suffix=''):
     else:
         return filename
         
-def resize_image(fobj, size=(50, 50)):
+def resize_image(fobj, size=(50, 50), quality=None):
     import Image
     from StringIO import StringIO
     
@@ -24,11 +26,11 @@ def resize_image(fobj, size=(50, 50)):
         image = image.convert('RGB')
     image = image.resize(size, Image.ANTIALIAS)
     o = StringIO()
-    image.save(o, "JPEG")
+    image.save(o, "JPEG", quality=quality or QUALITY)
     o.seek(0)
     return o
 
-def thumbnail_image(realfile, filename, size=(200, 75), suffix=True):
+def thumbnail_image(realfile, filename, size=(200, 75), suffix=True, quality=None):
     """
     :param: real input filename (string)
     :filename: relative input filename (string)
@@ -52,7 +54,7 @@ def thumbnail_image(realfile, filename, size=(200, 75), suffix=True):
         ofile = file + ".thumbnail" + ext
     else:
         ofile = realfile
-    im.save(ofile, format)
+    im.save(ofile, format, quality=quality or QUALITY)
     file1, ext1 = os.path.splitext(filename)
     if suffix:
         ofile1 = file1 + ".thumbnail" + ext
@@ -71,7 +73,7 @@ def image_size(filename):
     image = Image.open(filename)
     return image.size
 
-def crop_resize(fobj, outfile, x, y, w, h, size=(50, 50)):
+def crop_resize(fobj, outfile, x, y, w, h, size=(50, 50), quality=None):
     import Image
 
     image = Image.open(fobj)
@@ -82,5 +84,5 @@ def crop_resize(fobj, outfile, x, y, w, h, size=(50, 50)):
         rm = r.resize(size, Image.ANTIALIAS)
     else:
         rm = r
-    rm.save(outfile, "JPEG")
+    rm.save(outfile, "JPEG", quality=quality or QUALITY)
     
