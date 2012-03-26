@@ -1023,6 +1023,7 @@ class Result(object):
         self.kwargs = kwargs
         self.result = None
         self.default_query_flag = True
+        self._group_by = None
         
     def all(self):
         return self
@@ -1047,6 +1048,10 @@ class Result(object):
     
     def order_by(self, *args, **kwargs):
         self.funcs.append(('order_by', args, kwargs))
+        return self
+    
+    def group_by(self, *args):
+        self._group_by = args
         return self
     
     def values(self, *args, **kwargs):
@@ -1113,6 +1118,8 @@ class Result(object):
             query = select(self.columns)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
+        if self._group_by:
+            query.group_by(*self._group_by)
         return query
     
     def one(self):
