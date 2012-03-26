@@ -1119,7 +1119,7 @@ class Result(object):
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         if self._group_by:
-            query.group_by(*self._group_by)
+            query = query.group_by(*self._group_by)
         return query
     
     def one(self):
@@ -1170,6 +1170,7 @@ class ReverseResult(Result):
         self.kwargs = kwargs
         self.result = None
         self.default_query_flag = True
+        self._group_by = None
         
     def has(self, *objs):
         ids = get_objs_columns(objs)
@@ -1221,6 +1222,7 @@ class ManyResult(Result):
         self.with_relation_name = None
         self.through_model = through_model
         self.default_query_flag = True
+        self._group_by = None
         
     def get(self, condition=None):
         if not isinstance(condition, ColumnElement):
@@ -1346,6 +1348,8 @@ class ManyResult(Result):
         query = select(columns, (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
+        if self._group_by:
+            query = query.group_by(*self._group_by)
         return query
     
     def one(self):
