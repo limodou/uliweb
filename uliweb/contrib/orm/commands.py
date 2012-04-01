@@ -74,7 +74,10 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
     import csv
     
     if not std:
-        std = open(filename, 'w')
+        if isinstance(filename, (str, unicode)):
+            std = open(filename, 'w')
+        else:
+            std = filename
     else:
         std = sys.stdout
     result = con.execute(table.select())
@@ -269,18 +272,26 @@ class DumpCommand(Command):
             help='delimiter character used in text file. Default is ",".'),
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
+        make_option('-z', dest='zipfile', 
+            help='Compress table files into a zip file.'),
     )
     has_options = True
     check_apps = True
     
     def handle(self, options, global_options, *args):
         from sqlalchemy import create_engine
+        from zipfile import ZipFile
+        from StringIO import StringIO
 
         if not os.path.exists(options.output_dir):
             os.makedirs(options.output_dir)
         
         engine = get_engine(global_options.apps_dir)
         con = create_engine(engine)
+        
+        zipfile = None
+        if options.zipfile:
+            zipfile = ZipFile(options.zipfile, 'w')
 
         for name, t in get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
@@ -290,9 +301,20 @@ class DumpCommand(Command):
                 format = 'txt'
             else:
                 format = None
-            dump_table(t, filename, con, delimiter=options.delimiter, 
+            #process zipfile
+            if options.zipfile:
+                fileobj = StringIO()
+                filename = os.path.basename(filename)
+            else:
+                fileobj = filename
+            dump_table(t, fileobj, con, delimiter=options.delimiter, 
                 format=format, encoding=options.encoding)
-
+            #write zip content
+            if options.zipfile and zipfile:
+                zipfile.writestr(filename, fileobj.getvalue())
+        if zipfile:
+            zipfile.close()
+            
 class DumpTableCommand(Command):
     name = 'dumptable'
     args = '<tablename, tablename, ...>'
@@ -614,3 +636,42 @@ class SqlHtmlCommand(Command):
         tables = get_tables(global_options.apps_dir, apps, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         print generate_html(tables, apps)
     
+class ValidatedbCommand(Command):
+    name = 'validatedb'
+    args = '<appname, appname, ...>'
+    help = "Validate database or apps, check if the table structure is matched with source code."
+    option_list = (
+        make_option('-t', dest='traceback', action='store_true', default=False,
+            help='Print traceback when validating failed.'),
+    )
+    check_apps = True
+    has_options = True
+    
+    def handle(self, options, global_options, *args):
+        from uliweb.core.SimpleFrame import Dispatcher
+        from gendoc import generate_html
+        from sqlalchemy import create_engine
+        
+        app = Dispatcher(project_dir=global_options.project, start=False)
+        if args:
+            apps = args
+        else:
+            apps = self.get_apps(global_options)
+        
+        engine = get_engine(global_options.apps_dir)
+        con = create_engine(engine)
+        
+        tables = get_tables(global_options.apps_dir, apps, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        
+        for name, t in get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
+            try:
+                result = list(con.execute(t.select().limit(1)))
+                flag = 'ok'
+            except Exception as e:
+                if options.traceback:
+                    import traceback
+                    traceback.print_exc()
+                flag = 'fail'
+                
+            if global_options.verbose:
+                print 'Validating %s...%s' % (name, flag)

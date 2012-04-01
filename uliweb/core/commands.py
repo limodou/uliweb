@@ -159,10 +159,12 @@ class NewOptionParser(OptionParser):
     def _process_args(self, largs, rargs, values):
         while rargs:
             arg = rargs[0]
+            longarg = False
             try:
                 if arg[0:2] == "--" and len(arg) > 2:
                     # process a single long option (possibly with value(s))
                     # the superclass code pops the arg off rargs
+                    longarg = True
                     self._process_long_opt(rargs, values)
                 elif arg[:1] == "-" and len(arg) > 1:
                     # process a cluster of short options (possibly with
@@ -176,6 +178,8 @@ class NewOptionParser(OptionParser):
                     del rargs[0]
                     raise Exception
             except:
+                if longarg:
+                    del rargs[0]
                 largs.append(arg)
     
 class ApplicationCommandManager(Command):

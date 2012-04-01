@@ -266,7 +266,7 @@ def get_model(model):
             return m
         else:
             m, name = item['model_name'].rsplit('.', 1)
-            mod = __import__(m, {}, {}, [''])
+            mod = __import__(m, fromlist=['*'])
             model = getattr(mod, name)
             item['model'] = model
             return model
