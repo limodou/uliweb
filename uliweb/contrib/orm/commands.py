@@ -345,21 +345,19 @@ class DumpTableCommand(Command):
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
             
+        tables = get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         for name in args:
-            m = orm.get_model(name)
-            if not m:
-                print "Error! Can't find the table %s...Skipped!" % name
-                continue
-            t = m.table
-            if global_options.verbose:
-                print 'Dumpping %s...' % name
-            filename = os.path.join(options.output_dir, name+'.txt')
-            if options.text:
-                format = 'txt'
-            else:
-                format = None
-            dump_table(t, filename, con, delimiter=options.delimiter, 
-                format=format, encoding=options.encoding)
+            if name in tables:
+                t = tables[name]
+                if global_options.verbose:
+                    print 'Dumpping %s...' % name
+                filename = os.path.join(options.output_dir, name+'.txt')
+                if options.text:
+                    format = 'txt'
+                else:
+                    format = None
+                dump_table(t, filename, con, delimiter=options.delimiter, 
+                    format=format, encoding=options.encoding)
 
 class DumpTableFileCommand(Command):
     name = 'dumptablefile'
@@ -387,10 +385,8 @@ class DumpTableFileCommand(Command):
             sys.exit(1)
             
         name = args[0]
-        m = orm.get_model(name)
-        if not m:
-            print "Error! Can't find the table %s...Skipped!" % name
-        t = m.table
+        tables = get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        t = tables[name]
         if global_options.verbose:
             print 'Dumpping %s...' % name
         if options.text:
@@ -486,27 +482,25 @@ are you sure to load data""" % ','.join(args)
         engine = get_engine(global_options.apps_dir)
         con = orm.get_connection(engine)
 
+        tables = get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         for name in args:
-            m = orm.get_model(name)
-            if not m:
-                print "Error! Can't find the table %s...Skipped!" % name
-                continue
-            t = m.table
-            if global_options.verbose:
-                print 'Loading %s...' % name
-            try:
-                con.begin()
-                filename = os.path.join(options.dir, name+'.txt')
-                if options.text:
-                    format = 'txt'
-                else:
-                    format = None
-                load_table(t, filename, con, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding)
-                con.commit()
-            except:
-                log.exception("There are something wrong when loading table [%s]" % name)
-                con.rollback()
+            if name in tables:
+                t = tables[name]
+                if global_options.verbose:
+                    print 'Loading %s...' % name
+                try:
+                    con.begin()
+                    filename = os.path.join(options.dir, name+'.txt')
+                    if options.text:
+                        format = 'txt'
+                    else:
+                        format = None
+                    load_table(t, filename, con, delimiter=options.delimiter, 
+                        format=format, encoding=options.encoding)
+                    con.commit()
+                except:
+                    log.exception("There are something wrong when loading table [%s]" % name)
+                    con.rollback()
 
 class LoadTableFileCommand(Command):
     name = 'loadtablefile'
@@ -541,11 +535,8 @@ class LoadTableFileCommand(Command):
         con = orm.get_connection(engine)
 
         name = args[0]
-        m = orm.get_model(name)
-        if not m:
-            print "Error! Can't find the table %s...Skipped!" % name
-
-        t = m.table
+        tables = get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        t = tables[name]
         if global_options.verbose:
             print 'Loading %s...' % name
         try:
