@@ -6,7 +6,7 @@ import os, sys
 import time
 from uliweb.orm import get_model, Model, Result
 import uliweb.orm as orm
-from uliweb import redirect, json, functions, UliwebError
+from uliweb import redirect, json, functions, UliwebError, Storage
 from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
 from uliweb.contrib.upload import FileServing, FilenameConverter
@@ -1828,7 +1828,8 @@ class ListView(SimpleListView):
         query = self.query()
         for record in query:
             self.rows_num += 1
-            r = {}
+            r = Storage()
+            r['_obj_'] = record
             for i, x in enumerate(self.table['fields_list']):
                 if hasattr(self.model, x['name']):
                     field = getattr(self.model, x['name'])

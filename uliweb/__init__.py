@@ -20,6 +20,7 @@ from uliweb.core.SimpleFrame import (Request, Response, redirect, error, json,
         functions, response, request, settings, application, NotFound, HTTPException,
     )
 from uliweb.core.js import json_dumps
+from uliweb.core.storage import Storage
 
 class Middleware(object):
     ORDER = 500
