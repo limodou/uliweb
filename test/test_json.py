@@ -10,6 +10,8 @@ def test():
     >>> import datetime
     >>> print json_dumps({'a':1, 'b':True, 'c':False})
     {"a":1,"c":false,"b":true}
+    >>> print json_dumps({1:1})
+    {"1":1}
     >>> print json_dumps([1,2,3])
     [1,2,3]
     >>> print json_dumps((1,2,3))

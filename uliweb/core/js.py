@@ -43,7 +43,7 @@ class JSONEncoder(object):
         self.unicode = unicode
         self.default = default
         
-    def iterencode(self, obj):
+    def iterencode(self, obj, key=False):
         if self.default:
             x = self.default(obj)
             obj = x or obj
@@ -64,9 +64,15 @@ class JSONEncoder(object):
         elif obj is False:
             yield 'false'
         elif isinstance(obj, (int, long)):
-            yield str(obj)
+            if key:
+                yield '"' + str(obj) + '"'
+            else:
+                yield str(obj)
         elif isinstance(obj, float):
-            yield repr(obj)
+            if key:
+                yield '"' + str(obj) + '"'
+            else:
+                yield str(obj)
         elif isinstance(obj, (list, tuple)):
             yield '['
             first = True
@@ -83,7 +89,9 @@ class JSONEncoder(object):
             for k, v in obj.iteritems():
                 if not first:
                     yield ','
-                yield encode_basestring(k) + ':'
+                for x in self.iterencode(k, key=True):
+                    yield x
+                yield ':'
                 for y in self.iterencode(v):
                     yield y
                 first = False
