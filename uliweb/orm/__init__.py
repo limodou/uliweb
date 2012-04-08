@@ -5,7 +5,7 @@
 #   2010.4.1 Add get() support to Result and ManyResult
 
 
-__all__ = ['Field', 'get_connection', 'Model', 'create_all',
+__all__ = ['Field', 'get_connection', 'Model', 'create_all', 'get_metadata',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 'set_connection', 'get_model', 'set_model',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'PICKLE', 
@@ -121,6 +121,13 @@ def get_connection(connection='', metadata=_default_metadata, default=True, debu
     db.metadata = metadata
     create_all(db)
     return db
+
+def get_metadata():
+    """
+    get metadata according to __models__
+    """
+    for tablename, m in __models__.items():
+        get_model(tablename)
 
 def set_connection(db, default=True, debug=False):
     global __default_connection__
@@ -321,7 +328,7 @@ class ModelMetaclass(type):
         without_id = getattr(cls, '__without_id__', False)
         if 'id' not in cls.properties and not without_id:
             cls.properties['id'] = f = Field(int, autoincrement=True, 
-                primary_key=not has_primary_key, default=None)
+                primary_key=not has_primary_key, default=None, nullable=False)
             f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)
 

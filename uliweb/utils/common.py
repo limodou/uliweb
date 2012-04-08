@@ -63,7 +63,7 @@ try:
 except:
     pkg = MyPkg
 
-def extract_file(module, path, dist, verbose=False):
+def extract_file(module, path, dist, verbose=False, replace=True):
     outf = os.path.join(dist, os.path.basename(path))
 #    d = pkg.get_distribution(module)
 #    if d.has_metadata('zip-safe'):
@@ -76,11 +76,13 @@ def extract_file(module, path, dist, verbose=False):
     import shutil
 
     inf = pkg.resource_filename(module, path)
-    shutil.copy2(inf, dist)
-    if verbose:
-        log.info('Copy %s to %s' % (inf, dist))
+    f = os.path.exists(dist)
+    if replace or not f:
+        shutil.copy2(inf, dist)
+        if verbose:
+            log.info('Copy %s to %s' % (inf, dist))
   
-def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, recursion=True):
+def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, recursion=True, replace=True):
     """
     mod name
     path mod path
@@ -102,12 +104,12 @@ def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, 
         fpath = os.path.join(path, r)
         if pkg.resource_isdir(mod, fpath):
             if recursion:
-                extract_dirs(mod, fpath, os.path.join(dst, r), verbose, exclude, exclude_ext)
+                extract_dirs(mod, fpath, os.path.join(dst, r), verbose, exclude, exclude_ext, replace)
         else:
             ext = os.path.splitext(fpath)[1]
             if ext in exclude_ext or ext in default_exclude_ext:
                 continue
-            extract_file(mod, fpath, dst, verbose)
+            extract_file(mod, fpath, dst, verbose, replace)
 
 def copy_dir(src, dst, verbose=False, check=False, processor=None):
     import shutil

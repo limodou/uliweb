@@ -664,5 +664,23 @@ class ValidatedbCommand(Command):
                     traceback.print_exc()
                 flag = 'fail'
                 
-            if global_options.verbose:
+            if global_options.verbose or flag=='fail':
                 print 'Validating %s...%s' % (name, flag)
+
+class InitAlembicCommand(Command):
+    name = 'init_alembic'
+    help = 'init alembic environment to current project'
+    args = ''
+    check_apps_dirs = True
+
+    def handle(self, options, global_options, *args):
+        from uliweb.utils.common import extract_dirs, pkg
+        from uliweb.core.template import template_file
+        
+        extract_dirs('uliweb.contrib.orm', 'templates/alembic', '.', verbose=global_options.verbose, replace=False)
+        engine_string = get_engine(global_options.apps_dir)
+        ini_file = os.path.join(pkg.resource_filename('uliweb.contrib.orm', 'templates/alembic/alembic.ini'))
+        text = template_file(ini_file, {'CONNECTION':engine_string})
+        with open(os.path.join(global_options.project, 'alembic.ini'), 'w') as f:
+            f.write(text)
+            
