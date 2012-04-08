@@ -50,7 +50,7 @@ class NotFound(Error):
         self.id = id
         
     def __str__(self):
-        return "%s(%s) instance can't be found" % (model.__name__, str(id))
+        return "%s(%s) instance can't be found" % (self.model.__name__, str(id))
 class ReservedWordError(Error):pass
 class ModelInstanceError(Error):pass
 class DuplicatePropertyError(Error):
