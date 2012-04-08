@@ -385,7 +385,7 @@ class DumpTableFileCommand(Command):
             sys.exit(1)
             
         name = args[0]
-        tables = get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         t = tables[name]
         if global_options.verbose:
             print 'Dumpping %s...' % name

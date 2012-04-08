@@ -179,7 +179,8 @@ class NewOptionParser(OptionParser):
                     raise Exception
             except:
                 if longarg:
-                    del rargs[0]
+                    if '=' in arg:
+                        del rargs[0]
                 largs.append(arg)
     
 class ApplicationCommandManager(Command):
