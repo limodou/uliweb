@@ -579,7 +579,7 @@ class DbinitCommand(Command):
                 if global_options.verbose:
                     print "Processing %s..." % m
                 con.begin()
-                mod = __import__(m, {}, {}, [''])
+                mod = __import__(m, fromlist=['*'])
                 con.commit()
             except ImportError:
                 con.rollback()

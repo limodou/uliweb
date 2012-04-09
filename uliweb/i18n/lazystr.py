@@ -16,7 +16,11 @@ class LazyString(object):
     def __unicode__(self):
         if not self.msg:
             return '<LazyString>'
-        return unicode(self.getvalue(), 'utf-8')
+        value = self.getvalue()
+        if isinstance(value, unicode):
+            return value
+        else:
+            return unicode(self.getvalue(), 'utf-8')
         
     def __str__(self):
         if not self.msg:
