@@ -104,7 +104,7 @@ def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, 
         fpath = os.path.join(path, r)
         if pkg.resource_isdir(mod, fpath):
             if recursion:
-                extract_dirs(mod, fpath, os.path.join(dst, r), verbose, exclude, exclude_ext, replace)
+                extract_dirs(mod, fpath, os.path.join(dst, r), verbose, exclude, exclude_ext, recursion, replace)
         else:
             ext = os.path.splitext(fpath)[1]
             if ext in exclude_ext or ext in default_exclude_ext:
