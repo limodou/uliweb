@@ -99,11 +99,15 @@ class Expose(object):
                     new_endpoint = '.'.join([func.__module__, f.__name__, name])
                     if func.im_func in __exposes__:
                         for v in __exposes__.pop(func.im_func):
+                            #__no_rule__ used to distinct if the view function has used
+                            #expose to decorator, if not then __no_rule__ will be True
+                            #then it'll use default url route regular to make url
                             if func.__no_rule__:
                                 rule = self._get_url(appname, prefix, func)
                             else:
-                                if func.__old_rule__:
-                                    rule = os.path.join(prefix, func.__old_rule__).replace('\\', '/')
+                                _old = func.__old_rule__.get(v[2])
+                                if _old:
+                                    rule = os.path.join(prefix, _old).replace('\\', '/')
                                 else:
                                     rule = prefix
                                 rule = self._fix_url(appname, rule)
@@ -149,7 +153,9 @@ class Expose(object):
         endpoint = '.'.join([f.__module__, f.__name__])
         f.__exposed__ = True
         f.__no_rule__ = (self.parse_level == 1) or (self.parse_level == 2 and (self.rule is None))
-        f.__old_rule__ = self.rule
+        if not hasattr(f, '__old_rule__'):
+            f.__old_rule__ = {}
+        f.__old_rule__[self.rule] = self.rule
         
         #add name parameter process
         if 'name' in self.kwargs:
