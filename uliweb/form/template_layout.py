@@ -144,6 +144,11 @@ class BootstrapFormWriter(FormWriter):
         kwargs['_class'] = 'form-actions'
         return indent * ' ' + begin_tag('div', **kwargs)
         
+    def do_button(self, indent, value, **kwargs):
+        v = {'type':'submit', 'class':'btn btn-primary'}
+        v.update(kwargs)
+        return indent * ' ' + str(Tag('button', value, **v))
+
     def do_field(self, indent, value, **kwargs):
         field_name = kwargs['name']
         field = getattr(self.form, field_name)
