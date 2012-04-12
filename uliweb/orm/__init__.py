@@ -346,7 +346,9 @@ class Property(object):
 
     def __init__(self, verbose_name=None, name=None, default=None,
         required=False, validators=None, choices=None, max_length=None, 
-        hint='', auto=None, auto_add=None, type_class=None, type_attrs=None, **kwargs):
+        hint='', auto=None, auto_add=None, type_class=None, type_attrs=None, 
+        placeholder='', extra=None,
+        **kwargs):
         self.verbose_name = verbose_name
         self.property_name = None
         self.name = name
@@ -363,6 +365,8 @@ class Property(object):
         self.kwargs = kwargs
         self.creation_counter = Property.creation_counter
         self.value = None
+        self.placeholder = placeholder
+        self.extra = extra or {}
         self.type_attrs = type_attrs or {}
         self.type_class = type_class or self.field_class
         Property.creation_counter += 1

@@ -198,8 +198,11 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     prop = field['prop']
     label = field.get('verbose_name', None) or prop.verbose_name or prop.property_name
     hint = field.get('hint', '') or prop.hint
+    placeholder = field.get('placeholder', '') or prop.placeholder
     kwargs = dict(label=label, name=prop.property_name, 
-        required=prop.required, help_string=hint)
+        required=prop.required, help_string=hint, placeholder=placeholder)
+    html_attrs = field.get('extra', {}).get('html_attrs', {}) or prop.extra.get('html_attrs', {})
+    kwargs['html_attrs'] = html_attrs
     
     v = prop.default_value()
 #    if v is not None:

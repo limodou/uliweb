@@ -104,7 +104,7 @@ class BaseField(object):
 
     def __init__(self, label='', default=None, required=False, validators=None, 
         name='', html_attrs=None, help_string='', build=None, datatype=None, 
-        multiple=False, idtype=None, static=False, **kwargs):
+        multiple=False, idtype=None, static=False, placeholder='', **kwargs):
         self.label = label
         self._default = default
         self.validators = validators or []
@@ -124,7 +124,7 @@ class BaseField(object):
             self.html_attrs['class'] = ' '.join([self.html_attrs.pop(_cls), self.field_css_class])
         else:
             self.html_attrs['class'] = ' '.join([self.field_css_class])
-        
+        self.html_attrs['placeholder'] = placeholder
         self.multiple = multiple
         self.build = build or self.default_build
         self.help_string = help_string
