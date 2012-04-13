@@ -125,7 +125,8 @@ class ExcelWriter(object):
                 _f = self.fields[field['col']]
                 y1 = self.hbegin_y + y
                 y2 = y1 + field['rowspan'] - 1
-                x1 = self.hbegin_x + i + posx
+#                x1 = self.hbegin_x + i + posx
+                x1 = self.hbegin_x + field['col']
                 x2 = x1 + field['colspan'] - 1
                 self.sh.write_merge(y1, y2, x1, x2, safe_unicode(field['title']), 
                     self.style(style=_f['head_style'] or 'font: bold on;align: vert center,horz center; pattern: pattern solid, fore-colour pale_blue;borders:left thin, right thin, top thin, bottom thin;'))
