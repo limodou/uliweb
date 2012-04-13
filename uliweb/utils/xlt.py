@@ -192,6 +192,8 @@ class ExcelWriter(object):
                   
                 if isinstance(col_txt, str):
                     col_txt = unicode(col_txt, self.encoding)
+                elif hasattr(col_txt, '__unicode__'):
+                    col_txt = unicode(col_txt)
                 if isinstance(col_txt, unicode):
                     r = re_link.search(col_txt)
                     if r:
