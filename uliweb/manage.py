@@ -168,6 +168,7 @@ class MakePkgCommand(Command):
     name = 'makepkg'
     args = '<pkgname1, pkgname2, ...>'
     help = 'Create new python package folders.'
+    check_apps_dirs = False
 
     def handle(self, options, global_options, *args):
         if not args:
@@ -233,6 +234,11 @@ class SupportCommand(Command):
 register_command(SupportCommand)
 
 class ExportStaticCommand(Command):
+    """
+    Compress js and css will follow the rule that: if the filename include 
+    '.min.' or '.pack.',
+    then don't process it.
+    """
     name = 'exportstatic'
     help = 'Export all installed apps static directory to output directory.'
     args = 'output_directory'
@@ -242,12 +248,10 @@ class ExportStaticCommand(Command):
             help='Check if the output files or directories have conflicts.'),
         make_option('--js', action='store_true', dest='js', default=False,
             help='Enable javascript compress process.'),
-        make_option('-J', dest='js_compressor', default='compiler.jar',
-            help='Default javascript compress compiler, default is Google Clource Compiler.'),
         make_option('--css', action='store_true', dest='css', default=False,
             help='Enable javascript compress process.'),
-        make_option('-C', dest='css_compressor', default='yuicompressor.jar',
-            help='Default css compress compiler, default is Yui CSS Compressor.'),
+        make_option('--auto', action='store_true', dest='auto', default=False,
+            help='Enable javascript and css both compress process.'),
     )
     has_options = True
     
@@ -265,37 +269,27 @@ class ExportStaticCommand(Command):
         dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in reversed(apps)]
         self.options = options
         self.global_options = global_options
-        copy_dir_with_check(dirs, outputdir, global_options.verbose, options.check, processor=self.process_file)
+        copy_dir_with_check(dirs, outputdir, False, options.check, processor=self.process_file)
         
     def process_file(self, sfile, dpath):
+        from rjsmin.rjsmin import jsmin
+        from rcssmin.rcssmin import cssmin
+        
         js_compressor = None
         css_compressor = None
         
-        if sfile.endswith('.js') and self.options.js:
-            if not js_compressor:
-                js_compressor = os.path.expanduser(self.options.js_compressor)
-                if not os.path.exists(js_compressor):
-                    log.error("Google Closure compiler jar file %s not found. Please use the -J option to specify the path." % js_compressor)
-                    sys.exit(0)
+        if sfile.endswith('.js') and ('.min.' not in sfile and '.pack.' not in sfile) and (self.options.js or self.options.auto):
             dfile = os.path.join(dpath, os.path.basename(sfile))
-            cmd = "java -jar %s --js %s --js_output_file %s" % (js_compressor, sfile, dfile)
+            open(dfile, 'w').write(jsmin(open(sfile).read()))
             if self.global_options.verbose:
-                log.info('Running: %s' % cmd)
-            os.system(cmd)
+                print 'Compress %s to %s' % (sfile, dfile)
             return True
-        if sfile.endswith('.css') and self.options.css:
-            if not css_compressor:
-                css_compressor = os.path.expanduser(self.options.css_compressor)
-                if not os.path.exists(css_compressor):
-                    log.error("Yui CSS Compressor compiler jar file %s not found. Please use the -C option to specify the path." % css_compressor)
-                    sys.exit(0)
+        if sfile.endswith('.css') and ('.min.' not in sfile and '.pack.' not in sfile) and (self.options.css or self.options.auto):
             dfile = os.path.join(dpath, os.path.basename(sfile))
-            cmd = "java -jar %s --type css --charset utf-8 -v %s > %s" % (css_compressor, sfile, dfile)
+            open(dfile, 'w').write(cssmin(open(sfile).read()))
             if self.global_options.verbose:
-                log.info('Running: %s' % cmd)
-            os.system(cmd)
+                print 'Compress %s to %s' % (sfile, dfile)
             return True
-            
 register_command(ExportStaticCommand)
     
 class ExportCommand(Command):

@@ -80,7 +80,7 @@ def extract_file(module, path, dist, verbose=False, replace=True):
     if replace or not f:
         shutil.copy2(inf, dist)
         if verbose:
-            log.info('Copy %s to %s' % (inf, dist))
+            print 'Copy %s to %s' % (inf, dist)
   
 def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, recursion=True, replace=True):
     """
@@ -93,11 +93,11 @@ def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, 
     default_exclude_ext = ['.pyc', '.pyo', '.bak', '.tmp']
     exclude = exclude or []
     exclude_ext = exclude_ext or []
-    log = logging.getLogger('uliweb.console')
+#    log = logging.getLogger('uliweb')
     if not os.path.exists(dst):
         os.makedirs(dst)
         if verbose:
-            log.info('Make directory %s' % dst)
+            print 'Make directory %s' % dst
     for r in pkg.resource_listdir(mod, path):
         if r in exclude or r in default_exclude:
             continue
@@ -114,7 +114,7 @@ def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, 
 def copy_dir(src, dst, verbose=False, check=False, processor=None):
     import shutil
 
-    log = logging.getLogger('uliweb.console')
+#    log = logging.getLogger('uliweb')
 
     def _md5(filename):
         try:
@@ -131,7 +131,7 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
         os.makedirs(dst)
 
     if verbose:
-        log.info("Processing %s" % src)
+        print "Processing %s" % src
         
     for r in os.listdir(src):
         if r in ['.svn', '_svn', '.git']:
@@ -149,7 +149,7 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
                     a = _md5(fpath)
                     b = _md5(df)
                     if a != b:
-                        log.error("Target file %s is already existed, and "
+                        print ("Error: Target file %s is already existed, and "
                             "it not same as source one %s, so copy failed" % (fpath, dst))
                 else:
                     if processor:
@@ -157,7 +157,7 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
                             continue
                     shutil.copy2(fpath, dst)
                     if verbose:
-                        log.info("Copy %s to %s" % (fpath, dst))
+                        print "Copy %s to %s" % (fpath, dst)
                     
             else:
                 if processor:
@@ -165,15 +165,13 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
                         continue
                 shutil.copy2(fpath, dst)
                 if verbose:
-                    log.info("Copy %s to %s" % (fpath, dst))
+                    print "Copy %s to %s" % (fpath, dst)
 
 def copy_dir_with_check(dirs, dst, verbose=False, check=True, processor=None):
-    log = logging.getLogger('uliweb.console')
+#    log = logging.getLogger('uliweb')
 
     for d in dirs:
         if not os.path.exists(d):
-            if verbose:
-                log.warn("%s does not exist, SKIP" % d)
             continue
 
         copy_dir(d, dst, verbose, check, processor)
@@ -223,7 +221,7 @@ def timeit(func):
         begin = time.time()
         ret = func(*args, **kwargs)
         end = time.time()
-        log.info("%s.%s [%s]s" % (func.__module__, func.__name__, end-begin))
+        print ("%s.%s [%s]s" % (func.__module__, func.__name__, end-begin))
         return ret
     return f
 
