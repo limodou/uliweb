@@ -1046,7 +1046,17 @@ class Result(object):
             return self.filter(condition).one()
     
     def count(self):
-        return self.model.count(self.condition)
+        flag = False
+        #judge if there is a distince process
+        for name, args, kwargs in self.funcs:
+            if name == 'distinct':
+                flag = True
+                break
+        if not flag:
+            return self.model.count(self.condition)
+        else:
+            sql = select([func.count(func.distinct(self.model.c.id))], self.condition)
+            return do_(sql).scalar()
 
     def filter(self, condition):
         if condition is None:
