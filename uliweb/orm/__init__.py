@@ -1028,14 +1028,40 @@ class Result(object):
     def __init__(self, model=None, condition=None, *args, **kwargs):
         self.model = model
         self.condition = condition
-        self.columns = [self.model.table]
+        self.columns = list(self.model.table.c)
         self.funcs = []
         self.args = args
         self.kwargs = kwargs
         self.result = None
         self.default_query_flag = True
         self._group_by = None
+        self.distinct_field = None
+        self._values_flag = False
         
+    def get_column(self, model, fieldname):
+        if isinstance(fieldname, (str, unicode)):
+            if issubclass(model, Model):
+                field = model.table.c[fieldname]
+            else:
+                field = model.c[fieldname]
+        else:
+            field = fieldname
+        return field
+    
+    def get_columns(self, model=None, columns=None):
+        columns = columns or self.columns
+        model = model or self.model
+        fields = []
+        field = None
+        if self.distinct_field is not None:
+            field = self.get_column(model, self.distinct_field)
+            fields.append(func.distinct(field).label(str(field.label(None))))
+        for col in columns:
+            if col is not field:
+                fields.append(col)
+        
+        return fields
+    
     def all(self):
         return self
     
@@ -1076,23 +1102,27 @@ class Result(object):
         return self
     
     def values(self, *args, **kwargs):
-        self.funcs.append(('with_only_columns', (args,), kwargs))
-        r = self.run()
-        while 1:
-            x = r.fetchone()
-            if x:
-                yield x
-            else:
-                raise StopIteration
+        self.funcs.append(('with_only_columns', ([self.get_column(self.model, x) for x in args],), kwargs))
+        self._values_flag = True
+        return self
     
     def values_one(self, *args, **kwargs):
-        self.funcs.append(('with_only_columns', (args,), kwargs))
+        self.funcs.append(('with_only_columns', ([self.get_column(self.model, x) for x in args],), kwargs))
         self.run(1)
         result = self.result.fetchone()
         return result
 
-    def distinct(self, *args, **kwargs):
-        self.funcs.append(('distinct', args, kwargs))
+    def distinct(self, field=None):
+        """
+        If field is None, then it means that it'll create:
+            select distinct *
+        and if field is not None, for example: 'name', it'll create:
+            select distinc(name), 
+        """
+        if field is None:
+            self.funcs.append(('distinct', (), {}))
+        else:
+            self.distinct_field = field
         return self
     
     def limit(self, *args, **kwargs):
@@ -1134,15 +1164,21 @@ class Result(object):
             if _f:
                 _f(self)
         if self.condition is not None:
-            query = select(self.columns, self.condition)
+            query = select(self.get_columns(), self.condition)
         else:
-            query = select(self.columns)
+            query = select(self.get_columns())
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         if self._group_by:
             query = query.group_by(*self._group_by)
         return query
     
+    def create_obj(self, values):
+        if self._values_flag:
+            return values
+        else:
+            return self.model.create_obj(values.items())
+        
     def one(self):
         self.run(1)
         if not self.result:
@@ -1150,10 +1186,7 @@ class Result(object):
         
         result = self.result.fetchone()
         if result:
-            d = self.model._data_prepare(result.items())
-            o = self.model(**d)
-            o.set_saved()
-            return o
+            return self.create_obj(result)
     
     def clear(self):
         if self.condition is None:
@@ -1172,10 +1205,7 @@ class Result(object):
             result = self.result.fetchone()
             if not result:
                 raise StopIteration
-            d = self.model._data_prepare(result.items())
-            o = self.model(**d)
-            o.set_saved()
-            yield o
+            yield self.create_obj(result)
   
 class ReverseResult(Result):
     def __init__(self, model, condition, a_field, b_table, instance, b_field, *args, **kwargs):
@@ -1185,13 +1215,15 @@ class ReverseResult(Result):
         self.instance = instance
         self.condition = condition
         self.a_field = a_field
-        self.columns = [self.model.table]
+        self.columns = list(self.model.table.c)
         self.funcs = []
         self.args = args
         self.kwargs = kwargs
         self.result = None
         self.default_query_flag = True
         self._group_by = None
+        self.distinct_field = None
+        self._values_flag = False
         
     def has(self, *objs):
         ids = get_objs_columns(objs)
@@ -1236,7 +1268,7 @@ class ManyResult(Result):
         self.realfielda = realfielda
         self.realfieldb = realfieldb
         self.valuea = valuea
-        self.columns = [self.modelb.table]
+        self.columns = list(self.modelb.table.c)
         self.condition = None
         self.funcs = []
         self.result = None
@@ -1244,6 +1276,8 @@ class ManyResult(Result):
         self.through_model = through_model
         self.default_query_flag = True
         self._group_by = None
+        self.distinct_field = None
+        self._values_flag = False
         
     def get(self, condition=None):
         if not isinstance(condition, ColumnElement):
@@ -1331,6 +1365,17 @@ class ManyResult(Result):
         count = do_(self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids)))).scalar()
         return count > 0
         
+    def values(self, *args, **kwargs):
+        self.funcs.append(('with_only_columns', ([self.get_column(self.modelb, x) for x in args],), kwargs))
+        self._values_flag = True
+        return self
+
+    def values_one(self, *args, **kwargs):
+        self.funcs.append(('with_only_columns', ([self.get_column(self.modelb, x) for x in args],), kwargs))
+        self.run(1)
+        result = self.result.fetchone()
+        return result
+
     def with_relation(self, relation_name=None):
         """
         if relation is not None, when fetch manytomany result, also
@@ -1363,10 +1408,10 @@ class ManyResult(Result):
             if _f:
                 _f(self)
         if self.with_relation_name:
-            columns = [self.table] + self.columns
+            columns = list(self.table.c) + self.columns
         else:
             columns = self.columns
-        query = select(columns, (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition)
+        query = select(self.get_columns(self.modelb, columns), (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         if self._group_by:
@@ -1379,18 +1424,17 @@ class ManyResult(Result):
             return
         result = self.result.fetchone()
         if result:
+            if self._values_flag:
+                return result
+
             offset = 0
             if self.with_relation_name:
                 offset = len(self.table.columns)
                 
-            d = self.modelb._data_prepare(zip(result.keys()[offset:], result.values()[offset:]))
-            o = self.modelb(**d)
-            o.set_saved()
+            o = self.modelb.create_obj(zip(result.keys()[offset:], result.values()[offset:]))
             
             if self.with_relation_name:
-                d_ = self.through_model._data_prepare(zip(result.keys()[:offset], result.values()[:offset]))
-                r = self.through_model(**d_)
-                r.set_saved()
+                r = self.through_model.create_obj(zip(result.keys()[:offset], result.values()[:offset]))
                 setattr(o, self.with_relation_name, r)
                 
             return o
@@ -1412,15 +1456,14 @@ class ManyResult(Result):
             result = self.result.fetchone()
             if not result:
                 raise StopIteration
+            if self._values_flag:
+                yield result
+                continue
            
-            d = self.modelb._data_prepare(zip(result.keys()[offset:], result.values()[offset:]))
-            o = self.modelb(**d)
-            o.set_saved()
+            o = self.modelb.create_obj(zip(result.keys()[offset:], result.values()[offset:]))
             
             if self.with_relation_name:
-                d_ = self.through_model._data_prepare(zip(result.keys()[:offset], result.values()[:offset]))
-                r = self.through_model(**d_)
-                r.set_saved()
+                r = self.through_model.create_obj(zip(result.keys()[:offset], result.values()[:offset]))
                 setattr(o, self.with_relation_name, r)
                 
             yield o
@@ -2114,3 +2157,17 @@ class Model(object):
         count = do_(cls.table.count(condition, **kwargs)).scalar()
         return count
             
+    @classmethod
+    def create_obj(cls, values):
+        if isinstance(values, (list, tuple)):
+            d = cls._data_prepare(values)
+        elif isinstance(values, dict):
+            d = values
+        else:
+            raise BadValueError("Can't support the data type %r" % values)
+        
+        o = cls(**d)
+        o.set_saved()
+        return o
+    
+    

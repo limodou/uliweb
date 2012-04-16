@@ -1238,6 +1238,59 @@ def test_manytomany_filter():
     >>> print list(Group.filter(User.groups.join_filter(User.c.username=='user2')))
     [<Group {'name':u'group1','id':1}>, <Group {'name':u'group2','id':2}>]
     """
+
+def test_distinct_updates():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     groups = ManyToMany('group')
+    >>> a = User(username='user1')
+    >>> a.save()
+    True
+    >>> b = User(username='user2')
+    >>> b.save()
+    True
+    >>> g1 = Group(name='group1')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='group2')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='group3')
+    >>> g3.save()
+    True
+    >>> a.groups.add(g1, g2, g3)
+    True
+    >>> b.groups.add(g1, g2)
+    True
+    >>> print User.all().distinct().get_query()
+    SELECT DISTINCT user.username, user.id 
+    FROM user
+    >>> print User.all().distinct('username').get_query()
+    SELECT distinct(user.username) AS "user.username", user.id 
+    FROM user
+    >>> print list(User.all().values('username').filter(User.c.username=='user1'))
+    [(u'user1',)]
+    >>> print list(a.groups.all().values('name'))
+    [(u'group1',), (u'group2',), (u'group3',)]
+    >>> print a.groups.all().distinct('name').get_query()
+    SELECT distinct("group".name) AS "group.name", "group".id 
+    FROM "group", user_group_groups 
+    WHERE user_group_groups.user_id = ? AND user_group_groups.group_id = "group".id
+    >>> print list(g1.user_set.all().values('username'))
+    [(u'user1',), (u'user2',)]
+    >>> print g1.user_set.all().distinct('username').get_query()
+    SELECT distinct(user.username) AS "user.username", user.id 
+    FROM user, user_group_groups 
+    WHERE user_group_groups.group_id = ? AND user_group_groups.user_id = user.id
+    
+    """
     
 #if __name__ == '__main__':
 #    db = get_connection('sqlite://')
