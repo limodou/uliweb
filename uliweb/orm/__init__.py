@@ -1055,7 +1055,7 @@ class Result(object):
         field = None
         if self.distinct_field is not None:
             field = self.get_column(model, self.distinct_field)
-            fields.append(func.distinct(field).label(str(field.label(None))))
+            fields.append(func.distinct(field).label(field.name))
         for col in columns:
             if col is not field:
                 fields.append(col)
