@@ -11,7 +11,7 @@ __commands__ = {}
 
 log = logging.getLogger('uliweb.console')
 
-def get_commands():
+def get_commands(global_options):
     global __commands__
     
     def check(c):
@@ -27,7 +27,8 @@ def get_commands():
     def collect_commands():
         from uliweb import get_apps
         
-        for f in get_apps(apps_dir):
+        for f in get_apps(global_options.apps_dir, settings_file=global_options.settings,
+                        local_settings_file=global_options.local_settings):
             m = '%s.commands' % f
             try:
                 mod = __import__(m, {}, {}, [''])
@@ -503,13 +504,17 @@ class ShellCommand(Command):
     )
     banner = "Uliweb Command Shell"
     
-    def make_shell_env(self, project_dir):
-        application = SimpleFrame.Dispatcher(project_dir=project_dir, start=False)
+    def make_shell_env(self, global_options):
+        print '###########', global_options.local_settings
+        application = SimpleFrame.Dispatcher(project_dir=global_options.project, 
+            settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings, 
+            start=False)
         env = {'application':application, 'settings':application.settings}
         return env
     
     def handle(self, options, global_options, *args):
-        namespace = self.make_shell_env(global_options.project)
+        namespace = self.make_shell_env(global_options)
         if options.ipython:
             try:
                 import IPython
@@ -622,7 +627,7 @@ def main():
     from uliweb.i18n.i18ntool import I18nCommand
     register_command(I18nCommand)
     
-    execute_command_line(sys.argv, get_commands(), 'uliweb')
+    execute_command_line(sys.argv, get_commands, 'uliweb')
 
 if __name__ == '__main__':
     main()

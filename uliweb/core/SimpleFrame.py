@@ -265,7 +265,7 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
 def get_settings(project_dir, include_apps=None, settings_file='settings.ini', 
     local_settings_file='local_settings.ini', default_settings=None):
     apps_dir = os.path.join(project_dir, 'apps')
-    apps = get_apps(apps_dir)
+    apps = get_apps(apps_dir, settings_file=settings_file, local_settings_file=local_settings_file)
     settings = []
     inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
     settings.insert(0, inifile)

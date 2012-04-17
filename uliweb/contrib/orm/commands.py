@@ -6,10 +6,11 @@ from optparse import make_option
 from uliweb.utils.common import log, is_pyfile_exist
 from sqlalchemy.types import *
 
-def get_engine(apps_dir):
+def get_engine(apps_dir, settings_file='settings.ini', local_settings_file='local_settings.ini'):
     from uliweb.core.SimpleFrame import Dispatcher
     settings = {'ORM/DEBUG_LOG':False, 'ORM/AUTO_CREATE':True}
-    app = Dispatcher(apps_dir=apps_dir, start=False, default_settings=settings)
+    app = Dispatcher(apps_dir=apps_dir, start=False, default_settings=settings,
+        settings_file=settings_file, local_settings_file=local_settings_file)
     engine = app.settings.ORM.CONNECTION
     return engine
 
@@ -20,7 +21,7 @@ def get_tables(apps_dir, apps=None, engine=None, import_models=False, settings_f
     from StringIO import StringIO
     
     if not engine:
-        engine = get_engine(apps_dir)
+        engine = get_engine(apps_dir, settings_file, local_settings_file)
     
     _engine = engine[:engine.find('://')+3]
     
@@ -156,7 +157,7 @@ class SyncdbCommand(Command):
     def handle(self, options, global_options, *args):
         from sqlalchemy import create_engine
 
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = create_engine(engine)
         
         for name, t in get_tables(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
@@ -178,7 +179,7 @@ class ResetCommand(Command):
             message = """This command will drop whole database, are you sure to reset"""
         get_answer(message)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = create_engine(engine)
         
         for name, t in get_tables(global_options.apps_dir, args, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
@@ -203,7 +204,7 @@ class ResetTableCommand(Command):
         message = """This command will drop all tables [%s], are you sure to reset""" % ','.join(args)
         get_answer(message)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = create_engine(engine)
         
         for name in args:
@@ -233,7 +234,7 @@ class DropTableCommand(Command):
         message = """This command will drop all tables [%s], are you sure to drop""" % ','.join(args)
         get_answer(message)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = create_engine(engine)
         
         for name in args:
@@ -286,7 +287,7 @@ class DumpCommand(Command):
         if not os.path.exists(options.output_dir):
             os.makedirs(options.output_dir)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = create_engine(engine)
         
         zipfile = None
@@ -338,7 +339,7 @@ class DumpTableCommand(Command):
         if not os.path.exists(options.output_dir):
             os.makedirs(options.output_dir)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = create_engine(engine)
 
         if not args:
@@ -377,7 +378,7 @@ class DumpTableFileCommand(Command):
         from sqlalchemy import create_engine
         from uliweb import orm
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = create_engine(engine)
 
         if len(args) != 2:
@@ -428,7 +429,7 @@ are you sure to load data"""
         if not os.path.exists(options.dir):
             os.makedirs(options.dir)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = orm.get_connection(engine)
 
         for name, t in get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
@@ -479,7 +480,7 @@ are you sure to load data""" % ','.join(args)
         if not os.path.exists(options.dir):
             os.makedirs(options.dir)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = orm.get_connection(engine)
 
         tables = get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
@@ -531,7 +532,7 @@ class LoadTableFileCommand(Command):
 
         ans = get_answer(message, answers='Yn', quit='q')
 
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = orm.get_connection(engine)
 
         name = args[0]
@@ -601,7 +602,7 @@ class SqldotCommand(Command):
         else:
             apps = self.get_apps(global_options)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         
         tables = get_tables(global_options.apps_dir, None, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         print generate_dot(tables, apps)
@@ -622,7 +623,7 @@ class SqlHtmlCommand(Command):
         else:
             apps = self.get_apps(global_options)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         
         tables = get_tables(global_options.apps_dir, apps, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         print generate_html(tables, apps)
@@ -649,7 +650,7 @@ class ValidatedbCommand(Command):
         else:
             apps = self.get_apps(global_options)
         
-        engine = get_engine(global_options.apps_dir)
+        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = create_engine(engine)
         
         tables = get_tables(global_options.apps_dir, apps, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
@@ -678,7 +679,7 @@ class InitAlembicCommand(Command):
         from uliweb.core.template import template_file
         
         extract_dirs('uliweb.contrib.orm', 'templates/alembic', '.', verbose=global_options.verbose, replace=False)
-        engine_string = get_engine(global_options.apps_dir)
+        engine_string = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         ini_file = os.path.join(pkg.resource_filename('uliweb.contrib.orm', 'templates/alembic/alembic.ini'))
         text = template_file(ini_file, {'CONNECTION':engine_string})
         with open(os.path.join(global_options.project, 'alembic.ini'), 'w') as f:

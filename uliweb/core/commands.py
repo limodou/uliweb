@@ -105,7 +105,10 @@ class Command(object):
     def get_application(self, global_options):
         from uliweb.manage import make_application
         
-        return make_application(project_dir=global_options.project, start=False, debug_console=False, debug=False)
+        return make_application(project_dir=global_options.project, start=False, 
+            debug_console=False, debug=False, settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings
+            )
         
     def run_from_argv(self, prog, subcommand, global_options, argv):
         """
@@ -121,9 +124,8 @@ class Command(object):
         from uliweb.utils.common import check_apps_dir
 
         #add apps_dir to global_options and insert it to sys.path
-        global_options.apps_dir = apps_dir = os.path.normpath(os.path.join(global_options.project, 'apps'))
-        if apps_dir not in sys.path:
-            sys.path.insert(0, apps_dir)
+        if global_options.apps_dir not in sys.path:
+            sys.path.insert(0, global_options.apps_dir)
         
         if self.check_apps_dirs:
             check_apps_dir(global_options.apps_dir)
@@ -208,26 +210,34 @@ class ApplicationCommandManager(Command):
         self.prog_name = prog_name or os.path.basename(self.argv[0])
         self.commands = commands
 
-    def print_help_info(self):
+    def get_commands(self, global_options):
+        if callable(self.commands):
+            commands = self.commands(global_options)
+        else:
+            commands = self.commands
+        return commands
+    
+    def print_help_info(self, global_options):
         """
         Returns the script's main help text, as a string.
         """
         usage = ['',"Type '%s help <subcommand>' for help on a specific subcommand." % self.prog_name,'']
         usage.append('Available subcommands:')
-        commands = self.commands.keys()
+        commands = self.get_commands(global_options).keys()
         commands.sort()
         for cmd in commands:
             usage.append('  %s' % cmd)
         return '\n'.join(usage)
     
-    def fetch_command(self, subcommand):
+    def fetch_command(self, global_options, subcommand):
         """
         Tries to fetch the given subcommand, printing a message with the
         appropriate command called from the command line (usually
         "uliweb") if it can't be found.
         """
+        commands = self.get_commands(global_options)
         try:
-            klass = self.commands[subcommand]
+            klass = commands[subcommand]
         except KeyError:
             sys.stderr.write("Unknown command: %r\nType '%s help' for usage.\n" % \
                 (subcommand, self.prog_name))
@@ -249,16 +259,17 @@ class ApplicationCommandManager(Command):
                              add_help_option = False,
                              option_list=self.option_list)
         
-        def print_help():
+        global_options, args = parser.parse_args(self.argv)
+        global_options.apps_dir = os.path.normpath(os.path.join(global_options.project, 'apps'))
+        handle_default_options(global_options)
+
+        def print_help(global_options):
             parser.print_help()
-            sys.stderr.write(self.print_help_info() + '\n')
+            sys.stderr.write(self.print_help_info(global_options) + '\n')
             sys.exit(1)
             
         if len(self.argv) == 1:
-            print_help()
-            
-        global_options, args = parser.parse_args(self.argv)
-        handle_default_options(global_options)
+            print_help(global_options)
     
         try:
             subcommand = args[1]
@@ -267,14 +278,14 @@ class ApplicationCommandManager(Command):
     
         if subcommand == 'help':
             if len(args) > 2:
-                self.fetch_command(args[2])().print_help(self.prog_name, args[2])
+                self.fetch_command(global_options, args[2])().print_help(self.prog_name, args[2])
                 sys.exit(1)
             else:
-                print_help()
+                print_help(global_options)
         if global_options.help:
-            print_help()
+            print_help(global_options)
         else:
-            self.fetch_command(subcommand)().run_from_argv(self.prog_name, subcommand, global_options, args[2:])
+            self.fetch_command(global_options, subcommand)().run_from_argv(self.prog_name, subcommand, global_options, args[2:])
 
 def execute_command_line(argv=None, commands=None, prog_name=None):
     m = ApplicationCommandManager(argv, commands, prog_name)
