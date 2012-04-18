@@ -346,7 +346,7 @@ class DumpTableCommand(Command):
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
             
-        tables = get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         for name in args:
             if name in tables:
                 t = tables[name]
@@ -475,7 +475,7 @@ are you sure to load data""" % ','.join(args)
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
-        get_answer(message)
+        ans = get_answer(message, answers='Yn', quit='q')
 
         if not os.path.exists(options.dir):
             os.makedirs(options.dir)
@@ -483,7 +483,7 @@ are you sure to load data""" % ','.join(args)
         engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
         con = orm.get_connection(engine)
 
-        tables = get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         for name in args:
             if name in tables:
                 t = tables[name]
@@ -497,7 +497,7 @@ are you sure to load data""" % ','.join(args)
                     else:
                         format = None
                     load_table(t, filename, con, delimiter=options.delimiter, 
-                        format=format, encoding=options.encoding)
+                        format=format, encoding=options.encoding, delete=ans=='Y')
                     con.commit()
                 except:
                     log.exception("There are something wrong when loading table [%s]" % name)
@@ -536,7 +536,7 @@ class LoadTableFileCommand(Command):
         con = orm.get_connection(engine)
 
         name = args[0]
-        tables = get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         t = tables[name]
         if global_options.verbose:
             print 'Loading %s...' % name
