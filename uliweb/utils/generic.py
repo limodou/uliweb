@@ -1099,7 +1099,9 @@ class SimpleListView(object):
             
             or 
             
-            [{'name':'fields', 'cal':'sum' or 'avg', 'render':str function(value, total_sum)]
+            [{'name':'fields', 'cal':'sum' or 'avg' or None, #if None then don't
+                #calculate at each row iterate, default cal = sum
+                'render':str function(value, total_sum)]
         """
         self.fields = fields
         self._query = query
@@ -1147,7 +1149,11 @@ class SimpleListView(object):
                     v = record.get(f)
                 else:
                     v = getattr(record, f)
-                self.total_sums[f] = self.total_sums.setdefault(f, 0) + v
+                x = self.total_fields[f]
+                cal = x.get('cal', None)
+                #if cal is None, then do nothing
+                if cal:
+                    self.total_sums[f] = self.total_sums.setdefault(f, 0) + v
                 
     def get_total(self, table):
         s = []
@@ -1165,8 +1171,6 @@ class SimpleListView(object):
                             pass
                         elif cal == 'avg':
                             v = v * 1.0 / self.rows_num
-                        else:
-                            raise Exception, "Don't support this cal type [%s]" % cal
                         render = x.get('render', None)
                         if render:
                             v = render(v, self.total_sums)
@@ -1444,6 +1448,7 @@ class SimpleListView(object):
             #create table body
             self.rows_num = 0
             for record in query:
+                self.cal_total(table, record)
                 self.rows_num += 1
                 
                 r = []
@@ -1460,7 +1465,6 @@ class SimpleListView(object):
                 else:
                     render_func = self.render_func or self.default_body_render
                     s.append(render_func(r, record))
-                self.cal_total(table, record)
             if json_body:
                 total = self.render_total(table, json_body)
                 if total:
