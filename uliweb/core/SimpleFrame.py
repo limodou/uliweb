@@ -464,7 +464,7 @@ class Dispatcher(object):
     def process_domains(self, settings):
         from urlparse import urlparse
 
-        self.domains = {}
+        Dispatcher.domains = {}
         
         for k, v in settings.DOMAINS.iteritems():
             _domain = urlparse(v['domain'])

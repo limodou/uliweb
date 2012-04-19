@@ -505,7 +505,6 @@ class ShellCommand(Command):
     banner = "Uliweb Command Shell"
     
     def make_shell_env(self, global_options):
-        print '###########', global_options.local_settings
         application = SimpleFrame.Dispatcher(project_dir=global_options.project, 
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings, 
