@@ -1150,7 +1150,7 @@ class SimpleListView(object):
                 else:
                     v = getattr(record, f)
                 x = self.total_fields[f]
-                cal = x.get('cal', None)
+                cal = x.get('cal', 'sum')
                 #if cal is None, then do nothing
                 if cal:
                     self.total_sums[f] = self.total_sums.setdefault(f, 0) + v
