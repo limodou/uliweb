@@ -13,6 +13,12 @@ def u_str(v, encoding='utf-8'):
         v = str(v)
     return v
 
+def str_u(v, encoding='utf-8'):
+    if isinstance(v, unicode):
+        return v
+    else:
+        return unicode(v, encoding)
+
 def _create_kwargs(args, nocreate_if_none=['id', 'for']):
     """
     Make python dict to k="v" format
@@ -75,10 +81,10 @@ class Buf(object):
     __getitem__ = __getattr__
     
     def __str__(self):
-        return self._document.getvalue().encode(self._encoding)
+        return u_str(self._document.getvalue(), self._encoding)
     
     def __unicode__(self):
-        return self._document.getvalue().decode(self._encoding)
+        return str_u(self._document.getvalue(), self._encoding)
     
     def _write(self, line):
         line = line.decode(self._encoding)
