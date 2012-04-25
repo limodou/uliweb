@@ -31,8 +31,11 @@ def get_commands(global_options):
                         local_settings_file=global_options.local_settings):
             m = '%s.commands' % f
             try:
-                mod = __import__(m, {}, {}, [''])
-            except ImportError:
+                mod = __import__(m, fromlist=['*'])
+            except ImportError as e:
+                if str(e) != 'No module named commands':
+                    import traceback
+                    traceback.print_exc()
                 continue
             
             find_mod_commands(mod)

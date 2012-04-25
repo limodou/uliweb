@@ -5,6 +5,8 @@ from uliweb.core.commands import Command, get_answer
 from optparse import make_option
 from uliweb.utils.common import log, is_pyfile_exist
 from sqlalchemy.types import *
+from sqlalchemy import MetaData, Table
+from sqlalchemy.engine.reflection import Inspector
 
 def get_engine(apps_dir, settings_file='settings.ini', local_settings_file='local_settings.ini'):
     from uliweb.core.SimpleFrame import Dispatcher
@@ -69,7 +71,7 @@ def get_tables(apps_dir, apps=None, engine=None, import_models=False, settings_f
                 
     return tables
 
-def dump_table(table, filename, con, std=None, delimiter=',', format=None, encoding='utf-8'):
+def dump_table(table, filename, con, std=None, delimiter=',', format=None, encoding='utf-8', inspector=None):
     from uliweb.utils.common import str_value
     from StringIO import StringIO
     import csv
@@ -81,10 +83,14 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
             std = filename
     else:
         std = sys.stdout
+    #add inspector table columns process, will not use model fields but database fields
+    if inspector:
+        meta = MetaData()
+        table = Table(table.name, meta)
+        inspector.reflecttable(table, None)
+        
     result = con.execute(table.select())
-    fields = []
-    for c in table.c:
-        fields.append(c.name)
+    fields = [x.name for x in table.c]
     if not format:
         print >>std, '#', ' '.join(fields)
     elif format == 'txt':
@@ -293,6 +299,8 @@ class DumpCommand(Command):
         zipfile = None
         if options.zipfile:
             zipfile = ZipFile(options.zipfile, 'w')
+            
+        inspector = Inspector.from_engine(con)
 
         for name, t in get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
@@ -309,7 +317,7 @@ class DumpCommand(Command):
             else:
                 fileobj = filename
             dump_table(t, fileobj, con, delimiter=options.delimiter, 
-                format=format, encoding=options.encoding)
+                format=format, encoding=options.encoding, inspector=inspector)
             #write zip content
             if options.zipfile and zipfile:
                 zipfile.writestr(filename, fileobj.getvalue())
@@ -346,6 +354,8 @@ class DumpTableCommand(Command):
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
             
+        inspector = Inspector.from_engine(con)
+
         tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         for name in args:
             if name in tables:
@@ -358,7 +368,7 @@ class DumpTableCommand(Command):
                 else:
                     format = None
                 dump_table(t, filename, con, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding)
+                    format=format, encoding=options.encoding, inspector=inspector)
 
 class DumpTableFileCommand(Command):
     name = 'dumptablefile'
@@ -385,6 +395,8 @@ class DumpTableFileCommand(Command):
             print self.print_help(self.prog_name, 'dumptablefile')
             sys.exit(1)
             
+        inspector = Inspector.from_engine(con)
+
         name = args[0]
         tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         t = tables[name]
@@ -395,7 +407,7 @@ class DumpTableFileCommand(Command):
         else:
             format = None
         dump_table(t, args[1], con, delimiter=options.delimiter, 
-            format=format, encoding=options.encoding)
+            format=format, encoding=options.encoding, inspector=inspector)
 
 class LoadCommand(Command):
     name = 'load'
