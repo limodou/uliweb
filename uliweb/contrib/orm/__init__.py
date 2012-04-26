@@ -7,7 +7,9 @@ def after_init_apps(sender):
     orm.set_debug_query(uliweb.settings.ORM.DEBUG_LOG)
     orm.set_auto_create(uliweb.settings.ORM.AUTO_CREATE)
     orm.set_auto_set_model(False)
-    orm.get_connection(uliweb.settings.ORM.CONNECTION, **uliweb.settings.ORM.CONNECTION_ARGS)
+    
+    if uliweb.settings.ORM.CONNECTION_TYPE == 'long':
+        orm.get_connection(uliweb.settings.ORM.CONNECTION, **uliweb.settings.ORM.CONNECTION_ARGS)
 
     if 'MODELS' in uliweb.settings:
         for name, path in uliweb.settings.MODELS.items():
