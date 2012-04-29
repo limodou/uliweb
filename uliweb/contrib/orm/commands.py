@@ -1,36 +1,35 @@
 import os, sys
-import datetime
-from decimal import Decimal
-from uliweb.core.commands import Command, get_answer
+from uliweb.core.commands import Command, get_answer, CommandManager
 from optparse import make_option
 from uliweb.utils.common import log, is_pyfile_exist
 from sqlalchemy.types import *
 from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
+from uliweb.orm import get_connection, set_auto_set_model
 
-def get_engine(apps_dir, settings_file='settings.ini', local_settings_file='local_settings.ini'):
-    from uliweb.core.SimpleFrame import Dispatcher
-    settings = {'ORM/DEBUG_LOG':False, 'ORM/AUTO_CREATE':True}
-    app = Dispatcher(apps_dir=apps_dir, start=False, default_settings=settings,
-        settings_file=settings_file, local_settings_file=local_settings_file)
-    engine = app.settings.ORM.CONNECTION
+def get_engine(options, global_options):
+    from uliweb.manage import make_simple_application
+    settings = {'ORM/DEBUG_LOG':False, 'ORM/AUTO_CREATE':False}
+    app = make_simple_application(apps_dir=global_options.apps_dir, 
+        settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+    #because set_auto_set_model will be invoked in orm initicalization, so
+    #below setting will be executed after Dispatcher started
+    set_auto_set_model(True)
+    engine_name = options.engine
+    engine = get_connection(engine_name=engine_name)
     return engine
 
-def get_tables(apps_dir, apps=None, engine=None, import_models=False, settings_file='settings.ini', local_settings_file='local_settings.ini'):
+def get_tables(apps_dir, apps=None, engine=None, import_models=False, tables=None,
+    settings_file='settings.ini', local_settings_file='local_settings.ini'):
     from uliweb.core.SimpleFrame import get_apps, get_app_dir
     from uliweb import orm
-    from sqlalchemy import create_engine
     from StringIO import StringIO
     
-    if not engine:
-        engine = get_engine(apps_dir, settings_file, local_settings_file)
-    
-    _engine = engine[:engine.find('://')+3]
+    engine = orm.engine_manager[engine]
+    e = engine.options['connection_string']
+    engine_name = e[:e.find('://')+3]
     
     buf = StringIO()
-    
-    con = create_engine(_engine, strategy='mock', executor=lambda s, p='': buf.write(str(s) + p))
-    db = orm.get_connection(con)
     
     if import_models:
         apps = get_apps(apps_dir, settings_file=settings_file, local_settings_file=local_settings_file)
@@ -62,14 +61,19 @@ def get_tables(apps_dir, apps=None, engine=None, import_models=False, settings_f
             raise
             
     if apps:
-        tables = {}
-        for tablename, m in db.metadata.tables.iteritems():
+        t = {}
+        for tablename, m in engine.metadata.tables.items():
             if hasattr(m, '__appname__') and m.__appname__ in apps:
-                tables[tablename] = db.metadata.tables[tablename]
+                t[tablename] = engine.metadata.tables[tablename]
+    elif tables:
+        t = {}
+        for tablename, m in engine.metadata.tables.items():
+            if tablename in tables:
+                t[tablename] = engine.metadata.tables[tablename]
     else:
-        tables = db.metadata.tables
+        t = engine.metadata.tables
                 
-    return tables
+    return t
 
 def dump_table(table, filename, con, std=None, delimiter=',', format=None, encoding='utf-8', inspector=None):
     from uliweb.utils.common import str_value
@@ -92,9 +96,9 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
     result = con.execute(table.select())
     fields = [x.name for x in table.c]
     if not format:
-        print >>std, '#', ' '.join(fields)
+        print >>std, '#' + ' '.join(fields)
     elif format == 'txt':
-        print >>std, '#', ','.join(fields)
+        print >>std, '#' + ','.join(fields)
     for r in result:
         if not format:
             print >>std, r
@@ -155,29 +159,35 @@ def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8
                 raise
     finally:
         f.close()
+        
+class SQLCommandMixin(object):
+    option_list = [
+        make_option('--engine', dest='engine', default='default',
+            help='Select database engine.'),
+    ]
+    has_options = True
 
-class SyncdbCommand(Command):
+class SyncdbCommand(SQLCommandMixin, Command):
     name = 'syncdb'
     help = 'Sync models with database. But all models should be defined in settings.ini.'
     
     def handle(self, options, global_options, *args):
-        from sqlalchemy import create_engine
-
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = create_engine(engine)
+        engine = get_engine(options, global_options)
         
-        for name, t in get_tables(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
-            if global_options.verbose:
-                print 'Creating %s...' % name
+        for name, t in get_tables(global_options.apps_dir, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
+            exist = engine.dialect.has_table(engine.connect(), name)
+            if not exist:
+                t.create(engine)
+            if not exist or global_options.verbose:
+                print '[%s] Creating %s...%s' % (options.engine, name, 'CREATED' if not exist else 'EXISTED')
 
-class ResetCommand(Command):
+class ResetCommand(SQLCommandMixin, Command):
     name = 'reset'
     args = '<appname, appname, ...>'
     help = 'Reset the apps models(drop and recreate). If no apps, then reset the whole database.'
     check_apps = True
     
     def handle(self, options, global_options, *args):
-        from sqlalchemy import create_engine
 
         if args:
             message = """This command will drop all tables of app [%s], are you sure to reset""" % ','.join(args)
@@ -185,23 +195,20 @@ class ResetCommand(Command):
             message = """This command will drop whole database, are you sure to reset"""
         get_answer(message)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = create_engine(engine)
+        engine = get_engine(options, global_options)
         
-        for name, t in get_tables(global_options.apps_dir, args, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
+        for name, t in get_tables(global_options.apps_dir, args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
-                print 'Resetting %s...' % name
-            t.drop(con)
-            t.create(con)
+                print '[%s] Resetting %s...' % (options.engine, name)
+            t.drop(engine)
+            t.create(engine)
 
-class ResetTableCommand(Command):
+class ResetTableCommand(SQLCommandMixin, Command):
     name = 'resettable'
     args = '<tablename, tablename, ...>'
     help = 'Reset the tables(drop and recreate). If no tables, then will do nothing.'
     
     def handle(self, options, global_options, *args):
-        from sqlalchemy import create_engine
-        from uliweb import orm
 
         if not args:
             print "Failed! You should pass one or more tables name."
@@ -210,28 +217,20 @@ class ResetTableCommand(Command):
         message = """This command will drop all tables [%s], are you sure to reset""" % ','.join(args)
         get_answer(message)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = create_engine(engine)
+        engine = get_engine(options, global_options)
         
-        for name in args:
-            m = orm.get_model(name)
-            if not m:
-                print "Error! Can't find the table %s...Skipped!" % name
-                continue
-            t = m.table
+        for name, t in get_tables(global_options.apps_dir, tables=args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
-                print 'Resetting %s...' % name
-            t.drop(con)
-            t.create(con)
+                print '[%s] Resetting %s...' % (options.engine, name)
+            t.drop(engine)
+            t.create(engine)
 
-class DropTableCommand(Command):
+class DropTableCommand(SQLCommandMixin, Command):
     name = 'droptable'
     args = '<tablename, tablename, ...>'
     help = 'Drop the tables. If no tables, then will do nothing.'
     
     def handle(self, options, global_options, *args):
-        from sqlalchemy import create_engine
-        from uliweb import orm
 
         if not args:
             print "Failed! You should pass one or more tables name."
@@ -240,20 +239,14 @@ class DropTableCommand(Command):
         message = """This command will drop all tables [%s], are you sure to drop""" % ','.join(args)
         get_answer(message)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = create_engine(engine)
+        engine = get_engine(options, global_options)
         
-        for name in args:
-            m = orm.get_model(name)
-            if not m:
-                print "Error! Can't find the table %s...Skipped!" % name
-                continue
-            t = m.table
+        for name, t in get_tables(global_options.apps_dir, tables=args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
-                print 'Dropping %s...' % name
-            t.drop(con)
+                print '[%s] Dropping %s...' % (options.engine, name)
+            t.drop(engine)
 
-class SQLCommand(Command):
+class SQLCommand(SQLCommandMixin, Command):
     name = 'sql'
     args = '<appname, appname, ...>'
     help = 'Display the table creation sql statement. If no apps, then process the whole database.'
@@ -262,11 +255,13 @@ class SQLCommand(Command):
     def handle(self, options, global_options, *args):
         from sqlalchemy.schema import CreateTable
         
-        for name, t in sorted(get_tables(global_options.apps_dir, args, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items()):
+        engine = get_engine(options, global_options)
+        
+        for name, t in sorted(get_tables(global_options.apps_dir, args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items()):
             _t = CreateTable(t)
             print _t
             
-class DumpCommand(Command):
+class DumpCommand(SQLCommandMixin, Command):
     name = 'dump'
     args = '<appname, appname, ...>'
     help = 'Dump all models records according all available tables. If no tables, then process the whole database.'
@@ -286,26 +281,29 @@ class DumpCommand(Command):
     check_apps = True
     
     def handle(self, options, global_options, *args):
-        from sqlalchemy import create_engine
         from zipfile import ZipFile
         from StringIO import StringIO
 
-        if not os.path.exists(options.output_dir):
-            os.makedirs(options.output_dir)
+        output_dir = os.path.join(options.output_dir, options.engine)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = create_engine(engine)
+        engine = get_engine(options, global_options)
         
         zipfile = None
         if options.zipfile:
             zipfile = ZipFile(options.zipfile, 'w')
             
-        inspector = Inspector.from_engine(con)
+        inspector = Inspector.from_engine(engine)
 
-        for name, t in get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
+        tables = get_tables(global_options.apps_dir, args, engine=options.engine, 
+            settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings)
+
+        for name, t in tables.items():
             if global_options.verbose:
                 print 'Dumpping %s...' % name
-            filename = os.path.join(options.output_dir, name+'.txt')
+            filename = os.path.join(output_dir, name+'.txt')
             if options.text:
                 format = 'txt'
             else:
@@ -316,7 +314,7 @@ class DumpCommand(Command):
                 filename = os.path.basename(filename)
             else:
                 fileobj = filename
-            dump_table(t, fileobj, con, delimiter=options.delimiter, 
+            dump_table(t, fileobj, engine, delimiter=options.delimiter, 
                 format=format, encoding=options.encoding, inspector=inspector)
             #write zip content
             if options.zipfile and zipfile:
@@ -324,7 +322,7 @@ class DumpCommand(Command):
         if zipfile:
             zipfile.close()
             
-class DumpTableCommand(Command):
+class DumpTableCommand(SQLCommandMixin, Command):
     name = 'dumptable'
     args = '<tablename, tablename, ...>'
     help = 'Dump all tables records according all available apps. If no apps, then will do nothing.'
@@ -341,36 +339,35 @@ class DumpTableCommand(Command):
     has_options = True
     
     def handle(self, options, global_options, *args):
-        from sqlalchemy import create_engine
-        from uliweb import orm
         
-        if not os.path.exists(options.output_dir):
-            os.makedirs(options.output_dir)
+        output_dir = os.path.join(options.output_dir, options.engine)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = create_engine(engine)
+        engine = get_engine(options, global_options)
 
         if not args:
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
             
-        inspector = Inspector.from_engine(con)
+        inspector = Inspector.from_engine(engine)
+        
+        tables = get_tables(global_options.apps_dir, tables=args,
+            engine=options.engine, settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings)
 
-        tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
-        for name in args:
-            if name in tables:
-                t = tables[name]
-                if global_options.verbose:
-                    print 'Dumpping %s...' % name
-                filename = os.path.join(options.output_dir, name+'.txt')
-                if options.text:
-                    format = 'txt'
-                else:
-                    format = None
-                dump_table(t, filename, con, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding, inspector=inspector)
+        for tablename, t in tables.items():
+            if global_options.verbose:
+                print '[%s] Dumpping %s...' % (options.engine, tablename)
+            filename = os.path.join(output_dir, tablename+'.txt')
+            if options.text:
+                format = 'txt'
+            else:
+                format = None
+            dump_table(t, filename, engine, delimiter=options.delimiter, 
+                format=format, encoding=options.encoding, inspector=inspector)
 
-class DumpTableFileCommand(Command):
+class DumpTableFileCommand(SQLCommandMixin, Command):
     name = 'dumptablefile'
     args = 'tablename text_filename'
     help = 'Dump the table records to a text file. '
@@ -385,31 +382,30 @@ class DumpTableFileCommand(Command):
     has_options = True
     
     def handle(self, options, global_options, *args):
-        from sqlalchemy import create_engine
-        from uliweb import orm
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = create_engine(engine)
+        engine = get_engine(options, global_options)
 
         if len(args) != 2:
             print self.print_help(self.prog_name, 'dumptablefile')
             sys.exit(1)
             
-        inspector = Inspector.from_engine(con)
+        inspector = Inspector.from_engine(engine)
 
         name = args[0]
-        tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, tables=[name],
+            engine=options.engine, settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings)
         t = tables[name]
         if global_options.verbose:
-            print 'Dumpping %s...' % name
+            print '[%s] Dumpping %s...' % (options.engine, name)
         if options.text:
             format = 'txt'
         else:
             format = None
-        dump_table(t, args[1], con, delimiter=options.delimiter, 
+        dump_table(t, args[1], engine, delimiter=options.delimiter, 
             format=format, encoding=options.encoding, inspector=inspector)
 
-class LoadCommand(Command):
+class LoadCommand(SQLCommandMixin, Command):
     name = 'load'
     args = '<appname, appname, ...>'
     help = 'Load all models records according all available apps. If no apps, then process the whole database.'
@@ -430,38 +426,41 @@ class LoadCommand(Command):
         from uliweb import orm
         
         if args:
-            message = """This command will delete all data of [%s] before loading, 
-are you sure to load data""" % ','.join(args)
+            message = """This command will delete all data of [%s]-[%s] before loading, 
+are you sure to load data""" % (options.engine, ','.join(args))
         else:
-            message = """This command will delete whole database before loading, 
-are you sure to load data"""
+            message = """This command will delete whole database [%s] before loading, 
+are you sure to load data""" % options.engine
 
         get_answer(message)
 
-        if not os.path.exists(options.dir):
-            os.makedirs(options.dir)
+        path = os.path.join(options.dir, options.engine)
+        if not os.path.exists(path):
+            os.makedirs(path)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = orm.get_connection(engine)
+        engine = get_engine(options, global_options)
 
-        for name, t in get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
+        tables = get_tables(global_options.apps_dir, args, engine=options.engine, 
+            settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings)
+        for name, t in tables.items():
             if global_options.verbose:
-                print 'Loading %s...' % name
+                print '[%s] Loading %s...' % (options.engine, name)
             try:
-                con.begin()
-                filename = os.path.join(options.dir, name+'.txt')
+                orm.Begin()
+                filename = os.path.join(path, name+'.txt')
                 if options.text:
                     format = 'txt'
                 else:
                     format = None
-                load_table(t, filename, con, delimiter=options.delimiter, 
+                load_table(t, filename, engine, delimiter=options.delimiter, 
                     format=format, encoding=options.encoding)
-                con.commit()
+                orm.Commit()
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
-                con.rollback()
+                orm.Rollback()
 
-class LoadTableCommand(Command):
+class LoadTableCommand(SQLCommandMixin, Command):
     name = 'loadtable'
     args = '<tablename, tablename, ...>'
     help = 'Load all tables records according all available tables. If no tables, then will do nothing.'
@@ -481,41 +480,41 @@ class LoadTableCommand(Command):
         from uliweb import orm
         
         if args:
-            message = """This command will delete all data of [%s] before loading, 
-are you sure to load data""" % ','.join(args)
+            message = """This command will delete all data of [%s]-[%s] before loading, 
+are you sure to load data""" % (options.engine, ','.join(args))
         else:
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
         ans = get_answer(message, answers='Yn', quit='q')
 
-        if not os.path.exists(options.dir):
-            os.makedirs(options.dir)
+        path = os.path.join(options.dir, options.engine)
+        if not os.path.exists(path):
+            os.makedirs(path)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = orm.get_connection(engine)
+        engine = get_engine(options, global_options)
 
-        tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
-        for name in args:
-            if name in tables:
-                t = tables[name]
-                if global_options.verbose:
-                    print 'Loading %s...' % name
-                try:
-                    con.begin()
-                    filename = os.path.join(options.dir, name+'.txt')
-                    if options.text:
-                        format = 'txt'
-                    else:
-                        format = None
-                    load_table(t, filename, con, delimiter=options.delimiter, 
-                        format=format, encoding=options.encoding, delete=ans=='Y')
-                    con.commit()
-                except:
-                    log.exception("There are something wrong when loading table [%s]" % name)
-                    con.rollback()
+        tables = get_tables(global_options.apps_dir, engine=options.engine, 
+            settings_file=global_options.settings, tables=args,
+            local_settings_file=global_options.local_settings)
+        for name, t in tables.items():
+            if global_options.verbose:
+                print '[%s] Loading %s...' % (options.engine, name)
+            try:
+                orm.Begin()
+                filename = os.path.join(path, name+'.txt')
+                if options.text:
+                    format = 'txt'
+                else:
+                    format = None
+                load_table(t, filename, engine, delimiter=options.delimiter, 
+                    format=format, encoding=options.encoding, delete=ans=='Y')
+                orm.Commit()
+            except:
+                log.exception("There are something wrong when loading table [%s]" % name)
+                orm.Rollback()
 
-class LoadTableFileCommand(Command):
+class LoadTableFileCommand(SQLCommandMixin, Command):
     name = 'loadtablefile'
     args = 'tablename text_filename'
     help = 'Load table data from text file. If no tables, then will do nothing.'
@@ -537,52 +536,51 @@ class LoadTableFileCommand(Command):
             sys.exit(1)
             
         if args:
-            message = """Do you want to delete all data of [%s] before loading, if you choose N, the data will not be deleted""" % args[0]
+            message = """Do you want to delete all data of [%s]-[%s] before loading, if you choose N, the data will not be deleted""" % (options.engine, args[0])
         else:
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
         ans = get_answer(message, answers='Yn', quit='q')
 
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = orm.get_connection(engine)
+        engine = get_engine(options, global_options)
 
         name = args[0]
-        tables = get_tables(global_options.apps_dir, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, engine=options.engine, 
+            settings_file=global_options.settings, tables=[name],
+            local_settings_file=global_options.local_settings)
         t = tables[name]
         if global_options.verbose:
-            print 'Loading %s...' % name
+            print '[%s] Loading %s...' % (options.engine, name)
         try:
-            con.begin()
+            orm.Begin()
             if options.text:
                 format = 'txt'
             else:
                 format = None
-            load_table(t, args[1], con, delimiter=options.delimiter, 
+            load_table(t, args[1], engine, delimiter=options.delimiter, 
                 format=format, encoding=options.encoding, delete=ans=='Y')
-            con.commit()
+            orm.Commit()
         except:
             log.exception("There are something wrong when loading table [%s]" % name)
-            con.rollback()
+            orm.Rollback()
 
-class DbinitCommand(Command):
+class DbinitCommand(SQLCommandMixin, Command):
     name = 'dbinit'
     args = '<appname, appname, ...>'
     help = "Initialize database, it'll run the code in dbinit.py of each app. If no apps, then process the whole database."
     check_apps = True
 
     def handle(self, options, global_options, *args):
-        from uliweb.core.SimpleFrame import get_app_dir, Dispatcher
+        from uliweb.core.SimpleFrame import get_app_dir
         from uliweb import orm
 
-        app = Dispatcher(project_dir=global_options.project, start=False)
+        engine = get_engine(options, global_options)
 
         if not args:
             apps_list = self.get_apps(global_options)
         else:
             apps_list = args
-        
-        con = orm.get_connection()
         
         for p in apps_list:
             if not is_pyfile_exist(get_app_dir(p), 'dbinit'):
@@ -590,57 +588,53 @@ class DbinitCommand(Command):
             m = '%s.dbinit' % p
             try:
                 if global_options.verbose:
-                    print "Processing %s..." % m
-                con.begin()
+                    print "[%s] Processing %s..." % (options.engine, m)
+                orm.Begin()
                 mod = __import__(m, fromlist=['*'])
-                con.commit()
+                orm.Commit()
             except ImportError:
-                con.rollback()
+                orm.Rollback()
                 log.exception("There are something wrong when importing module [%s]" % m)
 
-class SqldotCommand(Command):
+class SqldotCommand(SQLCommandMixin, Command):
     name = 'sqldot'
     args = '<appname, appname, ...>'
     help = "Create graphviz dot file. If no apps, then process the whole database."
     check_apps = True
     
     def handle(self, options, global_options, *args):
-        from uliweb.core.SimpleFrame import Dispatcher
         from graph import generate_dot
 
-        app = Dispatcher(project_dir=global_options.project, start=False)
+        engine = get_engine(options, global_options)
+
         if args:
             apps = args
         else:
             apps = self.get_apps(global_options)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        
-        tables = get_tables(global_options.apps_dir, None, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, apps, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         print generate_dot(tables, apps)
         
-class SqlHtmlCommand(Command):
+class SqlHtmlCommand(SQLCommandMixin, Command):
     name = 'sqlhtml'
     args = '<appname, appname, ...>'
     help = "Create database documentation in HTML format. If no apps, then process the whole database."
     check_apps = True
     
     def handle(self, options, global_options, *args):
-        from uliweb.core.SimpleFrame import Dispatcher
         from gendoc import generate_html
     
-        app = Dispatcher(project_dir=global_options.project, start=False)
+        engine = get_engine(options, global_options)
+        
         if args:
             apps = args
         else:
             apps = self.get_apps(global_options)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        
-        tables = get_tables(global_options.apps_dir, apps, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
         print generate_html(tables, apps)
     
-class ValidatedbCommand(Command):
+class ValidatedbCommand(SQLCommandMixin, Command):
     name = 'validatedb'
     args = '<appname, appname, ...>'
     help = "Validate database or apps, check if the table structure is matched with source code."
@@ -652,33 +646,34 @@ class ValidatedbCommand(Command):
     has_options = True
     
     def handle(self, options, global_options, *args):
-        from uliweb.core.SimpleFrame import Dispatcher
-        from gendoc import generate_html
-        from sqlalchemy import create_engine
         
-        app = Dispatcher(project_dir=global_options.project, start=False)
+        engine = get_engine(options, global_options)
+
         if args:
             apps = args
         else:
             apps = self.get_apps(global_options)
         
-        engine = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
-        con = create_engine(engine)
+        tables = get_tables(global_options.apps_dir, apps, engine=options.engine, 
+            settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings)
         
-        tables = get_tables(global_options.apps_dir, apps, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
-        
-        for name, t in get_tables(global_options.apps_dir, args, engine=engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
-            try:
-                result = list(con.execute(t.select().limit(1)))
-                flag = 'ok'
-            except Exception as e:
-                if options.traceback:
-                    import traceback
-                    traceback.print_exc()
-                flag = 'fail'
+        for name, t in tables.items():
+            exist = engine.dialect.has_table(engine.connect(), name)
+            if not exist:
+                flag = 'NOT EXISTED'
+            else:
+                try:
+                    result = list(engine.execute(t.select().limit(1)))
+                    flag = 'OK'
+                except Exception as e:
+                    if options.traceback:
+                        import traceback
+                        traceback.print_exc()
+                    flag = 'FAILED'
                 
-            if global_options.verbose or flag=='fail':
-                print 'Validating %s...%s' % (name, flag)
+            if global_options.verbose or flag!='OK':
+                print 'Validating [%s] %s...%s' % (options.engine, name, flag)
 
 class InitAlembicCommand(Command):
     name = 'init_alembic'
@@ -691,9 +686,35 @@ class InitAlembicCommand(Command):
         from uliweb.core.template import template_file
         
         extract_dirs('uliweb.contrib.orm', 'templates/alembic', '.', verbose=global_options.verbose, replace=False)
-        engine_string = get_engine(global_options.apps_dir, global_options.settings, global_options.local_settings)
+        engine_string = get_engine(options, global_options)
         ini_file = os.path.join(pkg.resource_filename('uliweb.contrib.orm', 'templates/alembic/alembic.ini'))
         text = template_file(ini_file, {'CONNECTION':engine_string})
         with open(os.path.join(global_options.project, 'alembic.ini'), 'w') as f:
             f.write(text)
-            
+      
+def get_commands(mod):
+    import types
+    
+    commands = {}
+    
+    def check(c):
+        return ((isinstance(c, types.ClassType) or isinstance(c, types.TypeType)) and 
+            issubclass(c, Command) and c is not Command and c is not CommandManager)
+    
+    for name in dir(mod):
+        c = getattr(mod, name)
+        if check(c):
+            commands[c.name] = c
+        
+    return commands
+
+class AlembicCommand(SQLCommandMixin, CommandManager):
+    name = 'alembic'
+    args = 'alembic_commands'
+    check_apps_dirs = True
+
+    def get_commands(self, global_options):
+        import subcommands
+        cmds = get_commands(subcommands)
+        return cmds
+    

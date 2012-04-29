@@ -76,7 +76,12 @@ def extract_file(module, path, dist, verbose=False, replace=True):
     import shutil
 
     inf = pkg.resource_filename(module, path)
-    f = os.path.exists(dist)
+    sfile = os.path.basename(inf)
+    if os.path.isdir(dist):
+        dfile = os.path.join(dist, sfile)
+    else:
+        dfile = dist
+    f = os.path.exists(dfile)
     if replace or not f:
         shutil.copy2(inf, dist)
         if verbose:

@@ -49,8 +49,18 @@ def get_answer(message, answers='Yn', default='Y', quit='n'):
         print "Command be cancelled!"
         sys.exit(1)
     return ans
+
+class CommandMetaclass(type):
+    def __init__(cls, name, bases, dct):
+        option_list = list(dct.get('option_list', []))
+        for c in bases:
+            if hasattr(c, 'option_list') and isinstance(c.option_list, list):
+                option_list.extend(c.option_list)
+        cls.option_list = option_list
         
 class Command(object):
+    __metaclass__ = CommandMetaclass
+    
     option_list = ()
     help = ''
     args = ''
@@ -184,32 +194,16 @@ class NewOptionParser(OptionParser):
                     if '=' in arg:
                         del rargs[0]
                 largs.append(arg)
+                
+class CommandManager(Command):
+    usage_info = "%prog [global_options] [subcommand [options] [args]]"
     
-class ApplicationCommandManager(Command):
-    option_list = (
-        make_option('--help', action='store_true', dest='help',
-            help='show this help message and exit.'),
-        make_option('-v', '--verbose', action='store_true', 
-            help='Output the result in verbose mode.'),
-        make_option('-s', '--settings', dest='settings', default='settings.ini',
-            help='Settings file name. Default is "settings.ini".'),
-        make_option('-L', '--local_settings', dest='local_settings', default='local_settings.ini',
-            help='Local settings file name. Default is "local_settings.ini".'),
-        make_option('--project', default='.', dest='project',
-            help='Your project directory, default is current directory.'),
-        make_option('--pythonpath', default='',
-            help='A directory to add to the Python path, e.g. "/home/myproject".'),
-#        make_option('--include-apps', default=[], dest='include_apps',
-#            help='Including extend apps when execute the command.'),
-    )
-    help = ''
-    args = ''
-    
-    def __init__(self, argv=None, commands=None, prog_name=None):
-        self.argv = argv or sys.argv[:]
+    def __init__(self, argv=None, commands=None, prog_name=None, global_options=None):
+        self.argv = argv
         self.prog_name = prog_name or os.path.basename(self.argv[0])
         self.commands = commands
-
+        self.global_options = global_options
+    
     def get_commands(self, global_options):
         if callable(self.commands):
             commands = self.commands(global_options)
@@ -253,40 +247,76 @@ class ApplicationCommandManager(Command):
         # These options could affect the commands that are available, so they
         # must be processed early.
         parser = NewOptionParser(prog=self.prog_name,
-                             usage="%prog [global_options] [subcommand [options] [args]]",
+                             usage=self.usage_info,
                              version=self.get_version(),
                              formatter = NewFormatter(),
                              add_help_option = False,
                              option_list=self.option_list)
         
-        global_options, args = parser.parse_args(self.argv)
-        global_options.apps_dir = os.path.normpath(os.path.join(global_options.project, 'apps'))
-        handle_default_options(global_options)
-
+        if not self.global_options:
+            global_options, args = parser.parse_args(self.argv)
+            global_options.apps_dir = os.path.normpath(os.path.join(global_options.project, 'apps'))
+            handle_default_options(global_options)
+            args = args[1:]
+        else:
+            global_options = self.global_options
+            args = self.argv
+    
         def print_help(global_options):
             parser.print_help()
             sys.stderr.write(self.print_help_info(global_options) + '\n')
             sys.exit(1)
             
-        if len(self.argv) == 1:
+        if len(args) == 0:
             print_help(global_options)
     
         try:
-            subcommand = args[1]
+            subcommand = args[0]
         except IndexError:
             subcommand = 'help' # Display help if no arguments were given.
     
         if subcommand == 'help':
-            if len(args) > 2:
-                self.fetch_command(global_options, args[2])().print_help(self.prog_name, args[2])
+            if len(args) > 1:
+                command = self.fetch_command(global_options, args[1])
+                if issubclass(command, CommandManager):
+                    cmd = command(['help'], None, '%s %s' % (self.prog_name, args[1]), global_options=global_options)
+                    cmd.execute()
+                else:
+                    command().print_help(self.prog_name, args[1])
                 sys.exit(1)
             else:
                 print_help(global_options)
         if global_options.help:
             print_help(global_options)
         else:
-            self.fetch_command(global_options, subcommand)().run_from_argv(self.prog_name, subcommand, global_options, args[2:])
-
+            command = self.fetch_command(global_options, subcommand)
+            if issubclass(command, CommandManager):
+                cmd = command(args[1:], None, '%s %s' % (self.prog_name, subcommand), global_options=global_options)
+                cmd.execute()
+            else:
+                cmd = command()
+                cmd.run_from_argv(self.prog_name, subcommand, global_options, args[1:])
+    
+class ApplicationCommandManager(CommandManager):
+    option_list = (
+        make_option('--help', action='store_true', dest='help',
+            help='show this help message and exit.'),
+        make_option('-v', '--verbose', action='store_true', 
+            help='Output the result in verbose mode.'),
+        make_option('-s', '--settings', dest='settings', default='settings.ini',
+            help='Settings file name. Default is "settings.ini".'),
+        make_option('-L', '--local_settings', dest='local_settings', default='local_settings.ini',
+            help='Local settings file name. Default is "local_settings.ini".'),
+        make_option('--project', default='.', dest='project',
+            help='Your project directory, default is current directory.'),
+        make_option('--pythonpath', default='',
+            help='A directory to add to the Python path, e.g. "/home/myproject".'),
+#        make_option('--include-apps', default=[], dest='include_apps',
+#            help='Including extend apps when execute the command.'),
+    )
+    help = ''
+    args = ''
+    
 def execute_command_line(argv=None, commands=None, prog_name=None):
     m = ApplicationCommandManager(argv, commands, prog_name)
     m.execute()

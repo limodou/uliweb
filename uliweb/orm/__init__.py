@@ -5,8 +5,9 @@
 #   2010.4.1 Add get() support to Result and ManyResult
 
 
-__all__ = ['Field', 'get_connection', 'Model', 'create_all', 'get_metadata',
-    'set_debug_query', 'set_auto_create', 'set_auto_set_model', 'set_connection', 'get_model', 'set_model',
+__all__ = ['Field', 'get_connection', 'Model', 'do_',
+    'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
+    'get_model', 'set_model', 'engine_manager',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'PICKLE', 
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
@@ -19,12 +20,20 @@ __all__ = ['Field', 'get_connection', 'Model', 'create_all', 'get_metadata',
     'ModelInstanceError', 'KindError', 'ConfigurationError',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback']
 
-__default_connection__ = None  #global connection instance
 __auto_create__ = False
 __auto_set_model__ = True
 __debug_query__ = None
 __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
+__models__ = {}
+
+debug = False
+
+def d_(*args):
+    if debug:
+        for x in args:
+            print x,
+        print
 
 import decimal
 import threading
@@ -32,15 +41,14 @@ import datetime
 from uliweb.utils import date
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement
-from sqlalchemy.sql import exists as _exists
+from sqlalchemy.pool import NullPool
 from uliweb.core import dispatch
 import threading
 
 Local = threading.local()
 Local.dispatch_send = True
-Local.conn = None
-
-_default_metadata = MetaData()
+Local.conn = {}
+Local.trans = {}
 
 class Error(Exception):pass
 class NotFound(Error):
@@ -88,120 +96,242 @@ def get_dispatch_send(default=True):
         Local.dispatch_send = default
     return Local.dispatch_send
 
-def get_connection(connection='', metadata=_default_metadata, default=True, debug=None, **args):
+class Transaction(object):
+    def __init__(self, connection):
+        self.connection = connection
+        self.trans = connection.begin()
+        
+    def do_(self, query):
+        return self.connection.execute(query)
+
+    def __enter__(self):
+        return self.do_
+    
+    def __exit__(self, type, value, tb):
+        if self.trans:
+            if type:
+                self.trans.rollback()
+            else:
+                self.trans.commit()
+
+class Connection(object):
+    def __init__(self, engine):
+        self.engine = engine
+        self.connection = engine.engine.connect()
+            
+    def do_(self, query):
+        return self.connection.execute(query)
+    
+    def begin(self):
+        return Transaction(self.connection)
+        
+    def __enter__(self):
+        return self.do_
+    
+    def __exit__(self, type, value, tb):
+        self.connection.close()
+
+class NamedEngine(object):
+    def __init__(self, name, options):
+        self.name = name
+        
+        d = SQLStorage({
+            'engine_name':name,
+            'connection_args':{},
+            'debug_log':None,
+            'connection_type':'long',
+            })
+        d.update(options)
+        if d.get('debug_log', None) is None:
+            d['debug_log'] = __debug_query__
+        if d.get('connection_type') == 'short':
+            d['connection_args']['poolclass'] = NullPool
+
+        self.options = d
+        self.engine_instance = None
+        self.metadata = MetaData()
+        self.models = {}
+        self.connection = None
+        
+        self.create()
+        
+    def create(self, new=False):
+        c = self.options
+        
+        db = self.engine_instance
+        if not self.engine_instance or new:
+            args = c.get('connection_args', {})
+            self.engine_instance = create_engine(c.get('connection_string'), **args)
+        self.engine_instance.echo = c['debug_log']
+        self.engine_instance.metadata = self.metadata
+        self.metadata.bind = self.engine_instance
+            
+        self.create_all()
+        return self.engine_instance
+        
+    def create_all(self):
+        for cls in self.models.values():
+            if not cls['created'] and cls['model']:
+                cls['model'].bind(self.metadata, auto_create=__auto_create__)
+                cls['created'] = True
+                
+#    def reuse_connection(self):
+#        if self.connection and not self.connection.connection.closed:
+#            return self.connection
+#        else:
+#            self.connection = Connection(self)
+#            return self.connection
+#        
+    def get_connection(self):
+        return Connection(self)
+    
+    @property
+    def engine(self):
+        return self.engine_instance
+    
+class EngineManager(object):
+    def __init__(self):
+        self.engines = {}
+        
+    def add(self, name, connection):
+        self.engines[name] = engine = NamedEngine(name, connection)
+        return engine
+        
+    def get(self, name=None):
+        name = name or 'default'
+        
+        engine = self.engines.get(name)
+        if not engine:
+            raise Error('Engine %s is not exists yet' % name)
+        return engine
+    
+    def __getitem__(self, name=None):
+        return self.get(name)
+    
+    def __setitem__(self, name, connection):
+        return self.add(name, connection)
+    
+    def __contains__(self, name):
+        return name in self.engines
+    
+engine_manager = EngineManager()
+
+def get_connection(connection='', default=True, 
+    debug=None, engine_name=None, connection_type='long', **args):
     """
     default encoding is utf-8
     """
-    global __default_connection__
-  
-    debug = debug or __debug_query__
-    
-    if default and __default_connection__:
-        return __default_connection__
-    
-    if 'strategy' not in args:
-        args['strategy'] = 'threadlocal'
-        
-    if isinstance(connection, (str, unicode)):
-        db = create_engine(connection, **args)
+    d = {
+        'connection_string':connection,
+        'debug_log':debug, 
+        'connection_args':args,
+        'connection_type':connection_type,
+        }
+    if connection:
+        #will create new connection
+        if default:
+            engine_name = engine_name or 'default'
+            engine = engine_manager.add(engine_name, d).engine
+            reset_local_connection(engine_name)
+        else:
+            engine = NamedEngine('', d).engine
+        return engine
     else:
-        db = connection
+        engine_name = engine_name or 'default'
+        if engine_name in engine_manager:
+            return engine_manager[engine_name].engine
+        else:
+            raise Error("Can't find engine %s" % engine_name)
         
-    if default:
-        __default_connection__ = db
-        
-    if debug:
-        db.echo = debug
-        
-    if not metadata:
-        metadata = MetaData(db)
-    else:
-        metadata.bind = db
-        
-    db.metadata = metadata
-    create_all(db)
-    return db
-
-def get_metadata():
+def get_metadata(engine_name=None):
     """
-    get metadata according to __models__
+    get metadata according used for alembic
+    It'll import all tables
     """
-    for tablename, m in __models__.items():
-        get_model(tablename)
-
-def set_connection(db, default=True, debug=False):
-    global __default_connection__
-
-    if default:
-        __default_connection__ = db
-    if debug:
-        db.echo = debug
-    metadata = MetaData(db)
-    db.metadata = metadata
+    engine = engine_manager[engine_name]
     
-def do_(query):
+    for tablename, m in engine.models.items():
+        if not m['model']:
+            get_model(tablename, engine_name)
+    return engine.metadata
+
+def local_conection(ec):
+    """
+    :param: ec - engine_name or connection
+    """
+    ec = ec or 'default'
+    if isinstance(ec, (str, unicode)):
+        if hasattr(Local, 'conn') and Local.conn.get(ec):
+            conn = Local.conn[ec]
+        else:
+            engine = engine_manager[ec]
+            conn = engine.get_connection().connection
+            if not hasattr(Local, 'conn'):
+                Local.conn = {}
+            Local.conn[ec] = conn
+    else:
+        conn = ec
+    return conn
+    
+def reset_local_connection(ec):
+    """
+    """
+    if hasattr(Local, 'conn') and Local.conn.get(ec):
+        conn = Local.conn[ec]
+        conn.close()
+        Local.conn[ec] = None
+    
+def do_(query, ec=None):
     """
     Execute a query
     """
-    if hasattr(Local, 'conn') and Local.conn:
-        conn = Local.conn
-    else:
-        conn = get_connection()
+    conn = local_conection(ec)
+    d_('do_', conn, id(conn), query)
     return conn.execute(query)
     
-def Begin(db=None, create=False):
-    if hasattr(Local, 'trans') and Local.trans:
-        return
-    if not db:
-        db = get_connection()
-    if create:
-        Local.conn = conn = db.connect()
-        Local.trans = conn.begin()
+def Begin(ec=None):
+    ec = ec or 'default'
+    if isinstance(ec, (str, unicode)):
+        conn = local_conection(ec)
+        if not hasattr(Local, 'trans'):
+            Local.trans = {}
+        Local.trans[ec] = conn.begin()
+        return Local.trans[ec]
     else:
-        db.begin()
+        return ec.begin()
     
-def Commit(db=None, close=False):
-    """
-    Before using this function, you should called Begin first.
-    """
-    if hasattr(Local, 'trans') and Local.trans:
-        try:
-            Local.trans.commit()
-        finally:
-            Local.trans = None
-            if close:
-                Local.conn.close()
-                Local.conn = None
+def Commit(close=False, ec=None, trans=None):
+    ec = ec or 'default'
+    if isinstance(ec, (str, unicode)):
+        if hasattr(Local, 'trans') and Local.trans.get(ec):
+            try:
+                Local.trans[ec].commit()
+            finally:
+                Local.trans[ec] = None
+                if close:
+                    Local.conn[ec].close()
+                    Local.conn[ec] = None
     else:
-        if not db:
-            db = get_connection()
-        conn = db.contextual_connect()
-        if conn.in_transaction():
-            db.commit()
+        trans.commit()
         if close:
-            conn.close()
+            ec.close()
 
-def Rollback(db=None, close=False):
-    """
-    Before using this function, you should called Begin first.
-    """
-    if hasattr(Local, 'trans') and Local.trans:
-        try:
-            Local.trans.rollback()
-        finally:
-            Local.trans = None
-            if close:
-                Local.conn.close()
-                Local.conn = None
-    else:
-        if not db:
-            db = get_connection()
-        conn = db.contextual_connect()
-        if conn.in_transaction():
-            db.rollback()
-        if close:
-            conn.close()
+def Rollback(close=False, ec=None, trans=None):
+    ec = ec or 'default'
     
+    if isinstance(ec, (str, unicode)):
+        if hasattr(Local, 'trans') and Local.trans.get(ec):
+            try:
+                Local.trans[ec].rollback()
+            finally:
+                Local.trans[ec] = None
+                if close:
+                    Local.conn[ec].close()
+                    Local.conn[ec] = None
+    else:
+        trans.rollback()
+        if close:
+            ec.close()
             
 class SQLStorage(dict):
     """
@@ -220,24 +350,27 @@ def check_reserved_word(f):
             "Cannot define property using reserved word '%s'. " % f
             )
 
-__models__ = {}
-
-def create_all(db=None):
-    global __models__
-    for cls in __models__.values():
-        if not cls['created'] and cls['model']:
-            cls['model'].bind(db.metadata, auto_create=__auto_create__)
-            cls['created'] = True
+#def create_all(db=None, engine_name=None):
+#    engine = engine_manager.get_engine(engine_name)
+#    for cls in engine.options['__models__'].values():
+#        if not cls['created'] and cls['model']:
+#            cls['model'].bind(engine.options['metadata'], auto_create=__auto_create__)
+#            cls['created'] = True
         
-def set_model(model, tablename=None, created=None):
+def set_model(model, tablename=None, created=None, engine_name=None):
     """
     Register an model and tablename to a global variable.
     model could be a string format, i.e., 'uliweb.contrib.auth.models.User'
+    
+    item structure
+        created
+        model
+        model_name
+        appname
     """
-    global __models__
     if isinstance(model, type) and issubclass(model, Model):
         tablename = model.tablename
-    item = __models__.setdefault(tablename, {})
+    item = {}
     if created is not None:
         item['created'] = created
     else:
@@ -248,26 +381,63 @@ def set_model(model, tablename=None, created=None):
         #for example 'uliweb.contrib.auth.models.User'
         model = None
     else:
-        model_name = ''
         appname = model.__module__.rsplit('.', 1)[0]
+        model_name = model.__module__ + '.' + model.__name__
         #for example 'uliweb.contrib.auth.models'
         
     item['model'] = model
     item['model_name'] = model_name
     item['appname'] = appname
     
-def get_model(model):
+    engine_name = engine_name or 'default'
+    if not isinstance(engine_name, (tuple, list)):
+        engine_name = [engine_name]
+    for c in engine_name:
+        engine_manager[c].models[tablename] = item
+    
+    #set global __models__
+    d = __models__.setdefault(tablename, {})
+    d['model_name'] = model_name
+    d['engine_name'] = engine_name
+    
+def valid_model(model, engine_name=None):
+    if isinstance(model, type) and issubclass(model, Model):
+        return True
+    engine = engine_manager[engine_name]
+    return model in engine.models
+
+def check_model(model):
+    """
+    :param model: Model instance
+    Model.__engine_name__ could be a list, so if there are multiple then use
+    the first one
+    """
+    tablename = model.tablename
+    name = model.__name__
+    appname = model.__module__
+    model_name = appname + '.' + name
+    return (tablename not in __models__) or (__models__.get(tablename, {}).get('model_name') == model_name)
+
+def find_metadata(model):
+    """
+    :param model: Model instance
+    """
+    engine_name = model.get_engine_name()
+    engine = engine_manager[engine_name]
+    return engine.metadata
+    
+def get_model(model, engine_name=None):
     """
     Return a real model object, so if the model is already a Model class, then
     return it directly. If not then import it.
     """
-    global __models__
     if model is _SELF_REFERENCE:
         return model
     if isinstance(model, type) and issubclass(model, Model):
         return model
-    if model in __models__:
-        item = __models__[model]
+    engine = engine_manager[engine_name]
+    if model in engine.models:
+        item = engine.models[model]
         m = item['model']
         if isinstance(m, type)  and issubclass(m, Model):
             return m
@@ -280,12 +450,6 @@ def get_model(model):
     else:
         raise Error("Can't found the model %s" % model)
     
-def valid_model(model):
-    global __models__
-    if isinstance(model, type) and issubclass(model, Model):
-        return True
-    return model in __models__
-
 class ModelMetaclass(type):
     def __init__(cls, name, bases, dct):
         super(ModelMetaclass, cls).__init__(name, bases, dct)
@@ -337,6 +501,7 @@ class ModelMetaclass(type):
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls._fields_list = fields_list
         
+        cls._bound = False
         cls.bind(auto_create=__auto_create__)
         
 class Property(object):
@@ -1037,7 +1202,12 @@ class Result(object):
         self._group_by = None
         self.distinct_field = None
         self._values_flag = False
+        self.engine_name = model.get_engine_name()
         
+    def do_(self, query):
+        global do_
+        return do_(query, self.engine_name)
+    
     def get_column(self, model, fieldname):
         if isinstance(fieldname, (str, unicode)):
             if issubclass(model, Model):
@@ -1062,6 +1232,9 @@ class Result(object):
         
         return fields
     
+    def connect(self, engine_name):
+        self.engine_name = engine_name
+        
     def all(self):
         return self
     
@@ -1082,7 +1255,7 @@ class Result(object):
             return self.model.count(self.condition)
         else:
             sql = select([func.count(func.distinct(self.model.c.id))], self.condition)
-            return do_(sql).scalar()
+            return self.do_(sql).scalar()
 
     def filter(self, condition):
         if condition is None:
@@ -1138,9 +1311,9 @@ class Result(object):
         Execute update table set field = field+1 like statement
         """
         if self.condition is not None:
-            self.result = do_(self.model.table.update().where(self.condition).values(**kwargs))
+            self.result = self.do_(self.model.table.update().where(self.condition).values(**kwargs))
         else:
-            self.result = do_(self.model.table.update().values(**kwargs))
+            self.result = self.do_(self.model.table.update().values(**kwargs))
         return self.result
     
     def without(self, flag='default_query'):
@@ -1153,7 +1326,7 @@ class Result(object):
         #add limit support
         if limit > 0:
             query = getattr(query, 'limit')(limit)
-        self.result = do_(query)
+        self.result = self.do_(query)
         return self.result
     
     def get_query(self):
@@ -1198,6 +1371,7 @@ class Result(object):
     def __del__(self):
         if self.result:
             self.result.close()
+            self.result = None
 
     def __iter__(self):
         self.result = self.run()
@@ -1224,6 +1398,7 @@ class ReverseResult(Result):
         self._group_by = None
         self.distinct_field = None
         self._values_flag = False
+        self.engine_name = model.get_engine_name()
         
     def has(self, *objs):
         ids = get_objs_columns(objs)
@@ -1231,12 +1406,12 @@ class ReverseResult(Result):
         if not ids:
             return False
         
-        count = do_(self.model.table.count(self.condition & (self.model.table.c['id'].in_(ids)))).scalar()
+        count = self.do_(self.model.table.count(self.condition & (self.model.table.c['id'].in_(ids)))).scalar()
         return count > 0
     
     def ids(self):
         query = select([self.model.c['id']], self.condition)
-        ids = [x[0] for x in do_(query)]
+        ids = [x[0] for x in self.do_(query)]
         return ids
     
     def clear(self, *objs):
@@ -1245,9 +1420,9 @@ class ReverseResult(Result):
         """
         if objs:
             ids = get_objs_columns(objs)
-            do_(self.model.table.delete(self.condition & self.model.table.c['id'].in_(ids)))
+            self.do_(self.model.table.delete(self.condition & self.model.table.c['id'].in_(ids)))
         else:
-            do_(self.model.table.delete(self.condition))
+            self.do_(self.model.table.delete(self.condition))
     
     remove = clear
     
@@ -1278,6 +1453,7 @@ class ManyResult(Result):
         self._group_by = None
         self.distinct_field = None
         self._values_flag = False
+        self.engine_name = self.modela.get_engine_name()
         
     def get(self, condition=None):
         if not isinstance(condition, ColumnElement):
@@ -1303,13 +1479,13 @@ class ManyResult(Result):
                 else:
                     v = o
                 d = {self.fielda:self.valuea, self.fieldb:v}
-                do_(self.table.insert().values(**d))
+                self.do_(self.table.insert().values(**d))
                 modified = modified or True
         return modified
          
     def ids(self):
         query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
-        ids = [x[0] for x in do_(query)]
+        ids = [x[0] for x in self.do_(query)]
         return ids
     
     def update(self, *objs):
@@ -1325,7 +1501,7 @@ class ManyResult(Result):
                 ids.remove(v)
             else:
                 d = {self.fielda:self.valuea, self.fieldb:v}
-                do_(self.table.insert().values(**d))
+                self.do_(self.table.insert().values(**d))
                 modified = True
                 
         if ids: #if there are still ids, so delete them
@@ -1339,9 +1515,9 @@ class ManyResult(Result):
         """
         if objs:
             ids = get_objs_columns(objs, self.realfieldb)
-            do_(self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))))
+            self.do_(self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))))
         else:
-            do_(self.table.delete(self.table.c[self.fielda]==self.valuea))
+            self.do_(self.table.delete(self.table.c[self.fielda]==self.valuea))
        
     remove = clear
     
@@ -1362,7 +1538,7 @@ class ManyResult(Result):
         if not ids:
             return False
         
-        count = do_(self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids)))).scalar()
+        count = self.do_(self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids)))).scalar()
         return count > 0
         
     def values(self, *args, **kwargs):
@@ -1397,7 +1573,7 @@ class ManyResult(Result):
         query = self.get_query()
         if limit > 0:
             query = getattr(query, 'limit')(limit)
-        self.result = do_(query)
+        self.result = self.do_(query)
         return self.result
         
     def get_query(self):
@@ -1806,6 +1982,7 @@ class Model(object):
 
     __metaclass__ = ModelMetaclass
     __dispatch_enabled__ = True
+    __engine_name__ = None
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
@@ -1888,8 +2065,6 @@ class Model(object):
                     x = v.get_value_for_datastore(self)
                     #todo If need to support ManyToMany and Reference except id field?
                     if isinstance(x, Model):
-                        
-                        \
                         x = x.id
                 else:
                     x = v.get_value_for_datastore(self, cached=True)
@@ -1941,7 +2116,7 @@ class Model(object):
                             _manytomany[k] = d.pop(k)
                             old.pop(k)
                 if d:
-                    obj = do_(self.table.insert().values(**d))
+                    obj = do_(self.table.insert().values(**d), self.get_engine_name())
                     if old:
                         saved = True
                     
@@ -1973,7 +2148,7 @@ class Model(object):
                                 _manytomany[k] = d.pop(k)
                                 old.pop(k)
                     if d:
-                        do_(self.table.update(self.table.c.id == self.id).values(**d))
+                        do_(self.table.update(self.table.c.id == self.id).values(**d), self.get_engine_name())
                         if old:
                             saved = True
                     if _manytomany:
@@ -1996,7 +2171,7 @@ class Model(object):
     def delete(self):
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'pre_delete', instance=self)
-        do_(self.table.delete(self.table.c.id==self.id))
+        do_(self.table.delete(self.table.c.id==self.id), self.get_engine_name())
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'post_delete', instance=self)
         self.id = None
@@ -2008,7 +2183,7 @@ class Model(object):
             if not isinstance(v, ManyToMany):
                 t = getattr(self, k, None)
                 if isinstance(v, Reference) and t:
-                    s.append('%r:<%s...>' % (k, v.__class__.__name__))
+                    s.append('%r:<%s:%d>' % (k, v.__class__.__name__, t.id))
                 else:
                     s.append('%r:%r' % (k, t))
         return ('<%s {' % self.__class__.__name__) + ','.join(s) + '}>'
@@ -2038,11 +2213,27 @@ class Model(object):
         cls.tablename = name
         
     @classmethod
+    def get_engine_name(cls):
+        m = __models__.get(cls.tablename, {})
+        engine_name = cls.__engine_name__ or m.get('engine_name') or 'default'
+        if isinstance(engine_name, (tuple, list)):
+            engine_name = engine_name[0]
+        return engine_name
+    
+    @classmethod
+    def connect(cls, engine_name):
+        cls.__engine_name__ = engine_name
+        return cls
+    
+    @classmethod
     def bind(cls, metadata=None, auto_create=False):
         cls._lock.acquire()
         try:
-            cls.metadata = metadata or _default_metadata
-            if cls.metadata and not hasattr(cls, '_bound'):
+            #if the module if not available then skip process
+            if not check_model(cls):
+                return
+            cls.metadata = metadata or find_metadata(cls)
+            if cls.metadata and not cls._bound:
                 cols = []
                 cls.manytomany = []
                 for k, f in cls.properties.items():
@@ -2072,17 +2263,17 @@ class Model(object):
                 cls._bound = True
             if cls._bound:
                 if auto_create:
-                    #only metadata is _default_metadata and bound 
+                    #only metadata is and bound 
                     #then the table will be created
                     #otherwise the creation of tables will be via: create_all(db)
-                    if cls.metadata == _default_metadata and cls.metadata.bind:
+                    if cls.metadata.bind:
                         cls.create()
-                        set_model(cls, created=True)
+                        set_model(cls, created=True, engine_name=cls.__engine_name__)
                     else:
-                        set_model(cls)
+                        set_model(cls, engine_name=cls.__engine_name__)
                 else:
                     if __auto_set_model__:
-                        set_model(cls)
+                        set_model(cls, engine_name=cls.__engine_name__)
         finally:
             cls._lock.release()
             
@@ -2090,11 +2281,12 @@ class Model(object):
     def create(cls):
         cls._c_lock.acquire()
         try:
-            if not cls.table.exists():
-                cls.table.create(checkfirst=True)
+            engine = get_connection(engine_name=cls.get_engine_name())
+            if not cls.table.exists(engine):
+                cls.table.create(engine, checkfirst=True)
             for x in cls.manytomany:
-                if not x.exists():
-                    x.create(checkfirst=True)
+                if not x.exists(engine):
+                    x.create(engine, checkfirst=True)
         finally:
             cls._c_lock.release()
             
@@ -2146,15 +2338,14 @@ class Model(object):
     @classmethod
     def remove(cls, condition=None, **kwargs):
         if isinstance(condition, (int, long)):
-            do_(cls.table.delete(cls.c.id==condition, **kwargs))
+            condition = cls.c.id==condition
         elif isinstance(condition, (tuple, list)):
-            do_(cls.table.delete(cls.c.id.in_(condition)))
-        else:
-            do_(cls.table.delete(condition, **kwargs))
+            condition = cls.c.id.in_(condition)
+        do_(cls.table.delete(condition, **kwargs), cls.get_engine_name())
             
     @classmethod
     def count(cls, condition=None, **kwargs):
-        count = do_(cls.table.count(condition, **kwargs)).scalar()
+        count = do_(cls.table.count(condition, **kwargs), cls.get_engine_name()).scalar()
         return count
             
     @classmethod

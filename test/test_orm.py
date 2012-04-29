@@ -101,13 +101,13 @@ def test_3():
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> list(a1.test1.all())[0]
-    <Test1 {'test1':<ReferenceProperty...>,'test2':<ReferenceProperty...>,'name':u'user','id':1}>
+    <Test1 {'test1':<ReferenceProperty:1>,'test2':<ReferenceProperty:1>,'name':u'user','id':1}>
     >>> a1.test1.count()
     2
     >>> list(a2.test2.all())
-    [<Test1 {'test1':<ReferenceProperty...>,'test2':<ReferenceProperty...>,'name':u'aaaa','id':2}>]
+    [<Test1 {'test1':<ReferenceProperty:1>,'test2':<ReferenceProperty:2>,'name':u'aaaa','id':2}>]
     >>> list(a1.test1.filter(Test1.c.name=='user'))
-    [<Test1 {'test1':<ReferenceProperty...>,'test2':<ReferenceProperty...>,'name':u'user','id':1}>]
+    [<Test1 {'test1':<ReferenceProperty:1>,'test2':<ReferenceProperty:1>,'name':u'user','id':1}>]
     >>> b1.test1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.username = 'user'
@@ -141,7 +141,7 @@ def test_4():
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> list(a1.tttt.all())[0]   #here we use tttt but not test1_set
-    <Test1 {'test':<ReferenceProperty...>,'name':u'user','id':1}>
+    <Test1 {'test':<ReferenceProperty:1>,'name':u'user','id':1}>
     >>> a1.tttt.count()
     2
     >>> b3 = Test1(name='aaaa')
@@ -153,29 +153,31 @@ def test_4():
     >>> b3.save()
     True
     >>> b3
-    <Test1 {'test':<ReferenceProperty...>,'name':u'aaaa','id':3}>
+    <Test1 {'test':<ReferenceProperty:1>,'name':u'aaaa','id':3}>
     >>> Test1.get(3)
-    <Test1 {'test':<ReferenceProperty...>,'name':u'aaaa','id':3}>
+    <Test1 {'test':<ReferenceProperty:1>,'name':u'aaaa','id':3}>
     """
     
 #testing transaction
 def test_5():
     """
-    >>> db = get_connection('sqlite://')
+    >>> db = get_connection('sqlite://', strategy='threadlocal')
     >>> db.metadata.drop_all()
     >>> class Test(Model):
     ...     username = Field(unicode)
     ...     year = Field(int, default=0)
-    >>> t = db.begin()
+    >>> Begin() # doctest:+ELLIPSIS
+    <sqlalchemy.engine.base.RootTransaction object at ...>
     >>> a = Test(username='limodou').save()
     >>> b = Test(username='limodou').save()
-    >>> db.rollback()
+    >>> Rollback()
     >>> Test.count()
     0
-    >>> t = db.begin()
+    >>> Begin() # doctest:+ELLIPSIS
+    <sqlalchemy.engine.base.RootTransaction object at ...>
     >>> a = Test(username='limodou').save()
     >>> b = Test(username='limodou').save()
-    >>> db.commit()
+    >>> Commit()
     >>> Test.count()
     2
     """
@@ -200,7 +202,7 @@ def test_6():
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.test1
-    <Test1 {'test':<OneToOne...>,'name':u'user','id':1}>
+    <Test1 {'test':<OneToOne:1>,'name':u'user','id':1}>
     >>> b1.test
     <Test {'username':u'limodou1','year':0,'id':1}>
     """
@@ -208,7 +210,7 @@ def test_6():
 #test ManyToMany
 def test_7():
     """
-    >>> set_debug_query(True)
+    >>> #set_debug_query(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
     >>> class User(Model):
@@ -294,7 +296,7 @@ def test_7():
 #test SelfReference
 def test_8():
     """
-    >>> set_debug_query(True)
+    >>> #set_debug_query(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
     >>> class User(Model):
@@ -312,12 +314,12 @@ def test_8():
     >>> for i in User.all():
     ...     print repr(i)
     <User {'username':u'a','parent':None,'id':1}>
-    <User {'username':u'b','parent':<ReferenceProperty...>,'id':2}>
-    <User {'username':u'c','parent':<ReferenceProperty...>,'id':3}>
+    <User {'username':u'b','parent':<ReferenceProperty:1>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
     >>> for i in a.children.all():
     ...     print repr(i)
-    <User {'username':u'b','parent':<ReferenceProperty...>,'id':2}>
-    <User {'username':u'c','parent':<ReferenceProperty...>,'id':3}>
+    <User {'username':u'b','parent':<ReferenceProperty:1>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
     """
     
 def test_floatproperty():
@@ -404,7 +406,7 @@ def test_datetime_property():
     
 def test_to_dict():
     """
-    >>> set_debug_query(True)
+    >>> #set_debug_query(True)
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
     >>> import datetime
@@ -587,7 +589,7 @@ def test_reference_not_id():
     >>> b2.save()
     True
     >>> print repr(a1), repr(b1), repr(b2)
-    <Test {'username':u'limodou1','year':20,'id':1}> <Test1 {'test':<ReferenceProperty...>,'year':5,'name':u'user','id':1}> <Test1 {'test':<ReferenceProperty...>,'year':10,'name':u'aaaa','id':2}>
+    <Test {'username':u'limodou1','year':20,'id':1}> <Test1 {'test':<ReferenceProperty:1>,'year':5,'name':u'user','id':1}> <Test1 {'test':<ReferenceProperty:1>,'year':10,'name':u'aaaa','id':2}>
     >>> print repr(b2.test)
     <Test {'username':u'limodou1','year':20,'id':1}>
     >>> print b2._test_
@@ -597,15 +599,15 @@ def test_reference_not_id():
     >>> print a1.tttt.ids()
     [1, 2]
     >>> print list(Test1.all())
-    [<Test1 {'test':<ReferenceProperty...>,'year':5,'name':u'user','id':1}>, <Test1 {'test':<ReferenceProperty...>,'year':10,'name':u'aaaa','id':2}>]
+    [<Test1 {'test':<ReferenceProperty:1>,'year':5,'name':u'user','id':1}>, <Test1 {'test':<ReferenceProperty:1>,'year':10,'name':u'aaaa','id':2}>]
     >>> a1.tttt.clear(b2)
     >>> print list(Test1.all())
-    [<Test1 {'test':<ReferenceProperty...>,'year':5,'name':u'user','id':1}>]
+    [<Test1 {'test':<ReferenceProperty:1>,'year':5,'name':u'user','id':1}>]
     >>> b3 = Test1(name='aaaa', year=10, test='limodou1')
     >>> b3.save()
     True
     >>> print repr(b3)
-    <Test1 {'test':<ReferenceProperty...>,'year':10,'name':u'aaaa','id':2}>
+    <Test1 {'test':<ReferenceProperty:1>,'year':10,'name':u'aaaa','id':2}>
     """
 
 def test_one2one_reference_field():
@@ -627,7 +629,7 @@ def test_one2one_reference_field():
     >>> a1
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> a1.test1
-    <Test1 {'test':<OneToOne...>,'name':u'user','id':1}>
+    <Test1 {'test':<OneToOne:1>,'name':u'user','id':1}>
     >>> b1.test
     <Test {'username':u'limodou1','year':0,'id':1}>
     """
@@ -1273,20 +1275,20 @@ def test_distinct_updates():
     SELECT DISTINCT user.username, user.id 
     FROM user
     >>> print User.all().distinct('username').get_query()
-    SELECT distinct(user.username) AS "user.username", user.id 
+    SELECT distinct(user.username) AS username, user.id 
     FROM user
     >>> print list(User.all().values('username').filter(User.c.username=='user1'))
     [(u'user1',)]
     >>> print list(a.groups.all().values('name'))
     [(u'group1',), (u'group2',), (u'group3',)]
     >>> print a.groups.all().distinct('name').get_query()
-    SELECT distinct("group".name) AS "group.name", "group".id 
+    SELECT distinct("group".name) AS name, "group".id 
     FROM "group", user_group_groups 
     WHERE user_group_groups.user_id = ? AND user_group_groups.group_id = "group".id
     >>> print list(g1.user_set.all().values('username'))
     [(u'user1',), (u'user2',)]
     >>> print g1.user_set.all().distinct('username').get_query()
-    SELECT distinct(user.username) AS "user.username", user.id 
+    SELECT distinct(user.username) AS username, user.id 
     FROM user, user_group_groups 
     WHERE user_group_groups.group_id = ? AND user_group_groups.user_id = user.id
     

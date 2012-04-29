@@ -4,7 +4,7 @@ import logging
 import types
 from optparse import make_option
 import uliweb
-from uliweb.core.commands import Command
+from uliweb.core.commands import Command, CommandManager
         
 apps_dir = 'apps'
 __commands__ = {}
@@ -16,7 +16,7 @@ def get_commands(global_options):
     
     def check(c):
         return ((isinstance(c, types.ClassType) or isinstance(c, types.TypeType)) and 
-            issubclass(c, Command) and c is not Command)
+            issubclass(c, Command) and c is not Command and c is not CommandManager)
     
     def find_mod_commands(mod):
         for name in dir(mod):

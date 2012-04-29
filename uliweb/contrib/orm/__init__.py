@@ -8,13 +8,32 @@ def after_init_apps(sender):
     orm.set_auto_create(uliweb.settings.ORM.AUTO_CREATE)
     orm.set_auto_set_model(False)
     
-    if uliweb.settings.ORM.CONNECTION_TYPE == 'long':
-        orm.get_connection(uliweb.settings.ORM.CONNECTION, **uliweb.settings.ORM.CONNECTION_ARGS)
+    d = {'connection_string':uliweb.settings.ORM.CONNECTION,
+        'connection_type':uliweb.settings.ORM.CONNECTION_TYPE,
+        'debug_log':uliweb.settings.ORM.DEBUG_LOG,
+        'connection_args':uliweb.settings.ORM.CONNECTION_ARGS,
+        'strategy':uliweb.settings.ORM.STRATEGY,
+        }
+    orm.engine_manager.add('default', d)
+    
+    for name, d in uliweb.settings.ORM.CONNECTIONS.items():
+        x = {'connection_string':d.get('CONNECTION', ''),
+            'debug_log':d.get('DEBUG_LOG', None),
+            'connection_args':d.get('CONNECTION_ARGS', {}),
+            'strategy':d.get('STRATEGY', 'plain'),
+            'connection_type':d.get('CONNECTION_TYPE', 'long')
+        }
+        orm.engine_manager.add(name, x)
 
     if 'MODELS' in uliweb.settings:
-        for name, path in uliweb.settings.MODELS.items():
+        for name, model_path in uliweb.settings.MODELS.items():
+            if isinstance(model_path, (str, unicode)):
+                path = model_path
+                engine_name = 'default'
+            else:
+                path, engine_name = model_path
             for k, v in __app_alias__.iteritems():
                 if path.startswith(k):
                     path = v + path[len(k):]
                     break
-            orm.set_model(path, name)
+            orm.set_model(path, name, engine_name=engine_name)
