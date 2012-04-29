@@ -15,12 +15,6 @@ fileConfig(config.config_file_name)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from uliweb.manage import make_simple_application
-from uliweb import orm
-make_simple_application(project_dir='.')
-db = orm.get_connection()
-orm.get_metadata()
-target_metadata = db.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -52,12 +46,20 @@ def run_migrations_online():
     and associate a connection with the context.
     
     """
-    engine = engine_from_config(
-                config.get_section(config.config_ini_section), 
-                prefix='sqlalchemy.', 
-                poolclass=pool.NullPool)
+    from uliweb.manage import make_simple_application
+    from uliweb import orm, settings
 
-    connection = engine.connect()
+#    engine = engine_from_config(
+#                config.get_section(config.config_ini_section), 
+#                prefix='sqlalchemy.', 
+#                poolclass=pool.NullPool)
+
+    name = config.get_main_option("engine_name")
+    make_simple_application(project_dir='.')
+    target_metadata = orm.get_metadata(name)
+    connection = orm.get_connection(engine_name=name).connect()
+#    connection = engine.connect()
+    
     context.configure(
                 connection=connection, 
                 target_metadata=target_metadata
