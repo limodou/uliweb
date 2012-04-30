@@ -446,25 +446,30 @@ def get_model(model, engine_name=None):
     """
     Return a real model object, so if the model is already a Model class, then
     return it directly. If not then import it.
+
+    if engine_name is None, then it'll find other engine_name according __models__
     """
     if model is _SELF_REFERENCE:
         return model
     if isinstance(model, type) and issubclass(model, Model):
         return model
-    engine = engine_manager[engine_name]
-    if model in engine.models:
-        item = engine.models[model]
-        m = item['model']
-        if isinstance(m, type)  and issubclass(m, Model):
-            return m
-        else:
-            m, name = item['model_name'].rsplit('.', 1)
-            mod = __import__(m, fromlist=['*'])
-            model = getattr(mod, name)
-            item['model'] = model
-            return model
-    else:
-        raise Error("Can't found the model %s" % model)
+    if model in __models__:
+        engines = __models__[model]['engine_name']
+        if engine_name is None and len(engines) == 1:
+            engine_name = engines[0]
+        engine = engine_manager[engine_name]
+        if model in engine.models:
+            item = engine.models[model]
+            m = item['model']
+            if isinstance(m, type)  and issubclass(m, Model):
+                return m
+            else:
+                m, name = item['model_name'].rsplit('.', 1)
+                mod = __import__(m, fromlist=['*'])
+                model = getattr(mod, name)
+                item['model'] = model
+                return model
+    raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
 class ModelMetaclass(type):
     def __init__(cls, name, bases, dct):
