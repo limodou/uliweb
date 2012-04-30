@@ -7,6 +7,7 @@ def after_init_apps(sender):
     orm.set_debug_query(uliweb.settings.ORM.DEBUG_LOG)
     orm.set_auto_create(uliweb.settings.ORM.AUTO_CREATE)
     orm.set_auto_set_model(False)
+    orm.set_auto_dotransaction(uliweb.settings.ORM.AUTO_DOTRANSACTION)
     
     d = {'connection_string':uliweb.settings.ORM.CONNECTION,
         'connection_type':uliweb.settings.ORM.CONNECTION_TYPE,

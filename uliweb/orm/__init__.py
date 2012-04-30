@@ -7,7 +7,7 @@
 
 __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
-    'get_model', 'set_model', 'engine_manager',
+    'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'PICKLE', 
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
@@ -23,6 +23,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
 
 __auto_create__ = False
 __auto_set_model__ = True
+__auto_dotransaction__ = False
 __debug_query__ = None
 __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
@@ -79,6 +80,10 @@ def set_auto_create(flag):
     global __auto_create__
     __auto_create__ = flag
     
+def set_auto_dotransaction(flag):
+    global __auto_dotransaction__
+    __auto_dotransaction__ = flag
+
 def set_auto_set_model(flag):
     global __auto_set_model__
     __auto_set_model__ = flag
@@ -241,6 +246,8 @@ def local_conection(ec, auto_transaction=False):
     :param: ec - engine_name or connection
     auto_transaction will only effect for named engine
     """
+    global __auto_dotransaction__
+    
     ec = ec or 'default'
     if isinstance(ec, (str, unicode)):
         if hasattr(Local, 'conn') and Local.conn.get(ec):
@@ -251,12 +258,12 @@ def local_conection(ec, auto_transaction=False):
             if not hasattr(Local, 'conn'):
                 Local.conn = {}
             Local.conn[ec] = conn
-            if auto_transaction:
-                if not hasattr(Local, 'trans'):
-                    Local.trans = {}
-                Local.trans[ec] = conn.begin()
+        if __auto_dotransaction__ or auto_transaction:
+            if not hasattr(Local, 'trans'):
+                Local.trans = {}
+            Local.trans[ec] = conn.begin()
                 
-    elif isinstance(ec, EngineBase.Connection):
+    elif isinstance(ec, EngineBase.Connection) or isinstance(ec, EngineBase.Engine):
         conn = ec
     else:
         raise Error("Connection %r should be existed engine name or valid Connection object" % ec)
@@ -269,20 +276,22 @@ def reset_local_connection(ec):
         conn = Local.conn[ec]
         conn.close()
         Local.conn[ec] = None
+    if hasattr(Local, 'trans') and Local.trans.get(ec):
+        Local.trans[ec] = None
     
-def do_(query, ec=None, auto_transaction=True):
+def do_(query, ec=None):
     """
     Execute a query
     if auto_transaction is True, then if there is no connection existed,
     then auto created an connection, and auto begin transaction
     """
-    conn = local_conection(ec, auto_transaction)
+    conn = local_conection(ec)
     return conn.execute(query)
     
 def Begin(ec=None):
     ec = ec or 'default'
     if isinstance(ec, (str, unicode)):
-        conn = local_conection(ec, auto_transaction=True)
+        conn = local_conection(ec, True)
         return Local.trans[ec]
     elif isinstance(ec, EngineBase.Connection):
         return ec.begin()
@@ -1230,11 +1239,11 @@ class Result(object):
         self._group_by = None
         self.distinct_field = None
         self._values_flag = False
-        self.engine_name = model.get_engine_name()
+        self.connection = model.get_connection()
         
     def do_(self, query):
         global do_
-        return do_(query, self.engine_name)
+        return do_(query, self.connection)
     
     def get_column(self, model, fieldname):
         if isinstance(fieldname, (str, unicode)):
@@ -1262,6 +1271,7 @@ class Result(object):
     
     def connect(self, engine_name):
         self.engine_name = engine_name
+        return self
         
     def all(self):
         return self
@@ -1426,7 +1436,7 @@ class ReverseResult(Result):
         self._group_by = None
         self.distinct_field = None
         self._values_flag = False
-        self.engine_name = model.get_engine_name()
+        self.connection = model.get_connection()
         
     def has(self, *objs):
         ids = get_objs_columns(objs)
@@ -1481,7 +1491,7 @@ class ManyResult(Result):
         self._group_by = None
         self.distinct_field = None
         self._values_flag = False
-        self.engine_name = self.modela.get_engine_name()
+        self.connection = self.modela.get_connection()
         
     def get(self, condition=None):
         if not isinstance(condition, ColumnElement):
@@ -2011,6 +2021,7 @@ class Model(object):
     __metaclass__ = ModelMetaclass
     __dispatch_enabled__ = True
     __engine_name__ = None
+    __connection__ = None
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
@@ -2144,7 +2155,7 @@ class Model(object):
                             _manytomany[k] = d.pop(k)
                             old.pop(k)
                 if d:
-                    obj = do_(self.table.insert().values(**d), self.get_engine_name())
+                    obj = do_(self.table.insert().values(**d), self.get_connection())
                     if old:
                         saved = True
                     
@@ -2176,7 +2187,7 @@ class Model(object):
                                 _manytomany[k] = d.pop(k)
                                 old.pop(k)
                     if d:
-                        do_(self.table.update(self.table.c.id == self.id).values(**d), self.get_engine_name())
+                        do_(self.table.update(self.table.c.id == self.id).values(**d), self.get_connection())
                         if old:
                             saved = True
                     if _manytomany:
@@ -2199,7 +2210,7 @@ class Model(object):
     def delete(self):
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'pre_delete', instance=self)
-        do_(self.table.delete(self.table.c.id==self.id), self.get_engine_name())
+        do_(self.table.delete(self.table.c.id==self.id), self.get_connection())
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'post_delete', instance=self)
         self.id = None
@@ -2241,11 +2252,20 @@ class Model(object):
         cls.tablename = name
         
     @classmethod
+    def get_connection(cls):
+        if cls.__connection__:
+            return cls.__connection__
+        return cls.get_engine_name()
+        
+    @classmethod
     def get_engine_name(cls):
         m = __models__.get(cls.tablename, {})
         engine_name = cls.__engine_name__ or m.get('engine_name') or 'default'
         if isinstance(engine_name, (tuple, list)):
-            engine_name = engine_name[0]
+            if len(engine_name) == 1:
+                engine_name = engine_name[0]
+            else:
+                raise Error("You should specify Model %s with one engine name, but there are more than one engine name found" % cls.__name__) 
         return engine_name
     
     @classmethod
@@ -2309,7 +2329,7 @@ class Model(object):
     def create(cls):
         cls._c_lock.acquire()
         try:
-            engine = get_connection(engine_name=cls.get_engine_name())
+            engine = get_connection(engine_name=cls.get_connection())
             if not cls.table.exists(engine):
                 cls.table.create(engine, checkfirst=True)
             for x in cls.manytomany:
@@ -2369,11 +2389,11 @@ class Model(object):
             condition = cls.c.id==condition
         elif isinstance(condition, (tuple, list)):
             condition = cls.c.id.in_(condition)
-        do_(cls.table.delete(condition, **kwargs), cls.get_engine_name())
+        do_(cls.table.delete(condition, **kwargs), cls.get_connection())
             
     @classmethod
     def count(cls, condition=None, **kwargs):
-        count = do_(cls.table.count(condition, **kwargs), cls.get_engine_name()).scalar()
+        count = do_(cls.table.count(condition, **kwargs), cls.get_connection()).scalar()
         return count
             
     @classmethod
