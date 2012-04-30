@@ -9,9 +9,11 @@ from uliweb.orm import get_connection, set_auto_set_model
 
 def get_engine(options, global_options):
     from uliweb.manage import make_simple_application
-    settings = {'ORM/DEBUG_LOG':False, 'ORM/AUTO_CREATE':False}
+    settings = {'ORM/DEBUG_LOG':False, 'ORM/AUTO_CREATE':False, 'ORM/AUTO_DOTRANSACTION':False}
     app = make_simple_application(apps_dir=global_options.apps_dir, 
-        settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        settings_file=global_options.settings, 
+        local_settings_file=global_options.local_settings,
+        default_settings=settings)
     #because set_auto_set_model will be invoked in orm initicalization, so
     #below setting will be executed after Dispatcher started
     set_auto_set_model(True)

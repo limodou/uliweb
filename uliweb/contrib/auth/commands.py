@@ -1,17 +1,18 @@
 from uliweb.core.commands import Command
+from uliweb.contrib.orm.commands import SQLCommandMixin
 
-class CreateSuperUserCommand(Command):
+class CreateSuperUserCommand(SQLCommandMixin, Command):
     name = 'createsuperuser'
     help = 'Create a super user account.'
     
     def handle(self, options, global_options, *args):
-        from uliweb.core.SimpleFrame import Dispatcher
+        from uliweb.manage import make_simple_application
         from uliweb import orm
         from getpass import getpass
         
-        app = Dispatcher(project_dir=global_options.project, start=False)
-        orm.set_auto_create(True)
-        db = orm.get_connection(app.settings.ORM.CONNECTION)
+        app = make_simple_application(apps_dir=global_options.apps_dir, 
+            settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        db = orm.get_connection()
         
         username = ''
         while not username:
@@ -33,7 +34,7 @@ class CreateSuperUserCommand(Command):
         
         orm.set_dispatch_send(False)
         
-        User = orm.get_model('user')
+        User = orm.get_model('user', options.engine)
         user = User(username=username, email=email)
         user.set_password(password)
         user.is_superuser = True

@@ -70,7 +70,7 @@ def install_config(apps_dir):
                     
 def make_application(debug=None, apps_dir='apps', project_dir=None, 
     include_apps=None, debug_console=True, settings_file='settings.ini', 
-    local_settings_file='local_settings.ini', start=True):
+    local_settings_file='local_settings.ini', start=True, default_settings=None):
     """
     Make an application object
     """
@@ -84,8 +84,12 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
         
     install_config(apps_dir)
     
-    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, include_apps=include_apps, 
-        settings_file=settings_file, local_settings_file=local_settings_file, start=start)
+    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, 
+        include_apps=include_apps, 
+        settings_file=settings_file, 
+        local_settings_file=local_settings_file, 
+        start=start,
+        default_settings=default_settings)
     
     #settings global application object
     uliweb.application = app
@@ -129,11 +133,13 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     return app
 
 def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
-    settings_file='settings.ini', local_settings_file='local_settings.ini'):
+    settings_file='settings.ini', local_settings_file='local_settings.ini', default_setings=None):
+    settings = {'ORM/AUTO_DOTRANSACTION':False}
+    settings.update(default_setings or {})
     return make_application(apps_dir=apps_dir, project_dir=project_dir,
         include_apps=include_apps, debug_console=False, debug=False,
         settings_file=settings_file, local_settings_file=local_settings_file,
-        start=False)
+        start=False, default_settings=settings)
 
 class MakeAppCommand(Command):
     name = 'makeapp'
