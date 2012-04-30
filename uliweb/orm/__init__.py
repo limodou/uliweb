@@ -261,7 +261,8 @@ def local_conection(ec, auto_transaction=False):
         if __auto_dotransaction__ or auto_transaction:
             if not hasattr(Local, 'trans'):
                 Local.trans = {}
-            Local.trans[ec] = conn.begin()
+            if not Local.trans.get(ec):
+                Local.trans[ec] = conn.begin()
                 
     elif isinstance(ec, EngineBase.Connection) or isinstance(ec, EngineBase.Engine):
         conn = ec
@@ -322,14 +323,12 @@ def CommitAll(close=False):
     """
     if hasattr(Local, 'trans'):
         for k, v in Local.trans.items():
-            print 'tttttt', k, v, bool(v)
             if v:
                 v.commit()
                 Local.trans[k] = None
             
     if close and hasattr(Local, 'conn'):
         for k, v in Local.conn.items():
-            print 'cccccc', k, v, bool(v)
             if v:
                 v.close()
                 Local.conn[k] = None
