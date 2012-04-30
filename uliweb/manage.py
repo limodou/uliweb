@@ -133,9 +133,10 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     return app
 
 def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
-    settings_file='settings.ini', local_settings_file='local_settings.ini', default_setings=None):
+    settings_file='settings.ini', local_settings_file='local_settings.ini', 
+    default_settings=None):
     settings = {'ORM/AUTO_DOTRANSACTION':False}
-    settings.update(default_setings or {})
+    settings.update(default_settings or {})
     return make_application(apps_dir=apps_dir, project_dir=project_dir,
         include_apps=include_apps, debug_console=False, debug=False,
         settings_file=settings_file, local_settings_file=local_settings_file,
