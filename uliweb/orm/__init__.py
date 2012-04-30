@@ -18,7 +18,8 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError',
-    'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback']
+    'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
+    'CommitAll', 'RollbackAll']
 
 __auto_create__ = False
 __auto_set_model__ = True
@@ -27,14 +28,6 @@ __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
 __models__ = {}
 
-debug = False
-
-def d_(*args):
-    if debug:
-        for x in args:
-            print x,
-        print
-
 import decimal
 import threading
 import datetime
@@ -42,6 +35,7 @@ from uliweb.utils import date
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement
 from sqlalchemy.pool import NullPool
+import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
 import threading
 
@@ -69,6 +63,17 @@ class KindError(Error):pass
 class ConfigurationError(Error):pass
 
 _SELF_REFERENCE = object()
+
+class SQLStorage(dict):
+    """
+    a dictionary that let you do d['a'] as well as d.a
+    """
+    def __getattr__(self, key): return self[key]
+    def __setattr__(self, key, value):
+        if self.has_key(key):
+            raise SyntaxError, 'Object exists and cannot be redefined'
+        self[key] = value
+    def __repr__(self): return '<SQLStorage ' + dict.__repr__(self) + '>'
 
 def set_auto_create(flag):
     global __auto_create__
@@ -114,23 +119,6 @@ class Transaction(object):
             else:
                 self.trans.commit()
 
-class Connection(object):
-    def __init__(self, engine):
-        self.engine = engine
-        self.connection = engine.engine.connect()
-            
-    def do_(self, query):
-        return self.connection.execute(query)
-    
-    def begin(self):
-        return Transaction(self.connection)
-        
-    def __enter__(self):
-        return self.do_
-    
-    def __exit__(self, type, value, tb):
-        self.connection.close()
-
 class NamedEngine(object):
     def __init__(self, name, options):
         self.name = name
@@ -175,15 +163,8 @@ class NamedEngine(object):
                 cls['model'].bind(self.metadata, auto_create=__auto_create__)
                 cls['created'] = True
                 
-#    def reuse_connection(self):
-#        if self.connection and not self.connection.connection.closed:
-#            return self.connection
-#        else:
-#            self.connection = Connection(self)
-#            return self.connection
-#        
-    def get_connection(self):
-        return Connection(self)
+    def connect(self, **kwargs):
+        return self.engine.connect(**kwargs)
     
     @property
     def engine(self):
@@ -255,9 +236,10 @@ def get_metadata(engine_name=None):
             get_model(tablename, engine_name)
     return engine.metadata
 
-def local_conection(ec):
+def local_conection(ec, auto_transaction=False):
     """
     :param: ec - engine_name or connection
+    auto_transaction will only effect for named engine
     """
     ec = ec or 'default'
     if isinstance(ec, (str, unicode)):
@@ -265,12 +247,19 @@ def local_conection(ec):
             conn = Local.conn[ec]
         else:
             engine = engine_manager[ec]
-            conn = engine.get_connection().connection
+            conn = engine.connect()
             if not hasattr(Local, 'conn'):
                 Local.conn = {}
             Local.conn[ec] = conn
-    else:
+            if auto_transaction:
+                if not hasattr(Local, 'trans'):
+                    Local.trans = {}
+                Local.trans[ec] = conn.begin()
+                
+    elif isinstance(ec, EngineBase.Connection):
         conn = ec
+    else:
+        raise Error("Connection %r should be existed engine name or valid Connection object" % ec)
     return conn
     
 def reset_local_connection(ec):
@@ -281,24 +270,24 @@ def reset_local_connection(ec):
         conn.close()
         Local.conn[ec] = None
     
-def do_(query, ec=None):
+def do_(query, ec=None, auto_transaction=True):
     """
     Execute a query
+    if auto_transaction is True, then if there is no connection existed,
+    then auto created an connection, and auto begin transaction
     """
-    conn = local_conection(ec)
-    d_('do_', conn, id(conn), query)
+    conn = local_conection(ec, auto_transaction)
     return conn.execute(query)
     
 def Begin(ec=None):
     ec = ec or 'default'
     if isinstance(ec, (str, unicode)):
-        conn = local_conection(ec)
-        if not hasattr(Local, 'trans'):
-            Local.trans = {}
-        Local.trans[ec] = conn.begin()
+        conn = local_conection(ec, auto_transaction=True)
         return Local.trans[ec]
-    else:
+    elif isinstance(ec, EngineBase.Connection):
         return ec.begin()
+    else:
+        raise Error("Connection %r should be existed engine name or valid Connection object" % ec)
     
 def Commit(close=False, ec=None, trans=None):
     ec = ec or 'default'
@@ -311,11 +300,31 @@ def Commit(close=False, ec=None, trans=None):
                 if close:
                     Local.conn[ec].close()
                     Local.conn[ec] = None
-    else:
+    elif isinstance(ec, EngineBase.Connection):
         trans.commit()
         if close:
             ec.close()
+    else:
+        raise Error("Connection %r should be existed engine name or valid Connection object" % ec)
 
+def CommitAll(close=False):
+    """
+    Commit all transactions according Local.conn
+    """
+    if hasattr(Local, 'trans'):
+        for k, v in Local.trans.items():
+            print 'tttttt', k, v, bool(v)
+            if v:
+                v.commit()
+                Local.trans[k] = None
+            
+    if close and hasattr(Local, 'conn'):
+        for k, v in Local.conn.items():
+            print 'cccccc', k, v, bool(v)
+            if v:
+                v.close()
+                Local.conn[k] = None
+            
 def Rollback(close=False, ec=None, trans=None):
     ec = ec or 'default'
     
@@ -328,22 +337,29 @@ def Rollback(close=False, ec=None, trans=None):
                 if close:
                     Local.conn[ec].close()
                     Local.conn[ec] = None
-    else:
+    elif isinstance(ec, EngineBase.Connection):
         trans.rollback()
         if close:
             ec.close()
-            
-class SQLStorage(dict):
-    """
-    a dictionary that let you do d['a'] as well as d.a
-    """
-    def __getattr__(self, key): return self[key]
-    def __setattr__(self, key, value):
-        if self.has_key(key):
-            raise SyntaxError, 'Object exists and cannot be redefined'
-        self[key] = value
-    def __repr__(self): return '<SQLStorage ' + dict.__repr__(self) + '>'
+    else:
+        raise Error("Connection %r should be existed engine name or valid Connection object" % ec)
 
+def RollbackAll(close=False):
+    """
+    Rollback all transactions, according Local.conn
+    """
+    if hasattr(Local, 'trans'):
+        for k, v in Local.trans.items():
+            if v:
+                v.rollback()
+                Local.trans[k] = None
+            
+    if close and hasattr(Local, 'conn'):
+        for k, v in Local.conn.items():
+            if v:
+                v.close()
+                Local.conn[k] = None
+    
 def check_reserved_word(f):
     if f in ['put', 'save', 'table', 'tablename'] or f in dir(Model):
         raise ReservedWordError(

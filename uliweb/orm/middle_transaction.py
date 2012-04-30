@@ -1,5 +1,5 @@
 from uliweb import Middleware
-from uliweb.orm import Begin, Commit, Rollback, get_connection
+from uliweb.orm import Begin, CommitAll, RollbackAll, get_connection
 
 class TransactionMiddle(Middleware):
     ORDER = 80
@@ -15,13 +15,13 @@ class TransactionMiddle(Middleware):
         try:
             return response
         finally:
-            Commit(close=True)
+            CommitAll(close=True)
             if self.settings.ORM.CONNECTION_TYPE == 'short':
                 db = get_connection()
                 db.dispose()
             
     def process_exception(self, request, exception):
-        Rollback(close=True)
+        RollbackAll(close=True)
         if self.settings.ORM.CONNECTION_TYPE == 'short':
             db = get_connection()
             db.dispose()
