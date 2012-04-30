@@ -453,10 +453,17 @@ def get_model(model, engine_name=None):
         return model
     if isinstance(model, type) and issubclass(model, Model):
         return model
+    if not isinstance(model, (str, unicode)):
+        raise Error("Model %r should be string or unicode type" % model)
+    
     if model in __models__:
         engines = __models__[model]['engine_name']
-        if engine_name is None and len(engines) == 1:
-            engine_name = engines[0]
+        if engine_name is None:
+            if len(engines) == 1:
+                engine_name = engines[0]
+            else:
+                raise Error("The model %s has multiple engine names, "
+                    "please pass the one which you want to search in" % model)
         engine = engine_manager[engine_name]
         if model in engine.models:
             item = engine.models[model]
