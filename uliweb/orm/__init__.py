@@ -393,7 +393,8 @@ def set_model(model, tablename=None, created=None, engine_name=None):
         appname
     """
     if isinstance(model, type) and issubclass(model, Model):
-        tablename = model.tablename
+        #use alias first
+        tablename = model.__alias__ or model.tablename
     item = {}
     if created is not None:
         item['created'] = created
@@ -436,7 +437,7 @@ def check_model(model):
     Model.__engine_name__ could be a list, so if there are multiple then use
     the first one
     """
-    tablename = model.tablename
+    tablename = model.__alias__ or model.tablename
     name = model.__name__
     appname = model.__module__
     model_name = appname + '.' + name
@@ -481,9 +482,10 @@ def get_model(model, engine_name=None):
             else:
                 m, name = item['model_name'].rsplit('.', 1)
                 mod = __import__(m, fromlist=['*'])
-                model = getattr(mod, name)
-                item['model'] = model
-                return model
+                model_inst = getattr(mod, name)
+                item['model'] = model_inst
+                model_inst.__alias__ = model
+                return model_inst
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
 class ModelMetaclass(type):
@@ -2021,6 +2023,7 @@ class Model(object):
     __dispatch_enabled__ = True
     __engine_name__ = None
     __connection__ = None
+    __alias__ = None #can be used via get_model(alias)
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
@@ -2258,7 +2261,7 @@ class Model(object):
         
     @classmethod
     def get_engine_name(cls):
-        m = __models__.get(cls.tablename, {})
+        m = __models__.get(cls.__alias__, {})
         engine_name = cls.__engine_name__ or m.get('engine_name') or 'default'
         if isinstance(engine_name, (tuple, list)):
             if len(engine_name) == 1:
