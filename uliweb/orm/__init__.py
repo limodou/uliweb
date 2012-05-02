@@ -135,11 +135,14 @@ class NamedEngine(object):
             'debug_log':None,
             'connection_type':'long',
             })
+        strategy = options.pop('strategy', None)
         d.update(options)
         if d.get('debug_log', None) is None:
             d['debug_log'] = __debug_query__
         if d.get('connection_type') == 'short':
             d['connection_args']['poolclass'] = NullPool
+        if strategy:
+            d['connection_args']['strategy'] = strategy
 
         self.options = d
         self.engine_instance = None

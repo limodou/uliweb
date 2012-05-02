@@ -21,7 +21,7 @@ def after_init_apps(sender):
         x = {'connection_string':d.get('CONNECTION', ''),
             'debug_log':d.get('DEBUG_LOG', None),
             'connection_args':d.get('CONNECTION_ARGS', {}),
-            'strategy':d.get('STRATEGY', 'plain'),
+            'strategy':d.get('STRATEGY', 'threadlocal'),
             'connection_type':d.get('CONNECTION_TYPE', 'long')
         }
         orm.engine_manager.add(name, x)
