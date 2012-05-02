@@ -1,11 +1,13 @@
 import os, sys
+import datetime
+from decimal import Decimal
 from uliweb.core.commands import Command, get_answer, CommandManager
 from optparse import make_option
 from uliweb.utils.common import log, is_pyfile_exist
 from sqlalchemy.types import *
 from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
-from uliweb.orm import get_connection, set_auto_set_model
+from uliweb.orm import get_connection, set_auto_set_model, do_
 
 def get_engine(options, global_options):
     from uliweb.manage import make_simple_application
@@ -95,7 +97,7 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
         table = Table(table.name, meta)
         inspector.reflecttable(table, None)
         
-    result = con.execute(table.select())
+    result = do_(table.select())
     fields = [x.name for x in table.c]
     if not format:
         print >>std, '#' + ' '.join(fields)
@@ -117,7 +119,7 @@ def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8
     from uliweb.utils.date import to_date, to_datetime
     
     if delete:
-        con.execute(table.delete())
+        do_(table.delete())
     
     if not os.path.exists(filename):
         log.info("The table [%s] data is not existed." % table.name)
@@ -155,7 +157,7 @@ def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8
                                 else:
                                     params[c.name] = record[c.name]
                 ins = table.insert().values(**params)
-                con.execute(ins)
+                do_(ins)
             except:
                 log.error('Error: Line %d' % n)
                 raise
@@ -666,7 +668,7 @@ class ValidatedbCommand(SQLCommandMixin, Command):
                 flag = 'NOT EXISTED'
             else:
                 try:
-                    result = list(engine.execute(t.select().limit(1)))
+                    result = list(do_(t.select().limit(1)))
                     flag = 'OK'
                 except Exception as e:
                     if options.traceback:
