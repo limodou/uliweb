@@ -28,6 +28,7 @@ __debug_query__ = None
 __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
 __models__ = {}
+__model_paths__ = {}
 
 import decimal
 import threading
@@ -389,7 +390,7 @@ def set_model(model, tablename=None, created=None, engine_name=None):
     item structure
         created
         model
-        model_name
+        model_path
         appname
     """
     if isinstance(model, type) and issubclass(model, Model):
@@ -401,17 +402,17 @@ def set_model(model, tablename=None, created=None, engine_name=None):
     else:
         item['created'] = None
     if isinstance(model, (str, unicode)):
-        model_name = model
+        model_path = model
         appname = model.rsplit('.', 2)[0]
         #for example 'uliweb.contrib.auth.models.User'
         model = None
     else:
         appname = model.__module__.rsplit('.', 1)[0]
-        model_name = model.__module__ + '.' + model.__name__
+        model_path = model.__module__ + '.' + model.__name__
         #for example 'uliweb.contrib.auth.models'
         
     item['model'] = model
-    item['model_name'] = model_name
+    item['model_path'] = model_path
     item['appname'] = appname
     
     engine_name = engine_name or 'default'
@@ -422,8 +423,10 @@ def set_model(model, tablename=None, created=None, engine_name=None):
     
     #set global __models__
     d = __models__.setdefault(tablename, {})
-    d['model_name'] = model_name
+    d['model_path'] = model_path
     d['engine_name'] = engine_name
+    
+    __model_paths__[model_path] = engine_name
     
 def valid_model(model, engine_name=None):
     if isinstance(model, type) and issubclass(model, Model):
@@ -440,8 +443,8 @@ def check_model(model):
     tablename = model.__alias__ or model.tablename
     name = model.__name__
     appname = model.__module__
-    model_name = appname + '.' + name
-    return (tablename not in __models__) or (__models__.get(tablename, {}).get('model_name') == model_name)
+    model_path = appname + '.' + name
+    return (tablename not in __models__) or (model_path in __model_paths__)
 
 def find_metadata(model):
     """
@@ -480,7 +483,7 @@ def get_model(model, engine_name=None):
             if isinstance(m, type)  and issubclass(m, Model):
                 return m
             else:
-                m, name = item['model_name'].rsplit('.', 1)
+                m, name = item['model_path'].rsplit('.', 1)
                 mod = __import__(m, fromlist=['*'])
                 model_inst = getattr(mod, name)
                 item['model'] = model_inst
@@ -2262,7 +2265,8 @@ class Model(object):
     @classmethod
     def get_engine_name(cls):
         m = __models__.get(cls.__alias__, {})
-        engine_name = cls.__engine_name__ or m.get('engine_name') or 'default'
+        m1 = __model_paths__.get(cls.__module__ + '.' + cls.__name__, None)
+        engine_name = cls.__engine_name__ or m.get('engine_name') or m1 or 'default'
         if isinstance(engine_name, (tuple, list)):
             if len(engine_name) == 1:
                 engine_name = engine_name[0]
