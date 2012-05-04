@@ -567,6 +567,8 @@ class Dispatcher(object):
     def prepare_request(self, request, endpoint):
         from uliweb.utils.common import safe_import
 
+        #bind endpoint to request
+        request.endpoint = endpoint
         #get handler
         _klass = None
         if isinstance(endpoint, (str, unicode)):
