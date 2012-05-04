@@ -564,11 +564,12 @@ class Dispatcher(object):
             e.update(env)
         return e
     
-    def prepare_request(self, request, endpoint):
+    def prepare_request(self, request, rule):
         from uliweb.utils.common import safe_import
 
+        endpoint = rule.endpoint
         #bind endpoint to request
-        request.endpoint = endpoint
+        request.rule = rule
         #get handler
         _klass = None
         if isinstance(endpoint, (str, unicode)):
@@ -920,11 +921,11 @@ class Dispatcher(object):
         
         url_adapter = get_url_adapter('default')
         try:
-            endpoint, values = url_adapter.match()
-            mod, handler_cls, handler = self.prepare_request(req, endpoint)
+            rule, values = url_adapter.match(return_rule=True)
+            mod, handler_cls, handler = self.prepare_request(req, rule)
             
             #process static
-            if endpoint in static_views:
+            if rule.endpoint in static_views:
                 response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
             else:
                 response = None
