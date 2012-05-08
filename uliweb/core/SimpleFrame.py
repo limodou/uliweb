@@ -954,9 +954,6 @@ class Dispatcher(object):
                                 if response:
                                     break
                         raise
-                        
-                else:
-                    response = res
                     
                 for cls in reversed(self.middlewares):
                     if hasattr(cls, 'process_response'):
