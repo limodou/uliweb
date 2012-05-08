@@ -47,10 +47,11 @@ class TableLayout(Layout):
     form_class = 'tform'
     buttons_line_class = 'type-button'
     
-    def __init__(self, form, layout=None, label_fix=False):
+    def __init__(self, form, layout=None, label_fix=False, table_class=None):
         self.form = form
         self.layout = layout
         self.label_fix = label_fix
+        self.table_class = table_class
 
     def get_class(self, f):
         name = f.build.__name__
@@ -145,7 +146,7 @@ class TableLayout(Layout):
         fieldset = None
         first = True
         buf << self.form.form_begin
-        cls = 'width100'
+        cls = self.table_class
         for fields in self.layout:
             if not isinstance(fields, (tuple, list)):
                 if isinstance(fields, (str, unicode)) and fields.startswith('--') and fields.endswith('--'):
