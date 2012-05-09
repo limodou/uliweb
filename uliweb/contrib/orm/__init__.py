@@ -1,13 +1,19 @@
 import uliweb
 
 def after_init_apps(sender):
-    from uliweb import orm
+    from uliweb import orm, settings
     from uliweb.core.SimpleFrame import __app_alias__
     
     orm.set_debug_query(uliweb.settings.ORM.DEBUG_LOG)
     orm.set_auto_create(uliweb.settings.ORM.AUTO_CREATE)
     orm.set_auto_set_model(False)
-    orm.set_auto_dotransaction(uliweb.settings.ORM.AUTO_DOTRANSACTION)
+    
+    #judge if transaction middle has not install then set
+    #AUTO_DOTRANSACTION is False
+    if 'transaction' in settings.MIDDLEWARES:
+        orm.set_auto_dotransaction(False)
+    else:
+        orm.set_auto_dotransaction(uliweb.settings.ORM.AUTO_DOTRANSACTION)
     
     d = {'connection_string':uliweb.settings.ORM.CONNECTION,
         'connection_type':uliweb.settings.ORM.CONNECTION_TYPE,
