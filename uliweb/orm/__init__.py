@@ -253,6 +253,11 @@ def local_conection(ec, auto_transaction=False):
     global __auto_dotransaction__
     
     ec = ec or 'default'
+    #if connection strategy is threadlocal then directly return db
+    #but not connect
+#    engine = engine_manager[ec]
+#    if engine.options.connection_args['strategy'] == 'threadlocal':
+#        return engine.engine_instance
     if isinstance(ec, (str, unicode)):
         if hasattr(Local, 'conn') and Local.conn.get(ec):
             conn = Local.conn[ec]
@@ -283,6 +288,10 @@ def reset_local_connection(ec):
         Local.conn[ec] = None
     if hasattr(Local, 'trans') and Local.trans.get(ec):
         Local.trans[ec] = None
+
+def Connect(ec=None):
+    ec = ec or 'default'
+    reset_local_connection(ec)
     
 def do_(query, ec=None):
     """

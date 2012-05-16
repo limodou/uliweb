@@ -47,7 +47,7 @@ class TableLayout(Layout):
     form_class = 'tform'
     buttons_line_class = 'type-button'
     
-    def __init__(self, form, layout=None, label_fix=False, table_class=None):
+    def __init__(self, form, layout=None, label_fix=False, table_class='table width100'):
         self.form = form
         self.layout = layout
         self.label_fix = label_fix
