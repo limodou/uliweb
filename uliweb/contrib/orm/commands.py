@@ -204,7 +204,7 @@ class ResetCommand(SQLCommandMixin, Command):
         for name, t in get_tables(global_options.apps_dir, args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
                 print '[%s] Resetting %s...' % (options.engine, name)
-            t.drop(engine)
+            t.drop(engine, checkfirst=True)
             t.create(engine)
 
 class ResetTableCommand(SQLCommandMixin, Command):
@@ -226,7 +226,7 @@ class ResetTableCommand(SQLCommandMixin, Command):
         for name, t in get_tables(global_options.apps_dir, tables=args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
                 print '[%s] Resetting %s...' % (options.engine, name)
-            t.drop(engine)
+            t.drop(engine, checkfirst=True)
             t.create(engine)
 
 class DropTableCommand(SQLCommandMixin, Command):
@@ -248,7 +248,7 @@ class DropTableCommand(SQLCommandMixin, Command):
         for name, t in get_tables(global_options.apps_dir, tables=args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
             if global_options.verbose:
                 print '[%s] Dropping %s...' % (options.engine, name)
-            t.drop(engine)
+            t.drop(engine, checkfirst=True)
 
 class SQLCommand(SQLCommandMixin, Command):
     name = 'sql'
