@@ -1,3 +1,5 @@
+#coding=utf8
+
 import os
 from time import time, mktime
 from datetime import datetime
@@ -22,6 +24,23 @@ def _generate_etag(mtime, file_size, real_filename):
         file_size,
         adler32(real_filename) & 0xffffffff
     )
+    
+def _get_download_filename(env, filename):
+    from uliweb import request
+    from uliweb.utils.common import safe_str
+    import urllib2
+    from werkzeug.useragents import UserAgent
+    
+    agent = UserAgent(env)
+    
+    fname = safe_str(filename, 'utf8')
+    if agent.browser == 'msie':
+        result = 'filename=' + urllib2.quote(fname)
+    elif agent.browser == 'safari':
+        result = 'filename=' + fname
+    else:
+        result = "filename*=UTF-8''" + urllib2.quote(fname)
+    return result
 
 def filedown(environ, filename, cache=True, cache_timeout=None, 
     action=None, real_filename=None, x_sendfile=False,
@@ -49,11 +68,11 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
     #make common headers
     headers = []
     headers.append(('Content-Type', mime_type))
-    d_filename = os.path.basename(filename)
+    d_filename = _get_download_filename(environ, os.path.basename(filename))
     if action == 'download':
-        headers.append(('Content-Disposition', 'attachment; filename=%s' % d_filename))
+        headers.append(('Content-Disposition', 'attachment; %s' % d_filename))
     elif action == 'inline':
-        headers.append(('Content-Disposition', 'inline; filename=%s' % d_filename))
+        headers.append(('Content-Disposition', 'inline; %s' % d_filename))
     if x_sendfile:
         if not x_header_name or not x_filename:
             raise Exception, "x_header_name or x_filename can't be empty"

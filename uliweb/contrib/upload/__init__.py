@@ -103,21 +103,21 @@ class FileServing(object):
         from uliweb.utils.common import safe_str
         from uliweb.utils.filedown import filedown
         
+        s = settings.GLOBAL
+
         action = request.GET.get('action', action)
         
-        fname = safe_str(filename)
         if not x_filename:
-            x_filename = fname
+            x_filename = safe_str(filename, s.FILESYSTEM_ENCODING)
         if self.x_file_prefix:
             x_filename = os.path.normpath(os.path.join(self.x_file_prefix, x_filename)).replace('\\', '/')
         
         if not real_filename:
             real_filename = self.get_filename(filename, True, convert=False)
         else:
-            s = settings.GLOBAL
             real_filename = files.encode_filename(real_filename, to_encoding=s.FILESYSTEM_ENCODING)
         
-        return filedown(request.environ, fname, action=action, 
+        return filedown(request.environ, filename, action=action, 
             x_sendfile=bool(self.x_sendfile), x_header_name=self.x_header_name, 
             x_filename=x_filename, real_filename=real_filename)
      
@@ -191,9 +191,14 @@ def get_backend():
 
 def file_serving(filename):
     from uliweb import request
-    alt_filename = request.GET.get('alt', filename)
-    _filename = get_filename(filename, True, convert=False)
+    import urllib2
     
+    alt_filename = request.GET.get('alt')
+    if not alt_filename:
+        alt_filename = filename
+    else:
+        alt_filename = urllib2.unquote(alt_filename)
+    _filename = get_filename(filename, True, convert=False)
     return get_backend().download(alt_filename, real_filename=_filename)
 
 def get_filename(filename, filesystem=False, convert=False):
