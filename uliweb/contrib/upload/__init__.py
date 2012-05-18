@@ -95,7 +95,7 @@ class FileServing(object):
             return files.encode_filename(f, to_encoding=s.FILESYSTEM_ENCODING)
         return f
 
-    def download(self, filename, action=None, x_filename='', real_filename=''):
+    def download(self, filename, action='download', x_filename='', real_filename=''):
         """
         action will be "download", "inline"
         and if the request.GET has 'action', then the action will be replaced by it.
@@ -155,16 +155,16 @@ class FileServing(object):
         if os.path.exists:
             os.unlink(f)
     
-    def get_href(self, filename):
+    def get_href(self, filename, **kwargs):
         if not filename:
             return ''
 
         s = settings.GLOBAL
         fname = norm_filename(files.unicode_filename(filename, s.FILESYSTEM_ENCODING))
-        f = url_for('file_serving', filename=fname)
+        f = url_for('file_serving', filename=fname, **kwargs)
         return f
         
-    def get_url(self, filename, **url_args):
+    def get_url(self, filename, query_para=None, **url_args):
         """
         Return <a href="filename" title="filename"> tag
         You should pass title and text to url_args, if not pass, then using filename
@@ -173,7 +173,8 @@ class FileServing(object):
         
         title = url_args.pop('title', filename)
         text = url_args.pop('text', title)
-        return str(Tag('a', title, href=self.get_href(filename), **url_args))
+        query_para = query_para or {}
+        return str(Tag('a', title, href=self.get_href(filename, **query_para), **url_args))
 
 def get_backend():
     global default_fileserving
@@ -189,7 +190,11 @@ def get_backend():
         return default_fileserving
 
 def file_serving(filename):
-    return get_backend().download(filename)
+    from uliweb import request
+    alt_filename = request.GET.get('alt', os.path.basename(filename))
+    _filename = get_filename(filename, True, convert=False)
+    
+    return get_backend().download(alt_filename, real_filename=_filename)
 
 def get_filename(filename, filesystem=False, convert=False):
     return get_backend().get_filename(filename, filesystem, convert=convert)
@@ -206,8 +211,8 @@ def save_image_field(field, resize_to=None, replace=False, filename=None, conver
 def delete_filename(filename):
     return get_backend().delete_filename(filename)
 
-def get_url(filename, **url_args):
-    return get_backend().get_url(filename, **url_args)
+def get_url(filename, query_para=None, **url_args):
+    return get_backend().get_url(filename, query_para, **url_args)
 
-def get_href(filename):
-    return get_backend().get_href(filename)
+def get_href(filename, **kwargs):
+    return get_backend().get_href(filename, **kwargs)

@@ -2287,8 +2287,14 @@ class Model(object):
         return engine_name
     
     @classmethod
-    def connect(cls, engine_name):
-        cls.__engine_name__ = engine_name
+    def connect(cls, ec):
+        """
+        Engine name or connection object
+        """
+        if isinstance(ec, (str, unicode)):
+            cls.__engine_name__ = ec
+        else:
+            cls.__connection__ = ec
         return cls
     
     @classmethod
