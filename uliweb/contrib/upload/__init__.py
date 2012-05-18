@@ -191,7 +191,7 @@ def get_backend():
 
 def file_serving(filename):
     from uliweb import request
-    alt_filename = request.GET.get('alt', os.path.basename(filename))
+    alt_filename = request.GET.get('alt', filename)
     _filename = get_filename(filename, True, convert=False)
     
     return get_backend().download(alt_filename, real_filename=_filename)
