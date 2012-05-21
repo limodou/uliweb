@@ -234,7 +234,7 @@ class BaseField(object):
         else:
             v = data
 #        if v is None:
-        if not v:
+        if not v or (isinstance(v, (str, unicode)) and not v.strip()):
             if not self.required:
                 return True, self.default
 #                if self.default is not None:
