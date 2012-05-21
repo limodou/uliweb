@@ -175,6 +175,22 @@ def get_url(ok_url, *args, **kwargs):
     else:
         return ok_url.format(*args, **kwargs)
 
+def get_obj_url(obj):
+    from uliweb import settings
+    from uliweb.core.html import Tag
+    
+    if hasattr(obj, 'get_url'):
+        display = obj.get_url()
+    else:
+        url_prefix = settings.get_var('MODEL_URL/'+obj.tablename)
+        if url_prefix:
+            if url_prefix.endswith('/'):
+                url_prefix = url_prefix[:-1]
+            display = str(Tag('a', unicode(obj), href=url_prefix+'/'+str(obj.id)))
+        else:
+            display = unicode(obj)
+    return display
+    
 def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
     json_func = json_func or json
     
@@ -294,7 +310,6 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
 def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=None, value=__default_value__):
     from uliweb.utils.textconvert import text2html
     from uliweb.core.html import Tag
-    from uliweb import settings
     
     old_value = value
 
@@ -351,16 +366,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                 else:
                     query = getattr(obj, prop.property_name).all()
                 for x in query:
-                    if hasattr(x, 'get_url'):
-                        s.append(x.get_url())
-                    else:
-                        url_prefix = settings.get_var('MODEL_URL/'+x.tablename)
-                        if url_prefix:
-                            if url_prefix.endswith('/'):
-                                url_prefix = url_prefix[:-1]
-                            s.append(str(Tag('a', unicode(x), href=url_prefix+'/'+str(x.id))))
-                        else:
-                            s.append(unicode(x))
+                    s.append(get_obj_url(x))
                 display = ' '.join(s)
             elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOne):
                 try:
@@ -376,16 +382,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                     display = obj.get_datastore_value(prop.property_name)
                     v = None
                 if isinstance(v, Model):
-                    if hasattr(v, 'get_url'):
-                        display = v.get_url()
-                    else:
-                        url_prefix = settings.get_var('MODEL_URL/'+v.tablename)
-                        if url_prefix:
-                            if url_prefix.endswith('/'):
-                                url_prefix = url_prefix[:-1]
-                            display = str(Tag('a', unicode(v), href=url_prefix+'/'+str(v.id)))
-                        else:
-                            display = unicode(v)
+                    display = get_obj_url(v)
                 else:
                     display = str(v)
             elif isinstance(prop, orm.FileProperty):
