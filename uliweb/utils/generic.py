@@ -1020,7 +1020,7 @@ class DeleteView(object):
     success_msg = _('The object has been deleted successfully!')
 
     def __init__(self, model, ok_url='', fail_url='', condition=None, obj=None, 
-        pre_delete=None, post_delete=None, validator=None, json_func=None):
+        pre_delete=None, post_delete=None, validator=None, json_func=None, use_delete_fieldname=None):
         self.model = get_model(model)
         self.condition = condition
         self.obj = obj
@@ -1035,6 +1035,7 @@ class DeleteView(object):
         self.fail_url = fail_url
         self.pre_delete = pre_delete
         self.post_delete = post_delete
+        self.use_delete_fieldname = use_delete_fieldname
         
     def run(self, json_result=False):
         flash = functions.flash
@@ -1063,7 +1064,11 @@ class DeleteView(object):
     def delete(self, obj):
         if obj:
             self.delete_manytomany(obj)
-            obj.delete()
+            if self.use_delete_fieldname:
+                setattr(obj, self.use_delete_fieldname, True)
+                obj.save()
+            else:
+                obj.delete()
         
     def delete_manytomany(self, obj):
         for k, v in obj._manytomany.iteritems():
