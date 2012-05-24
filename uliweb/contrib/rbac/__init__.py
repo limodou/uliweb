@@ -15,3 +15,10 @@ def after_init_apps(sender):
                 method = v[1]
                 if method:
                     register_role_method(k, method)
+
+def startup_installed(sender):
+    from uliweb.core import template
+    from tags import PermissionNode, RoleNode
+    
+    template.register_node('permission', PermissionNode)
+    template.register_node('role', RoleNode)

@@ -1672,6 +1672,7 @@ class ManyResult(Result):
     def __del__(self):
         if self.result:
             self.result.close()
+            self.result = None
     
     def __iter__(self):
         self.run()

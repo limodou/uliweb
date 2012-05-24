@@ -19,21 +19,28 @@ for name, v in r.items():
     role = Role.get(Role.c.name==name)
     if not role:
         role = Role(name=safe_str(name), description=safe_str(description), reserve=reserve)
+        print 'Add Role(%s)...' % name
     else:
         role.update(description=description, reserve=reserve)
+        print 'Update Role(%s)...' % name
     role.save()
 
 p = uliweb.settings.get('PERMISSIONS', {})
 for name, v in p.items():
     if isinstance(v, tuple):
         description, props = v
+    elif isinstance(v, dict):
+        description = v.get('desc', '')
+        props = v.get('props', None)
     else:
         description, props = v, None
     perm = Perm.get(Perm.c.name==name)
     if not perm:
         perm = Perm(name=name, description=description, props=props)
+        print 'Add Permission(%s)...' % name
     else:
         perm.update(description=description, props=props)
+        print 'Update Permission(%s)...' % name
     perm.save()
     
 p = uliweb.settings.get('ROLES_PERMISSIONS', {})
@@ -55,5 +62,6 @@ for name, v in p.items():
         if not role:
             raise Exception, 'Role [%s] not found.' % r
         rel = Rel(role=role, permission=perm, props=role_props)
+        print 'Add Relation(Permision=%s, Role=%s)...' % (name, role_name)
         rel.save()
 
