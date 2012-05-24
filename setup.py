@@ -122,8 +122,7 @@ Links
 * Plugs is a Uliweb apps collection project, you can visit it at https://github.com/limodou/plugs
 * uliweb-doc is a documentation project of Uliweb, you can visit it at https://github.com/limodou/uliweb-doc, 
   and you can also read the compiled documentation at http://uliweb.rtfd.org
-* uliwebzone is a community project of Uliweb, you can visit it at https://github.com/limodou/uliwebzone, 
-  and you can also see online demo which hosted in dotcloud http://www.uliweb.dotcloud.com/.
+* uliwebzone is a community project of Uliweb, you can visit it at https://github.com/limodou/uliwebzone.
 """
 
 setup(name='Uliweb',
@@ -131,7 +130,9 @@ setup(name='Uliweb',
       description="Easy python web framework",
       long_description=__doc__,
       classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Console",
+        "Environment :: Web Environment",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",
         "Topic :: Internet :: WWW/HTTP :: WSGI",
