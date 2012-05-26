@@ -350,6 +350,12 @@ class Dispatcher(object):
         Dispatcher.modules = self.collect_modules()
         
         self.install_settings(self.modules['settings'])
+        
+        #process binds
+        self.install_binds()
+        
+        dispatch.call(self, 'after_init_settings')
+        
         Dispatcher.settings = settings
         
         #process domains
@@ -366,8 +372,6 @@ class Dispatcher(object):
         
         #begin to start apps
         self.install_apps()
-        #process binds
-        self.install_binds()
         dispatch.call(self, 'after_init_apps')
         #process views
         self.install_views(self.modules['views'])

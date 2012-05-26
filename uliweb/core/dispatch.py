@@ -83,10 +83,7 @@ def call(sender, topic, *args, **kwargs):
         return
     items = _receivers[topic]
     def _cmp(x, y):
-        r = cmp(x[0], y[0])
-        if r == 0:
-            return cmp(x[1]['func_name'], y[1]['func_name'])
-        return r 
+        return cmp(x[0], y[0])
     
     items.sort(_cmp)
     for i in range(len(items)):
@@ -127,7 +124,10 @@ def get(sender, topic, *args, **kwargs):
     if not topic in _receivers:
         return
     items = _receivers[topic]
-    items.sort()
+    def _cmp(x, y):
+        return cmp(x[0], y[0])
+    
+    items.sort(_cmp)
     for i in range(len(items)):
         nice, f = items[i]
         _f = f['func']
