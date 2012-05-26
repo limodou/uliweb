@@ -233,7 +233,7 @@ class SupportCommand(Command):
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import extract_dirs
         
-        _types = ['gae', 'dotcloud', 'sae', 'bae']
+        _types = ['gae', 'dotcloud', 'sae', 'bae', 'heroku']
         if not args:
             support_type = ''
             while not support_type in _types:
