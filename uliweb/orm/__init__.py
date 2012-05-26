@@ -9,6 +9,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
     'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
+    'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
@@ -289,10 +290,20 @@ def reset_local_connection(ec):
     if hasattr(Local, 'trans') and Local.trans.get(ec):
         Local.trans[ec] = None
 
-def Connect(ec=None):
+def Reset(ec=None):
     ec = ec or 'default'
     reset_local_connection(ec)
     
+def ResetAll():
+    if hasattr(Local, 'trans'):
+        for k, v in Local.trans.items():
+            Local.trans[k] = None
+            
+    if hasattr(Local, 'conn'):
+        for k, v in Local.conn.items():
+            v.close()
+            Local.conn[k] = None
+
 def do_(query, ec=None):
     """
     Execute a query
