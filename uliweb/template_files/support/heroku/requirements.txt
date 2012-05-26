@@ -1,0 +1,3 @@
+Uliweb==0.1.1
+psycopg2==2.4.5
+SQLAlchemy==0.7.7
