@@ -38,7 +38,7 @@ I also constructed a few new "wheels" myself. For example:
 
 * Form processing module. Developers can use it to create HTML code, validate submitted data and convert submitted data to Python data types.
 * I18n processing including template support, language lazy process.
-* Uliorm, which is an ORM module, was built on top of SqlAlchemy. I also referenced from GAE datastore module.
+* Uliorm, which is an ORM module, was built on top of SqlAlchemy.
 * Framework runtime process.
 * Plugin mechanism, styled after the one used in the UliPad project.
 
@@ -56,7 +56,7 @@ Features
 
 * URL Mapping
 
-  Flexiable and powerful URL mapping. Uliweb uses werkzeug's routing module. User can easily define a URL, which in turn can be easily bound with a view function. URLs can also be created reversely according to the view function name. It supports argument definitions in URLs and default URL mapping to a view function.
+  Flexible and powerful URL mapping. Uliweb uses werkzeug's routing module. User can easily define a URL, which in turn can be easily bound with a view function. URLs can also be created reversely according to the view function name. It supports argument definitions in URLs and default URL mapping to a view function.
     
 * View and Template
 
@@ -70,7 +70,7 @@ Features
 
 * ORM
 
-  Uliorm is the default ORM module but not configured by default. Developers are free to use any ORM module as preferred. Uliorm supports model creation and automatic database migiration(table creation and table structure modification).
+  Uliorm is the default ORM module but not configured by default. Developers are free to use any ORM module as preferred. Uliorm supports basicly orm functionalities, and also support multiple databases. The important thing is Uliorm has designned a configurable settings so that user can easy config models even replace old model with new one. 
 
 * I18n
 
@@ -94,17 +94,14 @@ Features
 
 * Deployment
 
-  * Supports easy deployment on the GAE platform.
+  * Supports easy deployment on the GAE platform(but uliorm doesn't support datastore).
+  * Also support dotCloud, heroku, .etc.
   * Supports mod_wsgi, cgi, fast_cgi, scgi, uwsgi.
 
 * Development
 
   Provide a development server, and can be automatically reload when some module files are modified.
 
-* Misc.
-
-  Various demos are available for anyone interested in learning more about Uliweb. It includes all core codes and also all source code of uliwebproject , and some other demo codes, which can be used directly/freely as you wish.
-    
 * static file serving support.
 
   Uliweb supports static file access directly, and it can also process HTTP_IF_MODIFIED_SINCE and return static file content in trunk.
@@ -114,7 +111,7 @@ Principle
 
 * Simple and easy to use web framework.
 * Reusability and configurable are the main ideas about Uliweb.
-* The web framework should be flexiable and easy to extend.
+* The web framework should be flexible and easy to extend.
 
 Links
 --------
