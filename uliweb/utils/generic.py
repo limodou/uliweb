@@ -1085,7 +1085,7 @@ class GenericFileServing(FileServing):
     }
 
 class SimpleListView(object):
-    def __init__(self, fields=None, query=None, cache_file=None, 
+    def __init__(self, fields=None, query=None, 
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
         table_class_attr='table', table_width=False, pagination=True, total_fields=None, 
         template_data=None, default_column_width=100, total=None, manual=False, render=None):
@@ -1113,7 +1113,6 @@ class SimpleListView(object):
         self.id = id
         self.table_class_attr = table_class_attr
         self.fields_convert_map = fields_convert_map or {}
-        self.cache_file = cache_file
         self.total = total or 0
         self.table_width = table_width
         self.pagination = pagination
