@@ -1,0 +1,29 @@
+=====================
+Uliweb Change Log
+=====================
+
+0.1.2 Version
+-----------------
+
+#. Fix permission tag, and change PERMISSION definitions in settings.ini, now the 
+   PERMISSION definition can use dict datatype, just like::
+
+    [PERMISSION]
+    PERM = {'name':'PERM', 'roles':['a', 'b'], 'description':'PERM}
+
+   and with this method, you don't need to define ROLES_PERMISSIONS section
+
+#. Add TransactionMiddle as default settings in ORM settings.ini. By default, if 
+   you add 'uliweb.contrib.orm', the transaction middleware will automatically 
+   enabled. In the previous version, you should add this middleware yourself.
+
+0.1.1 Version
+-----------------
+
+#. Add BAE(Baidu Application Engine) and Heroku support
+
+0.0.1 Version
+-----------------
+
+#. Support i18n language setting key in query_string, and you can also configure
+   keyword in settings.ini.
