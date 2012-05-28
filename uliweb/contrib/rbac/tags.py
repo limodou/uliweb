@@ -1,13 +1,17 @@
-from uliweb.core.template import BlockNode
+from uliweb.core.template import Node
 from uliweb import functions
 
-class PermissionNode(BlockNode):
+class PermissionNode(Node):
+    block = 1
     def __init__(self, name='', content=None):
         self.nodes = []
         self.name = name.strip()
         self.content = content
         self.func = functions.has_permission
         
+    def add(self, node):
+        self.nodes.append(node)
+
     def __repr__(self):
         s = ['{{permission %s}}' % self.name]
         for x in self.nodes:
@@ -30,13 +34,7 @@ class PermissionNode(BlockNode):
         s = []
         if self.func(request.user, self.name):
             for x in self.nodes:
-                if isinstance(x, BlockNode):
-                    if x.name in self.content.root.block_vars:
-                        s.append(str(self.content.root.block_vars[x.name][-1]))
-                    else:
-                        s.append(str(x))
-                else:
-                    s.append(str(x))
+                s.append(str(x))
         return ''.join(s)
     
 class RoleNode(PermissionNode):
