@@ -107,15 +107,15 @@ class FileServing(object):
 
         action = request.GET.get('action', action)
         
-        if not x_filename:
-            x_filename = safe_str(filename, s.FILESYSTEM_ENCODING)
-        if self.x_file_prefix:
-            x_filename = os.path.normpath(os.path.join(self.x_file_prefix, x_filename)).replace('\\', '/')
-        
         if not real_filename:
             real_filename = self.get_filename(filename, True, convert=False)
         else:
             real_filename = files.encode_filename(real_filename, to_encoding=s.FILESYSTEM_ENCODING)
+
+        if not x_filename:
+            x_filename = safe_str(filename, s.FILESYSTEM_ENCODING)
+        if self.x_file_prefix:
+            x_filename = os.path.normpath(os.path.join(self.x_file_prefix, x_filename)).replace('\\', '/')
         
         return filedown(request.environ, filename, action=action, 
             x_sendfile=bool(self.x_sendfile), x_header_name=self.x_header_name, 
@@ -199,7 +199,8 @@ def file_serving(filename):
     else:
         alt_filename = urllib2.unquote(alt_filename)
     _filename = get_filename(filename, True, convert=False)
-    return get_backend().download(alt_filename, real_filename=_filename)
+    x_filename = filename
+    return get_backend().download(alt_filename, real_filename=_filename, x_filename=x_filename)
 
 def get_filename(filename, filesystem=False, convert=False):
     return get_backend().get_filename(filename, filesystem, convert=convert)
