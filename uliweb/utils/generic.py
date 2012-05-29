@@ -427,7 +427,8 @@ class AddView(object):
     fail_msg = _('There are somethings wrong.')
     builds_args_map = {}
     
-    def __init__(self, model, ok_url=None, ok_template=None, form=None, success_msg=None, fail_msg=None, 
+    def __init__(self, model, ok_url=None, ok_template=None, form=None, success_msg=None, 
+        fail_msg=None, use_flash=True,
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None, file_replace=True, template_data=None, 
@@ -443,6 +444,7 @@ class AddView(object):
             self.success_msg = success_msg
         if fail_msg:
             self.fail_msg = fail_msg
+        self.use_flash = use_flash
         self.data = data or {}
         self.template_data = template_data or {}
         
@@ -569,8 +571,8 @@ class AddView(object):
         if json_result:
             return to_json_result(True, self.success_msg, self.on_success_data(obj, d), json_func=self.json_func)
         else:
-            flash = functions.flash
-            flash(self.success_msg)
+            if self.use_flash:
+                functions.flash(self.success_msg)
             if self.ok_url:
                 return redirect(get_url(self.ok_url, id=obj.id))
             else:
@@ -585,8 +587,8 @@ class AddView(object):
         if json_result:
             return to_json_result(False, self.fail_msg, self.form.errors, json_func=self.json_func)
         else:
-            flash = functions.flash
-            flash(self.fail_msg, 'error')
+            if self.use_flash:
+                functions.flash(self.fail_msg, 'error')
             return d
     
     def init_form(self):
@@ -698,8 +700,8 @@ class EditView(AddView):
         if json_result:
             return to_json_result(True, msg, self.on_success_data(self.obj, d), modified=r, json_func=self.json_func)
         else:
-            flash = functions.flash
-            flash(msg)
+            if self.use_flash:
+                functions.flash(msg)
             if self.ok_url:
                 return redirect(get_url(self.ok_url, self.obj.id))
             else:
@@ -714,8 +716,8 @@ class EditView(AddView):
         if json_result:
             return to_json_result(False, self.fail_msg, self.form.errors, json_func=self.json_func)
         else:
-            flash = functions.flash
-            flash(self.fail_msg, 'error')
+            if self.use_flash:
+                functions.flash(self.fail_msg, 'error')
             return d
 
     def prepare_static_data(self, data):
@@ -1020,7 +1022,8 @@ class DeleteView(object):
     success_msg = _('The object has been deleted successfully!')
 
     def __init__(self, model, ok_url='', fail_url='', condition=None, obj=None, 
-        pre_delete=None, post_delete=None, validator=None, json_func=None, use_delete_fieldname=None):
+        pre_delete=None, post_delete=None, validator=None, json_func=None, 
+        use_flash=True, use_delete_fieldname=None):
         self.model = get_model(model)
         self.condition = condition
         self.obj = obj
@@ -1035,18 +1038,18 @@ class DeleteView(object):
         self.fail_url = fail_url
         self.pre_delete = pre_delete
         self.post_delete = post_delete
+        self.use_flash = use_flash
         self.use_delete_fieldname = use_delete_fieldname
         
     def run(self, json_result=False):
-        flash = functions.flash
-
         if self.validator:
             msg = self.validator(self.obj)
             if msg:
                 if json_result:
                     return to_json_result(False, msg, json_func=self.json_func)
                 else:
-                    flash(msg, 'error')
+                    if self.use_flash:
+                        functions.flash(msg, 'error')
                     return redirect(self.fail_url)
                 
         if self.pre_delete:
@@ -1058,7 +1061,8 @@ class DeleteView(object):
         if json_result:
             return to_json_result(True, self.success_msg, json_func=self.json_func)
         else:
-            flash(self.success_msg)
+            if self.use_flash:
+                functions.flash(self.success_msg)
             return redirect(self.ok_url)
     
     def delete(self, obj):
@@ -2028,8 +2032,6 @@ class QueryView(object):
         if isinstance(self.model, str):
             self.model = get_model(self.model)
             
-        flash = functions.flash
-        
         if not self.form:
             self.form = self.make_form()
         

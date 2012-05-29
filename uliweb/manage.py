@@ -252,7 +252,7 @@ class ExportStaticCommand(Command):
     """
     name = 'exportstatic'
     help = 'Export all installed apps static directory to output directory.'
-    args = 'output_directory'
+    args = 'output_directory [app1, app2, ...]'
     check_apps_dirs = True
     option_list = (
         make_option('-c', '--check', action='store_true', 
@@ -276,8 +276,11 @@ class ExportStaticCommand(Command):
         else:
             outputdir = args[0]
 
-        apps = get_apps(global_options.apps_dir, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
-        dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in reversed(apps)]
+        if not args[1:]:
+            apps = self.get_apps(global_options)
+        else:
+            apps = args[1:]
+        dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in apps]
         self.options = options
         self.global_options = global_options
         copy_dir_with_check(dirs, outputdir, False, options.check, processor=self.process_file)
@@ -309,8 +312,6 @@ class ExportCommand(Command):
     args = '[module1 module2]'
     check_apps_dirs = True
     option_list = (
-        make_option('--with-static', dest='with_static', action='store_false', 
-            help='Export files also include static files.'),
         make_option('-d', dest='outputdir',  
             help='Output directory of exported files.'),
     )
@@ -325,10 +326,6 @@ class ExportCommand(Command):
         else:
             outputdir = options.outputdir
     
-        exclude = []
-        if not options.with_static:
-            exclude = ['static']
-        
         if not args:
             apps = self.get_apps(global_options)
         else:
@@ -349,7 +346,7 @@ class ExportCommand(Command):
                     recursion = True
                 else:
                     recursion = False
-                extract_dirs(module, '', dest, verbose=global_options.verbose, exclude=exclude, recursion=recursion)
+                extract_dirs(module, '', dest, verbose=global_options.verbose, recursion=recursion)
                 
 register_command(ExportCommand)
 
