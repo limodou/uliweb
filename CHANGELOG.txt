@@ -20,6 +20,11 @@ Uliweb Change Log
    static folder
 #. Fix default file_serving process, add x_filename process, in order to make
    alt filename support processing correctly.
+#. Add -m option to find command, so you can use::
+
+    uliweb find -m model_name
+    
+   to find the model is defined in which model
 
 0.1.1 Version
 -----------------

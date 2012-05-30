@@ -547,6 +547,8 @@ class FindCommand(Command):
             help='Find views function path according url.'),
         make_option('-c', '--static', dest='static', 
             help='Find static file path according static filename.'),
+        make_option('-m', '--model', dest='model', 
+            help='Find model definition according model name.'),
     )
     
     def handle(self, options, global_options, *args):
@@ -557,6 +559,8 @@ class FindCommand(Command):
             self._find_template(options.template)
         elif options.static:
             self._find_static(global_options, options.static)
+        elif options.model:
+            self._find_model(global_options, options.model)
         
     def _find_url(self, url):
         from uliweb.core.SimpleFrame import url_map
@@ -591,6 +595,12 @@ class FindCommand(Command):
                 print '%s' % path
                 return
         print 'Not Found'
+        
+    def _find_model(self, global_options, model):
+        from uliweb import settings
+        
+        model_path = settings.MODELS.get(model, 'Not Found')
+        print model_path
 register_command(FindCommand)
 
 def collect_files(apps_dir, apps):

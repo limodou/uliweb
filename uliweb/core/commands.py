@@ -113,10 +113,10 @@ class Command(object):
             settings_file=global_options.settings, local_settings_file=global_options.local_settings)
     
     def get_application(self, global_options):
-        from uliweb.manage import make_application
+        from uliweb.manage import make_simple_application
         
-        return make_application(project_dir=global_options.project, start=False, 
-            debug_console=False, debug=False, settings_file=global_options.settings, 
+        return make_simple_application(project_dir=global_options.project, 
+            settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings
             )
         
