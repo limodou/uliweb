@@ -1296,8 +1296,9 @@ class Result(object):
         
         return fields
     
-    def connect(self, engine_name):
-        self.engine_name = engine_name
+    def connect(self, connection):
+        if connection:
+            self.connection = connection
         return self
         
     def all(self):
@@ -2156,7 +2157,7 @@ class Model(object):
         return self
 #                    getattr(self, k).update(*v)
             
-    def put(self, insert=False):
+    def put(self, insert=False, connection=None):
         """
         If insert=True, then it'll use insert() indead of update()
         """
@@ -2184,7 +2185,7 @@ class Model(object):
                             _manytomany[k] = d.pop(k)
                             old.pop(k)
                 if d:
-                    obj = do_(self.table.insert().values(**d), self.get_connection())
+                    obj = do_(self.table.insert().values(**d), connection or self.get_connection())
                     if old:
                         saved = True
                     
@@ -2216,7 +2217,7 @@ class Model(object):
                                 _manytomany[k] = d.pop(k)
                                 old.pop(k)
                     if d:
-                        do_(self.table.update(self.table.c.id == self.id).values(**d), self.get_connection())
+                        do_(self.table.update(self.table.c.id == self.id).values(**d), connection or self.get_connection())
                         if old:
                             saved = True
                     if _manytomany:
@@ -2236,10 +2237,17 @@ class Model(object):
     
     save = put
     
-    def delete(self):
+    def delete(self, manytomany=True, connection=None):
+        """
+        Delete current obj
+        :param manytomany: if also delete all manytomany relationships
+        """
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'pre_delete', instance=self)
-        do_(self.table.delete(self.table.c.id==self.id), self.get_connection())
+        if manytomany:
+            for k, v in self._manytomany.iteritems():
+                getattr(self, k).clear()
+        do_(self.table.delete(self.table.c.id==self.id), connection or self.get_connection())
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'post_delete', instance=self)
         self.id = None
@@ -2362,10 +2370,10 @@ class Model(object):
             cls._lock.release()
             
     @classmethod
-    def create(cls):
+    def create(cls, engine=None):
         cls._c_lock.acquire()
         try:
-            engine = get_connection(engine_name=cls.get_connection())
+            engine = engine or get_connection(engine_name=cls.get_connection())
             if not cls.table.exists(engine):
                 cls.table.create(engine, checkfirst=True)
             for x in cls.manytomany:
@@ -2375,7 +2383,7 @@ class Model(object):
             cls._c_lock.release()
             
     @classmethod
-    def get(cls, condition=None):
+    def get(cls, condition=None, connection=None):
         if condition is None:
             return None
         if isinstance(condition, (int, long)):
@@ -2387,15 +2395,15 @@ class Model(object):
         if obj:
             return obj
         #if there is no cached object, then just fetch from database
-        obj = cls.filter(_cond).one()
+        obj = cls.connect(connection).filter(_cond).one()
         #send 'set_object' topic to stored the object to cache
         if obj:
             dispatch.call(cls, 'set_object', condition=_cond, instance=obj)
         return obj
     
     @classmethod
-    def get_or_notfound(cls, condition=None):
-        obj = cls.get(condition)
+    def get_or_notfound(cls, condition=None, connection=None):
+        obj = cls.get(condition, connection)
         if not obj:
             raise NotFound("Can't found the object", cls, condition)
         return obj
@@ -2420,16 +2428,16 @@ class Model(object):
         return Result(cls, condition, **kwargs)
             
     @classmethod
-    def remove(cls, condition=None, **kwargs):
+    def remove(cls, condition=None, connection=None, **kwargs):
         if isinstance(condition, (int, long)):
             condition = cls.c.id==condition
         elif isinstance(condition, (tuple, list)):
             condition = cls.c.id.in_(condition)
-        do_(cls.table.delete(condition, **kwargs), cls.get_connection())
+        do_(cls.table.delete(condition, **kwargs), connection or cls.get_connection())
             
     @classmethod
-    def count(cls, condition=None, **kwargs):
-        count = do_(cls.table.count(condition, **kwargs), cls.get_connection()).scalar()
+    def count(cls, condition=None, connection=None, **kwargs):
+        count = do_(cls.table.count(condition, **kwargs), connection or cls.get_connection()).scalar()
         return count
             
     @classmethod

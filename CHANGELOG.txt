@@ -25,6 +25,8 @@ Uliweb Change Log
     uliweb find -m model_name
     
    to find the model is defined in which model
+#. Add manytomany parameter to Model.delete() function, so it'll automatically 
+   delete manytomany relationships
 
 0.1.1 Version
 -----------------
