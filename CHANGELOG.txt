@@ -12,10 +12,14 @@ Uliweb Change Log
     PERM = {'name':'PERM', 'roles':['a', 'b'], 'description':'PERM}
 
    and with this method, you don't need to define ROLES_PERMISSIONS section
-
 #. Add TransactionMiddle as default settings in ORM settings.ini. By default, if 
    you add 'uliweb.contrib.orm', the transaction middleware will automatically 
    enabled. In the previous version, you should add this middleware yourself.
+#. Add app arguments to exportstatic command
+#. Remove --with-static option of export command, so default behavior is export
+   static folder
+#. Fix default file_serving process, add x_filename process, in order to make
+   alt filename support processing correctly.
 
 0.1.1 Version
 -----------------
