@@ -26,7 +26,8 @@ Uliweb Change Log
     
    to find the model is defined in which model
 #. Add manytomany parameter to Model.delete() function, so it'll automatically 
-   delete manytomany relationships
+   delete manytomany relationships.
+#. Add tables app to uliweb.
 
 0.1.1 Version
 -----------------
