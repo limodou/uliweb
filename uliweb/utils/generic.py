@@ -120,7 +120,122 @@ class RemoteField(BaseField):
         _attrs = {'url':url, 'alt':alt, '_class':'rselect'}
         _attrs.update(html_attrs or {})
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=_attrs, help_string=help_string, build=build, **kwargs)
+        
+class GenericReference(orm.Property):
+    property_type = 'compound'
+    def __init__(self, verbose_name=None, table_fieldname='table_id', 
+        object_fieldname='object_id', **attrs):
+        """
+        Definition of GenericRelation property
+        """
             
+        super(GenericReference, self).__init__(
+            verbose_name=verbose_name, **attrs)
+    
+        self.table_fieldname = table_fieldname
+        self.object_fieldname = object_fieldname
+        self.table = get_model('tables')
+
+    def create(self, cls):
+        pass
+            
+    def __property_config__(self, model_class, property_name):
+        """Loads all of the references that point to this model.
+        """
+        super(GenericReference, self).__property_config__(model_class, property_name)
+        if self.table_fieldname not in model_class.properties:
+            prop = orm.Field(orm.PKTYPE())
+            model_class.add_property(self.table_fieldname, prop)
+        if self.object_fieldname not in model_class.properties:
+            prop = orm.Field(orm.PKTYPE())
+            model_class.add_property(self.object_fieldname, prop)
+            
+    def filter(self, model):
+        model = get_model(model)
+        table_id = self.table.get_table(model.tablename).id
+        return self.model_class.filter(self.model_class.c[self.table_fieldname]==table_id)
+        
+    def __get__(self, model_instance, model_class):
+        """Get reference object.
+    
+        This method will fetch unresolved entities from the datastore if
+        they are not already loaded.
+    
+        Returns:
+            ReferenceProperty to Model object if property is set, else None.
+        """
+        if model_instance:
+            table_id, object_id = self.get_value_for_datastore(model_instance)
+            if not table_id and not object_id:
+                return None
+            model = self.table.get_model(table_id)
+            return model.get(object_id)
+        else:
+            return self
+    
+    def __set__(self, model_instance, value):
+        if model_instance is None:
+            return
+        
+        if value:
+            if isinstance(value, (tuple, list)):
+                if not len(value) == 2:
+                    raise ValueError("The value of GenericRelation should be two-elements tuple/list, or instance of Model, but %r found" % value)
+                
+                table_id, object_id = value
+                if isinstance(table_id, (str, unicode)):
+                    table_id = self.table.get_table(table_id).id
+            elif isinstance(value, orm.Model):
+                table_id = self.table.get_table(value.tablename).id
+                object_id = value.id
+            else:
+                raise ValueError("The value of GenericRelation should be two-elements tuple/list, or instance of Model, but %r found" % value)
+        
+            model_instance.properties[self.table_fieldname].__set__(model_instance, table_id)
+            model_instance.properties[self.object_fieldname].__set__(model_instance, object_id)
+        setattr(model_instance, self._attr_name(), value)
+    
+    def get_value_for_datastore(self, model_instance):
+        """Get key of reference rather than reference itself."""
+        table_id = getattr(model_instance, self.table_fieldname, None)
+        object_id = getattr(model_instance, self.object_fieldname, None)
+        return table_id, object_id
+    
+    def get_display_value(self, value):
+        return unicode(value)
+    
+class GenericRelation(orm.Property):
+    property_type = 'compound'
+    """Generic Relation difinition
+    """
+
+    def __init__(self, model, reference_fieldname='table_id', **attrs):
+        """Constructor for reverse reference.
+
+        Constructor does not take standard values of other property types.
+
+        """
+        super(GenericRelation, self).__init__(**attrs)
+        self._model = model
+        self.reference_fieldname = reference_fieldname
+        self.table = get_model('tables')
+
+    def create(self, cls):
+        pass
+
+    def __get__(self, model_instance, model_class):
+        """Fetches collection of model instances of this collection property."""
+        if model_instance is not None:      #model_instance is B's
+            table_id = self.table.get_table(self.model_class.tablename).id
+            model = get_model(self._model)
+            return model.filter(model.c[self.reference_fieldname]==table_id)
+        else:
+            return self
+
+    def __set__(self, model_instance, value):
+        """Not possible to set a new collection."""
+        raise BadValueError('Virtual property is read-only')
+
 def get_fields(model, fields, meta=None):
     """
     Acording to model and fields to get fields list

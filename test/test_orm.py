@@ -1339,6 +1339,47 @@ def test_manytomany_delete():
     
     """
     
+def test_generic_relation():
+    """
+    >>> from uliweb.utils.generic import GenericReference, GenericRelation
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> from uliweb.contrib.tables.models import Tables
+    >>> class Article(Model):
+    ...     title = Field(str)
+    ...     content = Field(TEXT)
+    ...     tags = GenericRelation('tag')
+    >>> class Tag(Model):
+    ...     name = Field(str)
+    ...     content_object = GenericReference()
+    >>> a = Article(title='Test')
+    >>> a.save()
+    True
+    >>> b = Article(title='Linux')
+    >>> b.save()
+    True
+    >>> print list(a.all()) # doctest:+ELLIPSIS
+    [<Article {'title':u'Test','content':u'','tags':<uliweb.orm.Result ...>,'id':1}>, <Article {'title':u'Linux','content':u'','tags':<uliweb.orm.Result ...>,'id':2}>]
+    >>> t = Tag(name='python', content_object=a)
+    >>> t.save()
+    True
+    >>> t1 = Tag(name='linux', content_object=a)
+    >>> t1.save()
+    True
+    >>> b = list(t.all())[0]
+    >>> print repr(b) # doctest:+ELLIPSIS
+    <Tag {'name':u'python','content_object':<Article {'title':u'Test','content':u'','tags':<uliweb.orm.Result ...>,'id':1}>,'table_id':1,'object_id':1,'id':1}>
+    >>> print b.to_dict()
+    {'content_object': (1, 1), 'table_id': 1, 'name': 'python', 'object_id': 1, 'id': 1}
+    >>> print b.content_object
+    1
+    >>> print [x.name for x in a.tags]
+    [u'python', u'linux']
+    >>> print [x.name for x in Tag.content_object.filter(Article)]
+    [u'python', u'linux']
+    """
+    
 #if __name__ == '__main__':
 #    db = get_connection('sqlite://')
 #    db.metadata.drop_all()

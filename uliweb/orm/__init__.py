@@ -10,12 +10,12 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
-    'PICKLE', 
+    'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
-    'PickleType',
+    'PickleType', 'BigIntegerProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError',
@@ -30,6 +30,7 @@ __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
 __models__ = {}
 __model_paths__ = {}
+__pk_type__ = 'int'
 
 import decimal
 import threading
@@ -108,6 +109,17 @@ def get_dispatch_send(default=True):
         Local.dispatch_send = default
     return Local.dispatch_send
 
+def set_pk_type(name):
+    global __pk_type__
+    
+    __pk_type__ = name
+    
+def PKTYPE():
+    if __pk_type__ == 'int':
+        return int
+    else:
+        return BIGINT
+    
 class Transaction(object):
     def __init__(self, connection):
         self.connection = connection
@@ -538,12 +550,7 @@ class ModelMetaclass(type):
         for attr_name in dct.keys():
             attr = dct[attr_name]
             if isinstance(attr, Property):
-                check_reserved_word(attr_name)
-                if attr_name in defined:
-                    raise DuplicatePropertyError('Duplicate property: %s' % attr_name)
-                defined.add(attr_name)
-                cls.properties[attr_name] = attr
-                attr.__property_config__(cls, attr_name)
+                cls.add_property(attr_name, attr, set_property=False)
                 
                 if isinstance(attr, ManyToMany):
                     cls._manytomany[attr_name] = attr
@@ -551,11 +558,11 @@ class ModelMetaclass(type):
         #if there is already defined primary_key, the id will not be primary_key
         has_primary_key = bool([v for v in cls.properties.itervalues() if 'primary_key' in v.kwargs])
         
-        #add ___id__ attribute to model, if set it, uliorm will not
+        #add __without_id__ attribute to model, if set it, uliorm will not
         #create 'id' field for the model
         without_id = getattr(cls, '__without_id__', False)
         if 'id' not in cls.properties and not without_id:
-            cls.properties['id'] = f = Field(int, autoincrement=True, 
+            cls.properties['id'] = f = Field(PKTYPE(), autoincrement=True, 
                 primary_key=not has_primary_key, default=None, nullable=False)
             f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)
@@ -572,6 +579,7 @@ class Property(object):
     data_type = str
     field_class = String
     creation_counter = 0
+    property_type = 'column'   #Property type: 'column', 'compound', 'relation'
 
     def __init__(self, verbose_name=None, name=None, default=None,
         required=False, validators=None, choices=None, max_length=None, 
@@ -632,7 +640,7 @@ class Property(object):
             return self
 
         try:
-            return getattr(model_instance, self._attr_name())
+            return getattr(model_instance, self._attr_name(), self.default_value())
         except AttributeError:
             return None
         
@@ -651,8 +659,13 @@ class Property(object):
 #        return self.default
     def default_value(self):
         if callable(self.default):
-            return self.default()
-        return self.default
+            d = self.default()
+        else:
+            d = self.default
+        if d:
+            return self.convert(d)
+        else:
+            return d
     
     def get_choices(self):
         if callable(self.choices):
@@ -716,7 +729,7 @@ class Property(object):
         return value is None
 
     def get_value_for_datastore(self, model_instance):
-        return self.__get__(model_instance, model_instance.__class__)
+        return getattr(model_instance, self._attr_name(), None)
 
     def make_value_from_datastore(self, value):
         return value
@@ -958,6 +971,9 @@ class IntegerProperty(Property):
                 % (self.name, type(value).__name__))
         return value
 
+class BigIntegerProperty(IntegerProperty):
+    field_class = BigInteger
+    
 class FloatProperty(Property):
     """A float property."""
 
@@ -1758,7 +1774,7 @@ class ManyToMany(ReferenceProperty):
             self.table = self.create_table()
             #add appname to self.table
             appname = self.model_class.__module__
-            if appname.endswith('.models'):
+            if appname.rsplit('.', 1)[-1].startswith('models'):
                 self.table.__appname__ = appname[:-7]
             self.model_class.manytomany.append(self.table)
             Index('%s_mindx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
@@ -1818,7 +1834,7 @@ class ManyToMany(ReferenceProperty):
                 raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fieldb, self.through))
             self.table = self.through.table
             appname = self.model_class.__module__
-            if appname.endswith('.models'):
+            if appname.rsplit('.', 1)[-1].startswith('models'):
                 self.table.__appname__ = appname[:-7]
             self.model_class.manytomany.append(self.table)
             Index('%s_mindx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
@@ -2023,6 +2039,7 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
 
 FILE = FileProperty
 PICKLE = PickleProperty
+BIGINT = BigIntegerProperty
 
 _fields_mapping = {
     str:StringProperty,
@@ -2032,6 +2049,7 @@ _fields_mapping = {
     BLOB:BlobProperty,
     FILE:FileProperty,
     int:IntegerProperty,
+    BIGINT:BigIntegerProperty,
     float:FloatProperty,
     bool:BooleanProperty,
     datetime.datetime:DateTimeProperty,
@@ -2061,9 +2079,11 @@ class Model(object):
         for prop in self.properties.values():
             if prop.name in kwargs:
                 value = kwargs[prop.name]
-            else:
-                value = prop.default_value()
-            prop.__set__(self, value)
+#            else:
+#                if prop.get_value_for_datastore(self) is not None:
+#                    continue
+#                value = prop.default_value()
+                prop.__set__(self, value)
         
     def set_saved(self):
         self._old_values = self.to_dict()
@@ -2117,6 +2137,9 @@ class Model(object):
         if self.id is None:
             d = {}
             for k, v in self.properties.items():
+#                if not isinstance(v, ManyToMany):
+                if v.property_type == 'compound':
+                    continue
                 if not isinstance(v, ManyToMany):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
@@ -2129,6 +2152,8 @@ class Model(object):
             d = {}
             d['id'] = self.id
             for k, v in self.properties.items():
+                if v.property_type == 'compound':
+                    continue
                 t = self._old_values.get(k, None)
                 if not isinstance(v, ManyToMany):
                     x = v.get_value_for_datastore(self)
@@ -2175,6 +2200,8 @@ class Model(object):
                 #process auto_now_add
                 _manytomany = {}
                 for k, v in self.properties.items():
+                    if v.property_type == 'compound':
+                        continue
                     if not isinstance(v, ManyToMany):
                         if isinstance(v, DateTimeProperty) and v.auto_now_add and k not in d:
                             d[k] = v.now()
@@ -2207,6 +2234,8 @@ class Model(object):
                     #process auto_now
                     _manytomany = {}
                     for k, v in self.properties.items():
+                        if v.property_type == 'compound':
+                            continue
                         if not isinstance(v, ManyToMany):
                             if isinstance(v, DateTimeProperty) and v.auto_now and k not in d:
                                 d[k] = v.now()
@@ -2279,6 +2308,18 @@ class Model(object):
     #classmethod========================================================
 
     @classmethod
+    def add_property(cls, name, prop, config=True, set_property=True):
+        if isinstance(prop, Property):
+            check_reserved_word(name)
+            if name in cls.properties:
+                raise DuplicatePropertyError('Duplicate property: %s' % name)
+            cls.properties[name] = prop
+            if config:
+                prop.__property_config__(cls, name)
+            if set_property:
+                setattr(cls, name, prop)
+        
+    @classmethod
     def _set_tablename(cls, appname=None):
         if not hasattr(cls, '__tablename__'):
             name = cls.__name__.lower()
@@ -2343,7 +2384,7 @@ class Model(object):
                 cls.table = Table(cls.tablename, cls.metadata, *cols, **args)
                 #add appname to self.table
                 appname = cls.__module__
-                if appname.endswith('.models'):
+                if appname.rsplit('.', 1)[-1].startswith('models'):
                     cls.table.__appname__ = appname[:-7]
                 
                 cls.c = cls.table.c

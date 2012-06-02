@@ -6,6 +6,7 @@ def after_init_apps(sender):
     
     orm.set_debug_query(uliweb.settings.ORM.DEBUG_LOG)
     orm.set_auto_create(uliweb.settings.ORM.AUTO_CREATE)
+    orm.set_pk_type(uliweb.settings.ORM.PK_TYPE)
     orm.set_auto_set_model(False)
     
     #judge if transaction middle has not install then set
