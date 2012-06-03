@@ -2266,21 +2266,31 @@ class Model(object):
     
     save = put
     
-    def delete(self, manytomany=True, connection=None):
+    def delete(self, manytomany=True, connection=None, delete_fieldname=None):
         """
         Delete current obj
         :param manytomany: if also delete all manytomany relationships
+        :param delete_fieldname: if True then it'll use 'deleted', others will 
+        be the property name
         """
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'pre_delete', instance=self)
         if manytomany:
             for k, v in self._manytomany.iteritems():
                 getattr(self, k).clear()
-        do_(self.table.delete(self.table.c.id==self.id), connection or self.get_connection())
+        if delete_fieldname:
+            if delete_fieldname is True:
+                delete_fieldname = 'deleted'
+            if not hasattr(self, delete_fieldname):
+                raise KeyError("There is no %s property exists" % delete_fieldname)
+            setattr(self, delete_fieldname, True)
+            self.save()
+        else:
+            do_(self.table.delete(self.table.c.id==self.id), connection or self.get_connection())
+            self.id = None
+            self._old_values = {}
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'post_delete', instance=self)
-        self.id = None
-        self._old_values = {}
             
     def __repr__(self):
         s = []

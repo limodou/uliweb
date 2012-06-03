@@ -1339,6 +1339,53 @@ def test_manytomany_delete():
     
     """
     
+#test ManyToMany
+def test_manytomany_delete_fieldname():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    >>> class Group(Model):
+    ...     name = Field(str)
+    ...     deleted = Field(bool)
+    ...     users = ManyToMany(User)
+    >>> a = User(username='limodou')
+    >>> a.save()
+    True
+    >>> b = User(username='user')
+    >>> b.save()
+    True
+    >>> c = User(username='abc')
+    >>> c.save()
+    True
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
+    >>> g1.users.add(a)
+    True
+    >>> g1.users.add(b, 3) #add can support multiple object, and object can also int
+    True
+    >>> g1.users.add(a, b)  #can has duplicated records
+    False
+    >>> list(g1.users.all())
+    [<User {'username':u'limodou','id':1}>, <User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
+    >>> list(do_(Group.users.table.select()))
+    [(1, 1), (1, 2), (1, 3)]
+    >>> g1.delete(delete_fieldname=True)
+    >>> list(do_(Group.users.table.select()))
+    []
+    >>> g1
+    <Group {'name':u'python','deleted':True,'id':1}>
+    """
+
 def test_generic_relation():
     """
     >>> from uliweb.utils.generic import GenericReference, GenericRelation

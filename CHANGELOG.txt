@@ -34,6 +34,10 @@ Uliweb Change Log
    you can use set_pk_type(name) to switch it, also add PKTYPE() function, you
    can use Field(PKTYPE()) to create ForeignKey Property according the option,
    in web project, you can swith it via ORM/PK_TYPE 
+#. Add delete_fieldname parameter to Model.delete(), so if you pass True, it'll
+   assume the delete_fieldname is 'deleted', and if you pass real field_name it'll
+   use it directly. This way will not delete the record at all, just change the 
+   delete_fieldname value from False to True.
 
 0.1.1 Version
 -----------------
