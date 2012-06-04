@@ -99,7 +99,6 @@ class ReferenceSelectField(SelectField):
         return r
     
     def to_python(self, data):
-        print '!!!!!!!!!!!!!!!!!!!!!!', data, self.name
         return int(data)
 
 class ManyToManySelectField(ReferenceSelectField):
