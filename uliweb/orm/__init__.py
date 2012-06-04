@@ -2085,13 +2085,24 @@ class Model(object):
     
     def __init__(self, **kwargs):
         self._old_values = {}
+        
+        #compounds fields will be processed in the end
+        compounds = []
         for prop in self.properties.values():
             if prop.name in kwargs:
+                if prop.property_type == 'compound':
+                    compounds.append(prop)
+                    continue
                 value = kwargs[prop.name]
-#            else:
-#                if prop.get_value_for_datastore(self) is not None:
-#                    continue
-#                value = prop.default_value()
+            else:
+                if prop.property_type == 'compound':
+                    continue
+                value = prop.default_value()
+            prop.__set__(self, value)
+        
+        for prop in compounds:
+            if prop.name in kwargs:
+                value = kwargs[prop.name]
                 prop.__set__(self, value)
         
     def set_saved(self):
