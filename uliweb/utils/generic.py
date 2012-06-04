@@ -99,6 +99,7 @@ class ReferenceSelectField(SelectField):
         return r
     
     def to_python(self, data):
+        print '!!!!!!!!!!!!!!!!!!!!!!', data, self.name
         return int(data)
 
 class ManyToManySelectField(ReferenceSelectField):
@@ -116,10 +117,14 @@ class RemoteField(BaseField):
     """
     Fetch remote data
     """
-    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, alt='', url='', **kwargs):
+    def __init__(self, label='', default='', required=False, validators=None, 
+        name='', html_attrs=None, help_string='', build=None, alt='', url='', 
+        datatype=int, **kwargs):
         _attrs = {'url':url, 'alt':alt, '_class':'rselect'}
         _attrs.update(html_attrs or {})
-        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=_attrs, help_string=help_string, build=build, **kwargs)
+        BaseField.__init__(self, label=label, default=default, required=required, 
+            validators=validators, name=name, html_attrs=_attrs, help_string=help_string, 
+            build=build, datatype=datatype, **kwargs)
         
 class GenericReference(orm.Property):
     property_type = 'compound'
@@ -234,7 +239,7 @@ class GenericRelation(orm.Property):
 
     def __set__(self, model_instance, value):
         """Not possible to set a new collection."""
-        raise BadValueError('Virtual property is read-only')
+        raise ValueError('Virtual property is read-only')
 
 def get_fields(model, fields, meta=None):
     """

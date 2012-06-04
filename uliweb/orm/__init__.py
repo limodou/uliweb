@@ -120,6 +120,12 @@ def PKTYPE():
     else:
         return BIGINT
     
+def PKCLASS():
+    if __pk_type__ == 'int':
+        return Integer
+    else:
+        return BigInteger
+    
 class Transaction(object):
     def __init__(self, connection):
         self.connection = connection
@@ -1049,7 +1055,8 @@ class BooleanProperty(Property):
 class ReferenceProperty(Property):
     """A property that represents a many-to-one reference to another model.
     """
-    field_class = Integer
+    data_type = int
+    field_class = PKCLASS()
 
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
         reference_fieldname=None, required=False, **attrs):
@@ -1078,7 +1085,8 @@ class ReferenceProperty(Property):
                 reference_class is _SELF_REFERENCE or
                 valid_model(reference_class)):
             raise KindError('reference_class %r must be Model or _SELF_REFERENCE or available table name' % reference_class)
-        self.reference_class = self.data_type = get_model(reference_class)
+        
+        self.reference_class = get_model(reference_class)
         
     def create(self, cls):
         args = self.kwargs.copy()
@@ -1098,6 +1106,10 @@ class ReferenceProperty(Property):
         if not hasattr(self.reference_class, self.reference_fieldname):
             raise KindError('reference_fieldname is not existed')
         self.reference_field = getattr(self.reference_class, self.reference_fieldname)
+        
+        #process data_type
+        self.data_type = self.reference_field.data_type
+        
         field_class = self.reference_field.field_class
         if self.reference_field.max_length:
             f_type = field_class(self.reference_field.max_length)
@@ -1111,7 +1123,7 @@ class ReferenceProperty(Property):
         super(ReferenceProperty, self).__property_config__(model_class, property_name)
 
         if self.reference_class is _SELF_REFERENCE:
-            self.reference_class = self.data_type = model_class
+            self.reference_class = model_class
 
         if self.collection_name is None:
             self.collection_name = '%s_set' % (model_class.tablename)
@@ -1186,16 +1198,13 @@ class ReferenceProperty(Property):
                 - Object not of correct model type for reference.
         """
         if not isinstance(value, Model):
-            return value
+            return super(ReferenceProperty, self).validate(value)
 
-        if value is not None and not value.is_saved():
+        if not value.is_saved():
             raise BadValueError(
                     '%s instance must be saved before it can be stored as a '
                     'reference' % self.reference_class.__class__.__name__)
-
-        value = super(ReferenceProperty, self).validate(value)
-
-        if value is not None and not isinstance(value, self.reference_class):
+        if not isinstance(value, self.reference_class):
             raise KindError('Property %s must be an instance of %s' %
                     (self.name, self.reference_class.__class__.__name__))
 
