@@ -154,11 +154,22 @@ class GenericReference(orm.Property):
             prop = orm.Field(orm.PKTYPE())
             model_class.add_property(self.object_fieldname, prop)
             
-    def filter(self, model):
-        model = get_model(model)
-        table_id = self.table.get_table(model.tablename).id
-        return self.model_class.filter(self.model_class.c[self.table_fieldname]==table_id)
+#    def filter(self, model):
+#        model = get_model(model)
+#        table_id = self.table.get_table(model.tablename).id
+#        return self.model_class.filter(self.model_class.c[self.table_fieldname]==table_id)
         
+    def filter(self, obj):
+        if isinstance(obj, (tuple, list)):
+            if len(obj) != 2:
+                raise ValueError("GenericReference filter need a model instance or a tuple")
+            table_id = self.table.get_table(obj[0]).id
+            obj_id = obj[1]
+        else:
+            table_id = self.table.get_table(obj.__class__.tablename).id
+            obj_id = obj.id
+        return self.model_class.filter(self.model_class.c[self.table_fieldname]==table_id).filter(self.model_class.c[self.object_fieldname]==obj_id)
+
     def __get__(self, model_instance, model_class):
         """Get reference object.
     

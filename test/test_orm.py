@@ -1423,7 +1423,9 @@ def test_generic_relation():
     1
     >>> print [x.name for x in a.tags]
     [u'python', u'linux']
-    >>> print [x.name for x in Tag.content_object.filter(Article)]
+    >>> print [x.name for x in Tag.content_object.filter(a)]
+    [u'python', u'linux']
+    >>> print [x.name for x in Tag.content_object.filter(('article', a.id))]
     [u'python', u'linux']
     """
     
