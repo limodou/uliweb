@@ -886,7 +886,6 @@ class Form(object):
         if not 'class' in self.html_attrs:
             self.html_attrs['class'] = DEFAULT_FORM_CLASS
         
-        print '===============', html_attrs, self.html_attrs
         self.bind(data, errors)
         self.__init_validators()
         self.ok = True
