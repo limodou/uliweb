@@ -279,9 +279,9 @@ class BaseField(object):
 #    
 class StringField(BaseField):
     """
-    >>> a = StringField(name='title', label='Title:', required=True, id='field_title')
+    >>> a = StringField(name='title', label='Title', required=True, id='field_title')
     >>> print a.html('Test')
-    <input class="field" id="field_title" name="title" type="text" value="Test"></input>
+    <input class="field" id="field_title" name="title" placeholder="" type="text" value="Test"></input>
     <BLANKLINE>
     >>> print a.get_label()
     <label for="field_title">Title:<span class="field_required">*</span>
@@ -293,9 +293,9 @@ class StringField(BaseField):
     (True, 'Hello')
     >>> a.to_python('Hello')
     'Hello'
-    >>> a = StringField(name='title', label='Title:', required=True)
+    >>> a = StringField(name='title', label='Title', required=True)
     >>> print a.html('')
-    <input class="field" name="title" type="text" value=""></input>
+    <input class="field" name="title" placeholder="" type="text" value=""></input>
     <BLANKLINE>
     >>> print a.get_label()
     <label>Title:<span class="field_required">*</span>
@@ -303,7 +303,7 @@ class StringField(BaseField):
     <BLANKLINE>
     >>> a.idtype = 'name'
     >>> print a.html('')
-    <input class="field" id="field_title" name="title" type="text" value=""></input>
+    <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
     <BLANKLINE>
     >>> print a.get_label()
     <label for="field_title">Title:<span class="field_required">*</span>
@@ -311,7 +311,7 @@ class StringField(BaseField):
     <BLANKLINE>
     >>> a = StringField(name='title', label='Title:', required=True, html_attrs={'class':'ffff'})
     >>> print a.html('')
-    <input class="ffff field" name="title" type="text" value=""></input>
+    <input class="ffff field" name="title" placeholder="" type="text" value=""></input>
     <BLANKLINE>
     """
     default_datatype = str
@@ -331,9 +331,9 @@ class StringField(BaseField):
     
 class UnicodeField(BaseField):
     """
-    >>> a = UnicodeField(name='title', label='Title:', required=True, id='field_title')
+    >>> a = UnicodeField(name='title', label='Title', required=True, id='field_title')
     >>> print a.html('Test')
-    <input class="field" id="field_title" name="title" type="text" value="Test"></input>
+    <input class="field" id="field_title" name="title" placeholder="" type="text" value="Test"></input>
     <BLANKLINE>
     >>> print a.get_label()
     <label for="field_title">Title:<span class="field_required">*</span>
@@ -369,7 +369,7 @@ class PasswordField(StringField):
     """
     >>> a = PasswordField(name='password', label='Password:', required=True, id='field_password')
     >>> print a.html('Test')
-    <input class="field" id="field_password" name="password" type="password" value="Test"></input>
+    <input class="field" id="field_password" name="password" placeholder="" type="password" value="Test"></input>
     <BLANKLINE>
     """
     default_build = Password
@@ -378,7 +378,7 @@ class HiddenField(StringField):
     """
     >>> a = HiddenField(name='id', id='field_id')
     >>> print a.html('Test')
-    <input class="field" id="field_id" name="id" type="hidden" value="Test"></input>
+    <input class="field" id="field_id" name="id" placeholder="" type="hidden" value="Test"></input>
     <BLANKLINE>
     """
     default_build = Hidden
@@ -387,7 +387,7 @@ class ListField(StringField):
     """
     >>> a = ListField(name='list', id='field_list')
     >>> print a.html(['a', 'b'])
-    <input class="field" id="field_list" name="list" type="text" value="a b"></input>
+    <input class="field" id="field_list" name="list" placeholder="" type="text" value="a b"></input>
     <BLANKLINE>
     >>> print a.validate('a b')
     (True, ['a', 'b'])
@@ -425,7 +425,7 @@ class TextField(StringField):
     """
     >>> a = TextField(name='text', id='field_text')
     >>> print a.html('Test')
-    <textarea class="field" cols="75" id="field_text" name="text" rows="10">Test</textarea>
+    <textarea class="field" cols id="field_text" name="text" placeholder="" rows="10">Test</textarea>
     <BLANKLINE>
     
     """
@@ -451,7 +451,7 @@ class TextLinesField(TextField):
     """
     >>> a = TextLinesField(name='list', id='field_list')
     >>> print a.html(['a', 'b'])
-    <textarea class="field" cols="40" id="field_list" name="list" rows="4">a
+    <textarea class="field" cols="40" id="field_list" name="list" placeholder="" rows="4">a
     b</textarea>
     <BLANKLINE>
     """
@@ -463,16 +463,21 @@ class TextLinesField(TextField):
     def to_python(self, data):
         return [self.datatype(x) for x in data.splitlines()]
 
-    def to_html(self, data):
+    def html(self, data='', py=True):
         if data is None:
-            return ''
-        return '\n'.join([u_str(x) for x in data])
+            value = ''
+        else:
+            value = '\n'.join([u_str(x) for x in data])
+        #add convert '&' to '&amp;' 2011-8-20 by limodou
+        if self.convert_html:
+            value = value.replace('&', '&amp;')
+        return str(self.build(value, id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
 
 class BooleanField(BaseField):
     """
     >>> a = BooleanField(name='bool', id='field_bool')
     >>> print a.html('Test')
-    <input checked class="checkbox" id="field_bool" name="bool" type="checkbox"></input>
+    <input checked class="checkbox" id="field_bool" name="bool" placeholder="" type="checkbox"></input>
     <BLANKLINE>
     >>> print a.validate('on')
     (True, True)
@@ -510,7 +515,7 @@ class IntField(BaseField):
     """
     >>> a = IntField(name='int', id='field_int')
     >>> print a.html('Test')
-    <input class="field" id="field_int" name="int" type="text" value="Test"></input>
+    <input class="field" id="field_int" name="int" placeholder="" type="text" value="Test"></input>
     <BLANKLINE>
     >>> print a.validate('')
     (True, 0)
@@ -522,7 +527,7 @@ class IntField(BaseField):
     (True, 122)
     >>> a = BaseField(name='int', id='field_int', datatype=int)
     >>> print a.html('Test')
-    <input class="field" id="field_int" name="int" type="text" value="Test"></input>
+    <input class="field" id="field_int" name="int" placeholder="" type="text" value="Test"></input>
     <BLANKLINE>
     >>> print a.validate('122')
     (True, 122)
@@ -556,7 +561,7 @@ class SelectField(BaseField):
     >>> choices = [('a', 'AAA'), ('b', 'BBB')]
     >>> a = SelectField(name='select', id='field_select', default='a', choices=choices, validators=[IS_IN_SET(choices)])
     >>> print a.html('a')
-    <select class="field" id="field_select" name="select"><option selected value="a">AAA</option>
+    <select class="field" id="field_select" name="select" placeholder=""><option selected value="a">AAA</option>
     <BLANKLINE>
     <option value="b">BBB</option>
     </select>
@@ -621,10 +626,10 @@ class RadioSelectField(SelectField):
     >>> choices = [('a', 'AAA'), ('b', 'BBB')]
     >>> a = RadioSelectField(name='select', id='field_select', default='a', choices=choices, validators=[IS_IN_SET(choices)])
     >>> print a.html('a')
-    <input checked id="radio_1" name="select" type="radio" value="a"></input>
-    <label for="radio_1">AAA</label>
-    <input id="radio_2" name="select" type="radio" value="b"></input>
-    <label for="radio_2">BBB</label>
+    <label class="field" placeholder=""><input checked id="field_select" name="select" type="radio" value="a"></input>
+    AAA</label>
+    <label class="field" placeholder=""><input id="field_select" name="select" type="radio" value="b"></input>
+    BBB</label>
     <BLANKLINE>
     >>> print a.validate('')
     (True, 'a')
@@ -640,7 +645,7 @@ class FileField(BaseField):
     """
     >>> a = FileField(name='file', id='field_file')
     >>> print a.html('a')
-    <input class="field" id="field_file" name="file" type="file"></input>
+    <input class="field" id="field_file" name="file" placeholder="" type="file"></input>
     <BLANKLINE>
     """
     
@@ -680,7 +685,7 @@ class DateField(StringField):
     """
     >>> a = DateField(name='date', id='field_date')
     >>> print a.html(datetime.date(2009, 1, 1))
-    <input class="field field_date" id="field_date" name="date" type="text" value="2009-01-01"></input>
+    <input class="field field_date" id="field_date" name="date" placeholder="" type="text" value="2009-01-01"></input>
     <BLANKLINE>
     >>> print a.validate('2009-01-01')
     (True, datetime.date(2009, 1, 1))
@@ -728,7 +733,7 @@ class TimeField(StringField):
     """
     >>> a = TimeField(name='time', id='field_time')
     >>> print a.html(datetime.time(14, 30, 59))
-    <input class="field field_time" id="field_time" name="time" type="text" value="14:30:59"></input>
+    <input class="field field_time" id="field_time" name="time" placeholder="" type="text" value="14:30:59"></input>
     <BLANKLINE>
     >>> print a.validate('14:30:59')
     (True, datetime.time(14, 30, 59))
@@ -779,7 +784,7 @@ class DateTimeField(StringField):
     """
     >>> a = DateTimeField(name='datetime', id='field_datetime')
     >>> print a.html(datetime.datetime(2009, 9, 25, 14, 30, 59))
-    <input class="field field_datetime" id="field_datetime" name="datetime" type="text" value="2009-09-25 14:30:59"></input>
+    <input class="field field_datetime" id="field_datetime" name="datetime" placeholder="" type="text" value="2009-09-25 14:30:59"></input>
     <BLANKLINE>
     >>> print a.validate('2009-09-25 14:30:59')
     (True, datetime.datetime(2009, 9, 25, 14, 30, 59))
@@ -844,13 +849,13 @@ class Form(object):
     ...     title = StringField(lable='Title:')
     >>> form = F()
     >>> print form.form_begin
-    <form class="form" action="" method="POST">
+    <form action="" class="form" method="POST">
     >>> class F(Form):
     ...     title = StringField(lable='Title:')
     ...     file = FileField()
     >>> form = F(action='post')
     >>> print form.form_begin
-    <form class="form" action="post" enctype="multipart/form-data" method="POST">
+    <form action="post" class="form" enctype="multipart/form-data" method="POST">
     >>> print form.form_end
     </form>
     """

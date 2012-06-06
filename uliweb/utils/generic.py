@@ -116,7 +116,7 @@ class RemoteField(BaseField):
     """
     Fetch remote data
     """
-    def __init__(self, label='', default='', required=False, validators=None, 
+    def __init__(self, label='', default=None, required=False, validators=None, 
         name='', html_attrs=None, help_string='', build=None, alt='', url='', 
         datatype=int, **kwargs):
         _attrs = {'url':url, 'alt':alt, '_class':'rselect'}
