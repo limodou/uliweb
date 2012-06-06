@@ -119,8 +119,8 @@ class TableLayout(Layout):
         return div
         
     def html(self):
-        if self.form_class not in self.form.html_attrs['_class']:
-            self.form.html_attrs['_class'] = self.form_class
+        if self.form_class  and self.form_class not in self.form.html_attrs['class']:
+            self.form.html_attrs['class'] += ' ' + self.form_class
         if self.layout:
             m = []
             for line in self.layout:
@@ -449,8 +449,8 @@ class YamlLayout(Layout):
 
     def html(self):
         buf = Buf()
-        if 'yform' not in self.form.html_attrs['_class']:
-            self.form.html_attrs['_class'] = 'yform'
+        if 'yform' not in self.form.html_attrs['class']:
+            self.form.html_attrs['class'] = 'yform'
         buf << self.form.form_begin
             
 #            if self.form.fieldset:
@@ -490,6 +490,7 @@ class YamlLayout(Layout):
                     
 
 class BootstrapLayout(YamlLayout):
+    form_class = 'form-horizontal'
     field_classes = {
         ('Text', 'Password', 'TextArea'):'input-xlarge',
         ('Button', 'Submit', 'Reset', 'Checkbox', 'File', 'Hidden'):'',
@@ -523,8 +524,8 @@ class BootstrapLayout(YamlLayout):
                     
     def html(self):
         buf = Buf()
-        if 'form-horizontal' not in self.form.html_attrs['_class']:
-            self.form.html_attrs['_class'] = 'form-horizontal'
+        if self.form_class  and self.form_class not in self.form.html_attrs['class']:
+            self.form.html_attrs['class'] += ' ' + self.form_class
         buf << self.form.form_begin
         if not self.layout:
             self.layout = [name for name, obj in self.form.fields_list]

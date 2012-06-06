@@ -32,7 +32,7 @@ class FormWriter(uaml.Writer):
 
     def begin_form(self, indent, value, **kwargs):
         if kwargs.get('class', None):
-            self.form.html_attrs['_class'] = kwargs['class']
+            self.form.html_attrs['class'] = kwargs['class']
         return indent * ' ' + self.form.form_begin
     
     def close_form(self, indent):
@@ -136,8 +136,8 @@ class BootstrapFormWriter(FormWriter):
     
     def begin_form(self, indent, value, **kwargs):
         if kwargs.get('class', None):
-            self.form.html_attrs['_class'] = kwargs['class']
-        self.form.html_attrs['_class'] = self.form.html_attrs['_class'] + ' form-horizontal'
+            self.form.html_attrs['class'] = kwargs['class']
+        self.form.html_attrs['class'] = self.form.html_attrs['class'] + ' form-horizontal'
         return indent * ' ' + self.form.form_begin
         
     def begin_buttons(self, indent, value, **kwargs):

@@ -882,10 +882,11 @@ class Form(object):
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
         if '_class' in self.html_attrs:
-            self.html_attrs['_class'] = self.html_attrs['_class'] + ' ' + DEFAULT_FORM_CLASS
-        else:
-            self.html_attrs['_class'] = DEFAULT_FORM_CLASS
-            
+            self.html_attrs['class'] = self.html_attrs['class'] + ' ' + DEFAULT_FORM_CLASS
+        if not 'class' in self.html_attrs:
+            self.html_attrs['class'] = DEFAULT_FORM_CLASS
+        
+        print '===============', html_attrs, self.html_attrs
         self.bind(data, errors)
         self.__init_validators()
         self.ok = True
