@@ -2348,6 +2348,10 @@ class Model(object):
                 prop.__property_config__(cls, name)
             if set_property:
                 setattr(cls, name, prop)
+            if hasattr(cls, '_fields_list'):
+                if (name, prop) not in cls._fields_list:
+                    cls._fields_list.append((name, prop))
+                    cls._fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         
     @classmethod
     def _set_tablename(cls, appname=None):
@@ -2399,6 +2403,12 @@ class Model(object):
             if cls.metadata and not cls._bound:
                 cols = []
                 cls.manytomany = []
+                #add pre_create process
+                for k, f in cls.properties.items():
+                    func = getattr(f, 'pre_create', None)
+                    if func:
+                        func(cls)
+
                 for k, f in cls.properties.items():
                     c = f.create(cls)
                     if c is not None:

@@ -119,8 +119,8 @@ class TableLayout(Layout):
         return div
         
     def html(self):
-        if self.form_class  and self.form_class not in self.form.html_attrs['class']:
-            self.form.html_attrs['class'] += ' ' + self.form_class
+        if not self.form.html_attrs['class']:
+            self.form.html_attrs['class'] = self.form_class
         if self.layout:
             m = []
             for line in self.layout:
@@ -399,6 +399,8 @@ class YamlRadioSelect(RadioSelect):
         return str(s)
     
 class YamlLayout(Layout):
+    form_class = 'yform'
+
     field_classes = {
         ('Text', 'Password', 'TextArea'):'type-text',
         ('Button', 'Submit', 'Reset'):'type-button',
@@ -449,8 +451,8 @@ class YamlLayout(Layout):
 
     def html(self):
         buf = Buf()
-        if 'yform' not in self.form.html_attrs['class']:
-            self.form.html_attrs['class'] = 'yform'
+        if not self.form.html_attrs['class']:
+            self.form.html_attrs['class'] = self.form_class
         buf << self.form.form_begin
             
 #            if self.form.fieldset:
@@ -524,8 +526,8 @@ class BootstrapLayout(YamlLayout):
                     
     def html(self):
         buf = Buf()
-        if self.form_class  and self.form_class not in self.form.html_attrs['class']:
-            self.form.html_attrs['class'] += ' ' + self.form_class
+        if not self.form.html_attrs['class']:
+            self.form.html_attrs['class'] = self.form_class
         buf << self.form.form_begin
         if not self.layout:
             self.layout = [name for name, obj in self.form.fields_list]

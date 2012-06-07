@@ -142,17 +142,19 @@ class GenericReference(orm.Property):
 
     def create(self, cls):
         pass
+    
+    def pre_create(self, cls):
+        if self.table_fieldname not in cls.properties:
+            prop = orm.Field(orm.PKTYPE())
+            cls.add_property(self.table_fieldname, prop)
+        if self.object_fieldname not in cls.properties:
+            prop = orm.Field(orm.PKTYPE())
+            cls.add_property(self.object_fieldname, prop)
             
     def __property_config__(self, model_class, property_name):
         """Loads all of the references that point to this model.
         """
         super(GenericReference, self).__property_config__(model_class, property_name)
-        if self.table_fieldname not in model_class.properties:
-            prop = orm.Field(orm.PKTYPE())
-            model_class.add_property(self.table_fieldname, prop)
-        if self.object_fieldname not in model_class.properties:
-            prop = orm.Field(orm.PKTYPE())
-            model_class.add_property(self.object_fieldname, prop)
             
 #    def filter(self, model):
 #        model = get_model(model)
@@ -166,6 +168,8 @@ class GenericReference(orm.Property):
             table_id = self.table.get_table(obj[0]).id
             obj_id = obj[1]
         else:
+            if not isinstance(obj, orm.Model):
+                raise ValueError("obj should an instance of Model, but %r found" % obj)
             table_id = self.table.get_table(obj.__class__.tablename).id
             obj_id = obj.id
         return self.model_class.filter(self.model_class.c[self.table_fieldname]==table_id).filter(self.model_class.c[self.object_fieldname]==obj_id)

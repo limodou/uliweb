@@ -1416,7 +1416,7 @@ def test_generic_relation():
     True
     >>> b = list(t.all())[0]
     >>> print repr(b) # doctest:+ELLIPSIS
-    <Tag {'name':u'python','content_object':<Article {'title':u'Test','content':u'','tags':<uliweb.orm.Result ...>,'id':1}>,'table_id':1,'object_id':1,'id':1}>
+    <Tag {'name':u'python','content_object':<Article {'title':u'Test','content':u'','tags':<uliweb.orm.Result ...>,'id':1}>,'id':1,'table_id':1,'object_id':1}>
     >>> print b.to_dict()
     {'content_object': (1, 1), 'table_id': 1, 'name': 'python', 'object_id': 1, 'id': 1}
     >>> print b.content_object

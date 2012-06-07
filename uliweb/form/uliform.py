@@ -872,11 +872,14 @@ class Form(object):
     form_title = None
 
     def __init__(self, action=None, method=None, buttons=None, 
-            validators=None, html_attrs=None, data={}, errors={}, 
-            idtype='name', title='', vars=None, layout=None, **kwargs):
+            validators=None, html_attrs=None, data=None, errors=None, 
+            idtype='name', title='', vars=None, layout=None, 
+            id=None, _class='', **kwargs):
         self.form_action = action or self.form_action
         self.form_method = method or self.form_method
         self.form_title = title or self.form_title
+        self.form_class = _class
+        self.form_id = id
         self.kwargs = kwargs
         self._buttons = buttons or self.form_buttons
         self.validators = validators or []
@@ -886,12 +889,16 @@ class Form(object):
         self.vars = vars
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
-        if '_class' in self.html_attrs:
-            self.html_attrs['class'] = self.html_attrs['class'] + ' ' + DEFAULT_FORM_CLASS
-        if not 'class' in self.html_attrs:
-            self.html_attrs['class'] = DEFAULT_FORM_CLASS
+        if self.form_class:
+            self.html_attrs['class'] = self.form_class# + ' ' + DEFAULT_FORM_CLASS
+        else:
+            self.html_attrs['class'] = ''
+        if self.form_id:
+            self.html_attrs['id'] = self.form_id
+#        if not 'class' in self.html_attrs:
+#            self.html_attrs['class'] = DEFAULT_FORM_CLASS
         
-        self.bind(data, errors)
+        self.bind(data or {}, errors or {})
         self.__init_validators()
         self.ok = True
         
