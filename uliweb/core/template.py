@@ -137,14 +137,37 @@ class Node(object):
         
     def __repr__(self):
         return self.__str__()
-        
-class BlockNode(Node):
-    block = 1
+    
+class BaseBlockNode(Node):
     def __init__(self, name='', content=None):
         self.nodes = []
         self.name = name
         self.content = content
+        self.block = 1
         
+    def add(self, node):
+        self.nodes.append(node)
+
+    def end(self):
+        pass
+    
+    def __repr__(self):
+        s = ['{{BaseBlockNode %s}}' % self.name]
+        for x in self.nodes:
+            s.append(repr(x))
+        s.append('{{end}}')
+        return ''.join(s)
+    
+    def __str__(self):
+        return self.render()
+    
+    def render(self):
+        s = []
+        for x in self.nodes:
+            s.append(str(x))
+        return ''.join(s)
+    
+class BlockNode(BaseBlockNode):
     def add(self, node):
         self.nodes.append(node)
         if isinstance(node, BlockNode):
@@ -154,16 +177,6 @@ class BlockNode(Node):
     def merge(self, content):
         self.nodes.extend(content.nodes)
     
-    def __repr__(self):
-        s = ['{{block %s}}' % self.name]
-        for x in self.nodes:
-            s.append(repr(x))
-        s.append('{{end}}')
-        return ''.join(s)
-    
-    def __str__(self):
-        return self.render()
-
     def render(self, top=True):
         """
         Top: if output the toppest block node
@@ -197,7 +210,7 @@ class SuperNode(Node):
     def __repr__(self):
         return '{{super}}'
 
-class Content(BlockNode):
+class Content(BaseBlockNode):
     def __init__(self, root=None):
         self.nodes = []
         self.block_vars = {}
@@ -416,10 +429,10 @@ class Template(object):
                     line = i[2:-2].strip()
                     if not line:
                         continue
-                    if line.startswith('T='):
-                        name, value = 'T=', line[2:].strip()
-                    elif line.startswith('T<<'):
-                        name, value = 'T<<', line[3:].strip()
+#                    if line.startswith('T='):
+#                        name, value = 'T=', line[2:].strip()
+#                    elif line.startswith('T<<'):
+#                        name, value = 'T<<', line[3:].strip()
                     elif line.startswith('='):
                         name, value = '=', line[1:].strip()
                     elif line.startswith('<<'):
@@ -443,11 +456,18 @@ class Template(object):
                                 top.add(buf)
                     elif name == 'super':
                         t = self.stack[-1]
-                        if isinstance(t, BlockNode):
+                        if isinstance(t, BaseBlockNode):
                             node = SuperNode(t, self.content)
                             top.add(node)
                     elif name == 'end':
-                        self.stack.pop()
+                        #add block.end process
+                        #if end() return something, it'll be append to top node
+                        t = self.stack.pop()
+                        top = self.stack[-1]
+                        if t.block and hasattr(t, 'end'):
+                            buf = t.end()
+                            if buf:
+                                top.add(buf)
                     elif name == '=':
                         buf = "%s(%s)\n" % (self.writer, value)
                         top.add(buf)

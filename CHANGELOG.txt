@@ -41,6 +41,7 @@ Uliweb Change Log
 #. Fix RemoteField default datatype as int and default value is None.
 #. Refactor the ReferenceProperty datatype process.
 #. Add _class and id parameter to Form, and fix form_class process
+#. Refactor template, add BaseBlockNode class, and add end() process for block type node.
 
 0.1.1 Version
 -----------------
