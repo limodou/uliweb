@@ -306,6 +306,8 @@ class CSSLayout(Layout):
         return str(buf)
 
 class QueryLayout(Layout):
+    form_class = 'form'
+    
     def line(self, obj, label, input, help_string='', error=None):
         buf = Buf()
         with buf.td:
@@ -321,6 +323,8 @@ class QueryLayout(Layout):
         return buf
 
     def html(self):
+        if not self.form.html_attrs['class']:
+            self.form.html_attrs['class'] = self.form_class
         buf = Buf()
         buf << self.form.form_begin
         self.process_layout(buf)
@@ -328,7 +332,6 @@ class QueryLayout(Layout):
         return str(buf)
     
     def process_layout(self, buf):
-            
         def output(buf, line, first=False, more=False):
             if isinstance(line, (tuple, list)):
                 with buf.table(_class='query'):
