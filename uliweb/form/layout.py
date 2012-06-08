@@ -1,7 +1,7 @@
 from __future__ import with_statement
 from uliweb.i18n import gettext_lazy as _
 
-__all__ = ['Layout', 'TableLayout', 'CSSLayout', 
+__all__ = ['Layout', 'TableLayout', 'CSSLayout', 'YamlLayout',
     'BootstrapLayout', 'BootstrapTableLayout']
 
 from uliweb.core.html import Buf, Tag
@@ -382,114 +382,114 @@ class QueryLayout(Layout):
                     for line in layout:
                         output(buf, line)
 
-#from widgets import RadioSelect, Radio
+from widgets import RadioSelect, Radio
 
-#class YamlRadioSelect(RadioSelect):
-#    def html(self):
-#        s = Buf()
-#        for v, caption in self.choices:
-#            args = {'value': v}
-#            id = args.setdefault('id', 'radio_%d' % self.get_id())
-#            args['name'] = self.kwargs.get('name')
-#            if v == self.value:
-#                args['checked'] = None
-#            div = Tag('div', _class='type-check')
-#            div << Radio(**args)
-#            div << Tag('label', caption, _for=id)
-#            s << div
-#        return str(s)
+class YamlRadioSelect(RadioSelect):
+    def html(self):
+        s = Buf()
+        for v, caption in self.choices:
+            args = {'value': v}
+            id = args.setdefault('id', 'radio_%d' % self.get_id())
+            args['name'] = self.kwargs.get('name')
+            if v == self.value:
+                args['checked'] = None
+            div = Tag('div', _class='type-check')
+            div << Radio(**args)
+            div << Tag('label', caption, _for=id)
+            s << div
+        return str(s)
     
-#class YamlLayout(Layout):
-#    form_class = 'yform'
-#
-#    field_classes = {
-#        ('Text', 'Password', 'TextArea'):'type-text',
-#        ('Button', 'Submit', 'Reset'):'type-button',
-#        ('Select', 'RadioSelect'):'type-select',
-#        ('Radio', 'Checkbox'):'type-check',
-#        }
-#
-#    def get_class(self, f):
-#        name = f.build.__name__
-#        _class = 'type-text'
-#        for k, v in self.field_classes.items():
-#            if name in k:
-#                _class = v
-#                break
-#        return _class
-#    
-#    def line(self, obj, label, input, help_string='', error=None):
-#        _class = self.get_class(obj)
-#        if error:
-#            _class = _class + ' error'
-#        
-#        if self.get_widget_name(obj) == 'RadioSelect':
-#            obj.build = YamlRadioSelect
-#            fs = Tag('fieldset')
-#            fs << input
-#            return fs
-#        else:
-#            div = Tag('div', _class=_class, id='div_'+obj.id)
-#            with div:
-#                if error:
-#                    div.strong(error, _class="message")
-#                if self.get_widget_name(obj) == 'Checkbox':
-#                    div << input
-#                    div << label
-#                    div << help_string
-#                else:
-#                    div << label
-#                    div << help_string
-#                    div << input
-#            return div
-#
-#    def buttons_line(self, buttons):
-#        div = Tag('div', _class='line')
-#        with div:
-#            with div.div(_class='type-button'):
-#                div << buttons
-#        return str(div)
-#
-#    def html(self):
-#        buf = Buf()
-#        if not self.form.html_attrs['class']:
-#            self.form.html_attrs['class'] = self.form_class
-#        buf << self.form.form_begin
-#            
-##            if self.form.fieldset:
-##                with buf.fieldset:
-###                form = buf << Tag('fieldset')
-##                    if self.form.form_title:
-##                        buf.legend(self.form.form_title)
-###            else:
-###                form = buf
-#        if not self.layout:
-#            self.layout = [name for name, obj in self.form.fields_list]
-#        self.process_layout(buf)
-#        
-#        buf << self.buttons_line(self.form.get_buttons())
-#        buf << self.form.form_end
-#        return str(buf)
-#
-#    def process_layout(self, buf):
-#        for line in self.layout:
-#            if isinstance(line, (tuple, list)):
-#                with buf.div(_class='line'):
-#                    for x in line:
-#                        f = getattr(self.form, x)
-#                        obj = self.form.fields[x]
-#                        if self.is_hidden(obj):
-#                            buf << f
-#                        else:
-#                            buf << self.line(obj, f.label, f, f.help_string, f.error)
-#            else:
-#                f = getattr(self.form, line)
-#                obj = self.form.fields[line]
-#                if self.is_hidden(obj):
-#                    buf << f
-#                else:
-#                    buf << self.line(obj, f.label, f, f.help_string, f.error)
-#                    
+class YamlLayout(Layout):
+    form_class = 'yform'
+
+    field_classes = {
+        ('Text', 'Password', 'TextArea'):'type-text',
+        ('Button', 'Submit', 'Reset'):'type-button',
+        ('Select', 'RadioSelect'):'type-select',
+        ('Radio', 'Checkbox'):'type-check',
+        }
+
+    def get_class(self, f):
+        name = f.build.__name__
+        _class = 'type-text'
+        for k, v in self.field_classes.items():
+            if name in k:
+                _class = v
+                break
+        return _class
+    
+    def line(self, obj, label, input, help_string='', error=None):
+        _class = self.get_class(obj)
+        if error:
+            _class = _class + ' error'
+        
+        if self.get_widget_name(obj) == 'RadioSelect':
+            obj.build = YamlRadioSelect
+            fs = Tag('fieldset')
+            fs << input
+            return fs
+        else:
+            div = Tag('div', _class=_class, id='div_'+obj.id)
+            with div:
+                if error:
+                    div.strong(error, _class="message")
+                if self.get_widget_name(obj) == 'Checkbox':
+                    div << input
+                    div << label
+                    div << help_string
+                else:
+                    div << label
+                    div << help_string
+                    div << input
+            return div
+
+    def buttons_line(self, buttons):
+        div = Tag('div', _class='line')
+        with div:
+            with div.div(_class='type-button'):
+                div << buttons
+        return str(div)
+
+    def html(self):
+        buf = Buf()
+        if not self.form.html_attrs['class']:
+            self.form.html_attrs['class'] = self.form_class
+        buf << self.form.form_begin
+            
+#            if self.form.fieldset:
+#                with buf.fieldset:
+##                form = buf << Tag('fieldset')
+#                    if self.form.form_title:
+#                        buf.legend(self.form.form_title)
+##            else:
+##                form = buf
+        if not self.layout:
+            self.layout = [name for name, obj in self.form.fields_list]
+        self.process_layout(buf)
+        
+        buf << self.buttons_line(self.form.get_buttons())
+        buf << self.form.form_end
+        return str(buf)
+
+    def process_layout(self, buf):
+        for line in self.layout:
+            if isinstance(line, (tuple, list)):
+                with buf.div(_class='line'):
+                    for x in line:
+                        f = getattr(self.form, x)
+                        obj = self.form.fields[x]
+                        if self.is_hidden(obj):
+                            buf << f
+                        else:
+                            buf << self.line(obj, f.label, f, f.help_string, f.error)
+            else:
+                f = getattr(self.form, line)
+                obj = self.form.fields[line]
+                if self.is_hidden(obj):
+                    buf << f
+                else:
+                    buf << self.line(obj, f.label, f, f.help_string, f.error)
+                    
                     
 
 class BootstrapLayout(Layout):

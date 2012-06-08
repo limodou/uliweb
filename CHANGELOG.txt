@@ -40,6 +40,7 @@ Uliweb Change Log
    delete_fieldname value from False to True.
 #. Fix RemoteField default datatype as int and default value is None.
 #. Refactor the ReferenceProperty datatype process.
+#. Add _class and id parameter to Form, and fix form_class process
 
 0.1.1 Version
 -----------------
