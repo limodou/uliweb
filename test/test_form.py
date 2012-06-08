@@ -17,31 +17,37 @@ def test_1():
     ...     content = TextField(label='Content:')
     >>> f = F()
     >>> print f
-    <form class="yform" action="" method="POST">
-    <div class="type-text">
-        <label class="field" for="field_title">Title:<span class="field_required">*</span>
+    <form action="" class="form-horizontal" method="POST">
+    <div class="control-group" id="div_field_title">
+        <label class="control-label" for="field_title">Title::<span class="field_required">*</span>
     </label>
     <BLANKLINE>
-        <label class="description" for="field_title">Title help string</label>
+        <div class="controls">
+        <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
     <BLANKLINE>
-        <input class="field" id="field_title" name="title" type="text" value=""></input>
-    <BLANKLINE>
-    </div>
-    <BLANKLINE>
-    <div class="type-text">
-        <label class="field" for="field_content">Content:</label>
-    <BLANKLINE>
-    <BLANKLINE>
-        <textarea class="field" cols="75" id="field_content" name="content" rows="10"></textarea>
+        <p class="help help-block"><label class="description" for="field_title">Title help string</label>
+    </p>
     <BLANKLINE>
     </div>
     <BLANKLINE>
-    <div class="line">
-        <div class="type-button">
-            <input class="button" name="submit" type="submit" value="Submit"></input>
+    </div>
+    <BLANKLINE>
+    <div class="control-group" id="div_field_content">
+        <label class="control-label" for="field_content">Content::</label>
+    <BLANKLINE>
+        <div class="controls">
+        <textarea class="field" cols id="field_content" name="content" placeholder="" rows="10"></textarea>
+    <BLANKLINE>
+        <p class="help help-block"></p>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    <div class="form-actions">
+        <button class="btn btn-primary" name="submit" type="submit">Submit</button>
     <BLANKLINE>
     <BLANKLINE>
-        </div>
     </div>
     <BLANKLINE>
     </form>
@@ -59,10 +65,10 @@ def test_1():
     'Hello'
     >>> f.title.data = 'limodou'
     >>> print f.title.html
-    <input class="field" id="field_title" name="title" type="text" value="limodou"></input>
+    <input class="field" id="field_title" name="title" placeholder="" type="text" value="limodou"></input>
     <BLANKLINE>
     >>> print F.title.html()
-    <input class="field" id="field_title" name="title" type="text" value=""></input>
+    <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
     <BLANKLINE>
     """
 
@@ -92,13 +98,41 @@ def test_select():
     
     """
     
-#def test_3():
-#    class F(Form):
-#        title = StringField(label='Title:', required=True, help_string='Title help string')
-#        content = TextField(label='Content:')
-#    f = F(title='Test form')
-#    f.layout_class = CSSLayout
-#    print f
-#    
+def test_form_class():
+    """
+    >>> class TForm(Form):
+    ...     pass
+    >>> form = TForm(html_attrs={'_class':'well form-inline'})
+    >>> print form
+    <form action="" class="well form-inline" method="POST">
+    <div class="form-actions">
+        <button class="btn btn-primary" name="submit" type="submit">Submit</button>
+    <BLANKLINE>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    </form>
+    <BLANKLINE>
+    >>> form = TForm(form_class='well form-inline')
+    >>> print form
+    <form action="" class="form-horizontal" method="POST">
+    <div class="form-actions">
+        <button class="btn btn-primary" name="submit" type="submit">Submit</button>
+    <BLANKLINE>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    </form>
+    <BLANKLINE>
+    """
+    
 #if __name__ == '__main__':
-#    test_3()
+#    class TForm(Form):
+#        pass
+#    
+#    form = TForm(html_attrs={'_class':'well form-inline'})
+#    print form
+#
+#    form = TForm(form_class='well form-inline')
+#    print form
+#    
