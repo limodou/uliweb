@@ -19,3 +19,10 @@ def client(project_path='.', settings_file='settings.ini', local_settings_file='
     c = Client(app, Response)
     c.app = app
     return c
+
+def BlankRequest(url, **kwargs):
+    from werkzeug.test import create_environ
+    from uliweb import Request
+    
+    env = create_environ(path=url, **kwargs)
+    return Request(env)

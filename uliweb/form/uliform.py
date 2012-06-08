@@ -886,19 +886,26 @@ class Form(object):
         self._buttons = buttons or self.form_buttons
         self.validators = validators or []
         self.html_attrs = html_attrs or {}
+        if '_class' in self.html_attrs:
+            self.html_attrs['class'] = self.html_attrs.pop('_class')
+            
         self.idtype = idtype
         self.layout = layout or self.layout
         self.vars = vars
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
+        
         if self.form_class:
             self.html_attrs['class'] = self.form_class# + ' ' + DEFAULT_FORM_CLASS
-        else:
+        
+        if 'class' not in self.html_attrs:
             self.html_attrs['class'] = ''
+            
         if self.form_id:
             self.html_attrs['id'] = self.form_id
-#        if not 'class' in self.html_attrs:
-#            self.html_attrs['class'] = DEFAULT_FORM_CLASS
+  
+        self.form_class = self.html_attrs.get('class')
+        self.form_id = self.html_attrs.get('id')
         
         self.bind(data or {}, errors or {})
         self.__init_validators()
