@@ -870,6 +870,8 @@ class Form(object):
     form_method = 'POST'
     form_buttons = None
     form_title = None
+    form_class = None
+    form_id = None
 
     def __init__(self, action=None, method=None, buttons=None, 
             validators=None, html_attrs=None, data=None, errors=None, 
@@ -878,8 +880,8 @@ class Form(object):
         self.form_action = action or self.form_action
         self.form_method = method or self.form_method
         self.form_title = title or self.form_title
-        self.form_class = _class
-        self.form_id = id
+        self.form_class = _class or self.form_class
+        self.form_id = id or self.form_id
         self.kwargs = kwargs
         self._buttons = buttons or self.form_buttons
         self.validators = validators or []
