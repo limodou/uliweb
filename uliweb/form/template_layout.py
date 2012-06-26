@@ -137,7 +137,8 @@ class BootstrapFormWriter(FormWriter):
     def begin_form(self, indent, value, **kwargs):
         if kwargs.get('class', None):
             self.form.html_attrs['class'] = kwargs['class']
-        self.form.html_attrs['class'] = self.form.html_attrs['class'] + ' form-horizontal'
+        if not self.form.html_attrs['class']:
+            self.form.html_attrs['class'] = 'form-horizontal'
         return indent * ' ' + self.form.form_begin
         
     def begin_buttons(self, indent, value, **kwargs):
@@ -150,13 +151,13 @@ class BootstrapFormWriter(FormWriter):
         return indent * ' ' + str(Tag('button', value, **v))
 
     def do_field(self, indent, value, **kwargs):
-        field_name = kwargs['name']
+        field_name = kwargs.pop('name')
         field = getattr(self.form, field_name)
         error = field.error
         obj = self.form.fields[field_name]
-        help_string = kwargs.get('help_string', None) or field.help_string
+        help_string = kwargs.pop('help_string', None) or field.help_string
         if 'label' in kwargs:
-            label = kwargs['label']
+            label = kwargs.pop('label')
         else:
             label = obj.label
         if label:
@@ -170,6 +171,7 @@ class BootstrapFormWriter(FormWriter):
             _class = _class + " nolabel"
         if error:
             _class = _class + ' error'
+        field.field.html_attrs.update(kwargs)
         if self.is_hidden(obj):
             return str(field)
         
@@ -186,7 +188,7 @@ class BootstrapFormWriter(FormWriter):
                     div << field
                     div << label_text
                 else:
-                    div << field                    
+                    div << field
                 div << Tag('div', _class="help help-block", _value=help_string)
                 if error:
                     div << Tag('div', _class="message help-block", _value=error)
