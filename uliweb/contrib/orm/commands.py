@@ -23,6 +23,13 @@ def get_engine(options, global_options):
     engine = get_connection(engine_name=engine_name)
     return engine
 
+def reflect_table(engine, tablename):
+    meta = MetaData()
+    table = Table(tablename, meta)
+    insp = Inspector.from_engine(engine)
+    insp.reflecttable(table, None)
+    return table
+
 def get_tables(apps_dir, apps=None, engine=None, import_models=False, tables=None,
     settings_file='settings.ini', local_settings_file='local_settings.ini'):
     from uliweb.core.SimpleFrame import get_apps, get_app_dir
@@ -117,6 +124,8 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
 def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8', delete=True):
     import csv
     from uliweb.utils.date import to_date, to_datetime
+    
+    table = reflect_table(con, table.name)
     
     if delete:
         do_(table.delete())

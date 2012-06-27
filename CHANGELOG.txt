@@ -2,6 +2,12 @@
 Uliweb Change Log
 =====================
 
+0.1.3 Version
+-----------------
+
+#. Fix loadtable bug for PickleType type, using inspecttable instead, so
+   PickleyType will be BLOB type.
+
 0.1.2 Version
 -----------------
 
