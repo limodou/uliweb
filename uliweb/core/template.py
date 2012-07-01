@@ -10,6 +10,9 @@ __templates_temp_dir__ = 'tmp/templates_temp'
 __options__ = {'use_temp_dir':False}
 __nodes__ = {}   #user defined nodes
 
+BEGIN_TAG = '{{'
+END_TAG = '}}'
+
 class TemplateException(Exception): pass
 class ContextPopException(TemplateException):
     "pop() has been called more times than push()"
@@ -119,7 +122,11 @@ def eval_vars(vs, vars, env):
     else:
         return eval(vs, vars, env)
 
-r_tag = re.compile(r'(\{\{.*?\}\})', re.DOTALL|re.M)
+def get_tag(begin_tag, end_tag):
+    r = '(' + re.escape(begin_tag) + '.*?' + re.escape(end_tag) + ')'
+    return re.compile(r, re.DOTALL|re.M)
+
+r_tag = re.compile('^#uliweb-template-tag:(.+?),(.+?)(:\r|\n|\r\n)')
 
 class Node(object):
     block = 0
@@ -361,7 +368,8 @@ class Out(object):
 
 class Template(object):
     def __init__(self, text='', vars=None, env=None, dirs=None, 
-        default_template=None, use_temp=False, compile=None, skip_error=False, encoding='utf-8'):
+        default_template=None, use_temp=False, compile=None, skip_error=False, 
+        encoding='utf-8', begin_tag=None, end_tag=None):
         self.text = text
         self.filename = None
         self.vars = vars or {}
@@ -381,6 +389,8 @@ class Template(object):
         self.root = self
         self.skip_error = skip_error
         self.encoding = encoding
+        self.begin_tag = begin_tag or BEGIN_TAG
+        self.end_tag = end_tag or END_TAG
         
         for k, v in __nodes__.iteritems():
             if hasattr(v, 'init'):
@@ -420,7 +430,7 @@ class Template(object):
         text = self.text
         in_tag = False
         extend = None  #if need to process extend node
-        for i in r_tag.split(text):
+        for i in get_tag(self.begin_tag, self.end_tag).split(text):
             if i:
                 if len(self.stack) == 0:
                     raise TemplateException, "The 'end' tag is unmatched, please check if you have more '{{end}}'"
@@ -429,10 +439,6 @@ class Template(object):
                     line = i[2:-2].strip()
                     if not line:
                         continue
-#                    if line.startswith('T='):
-#                        name, value = 'T=', line[2:].strip()
-#                    elif line.startswith('T<<'):
-#                        name, value = 'T<<', line[3:].strip()
                     elif line.startswith('='):
                         name, value = '=', line[1:].strip()
                     elif line.startswith('<<'):
@@ -480,14 +486,14 @@ class Template(object):
                     elif name == '<<':
                         buf = "%s(%s, escape=False)\n" % (self.writer, value)
                         top.add(buf)
-                    elif name == 'T=':
-                        if not self._parse_template(top, value):
-                            buf = "%s(%s)\n" % (self.writer, value)
-                            top.add(buf)
-                    elif name == 'T<<':
-                        if not self._parse_template(top, value):
-                            buf = "%s(%s, escape=False)\n" % (self.writer, value)
-                            top.add(buf)
+#                    elif name == 'T=':
+#                        if not self._parse_template(top, value):
+#                            buf = "%s(%s)\n" % (self.writer, value)
+#                            top.add(buf)
+#                    elif name == 'T<<':
+#                        if not self._parse_template(top, value):
+#                            buf = "%s(%s, escape=False)\n" % (self.writer, value)
+#                            top.add(buf)
                     elif name == 'include':
                         self._parse_include(top, value)
                     elif name == 'embed':
@@ -555,9 +561,9 @@ class Template(object):
             self.depend_files.append(fname)
             
             f = open(fname, 'rb')
-            text = f.read()
+            text, begin_tag, end_tag = self.get_text(f.read())
             f.close()
-            t = Template(text, self.vars, self.env, self.dirs)
+            t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag)
             t.add_root(self)
             t.parse()
             content.merge(t.content)
@@ -577,9 +583,9 @@ class Template(object):
             self.depend_files.append(fname)
             
             f = open(fname, 'rb')
-            text = f.read()
+            text, begin_tag, end_tag = self.get_text(f.read())
             f.close()
-            t = Template(text, self.vars, self.env, self.dirs)
+            t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag)
             t.add_root(self)
             t.parse()
             self.content.clear_content()
@@ -612,9 +618,22 @@ class Template(object):
                     return True, f, text
         
         if self.filename and not self.text:
-            self.text = file(self.filename, 'rb').read()        
+            self.text, self.begin_tag, self.end_tag = self.get_text(file(self.filename, 'rb').read())
         return False, self.filename, self.parse()
         
+    def get_text(self, text):
+        """
+        Detect template tag definition in the text
+        """
+        b = r_tag.search(text)
+        if b:
+            begin_tag, end_tag = b.group(1), b.group(2)
+            text = text[b.end():]
+        else:
+            begin_tag = self.begin_tag
+            end_tag = self.end_tag
+        return text, begin_tag, end_tag
+    
     def __call__(self):
         use_temp_flag, filename, code = self.get_parsed_code()
         
@@ -671,13 +690,13 @@ class Template(object):
 
         return text
     
-def template_file(filename, vars=None, env=None, dirs=None, default_template=None, compile=None):
-    t = Template('', vars, env, dirs, default_template, use_temp=__options__['use_temp_dir'], compile=compile)
+def template_file(filename, vars=None, env=None, dirs=None, default_template=None, compile=None, **kwargs):
+    t = Template('', vars, env, dirs, default_template, use_temp=__options__['use_temp_dir'], compile=compile, **kwargs)
     t.set_filename(filename)
     return t()
 
-def template(text, vars=None, env=None, dirs=None, default_template=None):
-    t = Template(text, vars, env, dirs, default_template)
+def template(text, vars=None, env=None, dirs=None, default_template=None, **kwargs):
+    t = Template(text, vars, env, dirs, default_template, **kwargs)
     return t()
 
 

@@ -8,3 +8,6 @@ def startup_installed(sender):
     template.register_node('link', LinkNode)
     template.register_node('use', UseNode)
     
+    template.BEGIN_TAG = sender.settings.TEMPLATE.BEGIN_TAG
+    template.END_TAG = sender.settings.TEMPLATE.END_TAG
+    

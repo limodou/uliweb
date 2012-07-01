@@ -369,6 +369,8 @@ class Dispatcher(object):
         
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_dirs = self.get_template_dirs()
+        Dispatcher.template_processors = {}
+        self.install_template_processors()
         
         #begin to start apps
         self.install_apps()
@@ -492,11 +494,20 @@ class Dispatcher(object):
             if os.path.exists(path):
                 return path
         return None
+    
+    def get_template_processor(self, filename):
+        ext = os.path.splitext(filename)[1]
+        if ext in self.template_processors:
+            return self.template_processors[ext]['func'], self.template_processors[ext]['args']
+        else:
+            return template.template_file, {}
 
     def template(self, filename, vars=None, env=None, dirs=None, default_template=None):
         vars = vars or {}
         dirs = dirs or self.template_dirs
         env = env or self.get_view_env()
+        
+        func, kwargs = self.get_template_processor(filename)
         
         if self.debug:
             def _compile(code, filename, action, env, Loader=Loader):
@@ -507,9 +518,9 @@ class Dispatcher(object):
 #                    file('out.html', 'w').write(code)
                     raise
             
-            return template.template_file(filename, vars, env, dirs, default_template, compile=_compile)
+            return func(filename, vars, env, dirs, default_template, compile=_compile, **kwargs)
         else:
-            return template.template_file(filename, vars, env, dirs, default_template)
+            return func(filename, vars, env, dirs, default_template, **kwargs)
     
     def render_text(self, text, vars=None, env=None, dirs=None, default_template=None):
         vars = vars or {}
@@ -805,6 +816,11 @@ class Dispatcher(object):
             except BaseException, e:
                 log.exception(e)
             
+    def install_template_processors(self):
+        for v in settings.TEMPLATE_PROCESSORS.values():
+            for ext in v.get('file_exts', []):
+                self.template_processors[ext] = {'func':import_attr(v['processor']), 'args':v.get('args', {})}
+        
     def install_settings(self, s):
 #        settings = pyini.Ini()
         for v in s:

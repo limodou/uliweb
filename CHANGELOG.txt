@@ -7,6 +7,39 @@ Uliweb Change Log
 
 #. Fix loadtable bug for PickleType type, using inspecttable instead, so
    PickleyType will be BLOB type.
+#. Improve template process:
+
+    #. Add ``#uliweb-template-tag:<begin_tag>,<end_tag><newline>`` process to template
+       file, and you can also pass ``begin_tag`` and ``end_tag`` to Template, and
+       ``template_file()`` or ``template()``
+    #. Add ``[TEMPLATE_PROCESSOR]`` section to ``default_settings.ini``, so that user
+       can setup his own template processor, the option will look like::
+    
+            angularjs_template = {'file_exts':['.ahtml'], 
+                'processor':'uliweb.core.template.template_file', 
+                'args':{}}
+                
+       * the key is not very important, but you should keep it unique
+       * ``file_exts`` will be the file extensions, it's a list, so the 
+         processor can match multiple filenames
+       * ``processor`` will be the path of template function, uliweb will
+         import it when needed
+       * ``args`` will be a dict, and it will be passed to template function
+    #. Add ``BEGIN_TAG`` and ``END_TAG`` to settings.ini, so user can change
+       default tag name from ``{{`` and ``}}`` to other strings. But this 
+       appoach will effect globally, so if you are using other apps with
+       templates which using old tag strings, will cause errors. So using
+       ``#uliweb-template-tag`` or ``TEMPLATE_PROCESSOR`` maybe the good way,
+       but you still need to set it in template file or set ``response.template``
+       with other template extension, because the defult template file extension
+       is ``.html``. For example::
+    
+            def index():
+                response.template = 'index.ahtml'
+                return {}
+       
+       Above code will override the default template filename from ``index.html``
+       to ``index.ahtml``.
 
 0.1.2 Version
 -----------------
