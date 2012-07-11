@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(workpath, 'lib'))
 
 class UliwebError(Exception): pass
 
-from uliweb.core.SimpleFrame import (Request, Response, redirect, error, json, 
+from uliweb.core.SimpleFrame import (Request, Response, redirect, Redirect, error, json, 
         POST, GET, url_for, expose, get_app_dir, get_apps, function, decorators,
         functions, response, request, settings, application, NotFound, HTTPException,
     )

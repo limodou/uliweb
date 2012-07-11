@@ -1,4 +1,4 @@
-from uliweb import Middleware
+from uliweb import Middleware, Redirect
 from weto.session import Session, SessionCookie
 
 class SessionMiddle(Middleware):
@@ -52,3 +52,10 @@ class SessionMiddle(Middleware):
                     path=c.path, secure=c.secure)
         return response
         
+    def process_exception(self, request, e):
+        """
+        Still process session data when specially Exception
+        """
+        if isinstance(e, Redirect):
+            response = e.get_response()
+            self.process_response(request, response)

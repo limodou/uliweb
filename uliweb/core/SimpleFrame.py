@@ -104,6 +104,16 @@ def redirect(location, code=302):
     response.headers['Location'] = location
     return response
 
+class Redirect(Exception):
+    """
+    This is an exception, which can be raised in view function
+    """
+    def __init__(self, location, code=302):
+        self.response = redirect(location, code)
+        
+    def get_response(self):
+        return self.response
+    
 def error(message='', errorpage=None, request=None, appname=None, **kwargs):
     kwargs.setdefault('message', message)
     if request:
@@ -392,6 +402,7 @@ class Dispatcher(object):
         env = Storage({})
         env['url_for'] = url_for
         env['redirect'] = redirect
+        env['Redirect'] = Redirect
         env['error'] = error
         env['application'] = self
         env['settings'] = settings
@@ -711,6 +722,7 @@ class Dispatcher(object):
         local_env['response'] = local.response
         local_env['url_for'] = url_for
         local_env['redirect'] = redirect
+        local_env['Redirect'] = Redirect
         local_env['error'] = error
         local_env['settings'] = __global__.settings
         local_env['json'] = json
@@ -986,6 +998,8 @@ class Dispatcher(object):
             
         except HTTPError, e:
             response = self.render(e.errorpage, Storage(e.errors))
+        except Redirect, e:
+            response = e.get_response()
         except NotFound, e:
             response = self.not_found(e)
         except HTTPException, e:
