@@ -597,8 +597,8 @@ class AddView(object):
         self.post_fail = post_fail
         self.file_replace = file_replace
         self.success_data = success_data
-        self.types_convert_map = types_convert_map
-        self.fields_convert_map = fields_convert_map
+        self.types_convert_map = types_convert_map or {}
+        self.fields_convert_map = fields_convert_map or {}
         self.json_func = json_func or json
         self.file_convert = file_convert
         self.form = self.make_form(form)
@@ -1409,10 +1409,7 @@ class SimpleListView(object):
         """
         from uliweb import settings
         
-        if fields_convert_map is not None:
-            fields_convert_map = fields_convert_map 
-        else:
-            fields_convert_map = self.fields_convert_map
+        fields_convert_map = fields_convert_map or self.fields_convert_map
         
         t_filename = self.get_real_file(filename)
         if os.path.exists(t_filename):
@@ -1845,8 +1842,8 @@ class ListView(SimpleListView):
         self.order_by = order_by
         self.fields = fields
         self.rows_per_page = rows_per_page
-        self.types_convert_map = types_convert_map
-        self.fields_convert_map = fields_convert_map
+        self.types_convert_map = types_convert_map or {}
+        self.fields_convert_map = fields_convert_map or {}
         self.id = id
         self.rows_num = 0
         self._query = query

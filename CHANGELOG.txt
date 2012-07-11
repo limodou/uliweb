@@ -43,6 +43,7 @@ Uliweb Change Log
 #. Add Redirect support. Redirect is an exception, and also add Redirect support
    in middle_session. Because Redirect is an exception, so it'll implement process_exception
    and save the session also.
+#. Fix generic.py fields_convert_map initialization bug
 
 0.1.2 Version
 -----------------
