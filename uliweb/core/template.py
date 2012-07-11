@@ -561,7 +561,7 @@ class Template(object):
             self.depend_files.append(fname)
             
             f = open(fname, 'rb')
-            text, begin_tag, end_tag = self.get_text(f.read())
+            text, begin_tag, end_tag = self.get_text(f.read(), inherit_tags=False)
             f.close()
             t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag)
             t.add_root(self)
@@ -583,7 +583,7 @@ class Template(object):
             self.depend_files.append(fname)
             
             f = open(fname, 'rb')
-            text, begin_tag, end_tag = self.get_text(f.read())
+            text, begin_tag, end_tag = self.get_text(f.read(), inherit_tags=False)
             f.close()
             t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag)
             t.add_root(self)
@@ -621,17 +621,23 @@ class Template(object):
             self.text, self.begin_tag, self.end_tag = self.get_text(file(self.filename, 'rb').read())
         return False, self.filename, self.parse()
         
-    def get_text(self, text):
+    def get_text(self, text, inherit_tags=True):
         """
         Detect template tag definition in the text
+        If inherit_tags is True, then use current begin and end tag string, 
+        or use default tag string
         """
         b = r_tag.search(text)
         if b:
             begin_tag, end_tag = b.group(1), b.group(2)
             text = text[b.end():]
         else:
-            begin_tag = self.begin_tag
-            end_tag = self.end_tag
+            if inherit_tags:
+                begin_tag = self.begin_tag
+                end_tag = self.end_tag
+            else:
+                begin_tag = BEGIN_TAG
+                end_tag = END_TAG
         return text, begin_tag, end_tag
     
     def __call__(self):

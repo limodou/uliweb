@@ -44,6 +44,8 @@ Uliweb Change Log
    in middle_session. Because Redirect is an exception, so it'll implement process_exception
    and save the session also.
 #. Fix generic.py fields_convert_map initialization bug
+#. Fix template get_text() bug, add inherit_tags parameter to it, and if it's False,
+   will use default begin and end tag string.
 
 0.1.2 Version
 -----------------
