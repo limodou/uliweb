@@ -2112,8 +2112,9 @@ class Model(object):
                 t = v.get_value_for_datastore(self, cached=True)
                 self._old_values[k] = t
         
-    def to_dict(self, fields=[], convert=True, manytomany=False):
+    def to_dict(self, fields=None, convert=True, manytomany=False):
         d = {}
+        fields = fields or []
         for k, v in self.properties.items():
             if fields and not k in fields:
                 continue
