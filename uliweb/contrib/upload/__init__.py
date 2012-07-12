@@ -198,7 +198,7 @@ def file_serving(filename):
         alt_filename = filename
     else:
         alt_filename = urllib2.unquote(alt_filename)
-    _filename = get_filename(filename, True, convert=False)
+    _filename = get_filename(filename, False, convert=False)
     x_filename = filename
     return get_backend().download(alt_filename, real_filename=_filename, x_filename=x_filename)
 
