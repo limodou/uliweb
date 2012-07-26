@@ -65,7 +65,7 @@ def test_2():
     ...     username = Field(str, max_length=20)
     ...     year = Field(int)
     >>> Test.table.columns.keys()
-    ['username', 'id', 'year']
+    ['username', 'year', 'id']
     """
     
 #testing many2one

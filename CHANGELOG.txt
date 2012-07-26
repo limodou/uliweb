@@ -47,6 +47,7 @@ Uliweb Change Log
 #. Fix template get_text() bug, add inherit_tags parameter to it, and if it's False,
    will use default begin and end tag string.
 #. Fix file_serving.download() for Chinese characters bug.
+#. Change the order of creating table colums according the definition of Model
 
 0.1.2 Version
 -----------------

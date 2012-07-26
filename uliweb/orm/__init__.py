@@ -2405,12 +2405,12 @@ class Model(object):
                 cols = []
                 cls.manytomany = []
                 #add pre_create process
-                for k, f in cls.properties.items():
+                for k, f in cls._fields_list:
                     func = getattr(f, 'pre_create', None)
                     if func:
                         func(cls)
 
-                for k, f in cls.properties.items():
+                for k, f in cls._fields_list:
                     c = f.create(cls)
                     if c is not None:
                         cols.append(c)
