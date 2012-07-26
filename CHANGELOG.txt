@@ -48,6 +48,7 @@ Uliweb Change Log
    will use default begin and end tag string.
 #. Fix file_serving.download() for Chinese characters bug.
 #. Change the order of creating table colums according the definition of Model
+#. Fix pyini/uni_prt bug. And change _uni_prt to uni_prt.
 
 0.1.2 Version
 -----------------

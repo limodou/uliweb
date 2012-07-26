@@ -191,3 +191,13 @@ def test_update():
     <BLANKLINE>
     
     """
+
+def test_uni_print():
+    """
+    >>> a = ()
+    >>> uni_prt(a, 'utf-8')
+    '()'
+    >>> a = (1,2)
+    >>> uni_prt(a)
+    '(1, 2)'
+    """

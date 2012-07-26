@@ -24,7 +24,7 @@ import tokenize
 import token
 from sorteddict import SortedDict
 
-__all__ = ['SortedDict', 'Section', 'Ini']
+__all__ = ['SortedDict', 'Section', 'Ini', 'uni_prt']
 
 try:
     set
@@ -51,7 +51,7 @@ def set_env(env=None):
     
     __default_env__.update(env or {})
     
-def _uni_prt(a, encoding, beautiful=False, indent=0):
+def uni_prt(a, encoding='utf-8', beautiful=False, indent=0):
     escapechars = [("\\", "\\\\"), ("'", r"\'"), ('\"', r'\"'), ('\b', r'\b'),
         ('\t', r"\t"), ('\r', r"\r"), ('\n', r"\n")]
     s = []
@@ -68,7 +68,7 @@ def _uni_prt(a, encoding, beautiful=False, indent=0):
                 ind = indent + 1
             else:
                 ind = indent
-            s.append(indent_char*ind + _uni_prt(k, encoding, beautiful, indent+1))
+            s.append(indent_char*ind + uni_prt(k, encoding, beautiful, indent+1))
             if i<len(a)-1:
                 if beautiful:
                     s.append(',\n')
@@ -79,7 +79,7 @@ def _uni_prt(a, encoding, beautiful=False, indent=0):
         if isinstance(a, list):
             s.append(indent_char*indent + ']')
         else:
-            if len(a) > 0:
+            if len(a) == 1:
                 s.append(',')
             s.append(indent_char*indent + ')')
     elif isinstance(a, dict):
@@ -92,7 +92,7 @@ def _uni_prt(a, encoding, beautiful=False, indent=0):
                 ind = indent + 1
             else:
                 ind = indent
-            s.append('%s: %s' % (indent_char*ind + _uni_prt(key, encoding, beautiful, indent+1), _uni_prt(value, encoding, beautiful, indent+1)))
+            s.append('%s: %s' % (indent_char*ind + uni_prt(key, encoding, beautiful, indent+1), uni_prt(value, encoding, beautiful, indent+1)))
             if i<len(a.items())-1:
                 if beautiful:
                     s.append(',\n')
@@ -175,9 +175,9 @@ class Section(SortedDict):
                 op = ' <= '
             else:
                 op = ' = '
-            buf = f + op + _uni_prt(self[f], self._encoding)
+            buf = f + op + uni_prt(self[f], self._encoding)
             if len(buf) > 79:
-                buf = f + op + _uni_prt(self[f], self._encoding, True)
+                buf = f + op + uni_prt(self[f], self._encoding, True)
             print >> out, buf
             
     def __delitem__(self, key):
