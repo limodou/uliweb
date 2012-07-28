@@ -1971,16 +1971,20 @@ class ListView(SimpleListView):
         query = self.query()
         for record in query:
             self.rows_num += 1
-            r = Storage()
-            r['_obj_'] = record
-            for i, x in enumerate(self.table['fields_list']):
-                if hasattr(self.model, x['name']):
-                    field = getattr(self.model, x['name'])
-                else:
-                    field = x
-                v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
-                r[x['name']] = v['display']
+            r = self.object(record)
             yield r
+            
+    def object(self, record):
+        r = Storage()
+        r['_obj_'] = record
+        for i, x in enumerate(self.table['fields_list']):
+            if hasattr(self.model, x['name']):
+                field = getattr(self.model, x['name'])
+            else:
+                field = x
+            v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
+            r[x['name']] = v['display']
+        return r
         
     def query_all(self):
         """
