@@ -36,6 +36,8 @@ def _fix_soap_datatype(data):
         return data
 
 __soap_dispatcher__ = None
+class SimpleRule(object):
+    pass
 
 def soap():
     from pysimplesoap.server import SoapDispatcher
@@ -76,7 +78,9 @@ def soap():
         return response
     elif request.method == 'POST':
         def _call(func, args):
-            mod, handler_cls, handler = app.prepare_request(request, func)
+            rule = SimpleRule()
+            rule.endpoint = func
+            mod, handler_cls, handler = app.prepare_request(request, rule)
             result = app.call_view(mod, handler_cls, handler, request, response, _wrap_result, kwargs=args)
             r = _fix_soap_datatype(result)
             return r

@@ -15,7 +15,7 @@
 __author__ = "Mariano Reingart (reingart@gmail.com)"
 __copyright__ = "Copyright (C) 2008 Mariano Reingart"
 __license__ = "LGPL 3.0"
-__version__ = "1.04a"
+__version__ = "1.05a"
 
 TIMEOUT = 60
 
@@ -23,193 +23,32 @@ import hashlib
 import os
 import cPickle as pickle
 import urllib2
-from simplexml import SimpleXMLElement, TYPE_MAP, OrderedDict
+from urlparse import urlparse
+import tempfile
+from simplexml import SimpleXMLElement, TYPE_MAP, REVERSE_TYPE_MAP, OrderedDict
+from transport import get_http_wrapper, set_http_wrapper, get_Http
+import logging
 
-#
-# We store metadata about what available transport mechanisms we have available.
-#
-_http_connectors = {} # libname: classimpl mapping
-_http_facilities = {} # functionalitylabel: [sequence of libname] mapping
+log = logging.getLogger(__name__)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.WARNING)
 
-class TransportBase:
-    @classmethod
-    def supports_feature(cls, feature_name):
-        return cls._wrapper_name in _http_facilities[feature_name]
-
-#
-# httplib2 support.
-#
-try:
-    import httplib2
-except ImportError:
-    pass
-else:
-    class Httplib2Transport(httplib2.Http, TransportBase):
-        _wrapper_version = "httplib2 %s" % httplib2.__version__
-        _wrapper_name = 'httplib2'
-        def __init__(self, timeout, proxy=None, cacert=None, sessions=False):
-            ##httplib2.debuglevel=4
-            kwargs = {}
-            if proxy:
-                import socks
-                kwargs['proxy_info'] = httplib2.ProxyInfo(proxy_type=socks.PROXY_TYPE_HTTP, **proxy)
-                print "using proxy", proxy
-
-            # timeout is supported on httplib2 >= 0.3.0
-            if timeout is not None:
-                kwargs['timeout'] = timeout
-            #if self.certssl: # esto funciona para validar al server?
-            #    self.http.add_certificate(self.keyssl, self.keyssl, self.certssl)
-            httplib2.Http.__init__(self, **kwargs)
-
-    _http_connectors['httplib2'] = Httplib2Transport
-    _http_facilities.setdefault('proxy', []).append('httplib2')
-    _http_facilities.setdefault('cacert', []).append('httplib2')
-
-    import inspect
-    if 'timeout' in inspect.getargspec(httplib2.Http.__init__)[0]:
-        _http_facilities.setdefault('timeout', []).append('httplib2')
-
-#
-# urllib2 support.
-#
-import urllib2
-class urllib2Transport(TransportBase):
-    _wrapper_version = "urllib2 %s" % urllib2.__version__
-    _wrapper_name = 'urllib2' 
-    def __init__(self, timeout=None, proxy=None, cacert=None, sessions=False):
-        if timeout is not None:
-            raise RuntimeError('timeout is not supported with urllib2 transport')
-        if proxy:
-            raise RuntimeError('proxy is not supported with urllib2 transport')
-        if cacert:
-            raise RuntimeError('cacert is not support with urllib2 transport')
-
-        self.request_opener = urllib2.urlopen
-        if sessions:
-            from cookielib import CookieJar
-            opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(CookieJar()))
-            self.request_opener = opener.open
-
-    def request(self, url, method, body, headers):
-        try:
-            f = self.request_opener(urllib2.Request(url, body, headers))
-        except urllib2.HTTPError, f:
-            if f.code != 500:
-                raise
-        return f.info(), f.read()
-
-_http_connectors['urllib2'] = urllib2Transport
-_http_facilities.setdefault('sessions', []).append('urllib2')
-
-#
-# pycurl support.
-# experimental: pycurl seems faster + better proxy support (NTLM) + ssl features
-#
-try:
-    import pycurl
-except ImportError:
-    pass
-else:
-    try:
-        from cStringIO import StringIO
-    except ImportError:
-        from StringIO import StringIO
-
-    class pycurlTransport(TransportBase):
-        _wrapper_version = pycurl.version
-        _wrapper_name = 'pycurl'
-        def __init__(self, timeout, proxy=None, cacert=None, sessions=False):
-            self.timeout = timeout 
-            self.proxy = proxy or {}
-            self.cacert = cacert
-               
-        def request(self, url, method, body, headers):
-            c = pycurl.Curl()
-            c.setopt(pycurl.URL, str(url))
-            if 'proxy_host' in self.proxy:
-                c.setopt(pycurl.PROXY, self.proxy['proxy_host'])
-            if 'proxy_port' in self.proxy:
-                c.setopt(pycurl.PROXYPORT, self.proxy['proxy_port'])
-            if 'proxy_user' in self.proxy:
-                c.setopt(pycurl.PROXYUSERPWD, "%(proxy_user)s:%(proxy_pass)s" % self.proxy)
-            self.buf = StringIO()
-            c.setopt(pycurl.WRITEFUNCTION, self.buf.write)
-            #c.setopt(pycurl.READFUNCTION, self.read)
-            #self.body = StringIO(body)
-            #c.setopt(pycurl.HEADERFUNCTION, self.header)
-            if self.cacert:
-                c.setopt(c.CAINFO, str(self.cacert)) 
-            c.setopt(pycurl.SSL_VERIFYPEER, self.cacert and 1 or 0)
-            c.setopt(pycurl.SSL_VERIFYHOST, self.cacert and 2 or 0)
-            c.setopt(pycurl.CONNECTTIMEOUT, self.timeout/6) 
-            c.setopt(pycurl.TIMEOUT, self.timeout)
-            if method=='POST':
-                c.setopt(pycurl.POST, 1)
-                c.setopt(pycurl.POSTFIELDS, body)            
-            if headers:
-                hdrs = ['%s: %s' % (str(k), str(v)) for k, v in headers.items()]
-                ##print hdrs
-                c.setopt(pycurl.HTTPHEADER, hdrs)
-            c.perform()
-            ##print "pycurl perform..."
-            c.close()
-            return {}, self.buf.getvalue()
-
-    _http_connectors['pycurl'] = pycurlTransport
-    _http_facilities.setdefault('proxy', []).append('pycurl')
-    _http_facilities.setdefault('cacert', []).append('pycurl')
-    _http_facilities.setdefault('timeout', []).append('pycurl')
-
-def get_http_wrapper(library=None, features=[]):
-    # If we are asked for a specific library, return it.
-    if library is not None:
-        try:
-            return _http_connectors[library]
-        except KeyError:
-            raise RuntimeError('%s transport is not available' % (library,))
-
-    # If we haven't been asked for a specific feature either, then just return our favourite
-    # implementation.
-    if not features:
-        return _http_connectors.get('httplib2', _http_connectors['urllib2'])
-
-    # If we are asked for a connector which supports the given features, then we will
-    # try that.
-    current_candidates = _http_connectors.keys()
-    new_candidates = []
-    for feature in features:
-        for candidate in current_candidates:
-            if candidate in _http_facilities.get(feature, []):
-                new_candidates.append(candidate)
-        current_candidates = new_candidates
-        new_candidates = []
-
-    # Return the first candidate in the list.
-    try:
-        candidate_name = current_candidates[0]
-    except IndexError:
-        raise RuntimeError("no transport available which supports these features: %s" % (features,))
-    else:
-        return _http_connectors[candidate_name]
-
-def set_http_wrapper(library=None, features=[]):
-    "Set a suitable HTTP connection wrapper."
-    global Http
-    Http = get_http_wrapper(library, features)
-    return Http
-
-# define the default HTTP connection class (it can be changed at runtime!):
-set_http_wrapper()
-
-#
-# End of the HTTP transport code.
-#
 
 class SoapFault(RuntimeError):
     def __init__(self,faultcode,faultstring):
         self.faultcode = faultcode
         self.faultstring = faultstring
+        RuntimeError.__init__(self, faultcode, faultstring)
+
+    def __str__(self):
+        return self.__unicode__().encode("ascii", "ignore")
+
+    def __unicode__(self):
+        return u'%s: %s' % (self.faultcode, self.faultstring)
+
+    def __repr__(self):
+        return u"SoapFault(%s, %s)" % (repr(self.faultcode), 
+                                       repr(self.faultstring))
+
 
 # soap protocol specification & namespace
 soap_namespaces = dict(
@@ -224,7 +63,9 @@ class SoapClient(object):
     "Simple SOAP Client (simil PHP)"
     def __init__(self, location = None, action = None, namespace = None,
                  cert = None, trace = False, exceptions = True, proxy = None, ns=False, 
-                 soap_ns=None, wsdl = None, cache = False, cacert=None, sessions=False):
+                 soap_ns=None, wsdl = None, cache = False, cacert=None,
+                 sessions=False, soap_server=None,
+                 ):
         self.certssl = cert             
         self.keyssl = None              
         self.location = location        # server location (url)
@@ -240,7 +81,25 @@ class SoapClient(object):
         else:
             self.__soap_ns = soap_ns
         
+        # SOAP Server (special cases like oracle or jbossas6)
+        self.__soap_server = soap_server
+        
+        # SOAP Header support
+        self.__headers = {}         # general headers
+        self.__call_headers = None  # OrderedDict to be marshalled for RPC Call
+        
+        # check if the Certification Authority Cert is a string and store it
+        if cacert and cacert.startswith("-----BEGIN CERTIFICATE-----"):
+            fd, filename = tempfile.mkstemp()
+            f = os.fdopen(fd, 'w+b', -1)
+            if self.trace: log.info(u"Saving CA certificate to %s" % filename)
+            f.write(cacert)
+            cacert = filename
+            f.close()
+        self.cacert = cacert
+
         # Create HTTP wrapper
+        Http = get_Http()
         self.http = Http(timeout=TIMEOUT, cacert=cacert, proxy=proxy, sessions=sessions)
         
         # parse wsdl url
@@ -253,6 +112,7 @@ class SoapClient(object):
 <%(soap_ns)s:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
     xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
     xmlns:%(soap_ns)s="%(soap_uri)s">
+<%(soap_ns)s:Header/>
 <%(soap_ns)s:Body>
     <%(method)s xmlns="%(namespace)s">
     </%(method)s>
@@ -268,13 +128,16 @@ class SoapClient(object):
 </%(soap_ns)s:Body>
 </%(soap_ns)s:Envelope>"""
 
+        # parse wsdl url
+        self.services = wsdl and self.wsdl_parse(wsdl, debug=trace, cache=cache) 
+        self.service_port = None                 # service port for late binding
+
     def __getattr__(self, attr):
         "Return a pseudo-method that can be called"
         if not self.services: # not using WSDL?
             return lambda self=self, *args, **kwargs: self.call(attr,*args,**kwargs)
         else: # using WSDL:
-            f = lambda *args, **kwargs: self.wsdl_call(attr,*args,**kwargs)
-            return f
+            return lambda *args, **kwargs: self.wsdl_call(attr,*args,**kwargs)
         
     def call(self, method, *args, **kwargs):
         "Prepare xml request and make SOAP call, returning a SimpleXMLElement"                
@@ -292,10 +155,32 @@ class SoapClient(object):
             # merge xmlelement parameter ("raw" - already marshalled)
             for param in parameters[0].children():
                 getattr(request,method).import_node(param)
-        else:
+        elif parameters:
             # marshall parameters:
             for k,v in parameters: # dict: tag=valor
                 getattr(request,method).marshall(k,v)
+        elif not self.__soap_server in ('oracle', ) or self.__soap_server in ('jbossas6',):
+            # JBossAS-6 requires no empty method parameters!
+            delattr(request("Body", ns=soap_namespaces.values(),), method)
+        # construct header and parameters (if not wsdl given) except wsse
+        if self.__headers and not self.services:
+            self.__call_headers = dict([(k, v) for k, v in self.__headers.items()
+                                        if not k.startswith("wsse:")])
+        # always extract WS Security header and send it
+        if 'wsse:Security' in self.__headers:
+            #TODO: namespaces too hardwired, clean-up...
+            header = request('Header' , ns=soap_namespaces.values(),)
+            k = 'wsse:Security'
+            v = self.__headers[k]
+            header.marshall(k, v, ns=False, add_children_ns=False)
+            header(k)['xmlns:wsse'] = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd'
+            #<wsse:UsernameToken xmlns:wsu='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'> 
+        if self.__call_headers:
+            header = request('Header' , ns=soap_namespaces.values(),)
+            for k, v in self.__call_headers.items():
+                ##if not self.__ns:
+                ##    header['xmlns']
+                header.marshall(k, v, ns=self.__ns, add_children_ns=False)
         self.xml_request = request.as_xml()
         self.xml_response = self.send(method, self.xml_request)
         response = SimpleXMLElement(self.xml_response, namespace=self.namespace)
@@ -316,6 +201,7 @@ class SoapClient(object):
                 'Content-length': str(len(xml)),
                 "SOAPAction": "\"%s\"" % (soap_action)
                 }
+        log.info("POST %s" % location)
         if self.trace:
             print "-"*80
             print "POST %s" % location
@@ -326,7 +212,6 @@ class SoapClient(object):
         self.response = response
         self.content = content
         if self.trace: 
-            print 
             print '\n'.join(["%s: %s" % (k,v) for k,v in response.items()])
             print content#.decode("utf8","ignore")
             print "="*80
@@ -361,6 +246,7 @@ class SoapClient(object):
         # get i/o type declarations:
         input = operation['input']
         output = operation['output']
+        header = operation.get('header')
         if 'action' in operation:
             self.action = operation['action']
         # sort parameters (same order as xsd:sequence)
@@ -369,7 +255,8 @@ class SoapClient(object):
                 ret = OrderedDict()
                 for k in od.keys():
                     v = d.get(k)
-                    if v:
+                    # don't append null tags!
+                    if v is not None:
                         if isinstance(v, dict):
                             v = sort_dict(od[k], v)
                         elif isinstance(v, list):
@@ -379,9 +266,21 @@ class SoapClient(object):
                 return ret
             else:
                 return d
+        # construct header and parameters
+        if header:
+            self.__call_headers = sort_dict(header, self.__headers)
+        if input and args:
+            # convert positional parameters to named parameters:
+            d = [(k, arg) for k, arg in zip(input.values()[0].keys(), args)]
+            kwargs.update(dict(d))
         if input and kwargs:
             params = sort_dict(input.values()[0], kwargs).items()
-            method = input.keys()[0]
+            if self.__soap_server == "axis":
+                # use the operation name
+                method = method
+            else:
+                # use the message (element) name
+                method = input.keys()[0]
         #elif not input:
             #TODO: no message! (see wsmtxca.dummy) 
         else:
@@ -395,21 +294,27 @@ class SoapClient(object):
     def help(self, method):
         "Return operation documentation and invocation/returned value example"
         operation = self.get_operation(method)
-        input = operation['input'].values()
-        input = input and input[0]
-        output = operation['output'].values()[0] 
-        return u"%s(%s)\n -> %s:\n\n%s" % (
+        input = operation['input']
+        input = input and input.values() and input.values()[0]
+        if isinstance(input, dict):
+            input = ", ".join("%s=%s" % (k,repr(v)) for k,v 
+                                 in input.items())
+        elif isinstance(input, list):
+            input = repr(input)
+        output = operation['output'].values()[0]
+        headers = operation.get('headers') or None
+        return u"%s(%s)\n -> %s:\n\n%s\nHeaders: %s" % (
             method, 
-            input and ", ".join("%s=%s" % (k,repr(v)) for k,v 
-                                 in input.items()) or "",
+            input or "",
             output and output or "",
             operation.get("documentation",""),
+            headers,
             )
 
     def wsdl_parse(self, url, debug=False, cache=False):
         "Parse Web Service Description v1.1"
 
-        if debug: print "wsdl url: %s" % url
+        log.debug("wsdl url: %s" % url)
         # Try to load a previously parsed wsdl:
         force_download = False
         if cache:
@@ -418,7 +323,7 @@ class SoapClient(object):
             if isinstance(cache, basestring):
                 filename_pkl = os.path.join(cache, filename_pkl) 
             if os.path.exists(filename_pkl):
-                if debug: print "Unpickle file %s" % (filename_pkl, )
+                log.debug("Unpickle file %s" % (filename_pkl, ))
                 f = open(filename_pkl, "r")
                 pkl = pickle.load(f)
                 f.close()
@@ -427,8 +332,8 @@ class SoapClient(object):
                     import warnings
                     warnings.warn('version or url mismatch! discarding cached wsdl', RuntimeWarning) 
                     if debug:
-                        print 'Version:', pkl['version'], __version__
-                        print 'URL:', pkl['url'], url
+                        log.debug('Version: %s %s' % (pkl['version'], __version__))
+                        log.debug('URL: %s %s' % (pkl['url'], url))
                     force_download = True
                 else:
                     self.namespace = pkl['namespace']
@@ -443,37 +348,56 @@ class SoapClient(object):
         xsd_uri="http://www.w3.org/2001/XMLSchema"
         xsi_uri="http://www.w3.org/2001/XMLSchema-instance"
         
-        get_local_name = lambda s: str((':' in s) and s.split(':')[1] or s)
+        get_local_name = lambda s: s and str((':' in s) and s.split(':')[1] or s)
+        get_namespace_prefix = lambda s: s and str((':' in s) and s.split(':')[0] or None)
         
-        REVERSE_TYPE_MAP = dict([(v,k) for k,v in TYPE_MAP.items()])
         # always return an unicode object:
         REVERSE_TYPE_MAP[u'string'] = unicode
 
         def fetch(url):
             "Download a document from a URL, save it locally if cache enabled"
+            
+            # check / append a valid schema if not given:
+            o = urlparse(url)
+            if not o.scheme in ('http','https', 'file'):
+                for scheme in ('http','https', 'file'):
+                    try:
+                        if not url.startswith("/") and scheme in ('http', 'https'):
+                            tmp_url = "%s://%s" % (scheme, url)
+                        else:
+                            tmp_url = "%s:%s" % (scheme, url)
+                        if debug: log.debug("Scheme not found, trying %s" % scheme)
+                        return fetch(tmp_url)
+                    except Exception, e:
+                        log.error(e)
+                raise RuntimeError("No scheme given for url: %s" % url)
+
             # make md5 hash of the url for caching... 
             filename = "%s.xml" % hashlib.md5(url).hexdigest()
             if isinstance(cache, basestring):
                 filename = os.path.join(cache, filename) 
             if cache and os.path.exists(filename) and not force_download:
-                if debug: print "Reading file %s" % (filename, )
+                log.info("Reading file %s" % (filename, ))
                 f = open(filename, "r")
                 xml = f.read()
                 f.close()
             else:
-                if debug: 
-                    print "-"*80
-                    print "GET %s using %s" % (url, self.http._wrapper_version)
-                response, xml = self.http.request(url, "GET")
+                if o.scheme == 'file':
+                    log.info("Fetching url %s using urllib2" % (url, ))
+                    f = urllib2.urlopen(url)
+                    xml = f.read()
+                else:
+                    log.info("GET %s using %s" % (url, self.http._wrapper_version))
+                    response, xml = self.http.request(url, "GET", None, {})
                 if cache:
-                    if debug: print "Writing file %s" % (filename, )
+                    log.info("Writing file %s" % (filename, ))
                     if not os.path.isdir(cache):
                         os.makedirs(cache)
                     f = open(filename, "w")
                     f.write(xml)
                     f.close()
             return xml
-            
+        
         # Open uri and read xml:
         xml = fetch(url)
         # Parse WSDL XML:
@@ -503,7 +427,7 @@ class SoapClient(object):
             service_name=service['name']
             if not service_name:
                 continue # empty service?
-            if debug: print "Processing service", service_name
+            if debug: log.debug("Processing service %s" % service_name)
             serv = services.setdefault(service_name, {'ports': {}})
             serv['documentation']=service['documentation'] or ''
             for port in service.port:
@@ -520,7 +444,7 @@ class SoapClient(object):
              
         for binding in wsdl.binding:
             binding_name = binding['name']
-            if debug: print "Processing binding", service_name
+            if debug: log.debug("Processing binding %s" % service_name)
             soap_binding = binding('binding', ns=soap_uris.values(), error=False)
             transport = soap_binding and soap_binding['transport'] or None
             port_type_name = get_local_name(binding['type'])
@@ -536,26 +460,47 @@ class SoapClient(object):
                 d = operations.setdefault(op_name, {})
                 bindings[binding_name]['operations'][op_name] = d
                 d.update({'name': op_name})
+                d['parts'] = {}
+                body = operation.input('body', ns=soap_uris.values(), error=False)
+                d['parts']['input_body'] = body and body['parts'] or None
+                body = operation.output('body', ns=soap_uris.values(), error=False)
+                d['parts']['output_body'] = body and body['parts'] or None
+                header = operation.input('header', ns=soap_uris.values(), error=False)
+                d['parts']['input_header'] = header and header['part'] or None
+                headers = operation.output('header', ns=soap_uris.values(), error=False)
+                d['parts']['output_header'] = header and header['part'] or None
                 #if action: #TODO: separe operation_binding from operation
                 if action:
                     d["action"] = action
         
+        def make_key(element_name, element_type):
+            "return a suitable key for elements"
+            # only distinguish 'element' vs other types
+            if element_type in ('complexType', 'simpleType'):
+                eltype = 'complexType'
+            else:
+                eltype = element_type
+            if eltype not in ('element', 'complexType', 'simpleType'):
+                raise RuntimeError("Unknown element type %s = %s" % (unicode(element_name), eltype))
+            return (unicode(element_name), eltype)
+        
         #TODO: cleanup element/schema/types parsing:
-        def process_element(element_name, node):
+        def process_element(element_name, node, element_type):
             "Parse and define simple element types"
-            if debug: print "Processing element", element_name
+            if debug: 
+                log.debug("Processing element %s %s" % (element_name, element_type))
             for tag in node:
                 if tag.get_local_name() in ("annotation", "documentation"):
                     continue
                 elif tag.get_local_name() in ('element', 'restriction'):
-                    if debug: print element_name,"has not children!",tag
+                    if debug: log.debug("%s has not children! %s" % (element_name,tag))
                     children = tag # element "alias"?
                     alias = True
                 elif tag.children():
                     children = tag.children()
                     alias = False
                 else:
-                    if debug: print element_name,"has not children!",tag
+                    if debug: log.debug("%s has not children! %s" % (element_name,tag))
                     continue #TODO: abstract?
                 d = OrderedDict()                    
                 for e in children:
@@ -570,27 +515,28 @@ class SoapClient(object):
                     else:
                         ns, type_name = None, t[0]
                     if element_name == type_name:
-                        continue # prevent infinite recursion
+                        pass ## warning with infinite recursion
                     uri = ns and e.get_namespace_uri(ns) or xsd_uri
                     if uri==xsd_uri:
                         # look for the type, None == any
                         fn = REVERSE_TYPE_MAP.get(unicode(type_name), None)
                     else:
-                        # complex type, postprocess later
-                        fn = elements.setdefault(unicode(type_name), OrderedDict())
+                        # simple / complex type, postprocess later 
+                        fn = elements.setdefault(make_key(type_name, "complexType"), OrderedDict())
+                        
                     if e['name'] is not None and not alias:
                         e_name = unicode(e['name'])
                         d[e_name] = fn
                     else:
-                        if debug: print "complexConent/simpleType/element", element_name, "=", type_name
+                        if debug: log.debug("complexConent/simpleType/element %s = %s" % (element_name, type_name))
                         d[None] = fn
-                    if e['maxOccurs']=="unbounded":
+                    if e['maxOccurs']=="unbounded" or (ns == 'SOAP-ENC' and type_name == 'Array'):
                         # it's an array... TODO: compound arrays?
                         d.array = True
                     if e is not None and e.get_local_name() == 'extension' and e.children():
                         # extend base element:
-                        process_element(element_name, e.children())
-                elements.setdefault(element_name, OrderedDict()).update(d)
+                        process_element(element_name, e.children(), element_type)
+                elements.setdefault(make_key(element_name, element_type), OrderedDict()).update(d)
 
         # check axis2 namespace at schema types attributes
         self.namespace = dict(wsdl.types("schema", ns=xsd_uri)[:]).get('targetNamespace', self.namespace) 
@@ -604,10 +550,10 @@ class SoapClient(object):
                     schema_namespace = element['namespace']
                     schema_location = element['schemaLocation']
                     if schema_location is None:
-                        if debug: print "Schema location not provided for %s!" % (schema_namespace, )
+                        if debug: log.debug("Schema location not provided for %s!" % (schema_namespace, ))
                         continue
                     if schema_location in imported_schemas:
-                        if debug: print "Schema %s already imported!" % (schema_location, )
+                        if debug: log.debug("Schema %s already imported!" % (schema_location, ))
                         continue
                     imported_schemas[schema_location] = schema_namespace
                     if debug: print "Importing schema %s from %s" % (schema_namespace, schema_location)
@@ -617,9 +563,10 @@ class SoapClient(object):
                     imported_schema = SimpleXMLElement(xml, namespace=xsd_uri)
                     preprocess_schema(imported_schema)
 
-                if element.get_local_name() in ('element', 'complexType', "simpleType"):
+                element_type = element.get_local_name()
+                if element_type in ('element', 'complexType', "simpleType"):
                     element_name = unicode(element['name'])
-                    if debug: print "Parsing Element %s: %s" % (element.get_local_name(),element_name)
+                    if debug: log.debug("Parsing Element %s: %s" % (element_type, element_name))
                     if element.get_local_name() == 'complexType':
                         children = element.children()
                     elif element.get_local_name() == 'simpleType':
@@ -633,7 +580,7 @@ class SoapClient(object):
                         elif element.get_local_name() == 'element':
                             children = element
                     if children:
-                        process_element(element_name, children)
+                        process_element(element_name, children, element_type)
 
         def postprocess_element(elements):
             "Fix unresolved references (elements referenced before its definition, thanks .net)"
@@ -650,7 +597,7 @@ class SoapClient(object):
                                 elements[k].insert(kk, v[None][kk], i)
                             del v[None]
                         else:  # "alias", just replace
-                            if debug: print "Replacing ", k , " = ", v[None]
+                            if debug: log.debug("Replacing %s = %s" % (k, v[None]))
                             elements[k] = v[None]
                             #break
                 if isinstance(v, list):
@@ -665,20 +612,45 @@ class SoapClient(object):
         postprocess_element(elements)
 
         for message in wsdl.message:
-            if debug: print "Processing message", message['name']
-            part = message('part', error=False)
-            element = {}
-            if part:
+            if debug: log.debug("Processing message %s" % message['name'])
+            for part in message('part', error=False) or []:
+                element = {}
                 element_name = part['element']
                 if not element_name:
-                    element_name = part['type'] # some uses type instead
-                element_name = get_local_name(element_name)
-                element = {element_name: elements.get(element_name)}
-            messages[message['name']] = element
-        
+                    # some implementations (axis) uses type instead
+                    element_name = part['type']
+                type_ns = get_namespace_prefix(element_name)
+                type_uri = wsdl.get_namespace_uri(type_ns)
+                if type_uri == xsd_uri:
+                    element_name = get_local_name(element_name)
+                    fn = REVERSE_TYPE_MAP.get(unicode(element_name), None)
+                    element = {part['name']: fn}
+                    # emulate a true Element (complexType)
+                    messages.setdefault((message['name'], None), {message['name']: OrderedDict()}).values()[0].update(element)
+                else:
+                    element_name = get_local_name(element_name)
+                    fn = elements.get(make_key(element_name, 'element'))
+                    if not fn:
+                        # some axis servers uses complexType for part messages
+                        fn = elements.get(make_key(element_name, 'complexType'))
+                        element = {message['name']: {part['name']: fn}}
+                    else:
+                        element = {element_name: fn}
+                    messages[(message['name'], part['name'])] = element
+
+        def get_message(message_name, part_name):
+            if part_name:
+                # get the specific part of the message:
+                return messages.get((message_name, part_name))
+            else:
+                # get the first part for the specified message:
+                for (message_name_key, part_name_key), message in messages.items():
+                    if message_name_key == message_name:
+                        return message
+                
         for port_type in wsdl.portType:
             port_type_name = port_type['name']
-            if debug: print "Processing port type", port_type_name
+            if debug: log.debug("Processing port type %s" % port_type_name)
             binding = port_type_bindings[port_type_name]
 
             for operation in port_type.operation:
@@ -689,12 +661,14 @@ class SoapClient(object):
                     #TODO: separe operation_binding from operation (non SOAP?)
                     input = get_local_name(operation.input['message'])
                     output = get_local_name(operation.output['message'])
-                    op['input'] = messages[input]
-                    op['output'] = messages[output]
+                    header = get_local_name(op['parts'].get('input_header'))
+                    op['input'] = get_message(input, op['parts'].get('input_body'))
+                    op['output'] = get_message(output, op['parts'].get('output_body'))
+                    op['header'] = get_message(input, op['parts'].get('input_header'))
 
         if debug:
             import pprint
-            pprint.pprint(services)
+            log.debug(pprint.pformat(services))
         
         # Save parsed wsdl (cache)
         if cache:
@@ -710,6 +684,18 @@ class SoapClient(object):
             f.close()
         
         return services
+
+    def __setitem__(self, item, value):
+        "Set SOAP Header value"
+        self.__headers[item] = value
+
+    def close(self):
+        "Finish the connection and remove temp files"
+        self.http.close()
+        if self.cacert.startswith(tempfile.gettempdir()):
+            if self.trace: log.info("removing %s" % self.cacert)
+            os.unlink(self.cacert)
+            
 
 def parse_proxy(proxy_str):
     "Parses proxy address user:pass@host:port into a dict suitable for httplib2"
@@ -730,196 +716,7 @@ def parse_proxy(proxy_str):
     return proxy_dict
     
     
-if __name__=="__main__":
-    import sys
-    
-    if '--web2py' in sys.argv:
-        # test local sample webservice exposed by web2py
-        from client import SoapClient
-        if not '--wsdl' in sys.argv:
-            client = SoapClient(
-                location = "http://127.0.0.1:8000/webservices/sample/call/soap",
-                action = 'http://127.0.0.1:8000/webservices/sample/call/soap', # SOAPAction
-                namespace = "http://127.0.0.1:8000/webservices/sample/call/soap", 
-                soap_ns='soap', trace = True, ns = False, exceptions=True)
-        else:
-            client = SoapClient(wsdl="http://127.0.0.1:8000/webservices/sample/call/soap?WSDL",trace=True)
-        response = client.Dummy()
-        print 'dummy', response
-        response = client.Echo(value='hola')
-        print 'echo', repr(response)
-        response = client.AddIntegers(a=1,b=2)
-        if not '--wsdl' in sys.argv:
-            result = response.AddResult # manully convert returned type
-            print int(result)
-        else:
-            result = response['AddResult']
-            print result, type(result), "auto-unmarshalled"
+if __name__ == "__main__":
+    pass
 
-    if '--raw' in sys.argv:
-        # raw (unmarshalled parameter) local sample webservice exposed by web2py
-        from client import SoapClient
-        client = SoapClient(
-            location = "http://127.0.0.1:8000/webservices/sample/call/soap",
-            action = 'http://127.0.0.1:8000/webservices/sample/call/soap', # SOAPAction
-            namespace = "http://127.0.0.1:8000/webservices/sample/call/soap", 
-            soap_ns='soap', trace = True, ns = False)
-        params = SimpleXMLElement("""<?xml version="1.0" encoding="UTF-8"?><AddIntegers><a>3</a><b>2</b></AddIntegers>""") # manully convert returned type
-        response = client.call('AddIntegers',params)
-        result = response.AddResult 
-        print int(result) # manully convert returned type
-            
-    if '--ctg' in sys.argv:
-        # test AFIP Agriculture webservice
-        client = SoapClient(
-            location = "https://fwshomo.afip.gov.ar/wsctg/services/CTGService",
-            action = 'http://impl.service.wsctg.afip.gov.ar/CTGService/', # SOAPAction
-            namespace = "http://impl.service.wsctg.afip.gov.ar/CTGService/",
-            trace = True,
-            ns = True)
-        response = client.dummy()
-        result = response.dummyResponse
-        print str(result.appserver)
-        print str(result.dbserver)
-        print str(result.authserver)
-    
-    if '--wsfe' in sys.argv:
-        # Demo & Test (AFIP Electronic Invoice):
-        ta_string=open("TA.xml").read()   # read access ticket (wsaa.py)
-        ta = SimpleXMLElement(ta_string)
-        token = str(ta.credentials.token)
-        sign = str(ta.credentials.sign)
-        cuit = long(20267565393)
-        id = 1234
-        cbte =199
-        client = SoapClient(
-            location = "https://wswhomo.afip.gov.ar/wsfe/service.asmx",
-            action = 'http://ar.gov.afip.dif.facturaelectronica/', # SOAPAction
-            namespace = "http://ar.gov.afip.dif.facturaelectronica/",
-            trace = True)
-        results = client.FERecuperaQTYRequest(
-            argAuth= {"Token": token, "Sign": sign, "cuit":long(cuit)}
-        )
-        if int(results.FERecuperaQTYRequestResult.RError.percode) != 0:
-            print "Percode: %s" % results.FERecuperaQTYRequestResult.RError.percode
-            print "MSGerror: %s" % results.FERecuperaQTYRequestResult.RError.perrmsg
-        else:
-            print int(results.FERecuperaQTYRequestResult.qty.value)
-    
-    if '--feriados' in sys.argv:
-        # Demo & Test: Argentina Holidays (Ministerio del Interior):
-        # this webservice seems disabled
-        from datetime import datetime, timedelta
-        client = SoapClient(
-            location = "http://webservices.mininterior.gov.ar/Feriados/Service.svc",
-            action = 'http://tempuri.org/IMyService/', # SOAPAction
-            namespace = "http://tempuri.org/FeriadoDS.xsd",
-            trace = True)
-        dt1 = datetime.today() - timedelta(days=60)
-        dt2 = datetime.today() + timedelta(days=60)
-        feriadosXML = client.FeriadosEntreFechasas_xml(dt1=dt1.isoformat(), dt2=dt2.isoformat());
-        print feriadosXML
 
-    if '--wsdl-parse' in sys.argv:
-        client = SoapClient()
-        # Test PySimpleSOAP WSDL
-        client.wsdl("file:C:/test.wsdl", debug=True)
-        # Test Java Axis WSDL:
-        client.wsdl('https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl',debug=True)
-        # Test .NET 2.0 WSDL:
-        client.wsdl('https://wswhomo.afip.gov.ar/wsfe/service.asmx?WSDL',debug=True)
-        client.wsdl('https://wswhomo.afip.gov.ar/wsfex/service.asmx?WSDL',debug=True)
-        client.wsdl('https://testdia.afip.gov.ar/Dia/Ws/wDigDepFiel/wDigDepFiel.asmx?WSDL',debug=True)
-        # Test JBoss WSDL:
-        client.wsdl('https://fwshomo.afip.gov.ar/wsctg/services/CTGService?wsdl',debug=True)
-        client.wsdl('https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl',debug=True)
-
-    if '--wsdl-client' in sys.argv:
-        import time
-        t0 = time.time()
-        for i in range(100):
-            print i
-            client = SoapClient(wsdl='https://wswhomo.afip.gov.ar/wsfex/service.asmx?WSDL',cache="cache", trace=False)
-            #results = client.FEXDummy()
-            #print results['FEXDummyResult']['AppServer']
-            #print results['FEXDummyResult']['DbServer']
-            #print results['FEXDummyResult']['AuthServer']
-        t1 = time.time()
-        print "Total time", t1-t0
-
-    if '--wsdl-client' in sys.argv:
-        ta_string=open("TA.xml").read()   # read access ticket (wsaa.py)
-        ta = SimpleXMLElement(ta_string)
-        token = str(ta.credentials.token)
-        sign = str(ta.credentials.sign)
-        response = client.FEXGetCMP(
-            Auth={"Token": token, "Sign": sign, "Cuit": 20267565393},
-            Cmp={"Tipo_cbte": 19, "Punto_vta": 1, "Cbte_nro": 1}) 
-        result = response['FEXGetCMPResult']
-        if False: print result
-        if 'FEXErr' in result:
-            print "FEXError:", result['FEXErr']['ErrCode'], result['FEXErr']['ErrCode'] 
-        cbt = result['FEXResultGet']
-        print cbt['Cae']
-        FEX_event = result['FEXEvents']
-        print FEX_event['EventCode'], FEX_event['EventMsg']
-
-    if '--wsdl-ctg' in sys.argv:
-        client = SoapClient(wsdl='https://fwshomo.afip.gov.ar/wsctg/services/CTGService?wsdl',
-                            trace=True, ns = "ctg")
-        results = client.dummy()
-        print results
-        print results['DummyResponse']['appserver']
-        print results['DummyResponse']['dbserver']
-        print results['DummyResponse']['authserver']
-        ta_string=open("TA.xml").read()   # read access ticket (wsaa.py)
-        ta = SimpleXMLElement(ta_string)
-        token = str(ta.credentials.token)
-        sign = str(ta.credentials.sign)
-        print client.help("obtenerProvincias")
-        response = client.obtenerProvincias(auth={"token":token, "sign":sign, "cuitRepresentado":20267565393})
-        print "response=",response
-        for ret in response:
-            print ret['return']['codigoProvincia'], ret['return']['descripcionProvincia'].encode("latin1")
-        prueba = dict(numeroCartaDePorte=512345678, codigoEspecie=23,
-                cuitRemitenteComercial=20267565393, cuitDestino=20267565393, cuitDestinatario=20267565393, 
-                codigoLocalidadOrigen=3058, codigoLocalidadDestino=3059, 
-                codigoCosecha='0910', pesoNetoCarga=1000, cantHoras=1, 
-                patenteVehiculo='CZO985', cuitTransportista=20267565393,
-                numeroCTG="43816783", transaccion='10000001681', observaciones='',
-            )
-
-        response = client.solicitarCTG( 
-            auth={"token": token, "sign": sign, "cuitRepresentado": 20267565393},
-            solicitarCTGRequest= prueba)
-
-        print response['return']['numeroCTG']
-
-    if '--libtest' in sys.argv:
-        import time
-        results = {}
-        for lib in 'httplib2', 'urllib2', 'pycurl':
-            print "testing library", lib
-            set_http_wrapper(lib)
-            print Http._wrapper_version
-            for proxy in None, parse_proxy("localhost:8000"):
-                print "proxy", proxy
-                try:
-                    client = SoapClient(wsdl='https://wswhomo.afip.gov.ar/wsfev1/service.asmx?WSDL',
-                                        cache="cache", trace=False, proxy=proxy)
-                    t0 = time.time()
-                    print "starting...",
-                    for i in range(20):
-                        print i,
-                        client.FEDummy()
-                    t1 = time.time()
-                    result = t1-t0
-                except Exception, e:
-                    result = "Failed: %s" % str(e)
-                print "Total time", result
-                results.setdefault(lib, {})[proxy and 'proxy' or 'direct'] = result
-        print "\nResults:"
-        for k, v in results.items():
-            for k2, v2 in v.items():
-                print k, k2, v2
-      
