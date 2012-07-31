@@ -50,6 +50,7 @@ Uliweb Change Log
 #. Change the order of creating table colums according the definition of Model
 #. Fix pyini/uni_prt bug. And change _uni_prt to uni_prt.
 #. Add object() to ListView
+#. Upgrade pysimplesoap to 1.05a
 
 0.1.2 Version
 -----------------
