@@ -1855,6 +1855,10 @@ class ManyToMany(ReferenceProperty):
     def __property_config__(self, model_class, property_name):
         """Loads all of the references that point to this model.
         """
+        
+        #Direct invoke super with ReferenceProperty in order to skip the
+        #ReferenceProperty process, but instead of invode ReferenceProperty's
+        #parent function
         super(ReferenceProperty, self).__property_config__(model_class, property_name)
     
         if self.reference_class is _SELF_REFERENCE:
