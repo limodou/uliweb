@@ -10,15 +10,19 @@ class DateError(Exception):pass
 
 DEFAULT_DATETIME_INPUT_FORMATS = (
     '%Y-%m-%d %H:%M:%S',     # '2006-10-25 14:30:59'
+    '%Y-%m-%d %H:%M:%S.%f',  # '2006-10-25 14:30:59.5200'
     '%Y-%m-%d %H:%M',        # '2006-10-25 14:30'
     '%Y-%m-%d',              # '2006-10-25'
     '%Y/%m/%d %H:%M:%S',     # '2006/10/25 14:30:59'
+    '%Y/%m/%d %H:%M:%S.%f',  # '2006/10/25 14:30:59.5200'
     '%Y/%m/%d %H:%M',        # '2006/10/25 14:30'
-    '%Y/%m/%d ',             # '2006/10/25 '
+    '%Y/%m/%d',              # '2006/10/25 '
     '%m/%d/%Y %H:%M:%S',     # '10/25/2006 14:30:59'
+    '%m/%d/%Y %H:%M:%S.%f',  # '10/25/2006 14:30:59.5200'
     '%m/%d/%Y %H:%M',        # '10/25/2006 14:30'
     '%m/%d/%Y',              # '10/25/2006'
     '%m/%d/%y %H:%M:%S',     # '10/25/06 14:30:59'
+    '%m/%d/%y %H:%M:%S.%f',  # '10/25/06 14:30:59.5200'
     '%m/%d/%y %H:%M',        # '10/25/06 14:30'
     '%m/%d/%y',              # '10/25/06'
     '%H:%M:%S',              # '14:30:59'
@@ -188,7 +192,7 @@ def to_datetime(dt, tzinfo=None, format=None):
         d = None
         for fmt in formats:
             try:
-                d = datetime(*time.strptime(dt, fmt)[:6])
+                d = datetime.strptime(dt, fmt)
             except ValueError:
                 continue
         if not d:
@@ -208,13 +212,21 @@ def to_local(dt, tzinfo=None):
     tz = pick_timezone(tzinfo, __local_timezone__)
     return to_datetime(dt, tzinfo=tz)
 
-def to_string(dt):
+def to_string(dt, microsecond=False, timezone=True):
     if isinstance(dt, datetime):
-        return dt.strftime('%Y-%m-%d %H:%M:%S %Z')
+        format = '%Y-%m-%d %H:%M:%S'
+        if microsecond:
+            format += '.%f'
+        if timezone:
+            format += ' %Z'
+        return dt.strftime(format).rstrip()
     elif isinstance(dt, date):
         return dt.strftime('%Y-%m-%d')
     elif isinstance(dt, time_):
-        return dt.strftime('%H:%M:%S')
+        format = '%H:%M:%S'
+        if microsecond:
+            format += '.%f'
+        return dt.strftime(format)
     
 #if __name__ == '__main__':
 #    GMT8 = timezone('GMT +8')

@@ -8,6 +8,7 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.core.html import Buf, Tag, begin_tag, u_str
 from widgets import *
 from layout import *
+from uliweb.utils import date
 
 DEFAULT_FORM_CLASS = 'form'
 REQUIRED_CAPTION = '*'
@@ -278,42 +279,6 @@ class BaseField(object):
 #        return '_' + self.name + '_'
 #    
 class StringField(BaseField):
-    """
-    >>> a = StringField(name='title', label='Title', required=True, id='field_title')
-    >>> print a.html('Test')
-    <input class="field" id="field_title" name="title" placeholder="" type="text" value="Test"></input>
-    <BLANKLINE>
-    >>> print a.get_label()
-    <label for="field_title">Title:<span class="field_required">*</span>
-    </label>
-    <BLANKLINE>
-    >>> a.validate('')
-    (False, gettext_lazy('This field is required.'))
-    >>> a.validate('Hello')
-    (True, 'Hello')
-    >>> a.to_python('Hello')
-    'Hello'
-    >>> a = StringField(name='title', label='Title', required=True)
-    >>> print a.html('')
-    <input class="field" name="title" placeholder="" type="text" value=""></input>
-    <BLANKLINE>
-    >>> print a.get_label()
-    <label>Title:<span class="field_required">*</span>
-    </label>
-    <BLANKLINE>
-    >>> a.idtype = 'name'
-    >>> print a.html('')
-    <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
-    <BLANKLINE>
-    >>> print a.get_label()
-    <label for="field_title">Title:<span class="field_required">*</span>
-    </label>
-    <BLANKLINE>
-    >>> a = StringField(name='title', label='Title:', required=True, html_attrs={'class':'ffff'})
-    >>> print a.html('')
-    <input class="ffff field" name="title" placeholder="" type="text" value=""></input>
-    <BLANKLINE>
-    """
     default_datatype = str
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
@@ -330,25 +295,6 @@ class StringField(BaseField):
         return data
     
 class UnicodeField(BaseField):
-    """
-    >>> a = UnicodeField(name='title', label='Title', required=True, id='field_title')
-    >>> print a.html('Test')
-    <input class="field" id="field_title" name="title" placeholder="" type="text" value="Test"></input>
-    <BLANKLINE>
-    >>> print a.get_label()
-    <label for="field_title">Title:<span class="field_required">*</span>
-    </label>
-    <BLANKLINE>
-    >>> a.validate('')
-    (False, gettext_lazy('This field is required.'))
-    >>> a.validate('Hello')
-    (True, u'Hello')
-    >>> a.to_python('Hello')
-    u'Hello'
-    >>> a.to_python('中国')
-    u'\u4e2d\u56fd'
-    
-    """
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, encoding='utf-8', **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.encoding = encoding
@@ -366,43 +312,12 @@ class UnicodeField(BaseField):
             return unicode(data, self.encoding)
   
 class PasswordField(StringField):
-    """
-    >>> a = PasswordField(name='password', label='Password:', required=True, id='field_password')
-    >>> print a.html('Test')
-    <input class="field" id="field_password" name="password" placeholder="" type="password" value="Test"></input>
-    <BLANKLINE>
-    """
     default_build = Password
 
 class HiddenField(StringField):
-    """
-    >>> a = HiddenField(name='id', id='field_id')
-    >>> print a.html('Test')
-    <input class="field" id="field_id" name="id" placeholder="" type="hidden" value="Test"></input>
-    <BLANKLINE>
-    """
     default_build = Hidden
 
 class ListField(StringField):
-    """
-    >>> a = ListField(name='list', id='field_list')
-    >>> print a.html(['a', 'b'])
-    <input class="field" id="field_list" name="list" placeholder="" type="text" value="a b"></input>
-    <BLANKLINE>
-    >>> print a.validate('a b')
-    (True, ['a', 'b'])
-    >>> print a.validate('')
-    (True, [])
-    >>> a = ListField(name='list', id='field_list', delimeter=',')
-    >>> print a.validate('a,b,c')
-    (True, ['a', 'b', 'c'])
-    >>> a = ListField(name='list', id='field_list', delimeter=',', datatype=int)
-    >>> print a.validate('1,b,c')
-    (False, "Can't convert '1,b,c' to ListField.")
-    >>> print a.validate('1,2,3')
-    (True, [1, 2, 3])
-    
-    """
     def __init__(self, label='', default=None, required=False, validators=None, name='', delimeter=' ', html_attrs=None, help_string='', build=None, datatype=str, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.delimeter = delimeter
@@ -422,13 +337,6 @@ class ListField(StringField):
             return self.delimeter.join([u_str(x) for x in data])
 
 class TextField(StringField):
-    """
-    >>> a = TextField(name='text', id='field_text')
-    >>> print a.html('Test')
-    <textarea class="field" cols id="field_text" name="text" placeholder="" rows="10">Test</textarea>
-    <BLANKLINE>
-    
-    """
     default_build = TextArea
 
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=10, cols=None, convert_html=False, **kwargs):
@@ -448,13 +356,6 @@ class TextField(StringField):
         return str(self.build(value, id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
 
 class TextLinesField(TextField):
-    """
-    >>> a = TextLinesField(name='list', id='field_list')
-    >>> print a.html(['a', 'b'])
-    <textarea class="field" cols="40" id="field_list" name="list" placeholder="" rows="4">a
-    b</textarea>
-    <BLANKLINE>
-    """
     def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, datatype=str, rows=4, cols=40, **kwargs):
         TextField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, rows=rows, cols=cols, **kwargs)
         self._default = default or []
@@ -474,19 +375,6 @@ class TextLinesField(TextField):
         return str(self.build(value, id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
 
 class BooleanField(BaseField):
-    """
-    >>> a = BooleanField(name='bool', id='field_bool')
-    >>> print a.html('Test')
-    <input checked class="checkbox" id="field_bool" name="bool" placeholder="" type="checkbox"></input>
-    <BLANKLINE>
-    >>> print a.validate('on')
-    (True, True)
-    >>> print a.validate('')
-    (True, False)
-    >>> print a.validate(None)
-    (True, False)
-    
-    """
     default_build = Checkbox
     field_css_class = 'checkbox'
     
@@ -512,27 +400,6 @@ class BooleanField(BaseField):
             return ''
 
 class IntField(BaseField):
-    """
-    >>> a = IntField(name='int', id='field_int')
-    >>> print a.html('Test')
-    <input class="field" id="field_int" name="int" placeholder="" type="text" value="Test"></input>
-    <BLANKLINE>
-    >>> print a.validate('')
-    (True, 0)
-    >>> print a.validate(None)
-    (True, 0)
-    >>> print a.validate('aaaa')
-    (False, "Can't convert 'aaaa' to IntField.")
-    >>> print a.validate('122')
-    (True, 122)
-    >>> a = BaseField(name='int', id='field_int', datatype=int)
-    >>> print a.html('Test')
-    <input class="field" id="field_int" name="int" placeholder="" type="text" value="Test"></input>
-    <BLANKLINE>
-    >>> print a.validate('122')
-    (True, 122)
-
-    """
     def __init__(self, label='', default=0, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
 
@@ -557,27 +424,6 @@ class FloatField(BaseField):
         return str(data)
 
 class SelectField(BaseField):
-    """
-    >>> choices = [('a', 'AAA'), ('b', 'BBB')]
-    >>> a = SelectField(name='select', id='field_select', default='a', choices=choices, validators=[IS_IN_SET(choices)])
-    >>> print a.html('a')
-    <select class="field" id="field_select" name="select" placeholder=""><option selected value="a">AAA</option>
-    <BLANKLINE>
-    <option value="b">BBB</option>
-    </select>
-    <BLANKLINE>
-    >>> print a.validate('')
-    (True, 'a')
-    >>> print a.validate('aaaaaaa')
-    (False, gettext_lazy('Select a valid choice. That choice is not one of the available choices.'))
-    >>> print a.validate('b')
-    (True, 'b')
-    >>> a = SelectField(name='select', id='field_select', choices=[(1, 'AAA'), (2, 'BBB')], datatype=int)
-    >>> print a.validate('')
-    (True, None)
-    >>> print a.validate('2')
-    (True, 2)
-    """
     default_build = Select
 
     def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', size=10, **kwargs):
@@ -622,33 +468,9 @@ class SelectField(BaseField):
         return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
 
 class RadioSelectField(SelectField):
-    """
-    >>> choices = [('a', 'AAA'), ('b', 'BBB')]
-    >>> a = RadioSelectField(name='select', id='field_select', default='a', choices=choices, validators=[IS_IN_SET(choices)])
-    >>> print a.html('a')
-    <label class="field" placeholder=""><input checked id="field_select" name="select" type="radio" value="a"></input>
-    AAA</label>
-    <label class="field" placeholder=""><input id="field_select" name="select" type="radio" value="b"></input>
-    BBB</label>
-    <BLANKLINE>
-    >>> print a.validate('')
-    (True, 'a')
-    >>> print a.validate('aaaaaaa')
-    (False, gettext_lazy('Select a valid choice. That choice is not one of the available choices.'))
-    >>> print a.validate('b')
-    (True, 'b')
-    
-    """
     default_build = RadioSelect
     
 class FileField(BaseField):
-    """
-    >>> a = FileField(name='file', id='field_file')
-    >>> print a.html('a')
-    <input class="field" id="field_file" name="file" placeholder="" type="file"></input>
-    <BLANKLINE>
-    """
-    
     default_build = File
     
     def to_python(self, data):
@@ -674,159 +496,43 @@ class ImageField(FileField):
         self.size = size
         self.validators.append(IS_IMAGE(self.size))
     
-DEFAULT_DATE_INPUT_FORMATS = (
-    '%Y-%m-%d', '%m/%d/%Y', '%m/%d/%y', '%Y/%m/%d',  # '2006-10-25', '10/25/2006', '10/25/06'
-    '%b %d %Y', '%b %d, %Y',            # 'Oct 25 2006', 'Oct 25, 2006'
-    '%d %b %Y', '%d %b, %Y',            # '25 Oct 2006', '25 Oct, 2006'
-    '%B %d %Y', '%B %d, %Y',            # 'October 25 2006', 'October 25, 2006'
-    '%d %B %Y', '%d %B, %Y',            # '25 October 2006', '25 October, 2006'
-)
-class DateField(StringField):
-    """
-    >>> a = DateField(name='date', id='field_date')
-    >>> print a.html(datetime.date(2009, 1, 1))
-    <input class="field field_date" id="field_date" name="date" placeholder="" type="text" value="2009-01-01"></input>
-    <BLANKLINE>
-    >>> print a.validate('2009-01-01')
-    (True, datetime.date(2009, 1, 1))
-    >>> print a.validate('2009/01/01')
-    (True, datetime.date(2009, 1, 1))
-    >>> a = DateField(name='date', id='field_date', default='now')
-    """
+class _BaseDatetimeField(StringField):
+    time_func = 'to_date'
+    
+    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, format=None, **kwargs):
+        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
+        self.format = format
+    
+    def _get_default(self):
+        if self._default == 'now':
+            return getattr(date, self.time_func)(date.now())
+        else:
+            return self._default
+    default = property(_get_default)
+    
+    def to_python(self, data):
+        try:
+            return getattr(date, self.time_func)(data, format=self.format)
+        except ValueError:
+            raise Exception, _("The date is not a valid date format.")
+    
+    def to_html(self, data):
+        if data:
+            return date.to_string(data)
+        else:
+            return ''
+    
+class DateField(_BaseDatetimeField):
     field_css_class = 'field field_date'
 
-    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, format=None, **kwargs):
-        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
-        if not format:
-            self.formats = DEFAULT_DATE_INPUT_FORMATS
-        else:
-            self.formats = format
-            if not isinstance(format, (list, tuple)):
-                self.formats = [format]
-
-    def _get_default(self):
-        if self._default == 'now':
-            return datetime.date(*datetime.datetime.now().timetuple()[:3])
-        else:
-            return self._default
-    default = property(_get_default)
-
-    def to_python(self, data):
-        for format in self.formats:
-            try:
-                return datetime.date(*time.strptime(data, format)[:3])
-            except ValueError:
-                continue
-        raise Exception, _("The date is not a valid date format.")
-    
-    def to_html(self, data):
-        if data:
-            return data.strftime(self.formats[0])
-        else:
-            return ''
-    
-DEFAULT_TIME_INPUT_FORMATS = (
-    '%H:%M:%S',     # '14:30:59'
-    '%H:%M',        # '14:30'
-)
-class TimeField(StringField):
-    """
-    >>> a = TimeField(name='time', id='field_time')
-    >>> print a.html(datetime.time(14, 30, 59))
-    <input class="field field_time" id="field_time" name="time" placeholder="" type="text" value="14:30:59"></input>
-    <BLANKLINE>
-    >>> print a.validate('14:30:59')
-    (True, datetime.time(14, 30, 59))
-    >>> print a.validate('14:30')
-    (True, datetime.time(14, 30))
-    >>> print a.validate('')
-    (True, None)
-    >>> a = TimeField(name='time', id='field_time', default='now')
-    """
+class TimeField(_BaseDatetimeField):
     field_css_class = 'field field_time'
+    time_func = 'to_time'
     
-    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, format=None, **kwargs):
-        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
-        if not format:
-            self.formats = DEFAULT_TIME_INPUT_FORMATS
-        else:
-            self.formats = format
-            if not isinstance(format, (list, tuple)):
-                self.formats = [format]
-        self._default = default
-
-    def _get_default(self):
-        if self._default == 'now':
-            return datetime.time(*datetime.datetime.now().timetuple()[3:6])
-        else:
-            return self._default
-    default = property(_get_default)
-    
-    def to_python(self, data):
-        for format in self.formats:
-            try:
-                return datetime.time(*time.strptime(data, format)[3:6])
-            except ValueError:
-                continue
-        raise Exception, _("The time is not a valid time format.")
-    
-    def to_html(self, data):
-        if data:
-            return data.strftime(self.formats[0])
-        else:
-            return ''
-
-DEFAULT_DATETIME_INPUT_FORMATS = ["%s %s" % (x, y)
-    for x in DEFAULT_DATE_INPUT_FORMATS
-        for y in DEFAULT_TIME_INPUT_FORMATS]
-        
-class DateTimeField(StringField):
-    """
-    >>> a = DateTimeField(name='datetime', id='field_datetime')
-    >>> print a.html(datetime.datetime(2009, 9, 25, 14, 30, 59))
-    <input class="field field_datetime" id="field_datetime" name="datetime" placeholder="" type="text" value="2009-09-25 14:30:59"></input>
-    <BLANKLINE>
-    >>> print a.validate('2009-09-25 14:30:59')
-    (True, datetime.datetime(2009, 9, 25, 14, 30, 59))
-    >>> print a.validate('2009-09-25 14:30')
-    (True, datetime.datetime(2009, 9, 25, 14, 30))
-    >>> print a.validate('')
-    (True, None)
-    """
+class DateTimeField(_BaseDatetimeField):
     field_css_class = 'field field_datetime'
+    time_func = 'to_datetime'
     
-    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, format=None, **kwargs):
-        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
-        if not format:
-            self.formats = DEFAULT_DATETIME_INPUT_FORMATS
-        else:
-            self.formats = format
-            if not isinstance(format, (list, tuple)):
-                self.formats = [format]
-        self._default = default
-
-    def _get_default(self):
-        if self._default == 'now':
-            return datetime.datetime.now()
-        else:
-            return self._default
-    default = property(_get_default)
-    
-    def to_python(self, data):
-        for format in self.formats:
-            try:
-                return datetime.datetime(*time.strptime(data, format)[:6])
-            except ValueError:
-                continue
-        raise Exception, _("The datetime is not a valid datetime format.")
-    
-    def to_html(self, data):
-        if data:
-            return data.strftime(self.formats[0])
-        else:
-            return ''
-
-#Only support single root derive
 class FormMetaclass(type):
     def __init__(cls, name, bases, dct):
         cls.fields = {}
@@ -844,21 +550,6 @@ class FormMetaclass(type):
             cls.add_field(field_name, obj)
 
 class Form(object):
-    """
-    >>> class F(Form):
-    ...     title = StringField(lable='Title:')
-    >>> form = F()
-    >>> print form.form_begin
-    <form action="" class="form" method="POST">
-    >>> class F(Form):
-    ...     title = StringField(lable='Title:')
-    ...     file = FileField()
-    >>> form = F(action='post')
-    >>> print form.form_begin
-    <form action="post" class="form" enctype="multipart/form-data" method="POST">
-    >>> print form.form_end
-    </form>
-    """
 
     __metaclass__ = FormMetaclass
 
@@ -1009,22 +700,6 @@ class Form(object):
         if errors is not None:
             self.errors = errors
             
-#        self.f = D({})
-#        for name, obj in self.fields_list:
-#            f = FieldProxy(self, obj)
-#            setattr(self, name, f)
-#            self.f[name] = f
-
-#    def __template__(self, name):
-#        result = []
-#        if hasattr(self, 'pre_html'):
-#            result.append(self.pre_html())
-#        result.append('{{<< %s}}' % name)
-#        if hasattr(self, 'post_html'):
-#            result.append(self.post_html())
-#        
-#        return ''.join(result)
-    
     def html(self):
         result = []
         if hasattr(self, 'pre_html'):
@@ -1036,24 +711,3 @@ class Form(object):
             result.append(self.post_html())
         return ''.join(result)
 
-def test():
-    """
-    >>> class F(Form):
-    ...     title = StringField(label='Title:', required=True, help_string='Title help string')
-    ...     content = TextField(label='Content:')
-    ...     password = PasswordField(label='Password:')
-    ...     age = IntField(label='Age:')
-    ...     id = HiddenField()
-    ...     tag = ListField(label='Tag:')
-    ...     public = BooleanField(label='Public:')
-    ...     format = SelectField(label='Format:', choices=[('rst', 'reStructureText'), ('text', 'Plain Text')], default='rst')
-    ...     radio = RadioSelectField(label='Radio:', choices=[('rst', 'reStructureText'), ('text', 'Plain Text')], default='rst')
-    ...     file = FileField(label='file')
-    >>> f = F()
-    >>> class F(Form):
-    ...     title = StringField(label='Title:', required=True, help_string='Title help string')
-    """
-
-#if __name__ == '__main__':
-#    import doctest
-#    doctest.testmod()

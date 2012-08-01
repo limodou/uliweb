@@ -62,3 +62,19 @@ def test():
     >>> date.timezone('gmt8')
     <tzinfo GMT +8>
     """
+    
+def test_microsecond():
+    """
+    >>> date.to_datetime('2012-08-01 16:41:12.5200')
+    datetime.datetime(2012, 8, 1, 16, 41, 12, 520000, tzinfo=<tzinfo UTC>)
+    >>> a = datetime(2012,8,1,16,41,12,5200)
+    >>> print a
+    2012-08-01 16:41:12.005200
+    >>> b = date.to_datetime(a)
+    >>> b
+    datetime.datetime(2012, 8, 1, 16, 41, 12, 5200, tzinfo=<tzinfo UTC>)
+    >>> date.to_string(b, microsecond=True)
+    '2012-08-01 16:41:12.005200 UTC'
+    >>> date.to_string(b, timezone=False)
+    '2012-08-01 16:41:12'
+    """

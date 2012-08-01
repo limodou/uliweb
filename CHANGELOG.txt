@@ -5,6 +5,11 @@ Uliweb Change Log
 0.1.4 Version
 -----------------
 
+#. Fix utils/date.to_datetime() support %f(misrosecond) format
+#. Add microsecond format support in utils/date.py
+#. Improve DateField, TimeField, DatetimeField process with date module
+#. Remove doc test from uliform.py to test_form.py
+
 0.1.3 Version
 -----------------
 
