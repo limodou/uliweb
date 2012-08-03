@@ -151,7 +151,7 @@ class Expose(object):
             rule = self.rule
         rule = self._fix_url(appname, rule)
         if inspect.ismethod(f):
-            endpoint = '.'.join([f.__module__, f.im_class.__name__, f.__name__])
+            endpoint = '.'.join([f.im_class.__module__, f.im_class.__name__, f.__name__])
         else:
             endpoint = '.'.join([f.__module__, f.__name__])
         f.func_dict['__exposed__'] = True

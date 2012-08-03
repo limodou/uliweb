@@ -3,7 +3,7 @@ from functools import partial
 from pysimplesoap.simplexml import (Date, DateTime, Decimal, byte, short, 
     double, integer, Time, TYPE_MAP)
 
-__soap_functions__ = {}
+__soap_functions__ = {'SOAP':{}}
 
 def _fix_soap_kwargs(kwargs):
     def _f(args):
@@ -24,23 +24,29 @@ def _fix_soap_kwargs(kwargs):
             kwargs[k] = _f(v)
     return kwargs
 
-def soap(func=None, name=None, returns=None, args=None, doc=None):
+def soap(func=None, name=None, returns=None, args=None, doc=None, target='SOAP'):
+    """
+    soap supports multiple SOAP function collections, it'll save functions to 
+    target dict, and you can give other target, but it should be keep up with
+    SoapView.target definition.
+    """
     global __soap_functions__
     
     returns = _fix_soap_kwargs(returns)
     args = _fix_soap_kwargs(args)
     
     if isinstance(func, str) and not name:
-        return partial(soap, name=func, returns=returns, args=args, doc=doc)
+        return partial(soap, name=func, returns=returns, args=args, doc=doc, target=target)
     
     if not func:
-        return partial(soap, name=name, returns=returns, args=args, doc=doc)
+        return partial(soap, name=name, returns=returns, args=args, doc=doc, target=target)
 
+    target_functions = __soap_functions__.setdefault(target, {})
     if inspect.isfunction(func):
         f_name = func.__name__
         if name:
             f_name = name
-        __soap_functions__[f_name] = endpoint = ('.'.join([func.__module__, func.__name__]), returns, args, doc)
+        target_functions[f_name] = endpoint = ('.'.join([func.__module__, func.__name__]), returns, args, doc)
         func.soap_endpoint = (f_name, endpoint)
     elif inspect.isclass(func):
         if not name:
@@ -53,10 +59,10 @@ def soap(func=None, name=None, returns=None, args=None, doc=None):
                 if hasattr(f, 'soap_endpoint'):
                     #the method has already been decorate by soap 
                     _n, _e = f.soap_endpoint
-                    __soap_functions__[name + '.' + _n] = endpoint
-                    del __soap_functions__[_n]
+                    target_functions[name + '.' + _n] = endpoint
+                    del target_functions[_n]
                 else:
-                    __soap_functions__[f_name] = endpoint
+                    target_functions[f_name] = endpoint
     else:
         raise Exception, "Can't support this type [%r]" % func
     return func
