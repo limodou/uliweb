@@ -20,7 +20,7 @@ def add_rule(map, url, endpoint=None, **kwargs):
     try:
         map.add(Rule(url, **kwargs))
     except ValueError as e:
-        log.info("Wrong url is %s" % url)
+        log.info("Wrong url is %s, endpoint=%s" % (url, endpoint))
         raise
             
 def merge_rules():
@@ -150,12 +150,15 @@ class Expose(object):
         else:
             rule = self.rule
         rule = self._fix_url(appname, rule)
-        endpoint = '.'.join([f.__module__, f.__name__])
-        f.__exposed__ = True
-        f.__no_rule__ = (self.parse_level == 1) or (self.parse_level == 2 and (self.rule is None))
+        if inspect.ismethod(f):
+            endpoint = '.'.join([f.__module__, f.im_class.__name__, f.__name__])
+        else:
+            endpoint = '.'.join([f.__module__, f.__name__])
+        f.func_dict['__exposed__'] = True
+        f.func_dict['__no_rule__'] = (self.parse_level == 1) or (self.parse_level == 2 and (self.rule is None))
         if not hasattr(f, '__old_rule__'):
-            f.__old_rule__ = {}
-        f.__old_rule__[self.rule] = self.rule
+            f.func_dict['__old_rule__'] = {}
+        f.func_dict['__old_rule__'][self.rule] = self.rule
         
         #add name parameter process
         if 'name' in self.kwargs:
