@@ -9,6 +9,13 @@ Uliweb Change Log
 #. Add microsecond format support in utils/date.py
 #. Improve DateField, TimeField, DatetimeField process with date module
 #. Remove doc test from uliform.py to test_form.py
+#. Add sort() to SortedDict
+#. Add set_var and get_var to SimpleFrame.py as default function, and config
+   them in settings.ini
+#. Fix rules.py can't parse Class View function directly, such as defined in
+   settings.ini
+#. Add test_sorteddict.py and add sort() method to sorteddict class
+#. Add common set_var and get_var and configure them in default_settings.ini
 
 0.1.3 Version
 -----------------
