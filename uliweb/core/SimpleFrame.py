@@ -241,7 +241,23 @@ def get_app_depends(app, existed_apps=None):
                     yield j
     s.add(app)
     yield app
-
+    
+def set_var(key, value):
+    """
+    Default set_var function
+    """
+    from uliweb import settings
+    
+    settings.set_var(key, value)
+    
+def get_var(key, default=None):
+    """
+    Default get_var function
+    """
+    from uliweb import settings
+    
+    return settings.get_var(key, default)
+    
 def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
     include_apps = include_apps or []
     inifile = norm_path(os.path.join(apps_dir, settings_file))
@@ -817,7 +833,11 @@ class Dispatcher(object):
             static = kw.pop('static', None)
             if static:
                 static_views.append(endpoint)
-            rules.add_rule(url_map, url, endpoint, **kw)
+            try:
+                rules.add_rule(url_map, url, endpoint, **kw)
+            except:
+                log.error("Wrong url url=%s, endpoint=endpoint" % (url, endpoint))
+                raise
     
     def install_apps(self):
         for p in self.apps:
