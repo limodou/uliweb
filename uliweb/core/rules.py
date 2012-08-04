@@ -59,7 +59,7 @@ class Expose(object):
             self.kwargs = kwargs
             
     def _fix_url(self, appname, rule):
-        if appname in __app_rules__:
+        if rule.startswith('/') and appname in __app_rules__:
             suffix = __app_rules__[appname]
             url = rule.lstrip('/')
             return os.path.join(suffix, url).replace('\\', '/')
@@ -110,7 +110,10 @@ class Expose(object):
                                     rule = os.path.join(prefix, _old).replace('\\', '/')
                                 else:
                                     rule = prefix
-                                rule = self._fix_url(appname, rule)
+                                #if rule has perfix of appname, then fix it, otherwise
+                                #maybe it's root url, e.g. /register
+                                if rule.startswith(prefix):
+                                    rule = self._fix_url(appname, rule)
                             __no_need_exposed__.append((v[0], new_endpoint, rule, v[3]))
                             for k in __url_names__.iterkeys():
                                 if __url_names__[k] == v[1]:
@@ -158,7 +161,7 @@ class Expose(object):
         f.func_dict['__no_rule__'] = (self.parse_level == 1) or (self.parse_level == 2 and (self.rule is None))
         if not hasattr(f, '__old_rule__'):
             f.func_dict['__old_rule__'] = {}
-        f.func_dict['__old_rule__'][self.rule] = self.rule
+        f.func_dict['__old_rule__'][rule] = self.rule
         
         #add name parameter process
         if 'name' in self.kwargs:
