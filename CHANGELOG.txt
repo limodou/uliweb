@@ -13,10 +13,12 @@ Uliweb Change Log
 #. Add set_var and get_var to SimpleFrame.py as default function, and config
    them in settings.ini
 #. Fix rules.py can't parse Class View function directly, such as defined in
-   settings.ini
+   settings.ini, also fix app URL definition for relative expose bug.
 #. Add test_sorteddict.py and add sort() method to sorteddict class
 #. Add common set_var and get_var and configure them in default_settings.ini
 #. improve soap app, add multiple soap support, details you should see soap doc
+#. Refactor form, add build propert and function to Form class, and the result
+   should be: pre_html, begin, body, buttons, end, post_html
 
 0.1.3 Version
 -----------------

@@ -20,13 +20,15 @@ def min_times(num):
     return reduce(_f, num)
 
 class Layout(object):
+    form_class = ''
+    
     def __init__(self, form, layout=None, **kwargs):
         self.form = form
         self.layout = layout
         self.kwargs = kwargs
         
     def html(self):
-        return ''
+        return self.begin() + self.body() + self.buttons_line() + self.end()
     
     def __str__(self):
         return self.html()
@@ -37,8 +39,27 @@ class Layout(object):
     def is_hidden(self, f):
         return self.get_widget_name(f) == 'Hidden'
     
+    def begin(self):
+        if not self.form.html_attrs['class'] and self.form_class:
+            self.form.html_attrs['class'] = self.form_class
+        return self.form.form_begin
+    
+    def body(self):
+        return ''
+    
+    def end(self):
+        return self.form.form_end
+    
+    def _buttons_line(self, buttons):
+        return ' '.join([str(x) for x in buttons])
+    
+    def buttons_line(self):
+        return self._buttons_line(self.form.get_buttons())
+    
+    def buttons(self):
+        return ' '.join([str(x) for x in self.form.get_buttons()])
+    
 class TableLayout(Layout):
-#    def line(self, label, input, help_string='', error=None):
     field_classes = {
         ('Text', 'Password', 'TextArea'):'type-text',
         ('Button', 'Submit', 'Reset'):'type-button',
@@ -113,15 +134,13 @@ class TableLayout(Layout):
                 tr << element
         return tr
 
-    def buttons_line(self, buttons, n):
+    def _buttons_line(self, buttons):
         div = Tag('div', _class=self.buttons_line_class)
         with div:
             div << buttons
         return div
         
-    def html(self):
-        if not self.form.html_attrs['class']:
-            self.form.html_attrs['class'] = self.form_class
+    def body(self):
         if self.layout:
             m = []
             for line in self.layout:
@@ -146,7 +165,6 @@ class TableLayout(Layout):
         table = None
         fieldset = None
         first = True
-        buf << self.form.form_begin
         cls = self.table_class
         for fields in self.layout:
             if not isinstance(fields, (tuple, list)):
@@ -179,24 +197,8 @@ class TableLayout(Layout):
         if fieldset:
             buf << '</fieldset>'
         
-        buf << self.buttons_line(self.form.get_buttons(), n)
-        
-        buf << self.form.form_end
         return str(buf)
         
-#        with buf.table(_class='table'):
-#            with buf.tbody:
-#
-#                for fields in self.layout:
-#                    if not isinstance(fields, (tuple, list)):
-#                        fields = [fields]
-#                    buf << self.line(fields, n)
-#        
-#                buf << self.buttons_line(self.form.get_buttons(), n)
-#                
-#            buf << self.form.form_end
-#        return str(buf)
-    
 class BootstrapTableLayout(TableLayout):
     field_classes = {
         ('Text', 'Password', 'TextArea'):'input-xlarge',
@@ -208,15 +210,6 @@ class BootstrapTableLayout(TableLayout):
     form_class = 'form-horizontal'
     buttons_line_class = 'form-actions'
     
-#    def get_class(self, f):
-#        name = f.build.__name__
-#        _class = ''
-#        for k, v in self.field_classes.items():
-#            if name in k:
-#                _class = v
-#                break
-#        return _class
-#
     def line(self, fields, n):
         _x = 0
         for _f in fields:
@@ -276,16 +269,15 @@ class CSSLayout(Layout):
         div << Tag('br/')
         return div
 
-    def buttons_line(self, buttons):
+    def _buttons_line(self, buttons):
         div = Buf()
         div << Tag('label', '&nbsp;', _class='field')
         div << buttons
         div << Tag('br/')
         return div
 
-    def html(self):
+    def body(self):
         buf = Buf()
-        buf << self.form.form_begin
         
         if self.form.fieldset:
             form = buf << Tag('fieldset')
@@ -301,8 +293,6 @@ class CSSLayout(Layout):
             else:
                 form << self.line(obj, f.label, f, f.help_string, f.error)
         
-        form << self.buttons_line(self.form.get_buttons())
-        buf << self.form.form_end
         return str(buf)
 
 class QueryLayout(Layout):
@@ -322,13 +312,9 @@ class QueryLayout(Layout):
                 buf << input
         return buf
 
-    def html(self):
-        if not self.form.html_attrs['class']:
-            self.form.html_attrs['class'] = self.form_class
+    def body(self):
         buf = Buf()
-        buf << self.form.form_begin
         self.process_layout(buf)
-        buf << self.form.form_end
         return str(buf)
     
     def process_layout(self, buf):
@@ -446,32 +432,18 @@ class YamlLayout(Layout):
                     div << input
             return div
 
-    def buttons_line(self, buttons):
+    def _buttons_line(self, buttons):
         div = Tag('div', _class='line')
         with div:
             with div.div(_class='type-button'):
                 div << buttons
         return str(div)
 
-    def html(self):
+    def body(self):
         buf = Buf()
-        if not self.form.html_attrs['class']:
-            self.form.html_attrs['class'] = self.form_class
-        buf << self.form.form_begin
-            
-#            if self.form.fieldset:
-#                with buf.fieldset:
-##                form = buf << Tag('fieldset')
-#                    if self.form.form_title:
-#                        buf.legend(self.form.form_title)
-##            else:
-##                form = buf
         if not self.layout:
             self.layout = [name for name, obj in self.form.fields_list]
         self.process_layout(buf)
-        
-        buf << self.buttons_line(self.form.get_buttons())
-        buf << self.form.form_end
         return str(buf)
 
     def process_layout(self, buf):
@@ -523,23 +495,17 @@ class BootstrapLayout(Layout):
             div_group << str(div)
         return str(div_group)
     
-    def buttons_line(self, buttons):
+    def _buttons_line(self, buttons):
         div = Tag('div', _class="form-actions")
         with div:
             div << buttons
         return div
-                    
-    def html(self):
+    
+    def body(self):
         buf = Buf()
-        if not self.form.html_attrs['class']:
-            self.form.html_attrs['class'] = self.form_class
-        buf << self.form.form_begin
         if not self.layout:
             self.layout = [name for name, obj in self.form.fields_list]
         self.process_layout(buf)
-        
-        buf << self.buttons_line(self.form.get_buttons())
-        buf << self.form.form_end
         return str(buf)
 
     def process_layout(self, buf):

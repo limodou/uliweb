@@ -13,13 +13,13 @@ import datetime
 def test_1():
     """
     >>> class F(Form):
-    ...     title = StringField(label='Title:', required=True, help_string='Title help string')
-    ...     content = TextField(label='Content:')
+    ...     title = StringField(label='Title', required=True, help_string='Title help string')
+    ...     content = TextField(label='Content')
     >>> f = F()
     >>> print f
     <form action="" class="form-horizontal" method="POST">
     <div class="control-group" id="div_field_title">
-        <label class="control-label" for="field_title">Title::<span class="field_required">*</span>
+        <label class="control-label" for="field_title">Title:<span class="field_required">*</span>
     </label>
     <BLANKLINE>
         <div class="controls">
@@ -33,7 +33,7 @@ def test_1():
     </div>
     <BLANKLINE>
     <div class="control-group" id="div_field_content">
-        <label class="control-label" for="field_content">Content::</label>
+        <label class="control-label" for="field_content">Content:</label>
     <BLANKLINE>
         <div class="controls">
         <textarea class="field" cols id="field_content" name="content" placeholder="" rows="10"></textarea>
@@ -44,9 +44,9 @@ def test_1():
     <BLANKLINE>
     </div>
     <BLANKLINE>
+    <BLANKLINE>
     <div class="form-actions">
         <button class="btn btn-primary" name="submit" type="submit">Submit</button>
-    <BLANKLINE>
     <BLANKLINE>
     </div>
     <BLANKLINE>
@@ -108,7 +108,6 @@ def test_form_class():
     <div class="form-actions">
         <button class="btn btn-primary" name="submit" type="submit">Submit</button>
     <BLANKLINE>
-    <BLANKLINE>
     </div>
     <BLANKLINE>
     </form>
@@ -118,7 +117,6 @@ def test_form_class():
     <form action="" class="form-horizontal" method="POST">
     <div class="form-actions">
         <button class="btn btn-primary" name="submit" type="submit">Submit</button>
-    <BLANKLINE>
     <BLANKLINE>
     </div>
     <BLANKLINE>
@@ -367,22 +365,52 @@ def test_datetime_field():
 def test_form():
     """
     >>> class F(Form):
-    ...     title = StringField(lable='Title:')
+    ...     title = StringField(label='Title:')
     >>> form = F()
     >>> print form.form_begin
     <form action="" class="" method="POST">
     >>> class F(Form):
-    ...     title = StringField(lable='Title:')
+    ...     title = StringField(label='Title:')
     ...     file = FileField()
     >>> form = F(action='post')
     >>> print form.form_begin
     <form action="post" class="" enctype="multipart/form-data" method="POST">
     >>> print form.form_end
     </form>
+    <BLANKLINE>
+    """
+    
+def test_build():
+    """
+    >>> class F(Form):
+    ...     title = StringField(label='Title:')
+    >>> form = F()
+    >>> build = form.build
+    >>> print build.pre_html
+    <BLANKLINE>
+    >>> print build.begin
+    <form action="" class="form-horizontal" method="POST">
+    >>> print build.body
+    <div class="control-group" id="div_field_title">
+        <label class="control-label" for="field_title">Title::</label>
+    <BLANKLINE>
+        <div class="controls">
+        <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
+    <BLANKLINE>
+        <p class="help help-block"></p>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    <BLANKLINE>
     """
     
 #if __name__ == '__main__':
 #    from uliweb.utils import date
 #    
-#    a = DateField(name='date', id='field_date')
-#    print a.validate('2009/01/01')
+#    class TForm(Form):
+#        title = StringField(label='Title', required=True)
+#        
+#    form = TForm()
+#    print form.build.buttons

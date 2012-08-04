@@ -8,6 +8,7 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.core.html import Buf, Tag, begin_tag, u_str
 from widgets import *
 from layout import *
+from uliweb.core.storage import Storage
 from uliweb.utils import date
 
 DEFAULT_FORM_CLASS = 'form'
@@ -465,6 +466,7 @@ class SelectField(BaseField):
                         choices.insert(0, (choices[0][0], '', self.empty))
                     else:
                         choices.insert(0, ('', self.empty))
+        
         return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
 
 class RadioSelectField(SelectField):
@@ -549,6 +551,15 @@ class FormMetaclass(type):
         for (field_name, obj) in fields_list:
             cls.add_field(field_name, obj)
 
+class FormBuild(object):
+    def __str__(self):
+        buf = []
+        for x in ['pre_html', 'begin', 'body', 'buttons_line', 'end', 'post_html']:
+            t = getattr(self, x)
+            if t:
+                buf.append(str(t))
+        return '\n'.join(buf)
+    
 class Form(object):
 
     __metaclass__ = FormMetaclass
@@ -559,7 +570,7 @@ class Form(object):
     fieldset = False
     form_action = ''
     form_method = 'POST'
-    form_buttons = None
+    form_buttons = [str(Button(value=_('Submit'), _class="btn btn-primary", name="submit", type="submit"))]
     form_title = None
     form_class = None
     form_id = None
@@ -574,7 +585,12 @@ class Form(object):
         self.form_class = _class or self.form_class
         self.form_id = id or self.form_id
         self.kwargs = kwargs
-        self._buttons = buttons or self.form_buttons
+        buttons = buttons or self.form_buttons
+        if buttons:
+            if isinstance(buttons, (tuple, list)):
+                self._buttons = list(buttons)
+            else:
+                self._buttons = [buttons]
         self.validators = validators or []
         self.html_attrs = html_attrs or {}
         if '_class' in self.html_attrs:
@@ -684,15 +700,10 @@ class Form(object):
     
     @property
     def form_end(self):
-        return '</form>'
+        return '</form>\n'
     
     def get_buttons(self):
-        b = Buf()
-        if self._buttons is None:
-            b << [Button(value=_('Submit'), _class="btn btn-primary", name="submit", type="submit")]
-        else:
-            b << self._buttons
-        return str(b)
+        return self._buttons
     
     def bind(self, data=None, errors=None):
         if data is not None:
@@ -701,13 +712,19 @@ class Form(object):
             self.errors = errors
             
     def html(self):
-        result = []
-        if hasattr(self, 'pre_html'):
-            result.append(self.pre_html())
+        b = self.build
+        return str(b)
+    
+    @property
+    def build(self):
         cls = self.layout_class
         layout = cls(self, self.layout, **self.layout_class_args)
-        result.append(str(layout))
-        if hasattr(self, 'post_html'):
-            result.append(self.post_html())
-        return ''.join(result)
-
+        result = FormBuild()
+        result.pre_html = self.pre_html() if hasattr(self, 'pre_html') else ''
+        result.begin = layout.begin()
+        result.body = layout.body()
+        result.buttons = layout.buttons()
+        result.buttons_line = layout.buttons_line()
+        result.end = layout.end()
+        result.post_html = self.post_html() if hasattr(self, 'post_html') else ''
+        return result
