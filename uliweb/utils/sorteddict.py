@@ -78,3 +78,14 @@ class SortedDict(object):
     
     def copy(self):
         return self._dict.copy()
+    
+    def sort(self, cmp=None, key=None, reverse=False):
+        self._fields = [x for x, y in sorted(self.items(), cmp, key, reverse)]
+        
+    def setdefault(self, key, value):
+        if key in self._dict:
+            return self._dict[key]
+        else:
+            self._dict[key] = value
+            self._fields.append(key)
+            return value
