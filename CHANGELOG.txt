@@ -16,6 +16,7 @@ Uliweb Change Log
    settings.ini
 #. Add test_sorteddict.py and add sort() method to sorteddict class
 #. Add common set_var and get_var and configure them in default_settings.ini
+#. improve soap app, add multiple soap support, details you should see soap doc
 
 0.1.3 Version
 -----------------
