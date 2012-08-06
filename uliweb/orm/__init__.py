@@ -2224,7 +2224,7 @@ class Model(object):
                 old = d.copy()
                 
                 if get_dispatch_send() and self.__dispatch_enabled__:
-                    dispatch.call(self.__class__, 'pre_save', instance=self, created=True, data=d, old_data=self._old_values)
+                    dispatch.call(self.__class__, 'pre_save', instance=self, created=True, data=d, old_data=self._old_values, signal=self.tablename)
                 
                 #process auto_now_add
                 _manytomany = {}
@@ -2258,7 +2258,7 @@ class Model(object):
                     old = d.copy()
                     
                     if get_dispatch_send() and self.__dispatch_enabled__:
-                        dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d, old_data=self._old_values)
+                        dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d, old_data=self._old_values, signal=self.tablename)
 
                     #process auto_now
                     _manytomany = {}
@@ -2288,7 +2288,7 @@ class Model(object):
                     if self.field_str(x) != self.field_str(v):
                         setattr(self, k, v)
                 if get_dispatch_send() and self.__dispatch_enabled__:
-                    dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old, old_data=self._old_values)
+                    dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old, old_data=self._old_values, signal=self.tablename)
                 self.set_saved()
                 
         return saved
@@ -2303,7 +2303,7 @@ class Model(object):
         be the property name
         """
         if get_dispatch_send() and self.__dispatch_enabled__:
-            dispatch.call(self.__class__, 'pre_delete', instance=self)
+            dispatch.call(self.__class__, 'pre_delete', instance=self, signal=self.tablename)
         if manytomany:
             for k, v in self._manytomany.iteritems():
                 getattr(self, k).clear()
@@ -2319,7 +2319,7 @@ class Model(object):
             self.id = None
             self._old_values = {}
         if get_dispatch_send() and self.__dispatch_enabled__:
-            dispatch.call(self.__class__, 'post_delete', instance=self)
+            dispatch.call(self.__class__, 'post_delete', instance=self, signal=self.tablename)
             
     def __repr__(self):
         s = []
@@ -2481,14 +2481,14 @@ class Model(object):
         else:
             _cond = condition
         #send 'get_object' topic to get cached object
-        obj = dispatch.get(cls, 'get_object', condition=_cond)
+        obj = dispatch.get(cls, 'get_object', condition=_cond, signal=cls.tablename)
         if obj:
             return obj
         #if there is no cached object, then just fetch from database
         obj = cls.connect(connection).filter(_cond).one()
         #send 'set_object' topic to stored the object to cache
         if obj:
-            dispatch.call(cls, 'set_object', condition=_cond, instance=obj)
+            dispatch.call(cls, 'set_object', condition=_cond, instance=obj, signal=cls.tablename)
         return obj
     
     @classmethod

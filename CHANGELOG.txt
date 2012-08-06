@@ -32,6 +32,7 @@ Uliweb Change Log
         appname = 'layout.html'
         
    so when render the template, the `layout_template` will be replaced with `layout.html`
+#. Add QueryString and query_string support in common.py
 
 0.1.3 Version
 -----------------

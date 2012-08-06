@@ -317,6 +317,9 @@ class QueryLayout(Layout):
         self.process_layout(buf)
         return str(buf)
     
+    def buttons_line(self):
+        return ''
+
     def process_layout(self, buf):
         def output(buf, line, first=False, more=False):
             if isinstance(line, (tuple, list)):

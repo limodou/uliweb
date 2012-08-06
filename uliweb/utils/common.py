@@ -371,6 +371,42 @@ class Serial(object):
     def dump(self, v):
         return cPickle.dumps(v, cPickle.HIGHEST_PROTOCOL)
 
+import urlparse
+class QueryString(object):
+    def __init__(self, url):
+        self.url = url
+        self.scheme, self.netloc, self.script_root, qs, self.anchor = self.parse()
+        self.qs = urlparse.parse_qs(qs, True)
+        
+    def parse(self):
+        return urlparse.urlsplit(self.url)
+    
+    def __getitem__(self, name):
+        return self.qs.get(name, [])
+    
+    def __setitem__(self, name, value):
+        self.qs[name] = [value]
+    
+    def set(self, name, value, replace=False):
+        v = self.qs.setdefault(name, [])
+        if replace:
+            self.qs[name] = [value]
+        else:
+            v.append(value)
+        return self
+
+    def __str__(self):
+        import urllib
+        
+        qs = urllib.urlencode(self.qs, True)
+        return urlparse.urlunsplit((self.scheme, self.netloc, self.script_root, qs, self.anchor))
+    
+def query_string(url, replace=True, **kwargs):
+    q = QueryString(url)
+    for k, v in kwargs.items():
+        q.set(k, v, replace)
+    return str(q)
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:
