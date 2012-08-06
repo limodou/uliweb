@@ -19,6 +19,7 @@ Uliweb Change Log
 #. improve soap app, add multiple soap support, details you should see soap doc
 #. Refactor form, add build propert and function to Form class, and the result
    should be: pre_html, begin, body, buttons, end, post_html
+#. Add default parameter to uliweb/utils/common.py get_choice()
 
 0.1.3 Version
 -----------------

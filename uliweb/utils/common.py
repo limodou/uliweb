@@ -249,10 +249,10 @@ def get_var(key):
         return settings.get_var(key)
     return f
 
-def get_choice(choices, value):
+def get_choice(choices, value, default=None):
     if callable(choices):
         choices = choices()
-    return dict(choices).get(value, '')
+    return dict(choices).get(value, default)
 
 def simple_value(v, encoding='utf-8', none=False):
     import datetime
