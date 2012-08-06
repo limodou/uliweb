@@ -127,7 +127,7 @@ def eval_vars(vs, vars, env):
     elif isinstance(vs, dict):
         return dict([(x, eval_vars(y, vars, env)) for x, y in vs.iteritems()])
     else:
-        return eval(vs, vars, env)
+        return eval(vs, env, vars)
 
 def get_tag(begin_tag, end_tag):
     r = '(' + re.escape(begin_tag) + '.*?' + re.escape(end_tag) + ')'
@@ -425,7 +425,7 @@ class Template(object):
         d = self.env.to_dict()
         d['_f'] = _f
         try:
-            args, kwargs = eval("_f(%s)" % value, self.vars, d)
+            args, kwargs = eval("_f(%s)" % value, d, self.vars)
         except:
             if self.skip_error:
                 return (None,), {}
@@ -543,7 +543,7 @@ class Template(object):
 
     def _parse_text(self, content, var):
         try:
-            text = str(eval(var, self.vars, self.env.to_dict()))
+            text = str(eval(var, self.env.to_dict(), self.vars))
         except:
             if self.skip_error:
                 text = ''
