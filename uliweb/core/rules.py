@@ -161,8 +161,8 @@ class Expose(object):
         f.func_dict['__no_rule__'] = (self.parse_level == 1) or (self.parse_level == 2 and (self.rule is None))
         if not hasattr(f, '__old_rule__'):
             f.func_dict['__old_rule__'] = {}
+    
         f.func_dict['__old_rule__'][rule] = self.rule
-        
         #add name parameter process
         if 'name' in self.kwargs:
             url_name = self.kwargs.pop('name')
