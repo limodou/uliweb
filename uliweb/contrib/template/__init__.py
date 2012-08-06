@@ -11,3 +11,7 @@ def startup_installed(sender):
     template.BEGIN_TAG = sender.settings.TEMPLATE.BEGIN_TAG
     template.END_TAG = sender.settings.TEMPLATE.END_TAG
     
+def prepare_view_env(sender, env):
+    from uliweb import request, functions
+
+    env['layout_template'] = functions.get_var('APP_LAYOUTS/' + request.appname, functions.get_var('APP_LAYOUTS/__default__', 'layout.html'))

@@ -731,7 +731,7 @@ class Dispatcher(object):
         local_env = {}
         
         #process before view call
-        dispatch.call(self, 'prepare_view_env', local_env, local.request)
+        dispatch.call(self, 'prepare_view_env', local_env)
         
         local_env['application'] = __global__.application
         local_env['request'] = local.request
