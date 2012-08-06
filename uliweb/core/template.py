@@ -76,7 +76,11 @@ def reindent(text):
     text='\n'.join(new_lines)
     return text
 
-def get_templatefile(filename, dirs, default_template=None):
+def get_templatefile(filename, dirs, default_template=None, skip=False):
+    """
+    Fetch the template filename according dirs
+    :para skip: if the searched filename equals skip, then using the one before.
+    """
     if os.path.exists(filename):
         return filename
     if filename:
@@ -84,7 +88,10 @@ def get_templatefile(filename, dirs, default_template=None):
             for d in dirs:
                 path = os.path.join(d, filename)
                 if os.path.exists(path):
-                    return path
+                    if path != skip:
+                        return path
+                    else:
+                        continue
     if default_template:
         if isinstance(default_template, (list, tuple)):
             for i in default_template:
@@ -554,7 +561,7 @@ class Template(object):
             args, kwargs = self._get_parameters(value)
             filename = args[0]
             self.env.update(kwargs)
-            fname = get_templatefile(filename, self.dirs)
+            fname = get_templatefile(filename, self.dirs, skip=self.filename)
             if not fname:
                 raise TemplateException, "Can't find the template %s" % filename
             
@@ -564,6 +571,7 @@ class Template(object):
             text, begin_tag, end_tag = self.get_text(f.read(), inherit_tags=False)
             f.close()
             t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag)
+            t.set_filename(fname)
             t.add_root(self)
             t.parse()
             content.merge(t.content)
@@ -571,12 +579,16 @@ class Template(object):
             self.env.pop()
         
     def _parse_extend(self, value):
+        """
+        If the extend template is the same name with current file, so it
+        means that it should use parent template
+        """
         self.env.push()
         try:
             args, kwargs = self._get_parameters(value)
             filename = args[0]
             self.env.update(kwargs)
-            fname = get_templatefile(filename, self.dirs)
+            fname = get_templatefile(filename, self.dirs, skip=self.filename)
             if not fname:
                 raise TemplateException, "Can't find the template %s" % filename
             
@@ -586,6 +598,7 @@ class Template(object):
             text, begin_tag, end_tag = self.get_text(f.read(), inherit_tags=False)
             f.close()
             t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag)
+            t.set_filename(fname)
             t.add_root(self)
             t.parse()
             self.content.clear_content()

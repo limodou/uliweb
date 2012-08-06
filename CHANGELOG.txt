@@ -20,6 +20,10 @@ Uliweb Change Log
 #. Refactor form, add build propert and function to Form class, and the result
    should be: pre_html, begin, body, buttons, end, post_html
 #. Add default parameter to uliweb/utils/common.py get_choice()
+#. Improve template extend and include process, if you extend the same filename
+   with current filename, then it'll find the parent same named filename. This
+   way can make new same named filename but extended from parent. Also support 
+   include tag.
 
 0.1.3 Version
 -----------------
