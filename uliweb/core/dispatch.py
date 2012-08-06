@@ -97,10 +97,11 @@ def call(sender, topic, *args, **kwargs):
                 raise
             f['func'] = _f
         if callable(_f):
-            if not _test(kwargs, f):
+            kw = kwargs.copy()
+            if not _test(kw, f):
                 continue
             try:
-                _f(sender, *args, **kwargs)
+                _f(sender, *args, **kw)
             except:
                 logging.exception('Calling dispatch point [%s] error!' % topic)
                 raise
