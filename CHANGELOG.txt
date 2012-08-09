@@ -34,6 +34,7 @@ Uliweb Change Log
    so when render the template, the `layout_template` will be replaced with `layout.html`
 #. Add QueryString and query_string support in common.py
 #. Fix dispatch signal process bug
+#. Set werkzeug log level to 'info', #issue 2
 
 0.1.3 Version
 -----------------
