@@ -123,7 +123,7 @@ class TemplateLayout(Layout):
     def __init__(self, form, layout=None, writer=None):
         self.form = form
         self.layout = layout
-        self.writer = FormWriter(form)
+        self.writer = writer or FormWriter(form)
 
     def html(self):
         from uliweb import application
@@ -131,7 +131,22 @@ class TemplateLayout(Layout):
         text = f.read()
         f.close()
         return str(uaml.Parser(text, self.writer))
-    
+   
+class TemplateFileLayout(Layout):
+    """
+    Add simple template file support, you should pass writer with FileWritter
+    """
+    def __init__(self, form, layout=None, vars=None):
+        self.form = form
+        self.layout = layout
+        self.vars = vars or {}
+        self.vars['form'] = form
+
+    def html(self):
+        from uliweb import application
+        
+        return application.template(self.layout, self.vars)
+
 class BootstrapFormWriter(FormWriter):
     
     def begin_form(self, indent, value, **kwargs):
