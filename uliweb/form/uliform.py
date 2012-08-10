@@ -712,8 +712,12 @@ class Form(object):
             self.errors = errors
             
     def html(self):
-        b = self.build
-        return str(b)
+        cls = self.layout_class
+        layout = cls(self, self.layout, **self.layout_class_args)
+        pre_html = self.pre_html() if hasattr(self, 'pre_html') else ''
+        body = layout.html()
+        post_html = self.post_html() if hasattr(self, 'post_html') else ''
+        return ''.join([str(x) for x in [pre_html,body,post_html]])
     
     @property
     def build(self):

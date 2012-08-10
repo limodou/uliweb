@@ -35,6 +35,7 @@ Uliweb Change Log
 #. Add QueryString and query_string support in common.py
 #. Fix dispatch signal process bug
 #. Set werkzeug log level to 'info', #issue 2
+#. Improve template_layout.py checkbox creation
 
 0.1.3 Version
 -----------------

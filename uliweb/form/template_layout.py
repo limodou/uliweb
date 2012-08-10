@@ -78,8 +78,8 @@ class FormWriter(uaml.Writer):
             if error:
                 div.strong(error, _class="message")
             if self.get_widget_name(obj) == 'Checkbox':
-                div << field
-                div << label_text
+                div << '<label>' + str(field) + label + '</label>'
+#                div << label_text
                 div << help_string
             else:
                 div << label_text
@@ -178,15 +178,15 @@ class BootstrapFormWriter(FormWriter):
         div_group = Tag('div', _class=_class, id='div_'+obj.id)
         with div_group: 
             if self.get_widget_name(obj) == 'Checkbox':
-                div_group << "&nbsp"
+                div_group << ""
             else:
                 div_group << label_text
                 
             div = Tag('div', _class='controls')
             with div:
                 if self.get_widget_name(obj) == 'Checkbox':
-                    div << field
-                    div << label_text
+                    div << '<label>'+str(field)+label+'</label>'
+#                    div << label_text
                 else:
                     div << field
                 div << Tag('div', _class="help help-block", _value=help_string)

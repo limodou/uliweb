@@ -28,7 +28,7 @@ class Layout(object):
         self.kwargs = kwargs
         
     def html(self):
-        return self.begin() + self.body() + self.buttons_line() + self.end()
+        return '\n'.join([x for x in [self.begin(), self.body(), self.buttons_line(), self.end()] if x])
     
     def __str__(self):
         return self.html()
@@ -54,7 +54,7 @@ class Layout(object):
         return ' '.join([str(x) for x in buttons])
     
     def buttons_line(self):
-        return self._buttons_line(self.form.get_buttons())
+        return str(self._buttons_line(self.form.get_buttons()))
     
     def buttons(self):
         return ' '.join([str(x) for x in self.form.get_buttons()])
