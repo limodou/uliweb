@@ -81,7 +81,55 @@ class Storage(BaseStorage):
             lock.close()
             if flag:
                 lock.delete()
-
+                
+    def inc(self, _key, step=1, expire=None):
+        key = _get_key(_key)
+        _file = self._get_file(key)
+        now = time.time()
+        
+        value = 0
+        
+        lock = self._get_lock(key)
+        try:
+            lock.lock(lockfile.LOCK_EX)
+            if os.path.exists(_file):
+                ret = self.load(_file)
+                if ret:
+                    stored_time, expiry_time, value = ret
+                    if self._is_not_expiry(stored_time, expiry_time):
+                        pass
+                    else:
+                        value = 0
+            v = value + step
+            self.save(key, now, expire, v)
+            return v
+        finally:
+            lock.close()
+        
+    def dec(self, _key, step=1, expire=None):
+        key = _get_key(_key)
+        _file = self._get_file(key)
+        now = time.time()
+        
+        value = 0
+        
+        lock = self._get_lock(key)
+        try:
+            lock.lock(lockfile.LOCK_EX)
+            if os.path.exists(_file):
+                ret = self.load(_file)
+                if ret:
+                    stored_time, expiry_time, value = ret
+                    if self._is_not_expiry(stored_time, expiry_time):
+                        pass
+                    else:
+                        value = 0
+            v = min(0, value - step)
+            self.save(key, now, expire, v)
+            return v
+        finally:
+            lock.close()
+    
     def _get_file(self, key):
         return encoded_path(self.file_dir, key, '.ses')
     

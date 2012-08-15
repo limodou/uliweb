@@ -39,6 +39,8 @@ Uliweb Change Log
 #. Change wsgi_staticfiles apps order, later defined app will be processed earlier
 #. Refactor manage.py add call() function, add -f option to makeproject and makeapp
 #. Add test_cache.py test file.
+#. Add creator parameter to cache.get() and also support callable for value
+#. Add memcache storage support, and add inc(), dec() to cache
 
 0.1.3 Version
 -----------------

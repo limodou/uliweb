@@ -50,7 +50,7 @@ class Cache(object):
         if modname in __modules__:
             return __modules__[modname]
         else:
-            mod = __import__(modname, {}, {}, [''])
+            mod = __import__(modname, fromlist=['*'])
             _class = getattr(mod, 'Storage', None)
             __modules__[modname] = _class
         return _class
@@ -106,6 +106,12 @@ class Cache(object):
     def setdefault(self, key, defaultvalue, expire=None):
         v = self.get(key, creator=defaultvalue, expire=expire)
         return v
+        
+    def inc(self, key, step=1, expire=None):
+        return self.storage.inc(key, step, expire or self.expiry_time)
+        
+    def dec(self, key, step=1, expire=None):
+        return self.storage.dec(key, step, expire or self.expiry_time)
         
     def cache(self, k=None, expire=None):
         def _f(func):

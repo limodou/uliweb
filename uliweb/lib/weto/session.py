@@ -71,7 +71,7 @@ class Session(dict):
         
     def __get_storage(self):
         modname = 'weto.backends.%s_storage' % self._storage_type
-        mod = __import__(modname, {}, {}, [''])
+        mod = __import__(modname, fromlist=['*'])
         _class = getattr(mod, 'Storage', None)
         return _class
     
