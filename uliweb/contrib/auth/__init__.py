@@ -1,5 +1,6 @@
 from uliweb.orm import get_model
 import logging
+from uliweb.i18n import ugettext_lazy as _
 
 log = logging.getLogger('uliweb.app')
 
@@ -80,24 +81,23 @@ def logout():
     request.user = None
     return True
 
-def has_login(next=None):
-    from uliweb import request, redirect, url_for
-    
-    if not request.user:
-        path = request.url
-        return redirect(next or url_for('login', next=path))
-
 def require_login(f=None, next=None):
     from uliweb.utils.common import wraps
     
+    def _login(next=None):
+        from uliweb import request, Redirect, url_for
+        
+        if not request.user:
+            path = request.url
+            Redirect(next or url_for('login', next=path))
+    
     if not f:
-        return has_login(next=next)
+        _login(next=next)
+        return
     
     @wraps(f)
     def _f(*args, **kwargs):
-        r = has_login(next=next)
-        if r:
-            return r
+        _login(next=next)
         return f(*args, **kwargs)
     return _f
 

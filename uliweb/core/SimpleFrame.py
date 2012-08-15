@@ -104,7 +104,7 @@ def redirect(location, code=302):
     response.headers['Location'] = location
     return response
 
-class Redirect(Exception):
+class RedirectException(Exception):
     """
     This is an exception, which can be raised in view function
     """
@@ -114,6 +114,9 @@ class Redirect(Exception):
     def get_response(self):
         return self.response
     
+def Redirect(url):
+    raise RedirectException(url)
+
 def error(message='', errorpage=None, request=None, appname=None, **kwargs):
     kwargs.setdefault('message', message)
     if request:
@@ -1018,7 +1021,7 @@ class Dispatcher(object):
             
         except HTTPError, e:
             response = self.render(e.errorpage, Storage(e.errors))
-        except Redirect, e:
+        except RedirectException, e:
             response = e.get_response()
         except NotFound, e:
             response = self.not_found(e)

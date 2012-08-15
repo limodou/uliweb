@@ -41,6 +41,9 @@ Uliweb Change Log
 #. Add test_cache.py test file.
 #. Add creator parameter to cache.get() and also support callable for value
 #. Add memcache storage support, and add inc(), dec() to cache
+#. Refactor require_login, remove has_login, require_login will raise Redirect Exception
+   so you don't need to just return value
+#. Change Redirect to RedirectException, and redefine Redirect as function
 
 0.1.3 Version
 -----------------
