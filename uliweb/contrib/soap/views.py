@@ -57,19 +57,18 @@ class SoapView(object):
                 request.environ['wsgi.url_scheme'],
                 request.environ['HTTP_HOST'],
                 request.path)
-            namespace = functions.get_var('SOAP/namespace', location)
-            documentation = functions.get_var('SOAP/documentation')
+            namespace = functions.get_var(self.config).get('namespace') or location
+            documentation = functions.get_var(self.config).get('documentation')
             dispatcher = SoapDispatcher(
-                name = functions.get_var('SOAP/name'),
+                name = functions.get_var(self.config).get('name'),
                 location = location,
                 action = '', # SOAPAction
                 namespace = namespace,
-                prefix=functions.get_var('SOAP/prefix'),
+                prefix=functions.get_var(self.config).get('prefix'),
                 documentation = documentation,
                 exception_handler = partial(exception_handler, response=response),
                 ns = True)
             for name, (func, returns, args, doc) in soap.__soap_functions__.get(self.config, {}).items():
-                print 'xxxxxxxxxxxxxxxxxxx', name, (func, returns, args, doc), self.config
                 if isinstance(func, (str, unicode)):
                     func = import_attr(func)
                 dispatcher.register_function(name, func, returns, args, doc)
