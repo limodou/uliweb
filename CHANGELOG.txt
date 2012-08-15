@@ -37,6 +37,8 @@ Uliweb Change Log
 #. Set werkzeug log level to 'info', #issue 2
 #. Improve template_layout.py checkbox creation
 #. Change wsgi_staticfiles apps order, later defined app will be processed earlier
+#. Refactor manage.py add call() function, add -f option to makeproject and makeapp
+#. Add test_cache.py test file.
 
 0.1.3 Version
 -----------------

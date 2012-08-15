@@ -61,16 +61,32 @@ class Cache(object):
             self._storage = self._storage_cls(self, self._options)
         return self._storage
     
-    def get(self, key, default=Empty):
+    def get(self, key, default=Empty, creator=Empty, expire=None):
+        """
+        :para default: if default is callable then invoke it, save it and return it
+        """
         try:
             return self.storage.get(key)
         except KeyError, e:
-            if default is not Empty:
-                return default
+            if creator is not Empty:
+                if callable(creator):
+                    v = creator()
+                else:
+                    v = creator
+                self.set(key, v, expire)
+                return v
             else:
-                raise
+                if default is not Empty:
+                    if callable(default):
+                        v = default()
+                        return v
+                    return default
+                else:
+                    raise
             
     def set(self, key, value=None, expire=None):
+        if callable(value):
+            value = value()
         return self.storage.set(key, value, expire or self.expiry_time)
         
     def delete(self, key):
@@ -80,18 +96,16 @@ class Cache(object):
         return self.get(key)
     
     def __setitem__(self, key, value):
+        if callable(value):
+            value = value()
         return self.set(key, value)
     
     def __delitem__(self, key):
         self.delete(key)
         
     def setdefault(self, key, defaultvalue, expire=None):
-        try:
-            v = self.get(key)
-            return v
-        except KeyError:
-            self.set(key, defaultvalue, expire)
-            return defaultvalue
+        v = self.get(key, creator=defaultvalue, expire=expire)
+        return v
         
     def cache(self, k=None, expire=None):
         def _f(func):

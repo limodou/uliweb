@@ -146,6 +146,11 @@ class MakeAppCommand(Command):
     name = 'makeapp'
     args = 'appname'
     help = 'Create a new app according the appname parameter.'
+    option_list = (
+        make_option('-f', action='store_true', dest="force", 
+            help='Force to create app directory.'),
+    )
+    has_options = True
     check_apps_dirs = False
     
     def handle(self, options, global_options, *args):
@@ -164,6 +169,8 @@ class MakeAppCommand(Command):
             path = app_path
         
         if os.path.exists(path):
+            if options.force:
+                ans = 'y'
             while ans not in ('y', 'n'):
                 ans = raw_input('The app directory has been existed, do you want to overwrite it?(y/n)[n]')
                 if not ans:
@@ -200,6 +207,11 @@ class MakeProjectCommand(Command):
     name = 'makeproject'
     help = 'Create a new project directory according the project name'
     args = 'project_name'
+    option_list = (
+        make_option('-f', action='store_true', dest="force", 
+            help='Force to create project directory.'),
+    )
+    has_options = True
     check_apps_dirs = False
 
     def handle(self, options, global_options, *args):
@@ -214,6 +226,8 @@ class MakeProjectCommand(Command):
         
         ans = '-1'
         if os.path.exists(project_name):
+            if options.force:
+                ans = 'y'
             while ans not in ('y', 'n'):
                 ans = raw_input('The project directory has been existed, do you want to overwrite it?(y/n)[n]')
                 if not ans:
@@ -268,7 +282,6 @@ class ExportStaticCommand(Command):
     
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import copy_dir_with_check
-        from uliweb import get_apps
         
         if not args:
             print >>sys.stderr, "Error: outputdir should be a directory and existed"
@@ -630,8 +643,8 @@ def collect_files(apps_dir, apps):
         files.append(os.path.join(path, 'settings.ini'))
         f(path)
     return files
-        
-def main():
+
+def call(args=None):
     from uliweb.core.commands import execute_command_line
     
     apps_dir = os.path.join(os.getcwd(), 'apps')
@@ -643,7 +656,14 @@ def main():
     from uliweb.i18n.i18ntool import I18nCommand
     register_command(I18nCommand)
     
-    execute_command_line(sys.argv, get_commands, 'uliweb')
+    if isinstance(args, (unicode, str)):
+        import shlex
+        args = shlex.split(args)
+    
+    execute_command_line(args or sys.argv, get_commands, 'uliweb')
 
+def main():
+    call()
+    
 if __name__ == '__main__':
     main()
