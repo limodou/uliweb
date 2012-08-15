@@ -45,7 +45,7 @@ class StaticFilesMiddleware(SharedDataMiddleware):
                 if os.path.exists(fname):
                     f = fname
             else:
-                for p in app.apps:
+                for p in reversed(app.apps):
                     fname = os.path.normpath(os.path.join('static', filename)).replace('\\', '/')
                     if not fname.startswith('static/'):
                         return Forbidden("You can only visit the files under static directory."), None

@@ -36,6 +36,7 @@ Uliweb Change Log
 #. Fix dispatch signal process bug
 #. Set werkzeug log level to 'info', #issue 2
 #. Improve template_layout.py checkbox creation
+#. Change wsgi_staticfiles apps order, later defined app will be processed earlier
 
 0.1.3 Version
 -----------------
