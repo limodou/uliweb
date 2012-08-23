@@ -103,10 +103,11 @@ def call(sender, topic, *args, **kwargs):
             try:
                 _f(sender, *args, **kw)
             except:
-                logging.exception('Calling dispatch point [%s] error!' % topic)
+                func = _f.__module__ + '.' + _f.__name__
+                logging.exception('Calling dispatch point [%s] %s(%r, %r) error!' % (topic, func, args, kw))
                 raise
         else:
-            raise Exception, "Dispatch point [%s] can't been invoked" % topic
+            raise Exception, "Dispatch point [%s] %r can't been invoked" % (topic, _f)
         
 def call_once(sender, topic, *args, **kwargs):
     signal = kwargs.get('signal')
@@ -145,12 +146,13 @@ def get(sender, topic, *args, **kwargs):
             try:
                 v = _f(sender, *args, **kwargs)
             except:
-                logging.exception('Calling dispatch point [%s] error!' % topic)
+                func = _f.__module__ + '.' + _f.__name__
+                logging.exception('Calling dispatch point [%s] %s(%r,%r) error!' % (topic, func, args, kwargs))
                 raise
             if v is not None:
                 return v
         else:
-            raise "Dispatch point [%s] can't been invoked" % topic
+            raise "Dispatch point [%s] %r can't been invoked" % (topic, _f)
 
 def get_once(sender, topic, *args, **kwargs):
     signal = kwargs.get('signal')

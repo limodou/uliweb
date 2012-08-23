@@ -6,6 +6,7 @@ Uliweb Change Log
 -----------------
 
 #. Change cache settings, remove file_dir and lock_dir as 0.1.3 before
+#. Add more info about dispatch call exception output
 
 0.1.4 Version
 -----------------
