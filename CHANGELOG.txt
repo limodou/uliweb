@@ -46,6 +46,7 @@ Uliweb Change Log
 #. Change Redirect to RedirectException, and redefine Redirect as function
 #. Fix soap configure reading bug
 #. Fix log format bug
+#. Fix pysimplesoap boot type bug http://code.google.com/p/pysimplesoap/issues/attachmentText?id=69&aid=690001000&name=simplexml.py.patch&token=F8TXcyAoCDS5vScp5MiFEccN6J4%3A1345507177742
 
 0.1.3 Version
 -----------------
