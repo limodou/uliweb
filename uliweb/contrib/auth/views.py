@@ -1,15 +1,11 @@
-from uliweb.core.SimpleFrame import expose
+from uliweb.core.SimpleFrame import functions
 from uliweb.i18n import ugettext_lazy as _
 import urllib
 
 def login():
     from uliweb.contrib.auth import authenticate, login
-    from forms import LoginForm
-    from uliweb.form import Submit, Tag
     
-    LoginForm.form_buttons = [Submit(value=_('Login'), _class="btn btn-primary btn-large")]
-    
-    form = LoginForm()
+    form = functions.get_form('auth.LoginForm')()
     
     if request.method == 'GET':
         form.next.data = request.GET.get('next', request.referrer or '/')
@@ -30,9 +26,8 @@ def login():
 
 def register():
     from uliweb.contrib.auth import create_user, login
-    from forms import RegisterForm
     
-    form = RegisterForm()
+    form = functions.get_form('auth.RegisterForm')()
     
     if request.method == 'GET':
         form.next.data = request.GET.get('next', '/')
