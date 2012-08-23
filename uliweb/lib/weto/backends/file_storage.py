@@ -30,11 +30,11 @@ def encoded_path(root, key, extension = ".enc", depth = 2):
     return os.path.join(dir, ident + extension)
 
 class Storage(BaseStorage):
-    def __init__(self, cache_manager, options):
+    def __init__(self, cache_manager, options, file_dir_name='session_files', lock_dir_name='session_files_lock'):
         BaseStorage.__init__(self, cache_manager, options)
         self.data_dir = options.get('data_dir', './sessions')
-        self.file_dir = options.get('file_dir') or os.path.join(self.data_dir, 'session_files')
-        self.lock_dir = options.get('lock_dir') or os.path.join(self.data_dir, 'session_files_lock')
+        self.file_dir = options.get('file_dir') or os.path.join(self.data_dir, file_dir_name)
+        self.lock_dir = options.get('lock_dir') or os.path.join(self.data_dir, lock_dir_name)
         
     def get(self, _key):
         key = _get_key(_key)

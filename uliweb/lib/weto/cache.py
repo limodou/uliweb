@@ -58,7 +58,10 @@ class Cache(object):
     @property
     def storage(self):
         if not self._storage:
-            self._storage = self._storage_cls(self, self._options)
+            d = {}
+            if self._storage_type == 'file':
+                d = {'file_dir_name':'cache_files', 'lock_dir_name':'cache_files_lock'}
+            self._storage = self._storage_cls(self, self._options, **d)
         return self._storage
     
     def get(self, key, default=Empty, creator=Empty, expire=None):
