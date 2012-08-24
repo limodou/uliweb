@@ -1,30 +1,32 @@
-import uliweb
+from uliweb import functions, settings
 
 def after_init_apps(sender):
-    from uliweb import orm, settings
+    from uliweb import orm
+    from uliweb.utils.common import import_attr
     from uliweb.core.SimpleFrame import __app_alias__
     
-    orm.set_debug_query(uliweb.settings.ORM.DEBUG_LOG)
-    orm.set_auto_create(uliweb.settings.ORM.AUTO_CREATE)
-    orm.set_pk_type(uliweb.settings.ORM.PK_TYPE)
+    orm.set_debug_query(settings.get_var('ORM/DEBUG_LOG'))
+    orm.set_auto_create(settings.get_var('ORM/AUTO_CREATE'))
+    orm.set_pk_type(settings.get_var('ORM/PK_TYPE'))
     orm.set_auto_set_model(False)
+    orm.set_tablename_converter(import_attr(settings.get_var('ORM/TABLENAME_CONVERTER')))
     
     #judge if transaction middle has not install then set
     #AUTO_DOTRANSACTION is False
     if 'transaction' in settings.MIDDLEWARES:
         orm.set_auto_dotransaction(False)
     else:
-        orm.set_auto_dotransaction(uliweb.settings.ORM.AUTO_DOTRANSACTION)
+        orm.set_auto_dotransaction(settings.get_var('ORM/AUTO_DOTRANSACTION'))
     
-    d = {'connection_string':uliweb.settings.ORM.CONNECTION,
-        'connection_type':uliweb.settings.ORM.CONNECTION_TYPE,
-        'debug_log':uliweb.settings.ORM.DEBUG_LOG,
-        'connection_args':uliweb.settings.ORM.CONNECTION_ARGS,
-        'strategy':uliweb.settings.ORM.STRATEGY,
+    d = {'connection_string':settings.get_var('ORM/CONNECTION'),
+        'connection_type':settings.get_var('ORM/CONNECTION_TYPE'),
+        'debug_log':settings.get_var('ORM/DEBUG_LOG'),
+        'connection_args':settings.get_var('ORM/CONNECTION_ARGS'),
+        'strategy':settings.get_var('ORM/STRATEGY'),
         }
     orm.engine_manager.add('default', d)
     
-    for name, d in uliweb.settings.ORM.CONNECTIONS.items():
+    for name, d in settings.get_var('ORM/CONNECTIONS').items():
         x = {'connection_string':d.get('CONNECTION', ''),
             'debug_log':d.get('DEBUG_LOG', None),
             'connection_args':d.get('CONNECTION_ARGS', {}),
@@ -33,8 +35,8 @@ def after_init_apps(sender):
         }
         orm.engine_manager.add(name, x)
 
-    if 'MODELS' in uliweb.settings:
-        for name, model_path in uliweb.settings.MODELS.items():
+    if 'MODELS' in settings:
+        for name, model_path in settings.MODELS.items():
             if isinstance(model_path, (str, unicode)):
                 path = model_path
                 engine_name = 'default'

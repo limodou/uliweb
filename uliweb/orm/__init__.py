@@ -8,6 +8,7 @@
 __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
     'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
+    'set_tablename_converter',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
@@ -31,6 +32,7 @@ __zero_float__ = 0.0000005
 __models__ = {}
 __model_paths__ = {}
 __pk_type__ = 'int'
+__default_tablename_converter__ = None
 
 import decimal
 import threading
@@ -102,6 +104,18 @@ def set_encoding(encoding):
 def set_dispatch_send(flag):
     global Local
     Local.dispatch_send = flag
+    
+def set_tablename_converter(converter=None):
+    global __default_tablename_converter__
+    __default_tablename_converter__ = converter
+    
+def get_tablename(tablename):
+    global __default_tablename_converter__
+    
+    c = __default_tablename_converter__
+    if not c:
+        c = lambda x:x.lower()
+    return c(tablename)
     
 def get_dispatch_send(default=True):
     global Local
@@ -2365,7 +2379,7 @@ class Model(object):
     @classmethod
     def _set_tablename(cls, appname=None):
         if not hasattr(cls, '__tablename__'):
-            name = cls.__name__.lower()
+            name = get_tablename(cls.__name__)
         else:
             name = cls.__tablename__
         if appname:

@@ -407,6 +407,14 @@ def query_string(url, replace=True, **kwargs):
         q.set(k, v, replace)
     return str(q)
 
+def camel_to_(s):
+    """
+    Convert CamelCase to camel_case
+    """
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', s)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+    
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:

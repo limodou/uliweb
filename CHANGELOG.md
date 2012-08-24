@@ -8,6 +8,16 @@ Uliweb Change Log
 * Add more info about dispatch call exception output
 * Add uliweb.contrib.form app, and add get_form() function.
 * Make auth support get_form() appoach
+* Add TablenameConvert support to uliweb.orm, you can pass an converter function
+  via orm.set_tablename_converter(converter) function, or defined it in settings.ini
+  if you are in a project, for example:
+
+    ```
+    [ORM]
+    TABLENAME_CONVERTER = 'uliweb.utils.common.camel_to_'
+    ```
+    
+  Then if the Model name is CamelCase then it'll be converted to `camel_case`.
 
 0.1.4 Version
 -----------------

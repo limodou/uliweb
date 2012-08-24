@@ -1429,6 +1429,25 @@ def test_generic_relation():
     [u'python', u'linux']
     """
     
+def test_camel_case_tablename():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> from uliweb.utils.common import camel_to_
+    >>> set_tablename_converter(camel_to_)
+    >>> class ArticleCase(Model):
+    ...     title = Field(str)
+    ...     content = Field(TEXT)
+    >>> ArticleCase.tablename
+    >>> 'article_case'
+    >>> set_tablename_converter(None)
+    >>> class ArticleCase(Model):
+    ...     title = Field(str)
+    ...     content = Field(TEXT)
+    >>> ArticleCase.tablename
+    'articlecase'
+    """
 #if __name__ == '__main__':
 #    db = get_connection('sqlite://')
 #    db.metadata.drop_all()
