@@ -2,7 +2,7 @@ from uliweb.form import *
 from uliweb.i18n import ugettext as _
 
 class RegisterForm(Form):
-    form_buttons = Submit(value=_('Register'), _class="button")
+    form_buttons = Submit(value=_('Register'), _class="btn btn-primary")
     form_title = _('Register')
     
     username = StringField(label=_('Username'), required=True)
@@ -24,7 +24,7 @@ class RegisterForm(Form):
             return {'password1' : _('Passwords are not match.')}
     
 class LoginForm(Form):
-    form_buttons = Submit(value=_('Login'), _class="button")
+    form_buttons = Submit(value=_('Login'), _class="btn btn-primary")
     form_title = _('Login')
     
     username = UnicodeField(label=_('Username'), required=True)
@@ -44,7 +44,7 @@ class LoginForm(Form):
             return {'password' : _('Password is not right.')}
             
 class ChangePasswordForm(Form):
-    form_buttons = Submit(value=_('Save'), _class="button")
+    form_buttons = Submit(value=_('Save'), _class="btn btn-primary")
     form_title = _('Change Password')
     
     oldpassword = PasswordField(label=_('Old Password'), required=True)

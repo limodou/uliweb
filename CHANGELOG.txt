@@ -7,6 +7,8 @@ Uliweb Change Log
 
 #. Change cache settings, remove file_dir and lock_dir as 0.1.3 before
 #. Add more info about dispatch call exception output
+#. Add uliweb.contrib.form app, and add get_form() function.
+#. Make auth support get_form() appoach
 
 0.1.4 Version
 -----------------
