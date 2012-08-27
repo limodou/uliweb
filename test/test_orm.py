@@ -1440,7 +1440,7 @@ def test_camel_case_tablename():
     ...     title = Field(str)
     ...     content = Field(TEXT)
     >>> ArticleCase.tablename
-    >>> 'article_case'
+    'article_case'
     >>> set_tablename_converter(None)
     >>> class ArticleCase(Model):
     ...     title = Field(str)
@@ -1448,6 +1448,88 @@ def test_camel_case_tablename():
     >>> ArticleCase.tablename
     'articlecase'
     """
+    
+def test_model_reference():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class Article(Model):
+    ...     title = Field(str)
+    ...     tag = Field(int)
+    >>> class Tag(Model):
+    ...     name = Field(str)
+    >>> Article.Reference('tag', 'tag')
+    >>> t = Tag(name='python')
+    >>> t.save()
+    True
+    >>> t1 = Tag(name='linux')
+    >>> t1.save()
+    True
+    >>> a = Article(title='Test', tag=t.id)
+    >>> a.save()
+    True
+    >>> b = Article(title='Test2', tag=t1.id)
+    >>> b.save()
+    True
+    >>> c = Article.get(1)
+    >>> print repr(c.tag)
+    <Tag {'name':u'python','id':1}>
+    >>> print list(t.article_set)
+    [<Article {'title':u'Test','tag':<ReferenceProperty:1>,'id':1}>]
+    >>> Article.Reference('tag', 'tag', collection_name='articles')
+    >>> print list(t.articles)
+    [<Article {'title':u'Test','tag':<ReferenceProperty:1>,'id':1}>]
+    """
+    
+def test_model_reference_self():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class Group(Model):
+    ...     title = Field(str)
+    ...     parent = Field(int, nullable=True, default=None)
+    >>> Group.Reference('parent', 'group', collection_name="children")
+    >>> t = Group(title='python')
+    >>> t.save()
+    True
+    >>> t1 = Group(title='orm', parent=t.id)
+    >>> t1.save()
+    True
+    >>> print list(Group.all())
+    [<Group {'title':u'python','parent':None,'id':1}>, <Group {'title':u'orm','parent':<ReferenceProperty:1>,'id':2}>]
+    >>> a = Group.get(2)
+    >>> print repr(a.parent)
+    <Group {'title':u'python','parent':None,'id':1}>
+    >>> print list(a.parent.children)
+    [<Group {'title':u'orm','parent':<ReferenceProperty:1>,'id':2}>]
+    """
+    
+def test_model_one2one():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class Article(Model):
+    ...     title = Field(str)
+    ...     tag = Field(int)
+    >>> class Tag(Model):
+    ...     name = Field(str)
+    >>> Article.OneToOne('tag', 'tag')
+    >>> t = Tag(name='python')
+    >>> t.save()
+    True
+    >>> a = Article(title='Test', tag=t.id)
+    >>> a.save()
+    True
+    >>> c = Article.get(1)
+    >>> print repr(c.tag)
+    <Tag {'name':u'python','id':1}>
+    >>> print repr(t.article)
+    <Article {'title':u'Test','tag':<OneToOne:1>,'id':1}>
+    """
+    
 #if __name__ == '__main__':
 #    db = get_connection('sqlite://')
 #    db.metadata.drop_all()

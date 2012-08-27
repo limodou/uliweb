@@ -1,4 +1,4 @@
-from uliweb import functions, settings
+from uliweb import settings
 
 def after_init_apps(sender):
     from uliweb import orm
@@ -9,7 +9,9 @@ def after_init_apps(sender):
     orm.set_auto_create(settings.get_var('ORM/AUTO_CREATE'))
     orm.set_pk_type(settings.get_var('ORM/PK_TYPE'))
     orm.set_auto_set_model(False)
-    orm.set_tablename_converter(import_attr(settings.get_var('ORM/TABLENAME_CONVERTER')))
+    convert_path = settings.get_var('ORM/TABLENAME_CONVERTER')
+    convert = import_attr(convert_path) if convert_path else None
+    orm.set_tablename_converter(convert)
     
     #judge if transaction middle has not install then set
     #AUTO_DOTRANSACTION is False

@@ -628,6 +628,16 @@ class Property(object):
         self.type_class = type_class or self.field_class
         Property.creation_counter += 1
         
+    def get_parameters(self):
+        """
+        Get common attributes and it'll used for Model.relationship clone process
+        """
+        d = {}
+        for k in ['verbose_name', 'required', 'hint', 'placeholder', 'choices',
+            'default', 'validators', 'max_length']:
+            d[k] = getattr(self, k)
+        return d
+        
     def create(self, cls):
         args = self.kwargs.copy()
         args['key'] = self.name
@@ -1139,11 +1149,7 @@ class ReferenceProperty(Property):
         if self.reference_class is _SELF_REFERENCE:
             self.reference_class = model_class
 
-        if self.collection_name is None:
-            self.collection_name = '%s_set' % (model_class.tablename)
-        if hasattr(self.reference_class, self.collection_name):
-            raise DuplicatePropertyError('Class %s already has property %s'
-                 % (self.reference_class.__name__, self.collection_name))
+        self.collection_name = self.reference_class.get_collection_name(self.collection_name, model_class)
         setattr(self.reference_class, self.collection_name,
             _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
 
@@ -2101,6 +2107,7 @@ class Model(object):
     __engine_name__ = None
     __connection__ = None
     __alias__ = None #can be used via get_model(alias)
+    __collection_set_id__ = 1
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
@@ -2375,7 +2382,93 @@ class Model(object):
                 if (name, prop) not in cls._fields_list:
                     cls._fields_list.append((name, prop))
                     cls._fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
+        else:
+            raise AttributeError("Prop should be instance of Property, but %r found" % prop)
+
+    @classmethod
+    def update_property(cls, name, prop, config=True, set_property=True):
+        if isinstance(prop, Property):
+            old_prop = cls.properties[name]
+            prop.creation_counter = old_prop.creation_counter
+            cls.properties[name] = prop
+            if config:
+                prop.__property_config__(cls, name)
+            if set_property:
+                setattr(cls, name, prop)
+            if hasattr(cls, '_fields_list'):
+                index = -1
+                for i, (n, p) in enumerate(cls._fields_list):
+                    if name == n:
+                        index = i
+                        break
+                    
+                if index >= 0:
+                    cls._fields_list[index] = (name, prop)
+        else:
+            raise AttributeError("Prop should be instance of Property, but %r found" % prop)
         
+    @classmethod
+    def get_collection_name(cls, collection_name=None, model=None):
+        """
+        Get reference collection_name, if the collection_name is None
+        then make sure the collection_name is not conflict, but
+        if the collection_name is not None, then check if the collection_name
+        is already exists, if existed then raise Exception.
+        """
+        if not collection_name:
+            collection_name = model.tablename + '_set'
+            if hasattr(cls, collection_name):
+                #if the xxx_set is already existed, then automatically
+                #create unique collection_set id
+                collection_name = cls.tablename + '_set_' + str(__collection_set_id__)
+                self.__class__.__collection_set_id__ += 1
+        else:
+            if hasattr(cls, collection_name):
+                raise DuplicatePropertyError("Model %s already has property %s" % (cls.__name__, collection_name))
+        return collection_name
+            
+    @classmethod
+    def Reference(cls, name, model, reference_fieldname=None, collection_name=None, **kwargs):
+        field_from = getattr(cls, name)
+        if not field_from:
+            raise AttributeError("Field %s can't be found in Model %s" % (name, cls.tablename))
+        d = field_from.get_parameters()
+        d.update(kwargs)
+        prop = ReferenceProperty(reference_class=model, 
+            reference_fieldname=reference_fieldname,
+            collection_name=collection_name,
+            **d)
+
+        cls.update_property(name, prop)
+        
+    @classmethod
+    def OneToOne(cls, name, model, reference_fieldname=None, collection_name=None, **kwargs):
+        field_from = getattr(cls, name)
+        if not field_from:
+            raise AttributeError("Field %s can't be found in Model %s" % (name, cls.tablename))
+        d = field_from.get_parameters()
+        d.update(kwargs)
+        prop = OneToOne(reference_class=model, 
+            reference_fieldname=reference_fieldname,
+            collection_name=collection_name,
+            **d)
+        
+        cls.update_property(name, prop)
+        
+    @classmethod
+    def ManyToMany(cls, name, model, reference_fieldname=None, collection_name=None, **kwargs):
+        field_from = getattr(cls, name)
+        if not field_from:
+            raise AttributeError("Field %s can't be found in Model %s" % (name, cls.tablename))
+        d = field_from.get_parameters()
+        d.update(kwargs)
+        prop = ManyToMany(reference_class=model, 
+            reference_fieldname=reference_fieldname,
+            collection_name=collection_name,
+            **d)
+        
+        cls.update_property(name, prop)
+
     @classmethod
     def _set_tablename(cls, appname=None):
         if not hasattr(cls, '__tablename__'):
