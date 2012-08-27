@@ -134,7 +134,7 @@ Uliweb Change Log
 * Add tables app to uliweb.
 * Add GenericReference and GenericRalation support
 * Add BigIntegerProperty support, the shorthand is Field(BIGINT)
-* Add __pk_type__ variable, current is 'int', others will be 'biginteger',
+* Add `__pk_type__` variable, current is 'int', others will be 'biginteger',
    you can use set_pk_type(name) to switch it, also add PKTYPE() function, you
    can use Field(PKTYPE()) to create ForeignKey Property according the option,
    in web project, you can swith it via ORM/PK_TYPE 
