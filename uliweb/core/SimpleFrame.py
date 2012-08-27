@@ -999,6 +999,8 @@ class Dispatcher(object):
                     try:
                         response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
                         
+                    except RedirectException, e:
+                        raise
                     except Exception, e:
                         for cls in reversed(self.middlewares):
                             if hasattr(cls, 'process_exception'):

@@ -8,6 +8,8 @@ Uliweb Change Log
 * Add more info about dispatch call exception output
 * Add uliweb.contrib.form app, and add get_form() function.
 * Make auth support get_form() appoach
+* Improve file_storage process.
+* Fix RedirectException still display bug.
 
 0.1.4 Version
 -----------------
