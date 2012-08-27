@@ -140,7 +140,10 @@ class Storage(BaseStorage):
     def load(self, filename):
         f = open(filename, 'rb')
         try:
-            v = self._load(f.read())
+            text = f.read()
+            if not text:
+                return None
+            v = self._load(text)
             return v
         finally:
             f.close()
@@ -149,11 +152,15 @@ class Storage(BaseStorage):
         _file = self._get_file(key)
         verify_path(_file)
         f = open(_file, 'wb')
+        ok = False
         try:
             v = self._dump((stored_time, expiry_time, value))
             f.write(v)
+            ok = True
         finally:
             f.close()
+            if not ok:
+                os.unlink(_file)
     
     def _is_not_expiry(self, accessed_time, expiry_time):
         return time.time() < accessed_time + expiry_time
