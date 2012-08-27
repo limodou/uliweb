@@ -1149,7 +1149,7 @@ class ReferenceProperty(Property):
         if self.reference_class is _SELF_REFERENCE:
             self.reference_class = model_class
 
-        self.collection_name = self.reference_class.get_collection_name(self.collection_name, model_class)
+        self.collection_name = self.reference_class.get_collection_name(self.collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
             _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
 
@@ -1803,7 +1803,12 @@ class ManyToMany(ReferenceProperty):
 #            self.table = self.through.table
         if not self.through:
             self.fielda = "%s_id" % self.model_class.tablename
-            self.fieldb = "%s_id" % self.reference_class.tablename
+            #test model_a is equels model_b
+            if self.model_class.tablename == self.reference_class.tablename:
+                _t = self.reference_class.tablename + '_b'
+            else:
+                _t = self.reference_class.tablename
+            self.fieldb = "%s_id" % _t
             self.table = self.create_table()
             #add appname to self.table
             appname = self.model_class.__module__
@@ -1884,11 +1889,12 @@ class ManyToMany(ReferenceProperty):
         if self.reference_class is _SELF_REFERENCE:
             self.reference_class = self.data_type = model_class
         self.tablename = '%s_%s_%s' % (model_class.tablename, self.reference_class.tablename, property_name)
-        if self.collection_name is None:
-            self.collection_name = '%s_set' % (model_class.tablename)
-        if hasattr(self.reference_class, self.collection_name):
-            raise DuplicatePropertyError('Class %s already has property %s'
-                 % (self.reference_class.__name__, self.collection_name))
+        self.collection_name = self.reference_class.get_collection_name(self.collection_name, model_class.tablename)
+#        if self.collection_name is None:
+#            self.collection_name = '%s_set' % (model_class.tablename)
+#        if hasattr(self.reference_class, self.collection_name):
+#            raise DuplicatePropertyError('Class %s already has property %s'
+#                 % (self.reference_class.__name__, self.collection_name))
         setattr(self.reference_class, self.collection_name,
             _ManyToManyReverseReferenceProperty(self, self.collection_name))
     
@@ -2408,7 +2414,7 @@ class Model(object):
             raise AttributeError("Prop should be instance of Property, but %r found" % prop)
         
     @classmethod
-    def get_collection_name(cls, collection_name=None, model=None):
+    def get_collection_name(cls, collection_name=None, prefix=None):
         """
         Get reference collection_name, if the collection_name is None
         then make sure the collection_name is not conflict, but
@@ -2416,11 +2422,11 @@ class Model(object):
         is already exists, if existed then raise Exception.
         """
         if not collection_name:
-            collection_name = model.tablename + '_set'
+            collection_name = prefix + '_set'
             if hasattr(cls, collection_name):
                 #if the xxx_set is already existed, then automatically
                 #create unique collection_set id
-                collection_name = cls.tablename + '_set_' + str(__collection_set_id__)
+                collection_name = prefix + '_set_' + str(__collection_set_id__)
                 self.__class__.__collection_set_id__ += 1
         else:
             if hasattr(cls, collection_name):
@@ -2456,18 +2462,28 @@ class Model(object):
         cls.update_property(name, prop)
         
     @classmethod
-    def ManyToMany(cls, name, model, reference_fieldname=None, collection_name=None, **kwargs):
-        field_from = getattr(cls, name)
-        if not field_from:
-            raise AttributeError("Field %s can't be found in Model %s" % (name, cls.tablename))
-        d = field_from.get_parameters()
-        d.update(kwargs)
+    def ManyToMany(cls, name, model, collection_name=None, 
+        reference_fieldname=None, reversed_fieldname=None, required=False, 
+        through=None, 
+        through_reference_fieldname=None, through_reversed_fieldname=None, 
+        reversed_manytomany_fieldname=None,
+        **kwargs):
         prop = ManyToMany(reference_class=model, 
-            reference_fieldname=reference_fieldname,
             collection_name=collection_name,
-            **d)
-        
-        cls.update_property(name, prop)
+            reference_fieldname=reference_fieldname,
+            reversed_fieldname=reversed_fieldname,
+            through=through,
+            through_reference_fieldname=through_reference_fieldname,
+            through_reversed_fieldname=through_reversed_fieldname,
+            reversed_manytomany_fieldname=reversed_manytomany_fieldname,
+            **kwargs)
+        cls.add_property(name, prop)
+        #create property, it'll create Table object
+        prop.create(cls)
+        #create real table
+        engine = get_connection(engine_name=cls.get_connection())
+        if not prop.through and not prop.table.exists(engine):
+            prop.table.create(engine, checkfirst=True)
 
     @classmethod
     def _set_tablename(cls, appname=None):

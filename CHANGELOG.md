@@ -18,6 +18,7 @@ Uliweb Change Log
     ```
     
   Then if the Model name is CamelCase then it'll be converted to `camel_case`.
+* Add Reference, OneToOne, ManyToMany relation definition in Model level
 
 0.1.4 Version
 -----------------

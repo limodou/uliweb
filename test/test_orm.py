@@ -293,8 +293,93 @@ def test_7():
     {'users': [1, 2], 'id': 1, 'name': 'python'}
     """
 
+def test_model_manytomany():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    >>> class Group(Model):
+    ...     name = Field(str)
+    >>> Group.ManyToMany('users', User)
+    >>> a = User(username='limodou')
+    >>> a.save()
+    True
+    >>> b = User(username='user')
+    >>> b.save()
+    True
+    >>> c = User(username='abc')
+    >>> c.save()
+    True
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
+    >>> g1.users.add(a)
+    True
+    >>> g1.users.add(b, 3) #add can support multiple object, and object can also int
+    True
+    >>> g1.users.add(a, b)  #can has duplicated records
+    False
+    >>> list(g1.users.all())
+    [<User {'username':u'limodou','id':1}>, <User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
+    >>> g1.users.clear(a)
+    >>> g1.users.clear()
+    >>> g1.users.count()
+    0
+    >>> g1.users.add(a, b, c)
+    True
+    >>> g1.users.add([a, b, c])
+    False
+    >>> g1.to_dict()
+    {'name': 'python', 'id': 1}
+    >>> g1.to_dict(manytomany=True)
+    {'id': 1, 'users': [1, 2, 3], 'name': 'python'}
+    >>> g1.users.count()
+    3
+    >>> g1.users.has(a)
+    True
+    >>> g1.users.has(100)
+    False
+    >>> g2.users.add(a)
+    True
+    >>> list(a.group_set.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    >>> a.group_set.add(g3)
+    True
+    >>> list(a.group_set.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
+    >>> g1.users.clear(a)
+    >>> list(g1.users.all())
+    [<User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
+    >>> list(g2.users.all())
+    [<User {'username':u'limodou','id':1}>]
+    >>> list(a.group_set.all())
+    [<Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
+    >>> g1.users.get(2)
+    <User {'username':u'user','id':2}>
+    >>> list(g1.users.filter(User.c.id==3).all())
+    [<User {'username':u'abc','id':3}>]
+    >>> g2.users.add(c)
+    True
+    >>> list(Group.filter(Group.users.in_(3)))
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    >>> g1.update(users=[1,2])
+    <Group {'name':u'python','id':1}>
+    >>> g1.save()
+    True
+    >>> g1.to_dict(manytomany=True)
+    {'id': 1, 'users': [1, 2], 'name': 'python'}
+    """
+
 #test SelfReference
-def test_8():
+def test_selfreference():
     """
     >>> #set_debug_query(True)
     >>> db = get_connection('sqlite://')
@@ -322,6 +407,35 @@ def test_8():
     <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
     """
     
+def test_model_selfreference():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     parent = Field(int, nullable=True, default=None)
+    >>> User.Reference('parent', User, collection_name='children')
+    >>> a = User(username='a')
+    >>> a.save()
+    True
+    >>> b = User(username='b', parent=a)
+    >>> b.save()
+    True
+    >>> c = User(username='c', parent=a)
+    >>> c.save()
+    True
+    >>> for i in User.all():
+    ...     print repr(i)
+    <User {'username':u'a','parent':None,'id':1}>
+    <User {'username':u'b','parent':<ReferenceProperty:1>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
+    >>> for i in a.children.all():
+    ...     print repr(i)
+    <User {'username':u'b','parent':<ReferenceProperty:1>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
+    """
+
 def test_floatproperty():
     """
     >>> db = get_connection('sqlite://')
@@ -1002,6 +1116,77 @@ def test_many2many_through_field():
     
     """
 
+def test_model_many2many_through_field():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    >>> Group.ManyToMany('users', User, through='relation', through_reference_fieldname='user2')
+    >>> class Relation(Model):
+    ...     user = Reference(User)
+    ...     user2 = Reference(User, collection_name='user2_rel')
+    ...     group = Reference(Group)
+    ...     age = Field(int)
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='user', year=10)
+    >>> b.save()
+    True
+    >>> c = User(username='abc', year=20)
+    >>> c.save()
+    True
+    >>> print list(User.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>, <User {'username':u'abc','year':20,'id':3}>]
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
+    >>> print list(Group.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>, <Group {'name':u'java','id':3}>]
+    >>> r1 = Relation(user2=a, user=b, group=g1, age=10)
+    >>> r1.save()
+    True
+    >>> r2 = Relation(user2=b, user=a, group=g1, age=5)
+    >>> r2.save()
+    True
+    >>> r3 = Relation(user2=a, group=g2, age=8)
+    >>> r3.save()
+    True
+    >>> print list(g1.users.all())
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
+    >>> print list(g1.users.all().order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>, <User {'username':u'limodou','year':5,'id':1}>]
+    >>> print list(g1.users.filter(User.c.year>5).order_by(User.c.year.desc()))
+    [<User {'username':u'user','year':10,'id':2}>]
+    >>> print g1.users.has(a)
+    True
+    >>> print list(a.group_set.all())
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    >>> print list(g1.users.filter(Relation.c.age>5))
+    [<User {'username':u'limodou','year':5,'id':1}>]
+    >>> print list(a.group_set.filter(Relation.c.age>5))
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    >>> print list(Group.filter(Group.users.in_(1)))
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    >>> print list(Group.filter(Group.users.filter(User.c.username=='limodou')))
+    [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    >>> print list(Group.filter(Group.users.filter(User.c.username=='user')))
+    [<Group {'name':u'python','id':1}>]
+    
+    """
+
 def test_decimal_float():
     """
     >>> db = get_connection('sqlite://')
@@ -1528,6 +1713,42 @@ def test_model_one2one():
     <Tag {'name':u'python','id':1}>
     >>> print repr(t.article)
     <Article {'title':u'Test','tag':<OneToOne:1>,'id':1}>
+    """
+    
+def test_self_manytomany():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    >>> class Group(Model):
+    ...     name = Field(str)
+    >>> Group.ManyToMany('users', User)
+    >>> Group.ManyToMany('child', Group)
+    >>> a = User(username='limodou')
+    >>> a.save()
+    True
+    >>> b = User(username='user')
+    >>> b.save()
+    True
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g1.users.add(a)
+    True
+    >>> print list(a.group_set)
+    [<Group {'name':u'python','id':1}>]
+    >>> g2 = Group(name='orm')
+    >>> g2.save()
+    True
+    >>> g1.child.add(g2)
+    True
+    >>> g3 = Group.get(1)
+    >>> print list(g3.child)
+    [<Group {'name':u'orm','id':2}>]
+    >>> print list(g2.group_set)
+    [<Group {'name':u'python','id':1}>]
     """
     
 #if __name__ == '__main__':
