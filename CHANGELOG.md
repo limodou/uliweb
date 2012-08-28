@@ -10,6 +10,17 @@ Uliweb Change Log
 * Make auth support get_form() appoach
 * Improve file_storage process.
 * Fix RedirectException still display bug.
+* Add TablenameConvert support to uliweb.orm, you can pass an converter function
+  via orm.set_tablename_converter(converter) function, or defined it in settings.ini
+  if you are in a project, for example:
+
+    ```
+    [ORM]
+    TABLENAME_CONVERTER = 'uliweb.utils.common.camel_to_'
+    ```
+    
+  Then if the Model name is CamelCase then it'll be converted to `camel_case`.
+* Add Reference, OneToOne, ManyToMany relation definition in Model level
 
 0.1.4 Version
 -----------------
