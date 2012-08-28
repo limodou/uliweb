@@ -21,6 +21,11 @@ Uliweb Change Log
     
   Then if the Model name is CamelCase then it'll be converted to `camel_case`.
 * Add Reference, OneToOne, ManyToMany relation definition in Model level
+* If collection_name is None, and if there is already `tablename_set` existed,
+  then it'll create new collection_name automatically, so that the collection_name
+  will not be duplication at all. But if the user pass the collection_name, and 
+  if there is `tablename_set` already, then raise the Exception always. Please note
+  the difference about it.
 
 0.1.4 Version
 -----------------
