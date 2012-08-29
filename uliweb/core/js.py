@@ -32,7 +32,7 @@ def simple_value(v):
     
     if callable(v):
         v = v()
-    elif isinstance(v, LazyString):
+    if isinstance(v, LazyString) or isinstance(v, decimal.Decimal) or isinstance(v, datetime.datetime):
         return str(v)
     else:
         return v

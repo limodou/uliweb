@@ -100,7 +100,7 @@ class Select(Build):
         if self.multiple:
             args['multiple'] = None
             args['size'] = self.size
-        return str(Tag('select', '\n'.join(s), **args))
+        return str(Tag('select', '\n'.join(s), newline=True, **args))
     
 class RadioSelect(Select):
     _id = 0
@@ -118,7 +118,7 @@ class RadioSelect(Select):
                 args['checked'] = None
             r = str(Radio(**args))
             s.append(str(Tag('label', r+caption, **kwargs)))
-        return ''.join(s)
+        return '\n'.join(s)
     
     def get_id(self):
         RadioSelect._id += 1

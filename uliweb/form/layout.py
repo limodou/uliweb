@@ -4,7 +4,7 @@ from uliweb.i18n import gettext_lazy as _
 __all__ = ['Layout', 'TableLayout', 'CSSLayout', 'YamlLayout',
     'BootstrapLayout', 'BootstrapTableLayout']
 
-from uliweb.core.html import Buf, Tag
+from uliweb.core.html import Buf, Tag, Div
 
 def min_times(num):
     def _f(m, n):
@@ -94,7 +94,7 @@ class TableLayout(Layout):
             else:
                 raise Exception, 'Colume definition is not right, only support string or dict'
 
-        tr = Tag('tr')
+        tr = Tag('tr', newline=True)
         with tr:
             for x in fields:
                 _span = n / _x
@@ -106,12 +106,18 @@ class TableLayout(Layout):
 
                 f = getattr(self.form, name)
                 obj = self.form.fields[name]
+                
+                #process hidden field
+                if self.is_hidden(obj):
+                    tr << f
+                    continue
+                
                 _class = self.get_class(obj)
                 if f.error:
                     _class = _class + ' error'
                 
                 with tr.td(colspan=_span, width='%d%%' % (100*_span/n,), valign='top'):
-                    with tr.div(_class=_class, id='div_'+obj.id):
+                    with tr.Div(_class=_class, id='div_'+obj.id):
                         if f.error:
                             tr.strong(f.error, _class="message")
                         if self.get_widget_name(obj) == 'Checkbox':
@@ -135,7 +141,7 @@ class TableLayout(Layout):
         return tr
 
     def _buttons_line(self, buttons):
-        div = Tag('div', _class=self.buttons_line_class)
+        div = Div(_class=self.buttons_line_class)
         with div:
             div << buttons
         return div
@@ -220,7 +226,7 @@ class BootstrapTableLayout(TableLayout):
             else:
                 raise Exception, 'Colume definition is not right, only support string or dict'
 
-        tr = Tag('tr')
+        tr = Tag('tr', newline=True)
         with tr:
             for x in fields:
                 _span = n / _x
@@ -232,12 +238,18 @@ class BootstrapTableLayout(TableLayout):
 
                 f = getattr(self.form, name)
                 obj = self.form.fields[name]
+                
+                #process hidden field
+                if self.is_hidden(obj):
+                    tr << f
+                    continue
+                
                 _class = "control-group"
                 if f.error:
                     _class = _class + ' error'
                 
                 with tr.td(colspan=_span, width='%d%%' % (100*_span/n,), valign='top'):
-                    with tr.div(_class=_class, id='div_'+obj.id):
+                    with tr.Div(_class=_class, id='div_'+obj.id):
                         if self.get_widget_name(obj) == 'Checkbox':
                             tr << "&nbsp"
                         else:
@@ -246,22 +258,22 @@ class BootstrapTableLayout(TableLayout):
                             else:
                                 tr << f.get_label(_class='control-label')                            
                             
-                        div = Tag('div', _class='controls')
+                        div = Div(_class='controls')
                         with div:
                             if self.get_widget_name(obj) == 'Checkbox':
                                 div << f
                                 div << f.label
                             else:
                                 div << f                    
-                            div << Tag('div', _class="help help-block", _value= f.help_string or '')
+                            div << Div(_class="help help-block", _value= f.help_string or '')
                             if f.error:
-                                div << Tag('div', _class="message help-block", _value=f.error)
+                                div << Div(_class="message help-block", _value=f.error)
                         tr << str(div)
         return tr
     
 class CSSLayout(Layout):
     def line(self, obj, label, input, help_string='', error=None):
-        div = Buf()
+        div = Div()
         div << label
         div << input
         if error:
@@ -270,7 +282,7 @@ class CSSLayout(Layout):
         return div
 
     def _buttons_line(self, buttons):
-        div = Buf()
+        div = Div()
         div << Tag('label', '&nbsp;', _class='field')
         div << buttons
         div << Tag('br/')
@@ -370,7 +382,7 @@ class QueryLayout(Layout):
             more = bool(layout)
             output(buf, line, first=first, more=more)
             if more:
-                with buf.div(id='query_div'):
+                with buf.Div(id='query_div'):
                     for line in layout:
                         output(buf, line)
 
@@ -385,7 +397,7 @@ class YamlRadioSelect(RadioSelect):
             args['name'] = self.kwargs.get('name')
             if v == self.value:
                 args['checked'] = None
-            div = Tag('div', _class='type-check')
+            div = Div(_class='type-check')
             div << Radio(**args)
             div << Tag('label', caption, _for=id)
             s << div
@@ -421,7 +433,7 @@ class YamlLayout(Layout):
             fs << input
             return fs
         else:
-            div = Tag('div', _class=_class, id='div_'+obj.id)
+            div = Div(_class=_class, id='div_'+obj.id)
             with div:
                 if error:
                     div.strong(error, _class="message")
@@ -436,9 +448,9 @@ class YamlLayout(Layout):
             return div
 
     def _buttons_line(self, buttons):
-        div = Tag('div', _class='line')
+        div = Div(_class='line')
         with div:
-            with div.div(_class='type-button'):
+            with div.Div(_class='type-button'):
                 div << buttons
         return str(div)
 
@@ -452,7 +464,7 @@ class YamlLayout(Layout):
     def process_layout(self, buf):
         for line in self.layout:
             if isinstance(line, (tuple, list)):
-                with buf.div(_class='line'):
+                with buf.Div(_class='line'):
                     for x in line:
                         f = getattr(self.form, x)
                         obj = self.form.fields[x]
@@ -485,21 +497,21 @@ class BootstrapLayout(Layout):
         if error:
             _class = _class + ' error'
         
-        div_group = Tag('div', _class=_class, id='div_'+obj.id)
+        div_group = Div(_class=_class, id='div_'+obj.id, newline=True)
         with div_group: 
             div_group << obj.get_label(_class='control-label')
-            div = Tag('div', _class='controls')
+            div = Div(_class='controls', newline=True)
             with div:
                 div << input                    
                 div << Tag('p', _class="help help-block", _value=help_string)
                 if error:
-                    div << Tag('div', _class="message help-block", _value=error)
+                    div << Div(_class="message help-block", _value=error, newline=True)
                     
             div_group << str(div)
         return str(div_group)
     
     def _buttons_line(self, buttons):
-        div = Tag('div', _class="form-actions")
+        div = Div(_class="form-actions")
         with div:
             div << buttons
         return div
@@ -514,7 +526,7 @@ class BootstrapLayout(Layout):
     def process_layout(self, buf):
         for line in self.layout:
             if isinstance(line, (tuple, list)):
-                with buf.div(_class='line'):
+                with buf.Div(_class='line'):
                     for x in line:
                         f = getattr(self.form, x)
                         obj = self.form.fields[x]

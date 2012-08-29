@@ -32,6 +32,17 @@ Uliweb Change Log
 * Add [GLOBAL_OBJECTS] mechanism, objects config in here will be injected into uliweb.
 * Add validators to uliweb, but this appoach is using [VALIDAOTRS] mechanism.
 * Add IS_LENGTH_LESSTHAN validator to generic.py if there is max_length exists.
+* Add newline and attrs to core/html.py/Tag, for example:
+
+    ```
+    >>> print Tag('p', 'Hello', attrs={'data-link':'ok'}, newline=False)
+    <p data-link="ok">Hello</p>
+    ```
+    
+  so you can pass `data-link` to `attrs`. For `newline=False` will not create `\n`.
+* Remove `Script` of core/html.py.
+* Add AUTHORS.md doc.
+* Fix BootstrapTableLayout HiddenField creation bug.
 
 0.1.4 Version
 -----------------

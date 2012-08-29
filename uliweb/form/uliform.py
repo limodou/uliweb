@@ -179,11 +179,12 @@ class BaseField(object):
                 label += str(Tag('span', REQUIRED_CAPTION, _class='field_required'))
             else:
                 label = str(Tag('span', REQUIRED_CAPTION, _class='field_required')) + label
-        return str(Tag('label', label, _for=self.id, **kwargs))
+        return str(Tag('label', label, _for=self.id, newline=False, **kwargs))
     
     def get_help_string(self, **kwargs):
         if self.help_string:
-            return str(Tag('label', self.help_string, _for=self.id, **kwargs))
+#            return str(Tag('label', self.help_string, _for=self.id, **kwargs))
+            return str(self.help_string)
         else:
             return ''
     

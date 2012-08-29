@@ -3,6 +3,7 @@ import cgi
 import StringIO
 
 __noescape_attrs__ = ['href', 'src']
+class DefaultValue(object):pass
 
 def u_str(v, encoding='utf-8'):
     if isinstance(v, str):
@@ -22,22 +23,6 @@ def str_u(v, encoding='utf-8'):
 def _create_kwargs(args, nocreate_if_none=['id', 'for']):
     """
     Make python dict to k="v" format
-    
-    >>> print _create_kwargs({'name':'title'})
-     name="title"
-    >>> print _create_kwargs({'_class':'color', 'id':'title'})
-     class="color" id="title"
-    >>> print _create_kwargs({'_class':'color', 'id':None})
-     class="color"
-    >>> print _create_kwargs({'_class':'color', 'checked':None})
-     class="color" checked
-    >>> print _create_kwargs({'_class':'color', '_for':None})
-     class="color"
-    >>> print _create_kwargs({'action': '', '_class': 'yform', 'method': 'POST'})
-     class="yform" action="" method="POST"
-    >>> print _create_kwargs({'action': '"hello"'})
-     class="yform" action="" method="POST"
-    
     """
     if not args:
         return ''
@@ -63,12 +48,13 @@ def _create_kwargs(args, nocreate_if_none=['id', 'for']):
 __tags__ = {}
 
 class Buf(object):
-    def __init__(self, encoding='utf-8'):
+    def __init__(self, encoding='utf-8', newline=True):
         self._document = StringIO.StringIO()
         self._indentation = 0
         self._indent = ' '*4
         self._encoding = encoding
         self._builder = self
+        self._newline = newline
         
     def bind(self, builder):
         self._builder = builder
@@ -88,7 +74,11 @@ class Buf(object):
     
     def _write(self, line):
         line = line.decode(self._encoding)
-        self._document.write('%s%s\n' % (self._indentation * self._indent, line))
+        if self._newline:
+            n = '\n'
+        else:
+            n = ''
+        self._document.write('%s%s%s' % (self._indentation * self._indent, line, n))
         
     def __lshift__(self, obj):
         if isinstance(obj, (tuple, list)):
@@ -98,15 +88,14 @@ class Buf(object):
             self._builder._write(u_str(obj, self._encoding))
 
 class Tag(Buf):
-    _dummy = {}
-    def __init__(self, tag_name, _value=_dummy, encoding='utf-8', **kwargs):
-        Buf.__init__(self, encoding=encoding)
+    def __init__(self, tag_name, _value=DefaultValue, encoding='utf-8', newline=False, attrs=None, **kwargs):
+        Buf.__init__(self, encoding=encoding, newline=newline)
         self.name = tag_name
-        self.attributes = {}
+        self.attributes = attrs or {}
         self(_value, **kwargs)
 #        if _value is None:
 #            self._builder._write('<%s%s />' % (self.name, _create_kwargs(self.attributes)))
-#        elif _value != Tag._dummy:
+#        elif _value != DefaultValue:
 #            self._builder._write('<%s%s>%s</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value), self.name))
     
     def __enter__(self):
@@ -118,25 +107,23 @@ class Tag(Buf):
         self._builder._indentation -= 1
         self._builder._write('</%s>' % self.name)
         
-    def __call__(self, _value=_dummy, **kwargs):
+    def __call__(self, _value=DefaultValue, **kwargs):
         self.attributes.update(kwargs)
         if _value is None:
             self._builder._write('<%s%s />' % (self.name, _create_kwargs(self.attributes)))
-        elif _value != Tag._dummy:
-            self._builder._write('<%s%s>%s</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value, self._encoding), self.name))
+        elif _value != DefaultValue:
+            if self._newline:
+               self._builder._write('<%s%s>\n%s\n</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value, self._encoding), self.name))
+            else:
+                self._builder._write('<%s%s>%s</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value, self._encoding), self.name))
             return
         return self
     
-class Script(Tag):
-    def __init__(self, src=Tag._dummy, **kwargs):
-        kwargs['type'] = 'text/javascript'
-        if src != Tag._dummy:
-            kwargs['src'] = src
-            Tag.__init__(self, tag_name="script", _value='', **kwargs)
-        else:
-            Tag.__init__(self, tag_name="script", _value=Tag._dummy, **kwargs)
- 
-__tags__['script'] = Script
+class Div(Tag):
+    def __init__(self, _value=DefaultValue, newline=True, **kwargs):
+        Tag.__init__(self, tag_name='div', _value=_value, newline=newline, **kwargs)
+
+__tags__['Div'] = Div
 
 def begin_tag(tag, **kwargs):
     return '<%s%s>' % (tag, _create_kwargs(kwargs))
@@ -165,9 +152,3 @@ if __name__ == '__main__':
     b << 'hello'
     b << [Tag('a', 'Link', href='#'), Tag('a', 'Link', href='#')]
     print str(b)
-    script = Script()
-    with script:
-        script << "var flag=true;"
-        script << "if (flag > 6)"
-    print script
-    
