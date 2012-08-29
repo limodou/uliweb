@@ -28,6 +28,9 @@ Uliweb Change Log
   the difference about it.
 * Change default max_length of CHAR, str, unicode as 255. The original default value
   is 30.
+* Add IS_LENGTH_LESSTHAN and IS_LENGTH_BETWEEN to validators.py.
+* Add [GLOBAL_OBJECTS] mechanism, objects config in here will be injected into uliweb.
+* Add validators to uliweb, but this appoach is using [VALIDAOTRS] mechanism.
 
 0.1.4 Version
 -----------------

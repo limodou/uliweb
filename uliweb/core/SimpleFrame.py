@@ -380,6 +380,9 @@ class Dispatcher(object):
         
         self.install_settings(self.modules['settings'])
         
+        #process global_objects
+        self.install_global_objects()
+        
         #process binds
         self.install_binds()
         
@@ -866,6 +869,15 @@ class Dispatcher(object):
         if not settings.GLOBAL.FILESYSTEM_ENCODING:
             settings.GLOBAL.FILESYSTEM_ENCODING = sys.getfilesystemencoding() or settings.GLOBAL.DEFAULT_ENCODING
             
+    def install_global_objects(self):
+        """
+        Process [GLOBAL_OBJECTS], and inject all object to uliweb module, so
+        user can import from uliweb
+        """
+        import uliweb
+        for k, v in settings.GLOBAL_OBJECTS.items():
+            setattr(uliweb, k, import_attr(v))
+        
     def install_binds(self):
         #process DISPATCH hooks
         #BINDS format

@@ -58,3 +58,22 @@ def IS_PAST_DATE(date=None):
             return 'The date can not be greater than %s' % date
     return f
     
+def IS_LENGTH_LESSTHAN(length):
+    """
+    Validate the length of value should be less than specified range, not include the
+    length.
+    """
+    def f(data, length=length):
+        if len(data) < length:
+            return _('The length of data should be less than %d.' % length)
+    return f
+    
+def IS_LENGTH_BETWEEN(min, max):
+    """
+    Validate the length of value should be between in specified range, not include
+    min and max.
+    """
+    def f(data, min=min, max=max):
+        if min < len(data) < max:
+            return _('The length of data should be bwtween in (%s, %s).' % (min, max))
+    return f
