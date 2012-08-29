@@ -43,6 +43,7 @@ Uliweb Change Log
 * Remove `Script` of core/html.py.
 * Add AUTHORS.md doc.
 * Fix BootstrapTableLayout HiddenField creation bug.
+* Add serial_cls support, so you can config session serial class yourself. Default is Cache.Serial.
 
 0.1.4 Version
 -----------------

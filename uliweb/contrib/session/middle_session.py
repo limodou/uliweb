@@ -1,4 +1,5 @@
-from uliweb import Middleware
+from uliweb import Middleware, settings
+from uliweb.utils.common import import_attr
 from uliweb.core.SimpleFrame import RedirectException
 from weto.session import Session, SessionCookie
 
@@ -29,8 +30,13 @@ class SessionMiddle(Middleware):
         key = request.cookies.get(SessionCookie.default_cookie_id)
         if not key:
             key = request.values.get(SessionCookie.default_cookie_id)
+        serial_cls_path = settings.SESSION.serial_cls
+        if serial_cls_path:
+            serial_cls = import_attr(serial_cls_path)
+        else:
+            serial_cls = None
         session = Session(key, storage_type=self.session_storage_type, 
-            options=self.options, expiry_time=self.timeout)
+            options=self.options, expiry_time=self.timeout, serial_cls=serial_cls)
         request.session = session
 
     def process_response(self, request, response):

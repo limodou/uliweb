@@ -43,13 +43,13 @@ class SessionCookie(object):
     def save(self):
         self.expiry_time =  self.expiry_time or self.session.expiry_time
    
-from cache import Serial, Empty
+from cache import Serial
 
 class Session(dict):
     force = False
     
     def __init__(self, key=None, storage_type='file', options=None, expiry_time=3600*24*365,
-        serial_cls=Serial):
+        serial_cls=None):
         """
         expiry_time is just like max_age, the unit is second
         """
@@ -64,7 +64,7 @@ class Session(dict):
         self.key = key
         self.deleted = False
         self.cookie = SessionCookie(self)
-        self._serial_cls = serial_cls
+        self._serial_cls = serial_cls or Serial
         self.serial_obj = serial_cls()
         
         self.load(self.key)

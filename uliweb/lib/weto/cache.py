@@ -6,6 +6,7 @@
 #########################################################################
 import cPickle
 from backends.base import KeyError
+import json
 
 __modules__ = {}
 
@@ -30,18 +31,25 @@ class Serial(NoSerial):
     
     def dump(self, v):
         return cPickle.dumps(v, cPickle.HIGHEST_PROTOCOL)
+
+class JsonSerial(Serial):
+    def load(self, s):
+        return json.loads(s)
+    
+    def dump(self, v):
+        return json.dumps(v)
     
 class Empty(object):
     pass
 
 class Cache(object):
     def __init__(self, storage_type='file', options=None, expiry_time=3600*24*365,
-        serial_cls=Serial):
+        serial_cls=None):
         self._storage_type = storage_type
         self._options = options or {}
         self._storage_cls = self.__get_storage()
         self._storage = None
-        self._serial_cls = serial_cls
+        self._serial_cls = serial_cls or Serial
         self.serial_obj = serial_cls()
         self.expiry_time = expiry_time
      
