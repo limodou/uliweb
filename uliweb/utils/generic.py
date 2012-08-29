@@ -334,6 +334,7 @@ def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
     
 def make_form_field(field, model, field_cls=None, builds_args_map=None):
     import uliweb.form as form
+    from uliweb.form.validators import IS_LENGTH_LESSTHAN
     
     model = get_model(model)
     field_type = None
@@ -370,6 +371,10 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         
     if 'required' in field:
         kwargs['required'] = field['required']
+        
+    #add max_length
+    if prop.max_length:
+        kwargs['validators'] = [IS_LENGTH_LESSTHAN(prop.max_length)]
         
     if field_cls:
         field_type = field_cls

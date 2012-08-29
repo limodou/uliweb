@@ -64,7 +64,7 @@ def IS_LENGTH_LESSTHAN(length):
     length.
     """
     def f(data, length=length):
-        if len(data) < length:
+        if not (len(data) < length):
             return _('The length of data should be less than %d.' % length)
     return f
     
@@ -74,6 +74,6 @@ def IS_LENGTH_BETWEEN(min, max):
     min and max.
     """
     def f(data, min=min, max=max):
-        if min < len(data) < max:
+        if not (min < len(data) < max):
             return _('The length of data should be bwtween in (%s, %s).' % (min, max))
     return f

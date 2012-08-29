@@ -31,6 +31,7 @@ Uliweb Change Log
 * Add IS_LENGTH_LESSTHAN and IS_LENGTH_BETWEEN to validators.py.
 * Add [GLOBAL_OBJECTS] mechanism, objects config in here will be injected into uliweb.
 * Add validators to uliweb, but this appoach is using [VALIDAOTRS] mechanism.
+* Add IS_LENGTH_LESSTHAN validator to generic.py if there is max_length exists.
 
 0.1.4 Version
 -----------------
