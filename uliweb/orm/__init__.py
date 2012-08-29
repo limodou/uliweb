@@ -810,7 +810,7 @@ class CharProperty(Property):
     data_type = unicode
     field_class = CHAR
     
-    def __init__(self, verbose_name=None, default=u'', max_length=30, **kwds):
+    def __init__(self, verbose_name=None, default=u'', max_length=255, **kwds):
         super(CharProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
     
     def empty(self, value):

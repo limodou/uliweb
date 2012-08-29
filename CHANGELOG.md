@@ -26,6 +26,8 @@ Uliweb Change Log
   will not be duplication at all. But if the user pass the collection_name, and 
   if there is `tablename_set` already, then raise the Exception always. Please note
   the difference about it.
+* Change default max_length of CHAR, str, unicode as 255. The original default value
+  is 30.
 
 0.1.4 Version
 -----------------
