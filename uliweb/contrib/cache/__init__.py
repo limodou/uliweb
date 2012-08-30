@@ -11,7 +11,7 @@ def get_cache(**kwargs):
     args = {'storage_type':settings.get_var('CACHE/type'),
         'options':settings.get_var('CACHE_STORAGE'),
         'expiry_time':settings.get_var('CACHE/expiretime'),
-        'serial_cls':import_attr(serial_cls)}
+        'serial_cls':serial_cls}
         
     args.update(kwargs)
     cache = Cache(**args)

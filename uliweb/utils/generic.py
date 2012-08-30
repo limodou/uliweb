@@ -372,10 +372,6 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     if 'required' in field:
         kwargs['required'] = field['required']
         
-    #add max_length
-    if prop.max_length:
-        kwargs['validators'] = [IS_LENGTH_LESSTHAN(prop.max_length)]
-        
     if field_cls:
         field_type = field_cls
     elif not field_type:
@@ -442,6 +438,12 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         if not build_args:
             build_args = get_fileds_builds().get(field_type, {})
         kwargs.update(build_args)
+        
+        #add max_length validator
+        if issubclass(prop.__class__, (orm.StringProperty, orm.CharProperty, orm.UnicodeProperty)):
+            v = kwargs.setdefault('validators', [])
+            v.append(IS_LENGTH_LESSTHAN(prop.max_length))
+        
         f = field_type(**kwargs)
     
         return f
