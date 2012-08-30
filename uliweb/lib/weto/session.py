@@ -65,7 +65,7 @@ class Session(dict):
         self.deleted = False
         self.cookie = SessionCookie(self)
         self._serial_cls = serial_cls or Serial
-        self.serial_obj = serial_cls()
+        self.serial_obj = self._serial_cls()
         
         self.load(self.key)
         
