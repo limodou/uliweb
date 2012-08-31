@@ -44,6 +44,11 @@ Uliweb Change Log
 * Add AUTHORS.md doc.
 * Fix BootstrapTableLayout HiddenField creation bug.
 * Add serial_cls support, so you can config session serial class yourself. Default is Cache.Serial.
+* If the url prefix '!' then don't parse it with appname URL prefix. For example:
+
+    ```
+    @expose('!/hello')
+    ```
 
 0.1.4 Version
 -----------------

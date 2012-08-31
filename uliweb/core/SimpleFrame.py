@@ -842,7 +842,7 @@ class Dispatcher(object):
             try:
                 rules.add_rule(url_map, url, endpoint, **kw)
             except:
-                log.error("Wrong url url=%s, endpoint=endpoint" % (url, endpoint))
+                log.error("Wrong url url=%s, endpoint=%s" % (url, endpoint))
                 raise
     
     def install_apps(self):

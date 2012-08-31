@@ -25,8 +25,16 @@ def add_rule(map, url, endpoint=None, **kwargs):
             
 def merge_rules():
     s = []
+    index = {}
     for v in __exposes__.itervalues():
-        s.extend(v)
+        for x in v:
+            appname, endpoint, url, kw = x
+            i = index.get(url, None)
+            if i is not None:
+                s[i] = x
+            else:
+                s.append(x)
+                index[url] = len(s)-1
     return __no_need_exposed__ + s
 
 def clear_rules():
@@ -61,10 +69,13 @@ class Expose(object):
     def _fix_url(self, appname, rule):
         if rule.startswith('/') and appname in __app_rules__:
             suffix = __app_rules__[appname]
-            url = rule.lstrip('/')
-            return os.path.join(suffix, url).replace('\\', '/')
+            url = os.path.join(suffix, rule.lstrip('/')).replace('\\', '/')
         else:
-            return rule
+            if rule[0] == '!':
+                url = rule[1:]
+            else:
+                url = rule
+        return url.rstrip('/') or '/'
             
     def _get_path(self, f):
         m = f.__module__.split('.')
