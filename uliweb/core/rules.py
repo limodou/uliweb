@@ -117,13 +117,16 @@ class Expose(object):
                                 rule = self._get_url(appname, prefix, func)
                             else:
                                 _old = func.__old_rule__.get(v[2])
+                                keep = _old.startswith('!')
+                                if keep:
+                                    _old = _old[1:]
                                 if _old:
                                     rule = os.path.join(prefix, _old).replace('\\', '/')
                                 else:
                                     rule = prefix
                                 #if rule has perfix of appname, then fix it, otherwise
                                 #maybe it's root url, e.g. /register
-                                if rule.startswith(prefix):
+                                if not keep and rule.startswith(prefix):
                                     rule = self._fix_url(appname, rule)
                             __no_need_exposed__.append((v[0], new_endpoint, rule, v[3]))
                             for k in __url_names__.iterkeys():

@@ -49,6 +49,7 @@ Uliweb Change Log
     ```
     @expose('!/hello')
     ```
+* Improve url expose for '!' process, and make class view also support it. Add test_url.py.
 
 0.1.4 Version
 -----------------
