@@ -71,7 +71,7 @@ class Expose(object):
             suffix = __app_rules__[appname]
             url = os.path.join(suffix, rule.lstrip('/')).replace('\\', '/')
         else:
-            if rule[0] == '!':
+            if rule.startswith('!'):
                 url = rule[1:]
             else:
                 url = rule
