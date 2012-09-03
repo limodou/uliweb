@@ -50,7 +50,7 @@ class Cache(object):
         self._storage_cls = self.__get_storage()
         self._storage = None
         self._serial_cls = serial_cls or Serial
-        self.serial_obj = serial_cls()
+        self.serial_obj = self._serial_cls()
         self.expiry_time = expiry_time
      
     def __get_storage(self):
