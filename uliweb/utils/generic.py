@@ -442,7 +442,8 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         #add max_length validator
         if issubclass(prop.__class__, (orm.StringProperty, orm.CharProperty, orm.UnicodeProperty)):
             v = kwargs.setdefault('validators', [])
-            v.append(IS_LENGTH_LESSTHAN(prop.max_length+1))
+            if isinstance(prop.max_length, int):
+                v.append(IS_LENGTH_LESSTHAN(prop.max_length+1))
         
         f = field_type(**kwargs)
     
