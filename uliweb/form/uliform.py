@@ -571,7 +571,7 @@ class Form(object):
     fieldset = False
     form_action = ''
     form_method = 'POST'
-    form_buttons = [str(Button(value=_('Submit'), _class="btn btn-primary", name="submit", type="submit"))]
+    form_buttons = None
     form_title = None
     form_class = None
     form_id = None
@@ -586,7 +586,7 @@ class Form(object):
         self.form_class = _class or self.form_class
         self.form_id = id or self.form_id
         self.kwargs = kwargs
-        buttons = buttons or self.form_buttons
+        buttons = buttons or self.form_buttons or [str(Button(value=_('Submit'), _class="btn btn-primary", name="submit", type="submit"))]
         if buttons:
             if isinstance(buttons, (tuple, list)):
                 self._buttons = list(buttons)
