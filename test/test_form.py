@@ -183,7 +183,7 @@ def test_list_field():
     (True, ['a', 'b', 'c'])
     >>> a = ListField(name='list', id='field_list', delimeter=',', datatype=int)
     >>> print a.validate('1,b,c')
-    (False, "Can't convert '1,b,c' to ListField.")
+    (False, u"Can't convert '1,b,c' to ListField.")
     >>> print a.validate('1,2,3')
     (True, [1, 2, 3])
     """
@@ -226,7 +226,7 @@ def test_int_field():
     >>> print a.validate(None)
     (True, 0)
     >>> print a.validate('aaaa')
-    (False, "Can't convert 'aaaa' to IntField.")
+    (False, u"Can't convert 'aaaa' to IntField.")
     >>> print a.validate('122')
     (True, 122)
     >>> a = BaseField(name='int', id='field_int', datatype=int)

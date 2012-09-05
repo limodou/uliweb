@@ -17,6 +17,9 @@ REQUIRED_CAPTION_AFTER = True
 DEFAULT_ENCODING = 'utf-8'
 DEFAULT_LABEL_DELIMETER = ':'
 
+ERR_REQUIRED = _('This field is required.')
+ERR_CONVERT = _("Can't convert %r to %s.")
+
 class ReservedWordError(Exception):pass
 
 __id = 0
@@ -245,7 +248,7 @@ class BaseField(object):
 #                else:
 #                    return True, data
             else:
-                return False, _('This field is required.')
+                return False, ERR_REQUIRED
         try:
             if isinstance(data, list):
                 v = []
@@ -255,7 +258,7 @@ class BaseField(object):
             else:
                 data = self.to_python(data)
         except:
-            return False, "Can't convert %r to %s." % (data, self.__class__.__name__)
+            return False, unicode(ERR_CONVERT) % (data, self.__class__.__name__)
         for v in self.default_validators + self.validators:
             msg = v(data)
             if msg:
@@ -633,7 +636,7 @@ class Form(object):
         for k, obj in self.fields.items():
             func = getattr(self, 'validate_%s' % obj.field_name, None)
             if func and callable(func):
-                obj.validators.append(func)
+                obj.validators.insert(0, func)
                 
         func = getattr(self, 'form_validate', None)
         if func and callable(func):

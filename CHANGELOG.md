@@ -50,6 +50,8 @@ Uliweb Change Log
     @expose('!/hello')
     ```
 * Improve url expose for '!' process, and make class view also support it. Add test_url.py.
+* Change form validate_xxx in the front of the original validator functions, move BaseField 
+  validate error mssage to module level, e.g. ERR_REQUIRED
 
 0.1.4 Version
 -----------------
