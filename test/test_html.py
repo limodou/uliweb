@@ -77,6 +77,14 @@ def test_tag():
         <label>Hello</label>
     </div>
     <BLANKLINE>
+    >>> div = Tag('div', newline=True)
+    >>> with div:
+    ...     div.span('test', attrs={'data-target':"Hello"})
+    >>> print div
+    <div>
+        <span data-target="Hello">test</span>
+    </div>
+    <BLANKLINE>
     """
 
 def test_other():

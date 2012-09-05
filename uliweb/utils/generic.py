@@ -742,10 +742,21 @@ class AddView(object):
         d.update({'form':self.form})
         return d
     
+    def _get_data(self):
+        from uliweb import request
+        from json import loads
+        
+        #add json data process
+        if 'application/json' in request.content_type:
+            data = (loads(request.data), )
+        else:
+            data = request.values, request.files
+        return data
+    
     def execute(self, json_result=False):
         from uliweb import request
         
-        flag = self.form.validate(request.values, request.files)
+        flag = self.form.validate(*self._get_data())
         if flag:
             d = self.default_data.copy()
             d.update(self.form.data)
@@ -807,7 +818,7 @@ class EditView(AddView):
     def execute(self, json_result=False):
         from uliweb import request
         
-        flag = self.form.validate(request.values, request.files)
+        flag = self.form.validate(*self._get_data())
         if flag:
             d = self.default_data.copy()
             d.update(self.form.data)

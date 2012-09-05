@@ -107,7 +107,9 @@ class Tag(Buf):
         self._builder._indentation -= 1
         self._builder._write('</%s>' % self.name)
         
-    def __call__(self, _value=DefaultValue, **kwargs):
+    def __call__(self, _value=DefaultValue, attrs=None, **kwargs):
+        attrs = attrs or {}
+        self.attributes.update(attrs)
         self.attributes.update(kwargs)
         if _value is None:
             self._builder._write('<%s%s />' % (self.name, _create_kwargs(self.attributes)))
