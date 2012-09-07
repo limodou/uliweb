@@ -53,6 +53,8 @@ Uliweb Change Log
 * Change form validate_xxx in the front of the original validator functions, move BaseField 
   validate error mssage to module level, e.g. ERR_REQUIRED
 * Fix i18n bug for LazyString
+* Add chmod after mkdirs in extract_dir function
+* Add alembic init command will drop `alembic_version` table
 
 0.1.4 Version
 -----------------

@@ -12,6 +12,7 @@ class InitCommand(SQLCommand, Command):
         from uliweb.core.template import template_file
         from uliweb.manage import make_simple_application
         from uliweb import settings
+        from sqlalchemy import *
         
         alembic_path = os.path.join(global_options.project, 'alembic', options.engine).replace('\\', '/')
         extract_dirs('uliweb.contrib.orm', 'templates/alembic', alembic_path, 
@@ -27,6 +28,13 @@ class InitCommand(SQLCommand, Command):
         
         with open(ini_file, 'w') as f:
             f.write(text)
+            
+        #drop old alembic_version table
+        db = create_engine(settings.ORM.CONNECTION)
+        metadata = MetaData(db)
+        if db.dialect.has_table(db.connect(), 'alembic_version'):
+            version = Table('alembic_version', metadata, autoload=True) 
+            version.drop()
     
 class RevisionCommand(SQLCommand, Command):
     name = 'revision'

@@ -101,6 +101,7 @@ def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, 
 #    log = logging.getLogger('uliweb')
     if not os.path.exists(dst):
         os.makedirs(dst)
+        os.chmod(dst, 0777)
         if verbose:
             print 'Make directory %s' % dst
     for r in pkg.resource_listdir(mod, path):
@@ -134,6 +135,7 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
     
     if not os.path.exists(dst):
         os.makedirs(dst)
+        os.chmod(dst, 0777)
 
     if verbose:
         print "Processing %s" % src
