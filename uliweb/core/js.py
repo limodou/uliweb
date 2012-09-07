@@ -46,7 +46,7 @@ class JSONEncoder(object):
     def iterencode(self, obj, key=False):
         if self.default:
             x = self.default(obj)
-            obj = x or obj
+            obj = x
         if isinstance(obj, str):
             if self.unicode:
                 yield encode_unicode(unicode(obj, self.encoding))

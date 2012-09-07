@@ -15,7 +15,7 @@ class LazyString(object):
         
     def __unicode__(self):
         if not self.msg:
-            return '<LazyString>'
+            return ''
         value = self.getvalue()
         if isinstance(value, unicode):
             return value
@@ -24,7 +24,7 @@ class LazyString(object):
         
     def __str__(self):
         if not self.msg:
-            return '<LazyString>'
+            return ''
         value = self.getvalue()
         if isinstance(value, unicode):
             return value.encode('utf-8')
