@@ -55,6 +55,7 @@ Uliweb Change Log
 * Fix i18n bug for LazyString
 * Add chmod after mkdirs in extract_dir function
 * Add alembic init command will drop `alembic_version` table
+* Add DEBUG_CONSOLE config to seperate DebugApplication evalex parameter from DEBUG
 
 0.1.4 Version
 -----------------

@@ -129,7 +129,7 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
         log.setLevel(logging.DEBUG)
         log.info(' * Loading DebuggedApplication...')
         from werkzeug.debug import DebuggedApplication
-        app = DebuggedApplication(app, debug_console)
+        app = DebuggedApplication(app, uliweb.settings.GLOBAL.get('DEBUG_CONSOLE', False))
     return app
 
 def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
