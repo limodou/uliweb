@@ -1,6 +1,11 @@
 Uliweb Change Log
 =====================
 
+0.1.6 Version
+-----------------
+
+* Add CSRF support thanks for Damon
+
 0.1.5 Version
 -----------------
 
