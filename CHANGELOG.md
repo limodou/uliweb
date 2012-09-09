@@ -5,6 +5,7 @@ Uliweb Change Log
 -----------------
 
 * Add CSRF support thanks for Damon
+* Add multiple lines comment tag `{{## ##}}` support to template
 
 0.1.5 Version
 -----------------

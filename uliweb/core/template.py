@@ -130,7 +130,10 @@ def eval_vars(vs, vars, env):
         return eval(vs, env, vars)
 
 def get_tag(begin_tag, end_tag):
-    r = '(' + re.escape(begin_tag) + '.*?' + re.escape(end_tag) + ')'
+    r = (
+        '(' + re.escape(begin_tag) + '##.*?##' + re.escape(end_tag) + '|' +
+            re.escape(begin_tag) + '.*?' + re.escape(end_tag) + 
+        ')')
     return re.compile(r, re.DOTALL|re.M)
 
 r_tag = re.compile('^#uliweb-template-tag:(.+?),(.+?)(:\r|\n|\r\n)')
@@ -435,13 +438,16 @@ class Template(object):
     
     def parse(self):
         text = self.text
-        in_tag = False
         extend = None  #if need to process extend node
         for i in get_tag(self.begin_tag, self.end_tag).split(text):
             if i:
                 if len(self.stack) == 0:
                     raise TemplateException, "The 'end' tag is unmatched, please check if you have more '{{end}}'"
                 top = self.stack[-1]
+                #process multiline comment
+                if i.startswith(self.begin_tag+'##'):
+                    continue
+                in_tag = i.startswith(self.begin_tag)
                 if in_tag:
                     line = i[2:-2].strip()
                     if not line:
@@ -514,7 +520,6 @@ class Template(object):
                     buf = "%s(%r, escape=False)\n" % (self.writer, i)
                     top.add(buf)
                     
-            in_tag = not in_tag
         if extend:
             self._parse_extend(extend)
         if self.encoding:
@@ -717,24 +722,3 @@ def template_file(filename, vars=None, env=None, dirs=None, default_template=Non
 def template(text, vars=None, env=None, dirs=None, default_template=None, **kwargs):
     t = Template(text, vars, env, dirs, default_template, **kwargs)
     return t()
-
-
-def test():
-    """
-    >>> print template("Hello, {{=name}}", {'name':'uliweb'})
-    Hello, uliweb
-    >>> print template("Hello, {{ =name}}", {'name':'uliweb'})
-    Hello, uliweb
-    >>> print template("Hello, {{ = name}}", {'name':'uliweb'})
-    Hello, uliweb
-    >>> print template("Hello, {{=name}}", {'name':'<h1>Uliweb</h1>'})
-    Hello, &lt;h1&gt;Uliweb&lt;/h1&gt;
-    >>> print template("Hello, {{<<name}}", {'name':'<h1>Uliweb</h1>'})
-    Hello, <h1>Uliweb</h1>
-    >>> print template('''{{import datetime}}{{=datetime.date( # this breaks
-    ...   2009,1,8)}}''')
-    2009-01-08
-    """
-
-if __name__ == '__main__':
-    print template("Hello, {{=name}}", {'name':'uliweb'})
