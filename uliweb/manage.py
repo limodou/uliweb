@@ -236,6 +236,8 @@ class MakeProjectCommand(Command):
             ans = 'y'
         if ans == 'y':
             extract_dirs('uliweb', 'template_files/project', project_name, verbose=global_options.verbose)
+            #rename .gitignore.template to .gitignore
+            os.rename(os.path.join(project_name, '.gitignore.template'), os.path.join(project_name, '.gitignore'))
 register_command(MakeProjectCommand)
 
 class SupportCommand(Command):

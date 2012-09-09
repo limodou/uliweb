@@ -6,6 +6,7 @@ Uliweb Change Log
 
 * Add CSRF support thanks for Damon
 * Add multiple lines comment tag `{{## ##}}` support to template
+* Improve makeproject project template, add .gitignore and local_settings.ini
 
 0.1.5 Version
 -----------------
