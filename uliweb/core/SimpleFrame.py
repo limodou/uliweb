@@ -662,37 +662,72 @@ class Dispatcher(object):
         return mod, _klass, handler
     
     def call_view(self, mod, cls, handler, request, response=None, wrap_result=None, args=None, kwargs=None):
+        import types
+        
         #get env
         wrap = wrap_result or self.wrap_result
         env = self.get_view_env()
         
         #if there is __begin__ then invoke it, if __begin__ return None, it'll
         #continue running
-        if hasattr(mod, '__begin__'):
-            f = getattr(mod, '__begin__')
-            result = self._call_function(f, request, response, env)
-            if result is not None:
-                return wrap(result, request, response, env)
         
-        if hasattr(cls, '__begin__'):
-            f = getattr(cls, '__begin__')
-            result = self._call_function(f, request, response, env)
-            if result is not None:
-                return wrap(result, request, response, env)
+        #there is a problem about soap view, because soap view will invoke
+        #call_view again, so that it may cause the __begin__ or __end__ be called
+        #twice, so I'll remember the function in cache, so that they'll not be invoke
+        #twice
+        
+        def _get_name(mod, name):
+            if isinstance(mod, types.ModuleType):
+                return mod.__name__ + '.' + name
+            else:
+                return cls.__module__ + '.' + cls.__name__ + '.' + name
+            
+        def _process_begin(mod):
+            name = '__begin__'
+            if hasattr(mod, name):
+                _name = _get_name(mod, name)
+                if _name not in request._invokes['begin']:
+                    request._invokes['begin'].append(_name)
+                    f = getattr(mod, name)
+                    return self._call_function(f, request, response, env)
+                    
+        def _prepare_end(mod):
+            name = '__end__'
+            if hasattr(mod, name):
+                _name = _get_name(mod, name)
+                if _name not in request._invokes['end']:
+                    request._invokes['end'].append(_name)
+                    return True
+            
+        def _process_end(mod):
+            f = getattr(mod, '__end__')
+            return self._call_function(f, request, response, env)
+            
+                
+        if not hasattr(request, '_invokes'):
+            request._invokes = {'begin':[], 'end':[]}
+            
+        result = _process_begin(mod)
+        if result is not None:
+            return wrap(result, request, response, env)
+        
+        result = _process_begin(cls)
+        if result is not None:
+            return wrap(result, request, response, env)
+        
+        #preprocess __end__
+        mod_end = _prepare_end(mod)
+        cls_end = _prepare_end(cls)
         
         result = self.call_handler(handler, request, response, env, wrap, args, kwargs)
 
-        result1 = None
-        if hasattr(mod, '__end__'):
-            f = getattr(mod, '__end__')
-            result1 = self._call_function(f, request, response, env)
+        if mod_end:
+            result1 = _process_end(mod)
             if result1 is not None:
                 return wrap(result1, request, response, env)
         
-        result1 = None
-        if hasattr(cls, '__end__'):
-            f = getattr(cls, '__end__')
-            result1, env = self._call_function(f, request, response, env)
+        if cls_end:
+            result1 = _process_end(cls)
             if result1 is not None:
                 return wrap(result1, request, response, env)
 

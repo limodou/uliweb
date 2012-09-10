@@ -7,6 +7,8 @@ Uliweb Change Log
 * Add CSRF support thanks for Damon
 * Add multiple lines comment tag `{{## ##}}` support to template
 * Improve makeproject project template, add .gitignore and local_settings.ini
+* Refactor `call_view()` so that fix the soap view function will invoke 
+  ``__begin__`` or ``__end__`` twice bug.
 
 0.1.5 Version
 -----------------
