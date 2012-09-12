@@ -680,7 +680,7 @@ class Dispatcher(object):
             if isinstance(mod, types.ModuleType):
                 return mod.__name__ + '.' + name
             else:
-                return cls.__module__ + '.' + cls.__name__ + '.' + name
+                return cls.__module__ + '.' + cls.__class__.__name__ + '.' + name
             
         def _process_begin(mod):
             name = '__begin__'
