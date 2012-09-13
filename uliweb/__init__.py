@@ -7,7 +7,7 @@ __author__ = 'limodou'
 __author_email__ = 'limodou@gmail.com'
 __url__ = 'https://github.com/limodou/uliweb'
 __license__ = 'BSD'
-version = __version__ = '0.1.5'
+version = __version__ = '0.1.6'
 
 import os, sys
 workpath = os.path.dirname(__file__)
@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(workpath, 'lib'))
 class UliwebError(Exception): pass
 
 from uliweb.core.SimpleFrame import (Request, Response, redirect, Redirect, error, json, 
-        POST, GET, url_for, expose, get_app_dir, get_apps, function, decorators,
+        POST, GET, url_for, expose, get_app_dir, get_apps, function, Finder, decorators,
         functions, response, request, settings, application, NotFound, HTTPException,
     )
 from uliweb.core.js import json_dumps

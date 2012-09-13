@@ -47,33 +47,28 @@ __global__.settings = pyini.Ini()
 #User can defined decorator functions in settings DECORATORS
 #and user can user @decorators.function_name in views
 #and this usage need settings be initialized before decorator invoking
-class Decorators(object):
-    __decorators__ = {}
+
+class Finder(object):
+    def __init__(self, section):
+        self.__objects = {}
+        self.__section = section
     
     def __getattr__(self, name):
-        if name in self.__decorators__:
-            return self.__decorators__[name]
-        if name not in settings.DECORATORS:
-            raise UliwebError("decorator %s is not existed!" % name)
-        func = import_attr(settings.DECORATORS.get(name))
-        self.__decorators__[name] = func
-        return func
+        if name in self.__objects:
+            return self.__objects[name]
+        if name not in settings[self.__section]:
+            raise UliwebError("Object %s is not existed!" % name)
+        obj = import_attr(settings[self.__section].get(name))
+        self.__objects[name] = obj
+        return obj
     
-decorators = Decorators()
+    def __setitem__(self, name, value):
+        if isinstance(value, (str, unicode)):
+            value = import_attr(value)
+        self.__objects[name] = value
 
-class Functions(object):
-    __functions__ = {}
-    
-    def __getattr__(self, name):
-        if name in self.__functions__:
-            return self.__functions__[name]
-        if name not in settings.FUNCTIONS:
-            raise UliwebError("function %s is not existed!" % name)
-        func = import_attr(settings.FUNCTIONS.get(name))
-        self.__functions__[name] = func
-        return func
-
-functions = Functions()
+decorators = Finder('DECORATORS')
+functions = Finder('FUNCTIONS')
 
 class Request(OriginalRequest):
     GET = OriginalRequest.args

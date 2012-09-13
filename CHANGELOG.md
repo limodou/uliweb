@@ -8,7 +8,10 @@ Uliweb Change Log
 * Add multiple lines comment tag `{{## ##}}` support to template
 * Improve makeproject project template, add .gitignore and local_settings.ini
 * Refactor `call_view()` so that fix the soap view function will invoke 
-  ``__begin__`` or ``__end__`` twice bug.
+  `__begin__` or `__end__` twice bug.
+* Refactor Functions, and Decorators, add parent class Finder. Also you can import
+  from `uliweb`
+* Replace class type judgement with `inspect.isclass()`
 
 0.1.5 Version
 -----------------

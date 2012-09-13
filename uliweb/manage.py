@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys, os
 import logging
-import types
+import inspect
 from optparse import make_option
 import uliweb
 from uliweb.core.commands import Command, CommandManager
@@ -15,7 +15,7 @@ def get_commands(global_options):
     global __commands__
     
     def check(c):
-        return ((isinstance(c, types.ClassType) or isinstance(c, types.TypeType)) and 
+        return (inspect.isclass(c) and 
             issubclass(c, Command) and c is not Command and c is not CommandManager)
     
     def find_mod_commands(mod):

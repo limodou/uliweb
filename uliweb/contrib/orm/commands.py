@@ -8,6 +8,7 @@ from sqlalchemy.types import *
 from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
 from uliweb.orm import get_connection, set_auto_set_model, do_
+import inspect
 
 def get_engine(options, global_options):
     from uliweb.manage import make_simple_application
@@ -711,7 +712,7 @@ def get_commands(mod):
     commands = {}
     
     def check(c):
-        return ((isinstance(c, types.ClassType) or isinstance(c, types.TypeType)) and 
+        return (inspect.isclass(c) and 
             issubclass(c, Command) and c is not Command and c is not CommandManager)
     
     for name in dir(mod):
