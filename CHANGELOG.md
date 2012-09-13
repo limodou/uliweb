@@ -12,6 +12,7 @@ Uliweb Change Log
 * Refactor Functions, and Decorators, add parent class Finder. Also you can import
   from `uliweb`
 * Replace class type judgement with `inspect.isclass()`
+* Fix `--version` command argument process bug.
 
 0.1.5 Version
 -----------------

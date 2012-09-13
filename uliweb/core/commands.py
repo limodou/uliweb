@@ -248,7 +248,7 @@ class CommandManager(Command):
         # must be processed early.
         parser = NewOptionParser(prog=self.prog_name,
                              usage=self.usage_info,
-                             version=self.get_version(),
+#                             version=self.get_version(),
                              formatter = NewFormatter(),
                              add_help_option = False,
                              option_list=self.option_list)
@@ -268,7 +268,12 @@ class CommandManager(Command):
             sys.exit(1)
             
         if len(args) == 0:
-            print_help(global_options)
+            if global_options.version:
+                print self.get_version()
+                sys.exit(1)
+            else:
+                print_help(global_options)
+                sys.ext(1)
     
         try:
             subcommand = args[0]
@@ -311,6 +316,8 @@ class ApplicationCommandManager(CommandManager):
             help='Your project directory, default is current directory.'),
         make_option('--pythonpath', default='',
             help='A directory to add to the Python path, e.g. "/home/myproject".'),
+        make_option('--version', action='store_true', dest='version',
+            help="show program's version number and exit."),
 #        make_option('--include-apps', default=[], dest='include_apps',
 #            help='Including extend apps when execute the command.'),
     )
