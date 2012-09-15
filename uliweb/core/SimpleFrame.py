@@ -966,24 +966,22 @@ class Dispatcher(object):
                 raise UliwebError('EXPOSES definition [%s=%r] is not right' % (name, args))
        
     def install_middlewares(self):
+        return self.sort_middlewares(settings.get('MIDDLEWARES', {}).values())
+    
+    def sort_middlewares(self, middlewares):
         #middleware process
         #middleware can be defined as
         #middleware_name = middleware_class_path[, order]
         #middleware_name = <empty> will be skip
-        middlewares = []
-        index = {}
-        for middleware_name, v in settings.get('MIDDLEWARES', {}).iteritems():
-            #process duplication of middleware, later will replace former
-            if middleware_name in index:
-                middlewares.pop(middleware_name)
-
+        m = []
+        for v in middlewares:
             if not v:
                 continue
             
             order = None
             if isinstance(v, (list, tuple)):
                 if len(v) > 2:
-                    raise UliwebError('Middleware %s difinition is not right' % middleware_name)
+                    raise UliwebError('Middleware %r difinition is not right' % v)
                 middleware_path = v[0]
                 if len(v) == 2:
                     order = v[1]
@@ -993,13 +991,11 @@ class Dispatcher(object):
             
             if order is None:
                 order = getattr(cls, 'ORDER', 500)
-            middlewares.append((order, cls))
-            #remember the middleware index, so that can be used for easily remove
-            index[middleware_name] = len(middlewares) - 1
+            m.append((order, cls))
         
-        middlewares.sort(cmp=lambda x, y: cmp(x[0], y[0]))
+        m.sort(cmp=lambda x, y: cmp(x[0], y[0]))
             
-        return [x[1] for x in middlewares]
+        return [x[1] for x in m]
     
     def get_template_dirs(self):
         """
@@ -1012,7 +1008,29 @@ class Dispatcher(object):
     def get_templateplugins_dirs(self):
         return [os.path.join(get_app_dir(p), 'template_plugins') for p in self.apps]
     
-    def __call__(self, environ, start_response):
+    def open(self, *args, **kwargs):
+        from werkzeug.test import EnvironBuilder
+        
+        pre_call = kwargs.pop('pre_call', None)
+        post_call = kwargs.pop('post_call', None)
+        middlewares = kwargs.pop('middlewares', [])
+        if middlewares is not None:
+            m = self.sort_middlewares(middlewares)
+        else:
+            m = self.middlewares
+        
+        builder = EnvironBuilder(*args, **kwargs)
+        try:
+            environ = builder.get_environ()
+        finally:
+            builder.close()
+            
+        return self._open(environ, pre_call=pre_call, post_call=post_call, middlewares=m)
+        
+    def _open(self, environ, pre_call=None, post_call=None, middlewares=None):
+        if middlewares is None:
+            middlewares = self.middlewares
+            
         local.request = req = Request(environ)
         local.response = res = Response(content_type='text/html')
         
@@ -1028,8 +1046,7 @@ class Dispatcher(object):
                 response = None
                 _clses = {}
                 _inss = {}
-
-                for cls in self.middlewares:
+                for cls in middlewares:
                     if hasattr(cls, 'process_request'):
                         ins = cls(self, settings)
                         _inss[cls] = ins
@@ -1039,12 +1056,16 @@ class Dispatcher(object):
                 
                 if response is None:
                     try:
-                        response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
-                        
+                        if pre_call:
+                            response = pre_call(req)
+                        if response is None:
+                            response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
+                        if post_call:
+                            response = post_call(req, response)
                     except RedirectException, e:
                         raise
                     except Exception, e:
-                        for cls in reversed(self.middlewares):
+                        for cls in reversed(middlewares):
                             if hasattr(cls, 'process_exception'):
                                 ins = _inss.get(cls)
                                 if not ins:
@@ -1054,7 +1075,7 @@ class Dispatcher(object):
                                     break
                         raise
                     
-                for cls in reversed(self.middlewares):
+                for cls in reversed(middlewares):
                     if hasattr(cls, 'process_response'):
                         ins = _inss.get(cls)
                         if not ins:
@@ -1077,8 +1098,52 @@ class Dispatcher(object):
             else:
 #                log.exception(e)
                 raise
+        return response
+    
+    def handler(self):
+        return DispatcherHandler(self)
+
+    def __call__(self, environ, start_response):
+        response = self._open(environ)
         return ClosingIterator(response(environ, start_response),
                                [local_manager.cleanup])
+            
+class DispatcherHandler(object):
+    def __init__(self, application):
+        self.application = application
+        
+    def open(self, *args, **kw):
+        return self.application.open(*args, **kw)
+        
+    def get(self, *args, **kw):
+        """Like open but method is enforced to GET."""
+        kw['method'] = 'GET'
+        return self.open(*args, **kw)
+    
+    def patch(self, *args, **kw):
+        """Like open but method is enforced to PATCH."""
+        kw['method'] = 'PATCH'
+        return self.open(*args, **kw)
+    
+    def post(self, *args, **kw):
+        """Like open but method is enforced to POST."""
+        kw['method'] = 'POST'
+        return self.open(*args, **kw)
+    
+    def head(self, *args, **kw):
+        """Like open but method is enforced to HEAD."""
+        kw['method'] = 'HEAD'
+        return self.open(*args, **kw)
+    
+    def put(self, *args, **kw):
+        """Like open but method is enforced to PUT."""
+        kw['method'] = 'PUT'
+        return self.open(*args, **kw)
+    
+    def delete(self, *args, **kw):
+        """Like open but method is enforced to DELETE."""
+        kw['method'] = 'DELETE'
+        return self.open(*args, **kw)
 
 response = LocalProxy(local, 'response', Response)
 request = LocalProxy(local, 'request', Request)

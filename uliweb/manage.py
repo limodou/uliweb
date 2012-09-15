@@ -5,7 +5,8 @@ import inspect
 from optparse import make_option
 import uliweb
 from uliweb.core.commands import Command, CommandManager
-        
+from uliweb.core import SimpleFrame
+
 apps_dir = 'apps'
 __commands__ = {}
 
@@ -51,8 +52,6 @@ workpath = os.path.join(os.path.dirname(__file__), 'lib')
 if workpath not in sys.path:
     sys.path.insert(0, os.path.join(workpath, 'lib'))
 
-from uliweb.core import SimpleFrame
-
 def install_config(apps_dir):
     from uliweb.utils import pyini
     #user can configure custom PYTHONPATH, so that uliweb can add these paths
@@ -70,11 +69,15 @@ def install_config(apps_dir):
                     
 def make_application(debug=None, apps_dir='apps', project_dir=None, 
     include_apps=None, debug_console=True, settings_file='settings.ini', 
-    local_settings_file='local_settings.ini', start=True, default_settings=None):
+    local_settings_file='local_settings.ini', start=True, default_settings=None, 
+    dispatcher_cls=None, dispatcher_kwargs=None):
     """
     Make an application object
     """
     from uliweb.utils.common import import_attr
+    
+    dispatcher_cls = dispatcher_cls or SimpleFrame.Dispatcher
+    dispatcher_kwargs = dispatcher_kwargs or {}
     
     if project_dir:
         apps_dir = os.path.normpath(os.path.join(project_dir, 'apps'))
@@ -84,15 +87,16 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
         
     install_config(apps_dir)
     
-    application = app = SimpleFrame.Dispatcher(apps_dir=apps_dir, 
+    application = app = dispatcher_cls(apps_dir=apps_dir, 
         include_apps=include_apps, 
         settings_file=settings_file, 
         local_settings_file=local_settings_file, 
         start=start,
-        default_settings=default_settings)
+        default_settings=default_settings,
+        **dispatcher_kwargs)
     
     #settings global application object
-    uliweb.application = app
+    SimpleFrame.__global__.application = app
     
     #process wsgi middlewares
     middlewares = []
@@ -134,13 +138,14 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
 
 def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
     settings_file='settings.ini', local_settings_file='local_settings.ini', 
-    default_settings=None):
+    default_settings=None, dispatcher_cls=None, dispatcher_kwargs=None):
     settings = {'ORM/AUTO_DOTRANSACTION':False}
     settings.update(default_settings or {})
     return make_application(apps_dir=apps_dir, project_dir=project_dir,
         include_apps=include_apps, debug_console=False, debug=False,
         settings_file=settings_file, local_settings_file=local_settings_file,
-        start=False, default_settings=settings)
+        start=False, default_settings=settings, dispatcher_cls=dispatcher_cls, 
+        dispatcher_kwargs=dispatcher_kwargs)
 
 class MakeAppCommand(Command):
     name = 'makeapp'

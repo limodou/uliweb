@@ -20,6 +20,14 @@ def client(project_path='.', settings_file='settings.ini', local_settings_file='
     c.app = app
     return c
 
+def client_from_application(app):
+    from werkzeug.test import Client
+    from werkzeug.wrappers import Response
+    
+    c = Client(app, Response)
+    c.app = app
+    return c
+
 def BlankRequest(url, **kwargs):
     from werkzeug.test import create_environ
     from uliweb import Request

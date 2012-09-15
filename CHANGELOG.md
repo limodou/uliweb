@@ -14,6 +14,21 @@ Uliweb Change Log
 * Replace class type judgement with `inspect.isclass()`
 * Fix `--version` command argument process bug.
 * Improve `import_mod_attr`, and make it can receive object parameter
+* Add `handler()` function to Dispatcher, and it'll return an instance of `DispatcherHandler`
+  and it provide `get`, `post`, `delete`, .etc, restful api, and you can invoke 
+  them to execute an url, for example:
+
+    ```
+    from uliweb import application
+    
+    handler = application.handler()
+    r = handler.get('/index')
+    #r is response object
+    ```
+* Add `client_from_application()` to uliweb/utils/test.py
+* Add `dispatcher_cls` and `dispatcher_kwargs` to `make_application` and 
+  `make_simple_applicatin`, so you can pass difference Disptacher class 
+  which provided by `uliweb/core/SimpleFrame.py`.
 
 0.1.5 Version
 -----------------
