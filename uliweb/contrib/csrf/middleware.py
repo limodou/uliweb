@@ -18,7 +18,7 @@ class CSRFMiddleware(Middleware):
     def process_request(self, request):
         # process each request
         if self.settings.get_var('CSRF/enable', False):
-            if request.method in ('POST', 'DELETE') or (request.method == 'GET' and request.GET.get(self.settings.CSRF.form_token_name)):
+            if request.method in ('POST', 'DELETE', 'PUT', 'PATCH') or (request.method == 'GET' and request.GET.get(self.settings.CSRF.form_token_name)):
                 functions.check_csrf_token()
 
     def process_response(self, request, response):

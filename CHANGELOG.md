@@ -29,6 +29,7 @@ Uliweb Change Log
 * Add `dispatcher_cls` and `dispatcher_kwargs` to `make_application` and 
   `make_simple_applicatin`, so you can pass difference Disptacher class 
   which provided by `uliweb/core/SimpleFrame.py`.
+* Add `PUT` and `PATCH` judgement to csrf middleware.
 
 0.1.5 Version
 -----------------
