@@ -13,6 +13,7 @@ Uliweb Change Log
   from `uliweb`
 * Replace class type judgement with `inspect.isclass()`
 * Fix `--version` command argument process bug.
+* Improve `import_mod_attr`, and make it can receive object parameter
 
 0.1.5 Version
 -----------------

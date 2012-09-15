@@ -2,6 +2,7 @@ import os, sys
 import re
 import logging
 import cPickle
+import inspect
 
 log = logging
 
@@ -19,9 +20,17 @@ def safe_import(path):
     return mod, g
         
 def import_mod_attr(path):
-    module, func = path.rsplit('.', 1)
-    mod = __import__(module, fromlist=['*'])
-    f = getattr(mod, func)
+    """
+    Import string format module, e.g. 'uliweb.orm' or an object
+    return module object and object
+    """
+    if isinstance(path, (str, unicode)):
+        module, func = path.rsplit('.', 1)
+        mod = __import__(module, fromlist=['*'])
+        f = getattr(mod, func)
+    else:
+        f = path
+        mod = inspect.getmodule(path)
     return mod, f
 
 def import_attr(func):
