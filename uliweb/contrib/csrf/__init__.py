@@ -14,6 +14,8 @@ def csrf_token():
         v = request.session[token_name]
         if time.time() >= v['created_time'] + v['expiry_time']:
             v = {}
+        else:
+            v['created_time'] = time.time()
     if not v:
         token = request.cookies.get(token_name)
         if not token:
