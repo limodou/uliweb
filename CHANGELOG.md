@@ -30,6 +30,7 @@ Uliweb Change Log
   `make_simple_applicatin`, so you can pass difference Disptacher class 
   which provided by `uliweb/core/SimpleFrame.py`.
 * Add `PUT` and `PATCH` judgement to csrf middleware.
+* Fix template.py for multiple times extending the same template file bug
 
 0.1.5 Version
 -----------------

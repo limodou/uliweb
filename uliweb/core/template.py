@@ -76,22 +76,37 @@ def reindent(text):
     text='\n'.join(new_lines)
     return text
 
-def get_templatefile(filename, dirs, default_template=None, skip=False):
+def get_templatefile(filename, dirs, default_template=None, skip=''):
     """
     Fetch the template filename according dirs
     :para skip: if the searched filename equals skip, then using the one before.
     """
+    def _file(filename, dirs):
+        for d in dirs:
+            _f = os.path.normcase(os.path.join(d, filename))
+            if os.path.exists(_f):
+                yield _f
+        raise StopIteration
+    
+    filename = os.path.normcase(filename)
+    skip = os.path.normcase(skip)
+    
     if os.path.exists(filename):
         return filename
-    if filename:
-        if dirs:
-            for d in dirs:
-                path = os.path.join(d, filename)
-                if os.path.exists(path):
-                    if path != skip:
-                        return path
-                    else:
-                        continue
+    
+    if filename and dirs:
+        _files = _file(filename, dirs)
+        if skip.endswith(filename):
+            for f in _files:
+                if f == skip:
+                    break
+                
+        for f in _files:
+            if f != skip:
+                return f
+            else:
+                continue
+            
     if default_template:
         if isinstance(default_template, (list, tuple)):
             for i in default_template:
