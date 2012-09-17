@@ -96,7 +96,11 @@ def get_templatefile(filename, dirs, default_template=None, skip=''):
     
     if filename and dirs:
         _files = _file(filename, dirs)
-        if skip.endswith(filename):
+        if filename[0] != os.path.sep:
+            fname = os.path.sep + filename
+        else:
+            fname = filename
+        if skip.endswith(fname):
             for f in _files:
                 if f == skip:
                     break
