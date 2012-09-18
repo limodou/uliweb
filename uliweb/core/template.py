@@ -76,7 +76,7 @@ def reindent(text):
     text='\n'.join(new_lines)
     return text
 
-def get_templatefile(filename, dirs, default_template=None, skip=''):
+def get_templatefile(filename, dirs, default_template=None, skip='', skip_original=''):
     """
     Fetch the template filename according dirs
     :para skip: if the searched filename equals skip, then using the one before.
@@ -90,17 +90,14 @@ def get_templatefile(filename, dirs, default_template=None, skip=''):
     
     filename = os.path.normcase(filename)
     skip = os.path.normcase(skip)
+    skip_original = os.path.normcase(skip_original)
     
     if os.path.exists(filename):
         return filename
     
     if filename and dirs:
         _files = _file(filename, dirs)
-        if filename[0] != os.path.sep:
-            fname = os.path.sep + filename
-        else:
-            fname = filename
-        if skip.endswith(fname):
+        if skip_original == filename:
             for f in _files:
                 if f == skip:
                     break
@@ -440,6 +437,7 @@ class Template(object):
         if not fname:
             raise TemplateException, "Can't find the template %s" % filename
         self.filename = fname
+        self.original_filename = filename
     
     def _get_parameters(self, value):
         def _f(*args, **kwargs):
@@ -585,7 +583,7 @@ class Template(object):
             args, kwargs = self._get_parameters(value)
             filename = args[0]
             self.env.update(kwargs)
-            fname = get_templatefile(filename, self.dirs, skip=self.filename)
+            fname = get_templatefile(filename, self.dirs, skip=self.filename, skip_original=self.original_filename)
             if not fname:
                 raise TemplateException, "Can't find the template %s" % filename
             
@@ -612,7 +610,7 @@ class Template(object):
             args, kwargs = self._get_parameters(value)
             filename = args[0]
             self.env.update(kwargs)
-            fname = get_templatefile(filename, self.dirs, skip=self.filename)
+            fname = get_templatefile(filename, self.dirs, skip=self.filename, skip_original=self.original_filename)
             if not fname:
                 raise TemplateException, "Can't find the template %s" % filename
             
