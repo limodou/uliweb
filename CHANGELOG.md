@@ -32,6 +32,7 @@ Uliweb Change Log
 * Add `PUT` and `PATCH` judgement to csrf middleware.
 * Fix template.py for multiple times extending the same template file bug
 * Expose `filename_convert()` function from upload app
+* Add `get_uuid()` function to utils/common.py
 
 0.1.5 Version
 -----------------

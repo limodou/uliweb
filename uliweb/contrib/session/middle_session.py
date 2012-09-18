@@ -1,5 +1,5 @@
 from uliweb import Middleware, settings
-from uliweb.utils.common import import_attr
+from uliweb.utils.common import import_attr, application_path
 from uliweb.core.SimpleFrame import RedirectException
 from weto.session import Session, SessionCookie
 
@@ -7,6 +7,7 @@ class SessionMiddle(Middleware):
     def __init__(self, application, settings):
         from datetime import timedelta
         self.options = dict(settings.get('SESSION_STORAGE', {}))
+        self.options['data_dir'] = application_path(self.options['data_dir'])
         
         #process Session options
         self.remember_me_timeout = settings.SESSION.remember_me_timeout

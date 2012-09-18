@@ -425,6 +425,22 @@ def camel_to_(s):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', s)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
     
+def application_path(path):
+    """
+    Join application project_dir and path
+    """
+    from uliweb import application
+    return os.path.join(application.project_dir, path)
+
+def get_uuid(type=4):
+    """
+    Get uuid value
+    """
+    import uuid
+    
+    name = 'uuid'+str(type)
+    u = getattr(uuid, name)
+    return u().hex
 
 #if __name__ == '__main__':
 #    log.info('Info: info')

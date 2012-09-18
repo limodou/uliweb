@@ -1,7 +1,7 @@
 import os
 from uliweb import settings, request, url_for
 from uliweb.utils import files
-from uliweb.utils.common import import_attr
+from uliweb.utils.common import import_attr, application_path
 import random
 import time
 
@@ -54,7 +54,11 @@ class FileServing(object):
     def __init__(self, default_filename_converter_cls=UUIDFilenameConverter):
         for k, v in self.options.items():
             item, default = v
-            setattr(self, k, settings.get_var(item, default))
+            if k == 'to_path':
+                value = application_path(settings.get_var(item, default))
+            else:
+                value = settings.get_var(item, default)
+            setattr(self, k, value)
             
         if self.x_sendfile and not self.x_header_name:
             if self.x_sendfile == 'nginx':
