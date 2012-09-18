@@ -2,6 +2,8 @@ import os
 from uliweb import settings, request, url_for
 from uliweb.utils import files
 from uliweb.utils.common import import_attr
+import random
+import time
 
 __all__ = ['save_file', 'get_filename', 'get_url', 'save_file_field', 'save_image_field', 
     'delete_filename', 'norm_filename']
@@ -34,7 +36,7 @@ class MD5FilenameConverter(object):
         _f, ext = os.path.splitext(filename)
         f = md5(
                     md5("%f%s%f%s" % (time.time(), id({}), random.random(),
-                                      getpid())).hexdigest(), 
+                                      os.getpid())).hexdigest(), 
                 ).hexdigest()
         
         return f + ext
@@ -66,8 +68,9 @@ class FileServing(object):
         else:
             self._filename_converter_cls = self._filename_converter or default_filename_converter_cls
         
-    def filename_convert(self, filename):
-        return self._filename_converter_cls.convert(filename)
+    def filename_convert(self, filename, convert_cls=None):
+        convert_cls = convert_cls or self._filename_converter_cls
+        return convert_cls.convert(filename)
         
     def get_filename(self, filename, filesystem=False, convert=False):
         """
@@ -201,6 +204,9 @@ def file_serving(filename):
     _filename = get_filename(filename, False, convert=False)
     x_filename = filename
     return get_backend().download(alt_filename, real_filename=_filename, x_filename=x_filename)
+
+def filename_convert(filename, convert_cls=None):
+    return get_backend().filename_convert(filename, convert_cls=convert_cls)
 
 def get_filename(filename, filesystem=False, convert=False):
     return get_backend().get_filename(filename, filesystem, convert=convert)

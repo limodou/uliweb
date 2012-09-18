@@ -31,6 +31,7 @@ Uliweb Change Log
   which provided by `uliweb/core/SimpleFrame.py`.
 * Add `PUT` and `PATCH` judgement to csrf middleware.
 * Fix template.py for multiple times extending the same template file bug
+* Expose `filename_convert()` function from upload app
 
 0.1.5 Version
 -----------------

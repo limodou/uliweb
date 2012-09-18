@@ -7,6 +7,7 @@ def csrf_token():
     Get csrf token or create new one
     """
     from uliweb import request, settings
+    from uliweb.utils.common import safe_str
     
     v = {}
     token_name = settings.CSRF.cookie_token_name
@@ -24,7 +25,7 @@ def csrf_token():
         v = {'token':token, 'expiry_time':settings.CSRF.timeout, 'created_time':time.time()}
 
     request.session[token_name] = v
-    return v['token']
+    return safe_str(v['token'])
 
 def check_csrf_token():
     """
