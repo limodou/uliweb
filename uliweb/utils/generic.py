@@ -10,6 +10,7 @@ from uliweb import redirect, json, functions, UliwebError, Storage
 from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
 from uliweb.contrib.upload import FileServing, FilenameConverter
+from uliweb.utils.common import safe_unicode, safe_str
 
 __default_fields_builds__ = {}
 class __default_value__(object):pass
@@ -328,7 +329,7 @@ def get_obj_url(obj):
 def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
     json_func = json_func or json
     
-    t = {'success':success, 'message':str(msg), 'data':d}
+    t = {'success':success, 'message':safe_str(msg), 'data':d}
     t.update(kwargs)
     return json_func(t)
     
@@ -1452,7 +1453,6 @@ class SimpleListView(object):
             return self.download_csv(filename, query, table, action, fields_convert_map, not_tempfile=bool(timeout))
        
     def get_data(self, query, table, fields_convert_map, encoding='utf-8', plain=True):
-        from uliweb.utils.common import safe_unicode
         from uliweb.orm import do_
 
         fields_convert_map = fields_convert_map or {}

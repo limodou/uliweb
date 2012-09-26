@@ -2426,8 +2426,8 @@ class Model(object):
             if hasattr(cls, collection_name):
                 #if the xxx_set is already existed, then automatically
                 #create unique collection_set id
-                collection_name = prefix + '_set_' + str(__collection_set_id__)
-                self.__class__.__collection_set_id__ += 1
+                collection_name = prefix + '_set_' + str(cls.__collection_set_id__)
+                cls.__collection_set_id__ += 1
         else:
             if hasattr(cls, collection_name):
                 raise DuplicatePropertyError("Model %s already has property %s" % (cls.__name__, collection_name))
