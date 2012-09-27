@@ -524,6 +524,8 @@ class BootstrapLayout(Layout):
         return str(buf)
 
     def process_layout(self, buf):
+        if self.form.form_title:
+            buf << '<fieldset><legend>%s</legend>' % self.form.form_title
         for line in self.layout:
             if isinstance(line, (tuple, list)):
                 with buf.Div(_class='line'):
@@ -541,3 +543,5 @@ class BootstrapLayout(Layout):
                     buf << f
                 else:
                     buf << self.line(obj, f.label, f, f.help_string, f.error)
+        if self.form.form_title:
+            buf << '</fieldset>'
