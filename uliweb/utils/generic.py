@@ -1140,6 +1140,7 @@ class DetailView(object):
         self.template_data = template_data or {}
         self.result_fields = Storage({})
         self.r = self.result_fields
+        self.f = Storage({})    #结果字段
         
     def run(self):
         view_text = self.render(self.obj)
@@ -1168,6 +1169,7 @@ class DetailView(object):
             if field:
                 view_text.append('<tr><th align="right" width=150>%s</th><td>%s</td></tr>' % (field["label"], field["display"]))
                 self.result_fields[field_name] = field
+                self.f[field_name] = field['display']
                 
         view_text.append('</table>')
         return view_text
@@ -1563,9 +1565,9 @@ class SimpleListView(object):
             real_filename=tfile.name)
         
     def json(self):
-        return self.run(head=False, body=True, json_body=True)
+        return self.run(head=False, body=True, json_result=True)
 
-    def run(self, head=True, body=True, json_body=False):
+    def run(self, head=True, body=True, json_result=False):
         #create table header
         table = self.table_info()
             
@@ -1574,7 +1576,7 @@ class SimpleListView(object):
         if head:
             result.update(self.render(table, head=head, body=body, query=query))
         else:
-            result.update(self.render(table, head=head, body=body, query=query, json_body=json_body))
+            result.update(self.render(table, head=head, body=body, query=query, json_body=json_result))
         return result
 
     def render(self, table, head=True, body=True, query=None, json_body=False):
@@ -1885,13 +1887,13 @@ class ListView(SimpleListView):
         #create table header
         self.table = self.table_info()
         
-    def run(self, head=True, body=True, json_body=False):
+    def run(self, head=True, body=True, json_result=False):
         query = self.query()
         result = self.template_data.copy()
         if head:
             result.update(self.render(self.table, query, head=head, body=body))
         else:
-            result.update(self.render(self.table, query, head=head, body=body, json_body=json_body))
+            result.update(self.render(self.table, query, head=head, body=body, json_body=json_result))
         return result
     
     def query(self):
@@ -1908,7 +1910,7 @@ class ListView(SimpleListView):
         return query
     
     def json(self):
-        return self.run(head=False, body=True, json_body=True)
+        return self.run(head=False, body=True, json_result=True)
 
     def get_field_display(self, record, field_name):
         if hasattr(self.model, field_name):

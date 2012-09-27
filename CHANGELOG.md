@@ -36,6 +36,8 @@ Uliweb Change Log
 * Fix `get_collection_name()` bug
 * Fix json bug, when dealing with `0x00-0x1f`
 * Add generic app, so user can use `functions.ListView`
+* Add fieldset support for BootstrapLayout
+* Change generic.py `json_body` to `json_result`, add `.f` attributes to DetailView object
 
 0.1.5 Version
 -----------------
