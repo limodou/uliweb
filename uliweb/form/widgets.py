@@ -39,6 +39,7 @@ class Text(Build):
         return str(Tag(self.tag, '', **args))
 
 class Password(Text): type = 'password'
+class Number(Text): type = 'number'
 class TextArea(Build):
     def __init__(self, value='', **kwargs):
         self.value = value

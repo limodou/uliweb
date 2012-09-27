@@ -38,6 +38,7 @@ Uliweb Change Log
 * Add generic app, so user can use `functions.ListView`
 * Add fieldset support for BootstrapLayout
 * Change generic.py `json_body` to `json_result`, add `.f` attributes to DetailView object
+* Change IntField build class to Number, so the html code will be `<input type="number"/>`
 
 0.1.5 Version
 -----------------
