@@ -526,7 +526,7 @@ class _BaseDatetimeField(StringField):
     
     def to_html(self, data):
         if data:
-            return date.to_string(data)
+            return date.to_string(data, timezone=False)
         else:
             return ''
     
