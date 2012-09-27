@@ -12,6 +12,8 @@ ESCAPE_DCT = {
     '\r': '\\r',
     '\t': '\\t',
 }
+for i in range(0x20):
+    ESCAPE_DCT.setdefault(chr(i), '\\u{0:04x}'.format(i))
 
 def encode_basestring(s):
     """Return a JSON representation of a Python string

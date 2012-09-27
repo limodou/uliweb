@@ -34,6 +34,7 @@ Uliweb Change Log
 * Expose `filename_convert()` function from upload app
 * Add `get_uuid()` function to utils/common.py
 * Fix `get_collection_name()` bug
+* Fix json bug, when dealing with `0x00-0x1f`
 
 0.1.5 Version
 -----------------
