@@ -41,6 +41,7 @@ Uliweb Change Log
 * Change IntField build class to Number, so the html code will be `<input type="number"/>`
 * Change DateTimeField html creation with UTC to no UTC.
 * Fix GET and POST bind to same url but with different method will be replaced bug
+* Fix `u"""` and `u'''` buf in pyini process
 
 0.1.5 Version
 -----------------

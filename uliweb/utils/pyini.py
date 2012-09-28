@@ -311,7 +311,10 @@ class Ini(SortedDict):
                             raise Exception, "Parsing ini file error in line(%d): %s" % (lineno, line)
                         try:
                             
-                            if ((value.startswith("u'") and value.endswith("'")) or
+                            if ((value.startswith("u'''") and value.endswith("'''")) or
+                                (value.startswith('u"""') and value.endswith('"""'))):
+                                v = unicode(value[4:-3], self._encoding)
+                            elif ((value.startswith("u'") and value.endswith("'")) or
                                 (value.startswith('u"') and value.endswith('"'))):
                                 v = unicode(value[2:-1], self._encoding)
                             else:

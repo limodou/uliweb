@@ -201,3 +201,20 @@ def test_uni_print():
     >>> uni_prt(a)
     '(1, 2)'
     """
+
+def test_triple_string():
+    """
+    >>> from StringIO import StringIO
+    >>> buf = StringIO(\"\"\"
+    ... [DEFAULT]
+    ... a = u'''hello
+    ... uliweb
+    ... '''
+    ... \"\"\")
+    >>> x = Ini()
+    >>> x.read(buf)
+    >>> print x.DEFAULT.a
+    hello
+    uliweb
+    <BLANKLINE>
+    """
