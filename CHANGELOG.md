@@ -40,6 +40,7 @@ Uliweb Change Log
 * Change generic.py `json_body` to `json_result`, add `.f` attributes to DetailView object
 * Change IntField build class to Number, so the html code will be `<input type="number"/>`
 * Change DateTimeField html creation with UTC to no UTC.
+* Fix GET and POST bind to same url but with different method will be replaced bug
 
 0.1.5 Version
 -----------------

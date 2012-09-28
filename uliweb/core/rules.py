@@ -29,12 +29,14 @@ def merge_rules():
     for v in __exposes__.itervalues():
         for x in v:
             appname, endpoint, url, kw = x
-            i = index.get(url, None)
+            methods = [y.upper() for y in kw.get('methods', [])]
+            methods.sort()
+            i = index.get((url, tuple(methods)), None)
             if i is not None:
                 s[i] = x
             else:
                 s.append(x)
-                index[url] = len(s)-1
+                index[(url, tuple(methods))] = len(s)-1
     return __no_need_exposed__ + s
 
 def clear_rules():
