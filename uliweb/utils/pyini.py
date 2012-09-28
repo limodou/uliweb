@@ -310,15 +310,8 @@ class Ini(SortedDict):
                             traceback.print_exc()
                             raise Exception, "Parsing ini file error in line(%d): %s" % (lineno, line)
                         try:
-                            
-                            if ((value.startswith("u'''") and value.endswith("'''")) or
-                                (value.startswith('u"""') and value.endswith('"""'))):
-                                v = unicode(value[4:-3], self._encoding)
-                            elif ((value.startswith("u'") and value.endswith("'")) or
-                                (value.startswith('u"') and value.endswith('"'))):
-                                v = unicode(value[2:-1], self._encoding)
-                            else:
-                                v = eval(value, self._env, section)
+                            txt = '#coding=%s\n%s' % (self._encoding, value)
+                            v = eval(txt, self._env, section)
                         except Exception, e:
                             raise Exception, "Converting value (%s) error in line %d:%s" % (value, lineno, line)
                     section.add(keyname, v, comments, replace=replace_flag)

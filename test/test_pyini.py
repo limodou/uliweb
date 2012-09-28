@@ -1,3 +1,4 @@
+#coding=utf8
 from uliweb.utils.pyini import *
 
 def test_sorteddict():
@@ -206,15 +207,14 @@ def test_triple_string():
     """
     >>> from StringIO import StringIO
     >>> buf = StringIO(\"\"\"
+    ... #coding=utf8
     ... [DEFAULT]
     ... a = u'''hello
-    ... uliweb
+    ... 中文
     ... '''
     ... \"\"\")
     >>> x = Ini()
     >>> x.read(buf)
-    >>> print x.DEFAULT.a
-    hello
-    uliweb
-    <BLANKLINE>
+    >>> print repr(x.DEFAULT.a)
+    u'hello\\n\\u4e2d\\u6587\\n'
     """
