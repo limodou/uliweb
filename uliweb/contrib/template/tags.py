@@ -69,21 +69,48 @@ class UseNode(LinkNode):
     def use(vars, env, plugin, *args, **kwargs):
         from uliweb.core.SimpleFrame import get_app_dir
         from uliweb import application as app, settings
+        from uliweb.utils.common import is_pyfile_exist
 
         if plugin in UseNode.__saved_template_plugins_modules__:
             mod = UseNode.__saved_template_plugins_modules__[plugin]
         else:
-            from uliweb.utils.common import is_pyfile_exist
+            #add settings support, only support simple situation
+            #so for complex cases you should still write module
+            #format just like:
+            #
+            #[TEMPLATE_USE]
+            #name = {
+            #   'toplinks':[
+            #       'myapp/jquery.myapp.{version}.min.js',
+            #   ], 
+            #   'depends':[xxxx], 
+            #   'config':{'version':'UI_CONFIG/test'},
+            #   'default':{'version':'1.2.0'},
+            #}
+            #
             mod = None
-            for p in app.apps:
-                if not is_pyfile_exist(os.path.join(get_app_dir(p), 'template_plugins'), plugin):
-                    continue
-                module = '.'.join([p, 'template_plugins', plugin])
-                try:
-                    mod = __import__(module, {}, {}, [''])
-                except ImportError, e:
-                    log.exception(e)
-                    mod = None
+            c = settings.get_var('TEMPLATE_USE/'+plugin)
+            if c:
+                config = c.pop('config', {})
+                default = c.pop('default', {})
+                #evaluate config value
+                config = dict([(k, settings.get_var(v, default.get(k, ''))) for k, v in config.items()])
+                #merge passed arguments
+                config.update(kwargs)
+                for t in ['toplinks', 'bottomlinks']:
+                    if t in c:
+                        c[t] = [x.format(**config) for x in c[t]]
+                mod = c
+            else:
+                for p in app.apps:
+                    if not is_pyfile_exist(os.path.join(get_app_dir(p), 'template_plugins'), plugin):
+                        continue
+                    module = '.'.join([p, 'template_plugins', plugin])
+                    try:
+                        mod = __import__(module, {}, {}, [''])
+                    except ImportError, e:
+                        log.exception(e)
+                        mod = None
             if mod:
                 UseNode.__saved_template_plugins_modules__[plugin] = mod
             else:
@@ -91,30 +118,35 @@ class UseNode(LinkNode):
                 if settings.get_var('TEMPLATE/RAISE_USE_EXCEPTION'):
                     raise UseModuleNotFound("Can't find the %s template plugin, check if you've installed special app already" % plugin)
                 
-        call = getattr(mod, 'call', None)
-        if call:
-            v = call(app, vars, env, *args, **kwargs)
-            if v:
-                if 'depends' in v:
-                    for _t in v['depends']:
-                        if isinstance(_t, str):
-                            UseNode.use(vars, env, _t)
-                        else:
-                            d, kw = _t
-                            UseNode.use(vars, env, d, **kw)
-                for _type in ['toplinks', 'bottomlinks']:
-                    if _type in v:
-                        links = v[_type]
-                        if not isinstance(links, (tuple, list)):
-                            links = [links]
-                        env['__links__'][_type].extend(links)
-                if 'depends_after' in v:
-                    for _t in v['depends_after']:
-                        if isinstance(_t, str):
-                            UseNode.use(vars, env, _t)
-                        else:
-                            d, kw = _t
-                            UseNode.use(vars, env, d, **kw)
+        #mod maybe an dict
+        if isinstance(mod, dict):
+            v = mod
+        else:
+            v = None
+            call = getattr(mod, 'call', None)
+            if call:
+                v = call(app, vars, env, *args, **kwargs)
+        if v:
+            if 'depends' in v:
+                for _t in v['depends']:
+                    if isinstance(_t, str):
+                        UseNode.use(vars, env, _t)
+                    else:
+                        d, kw = _t
+                        UseNode.use(vars, env, d, **kw)
+            for _type in ['toplinks', 'bottomlinks']:
+                if _type in v:
+                    links = v[_type]
+                    if not isinstance(links, (tuple, list)):
+                        links = [links]
+                    env['__links__'][_type].extend(links)
+            if 'depends_after' in v:
+                for _t in v['depends_after']:
+                    if isinstance(_t, str):
+                        UseNode.use(vars, env, _t)
+                    else:
+                        d, kw = _t
+                        UseNode.use(vars, env, d, **kw)
                 
     
 class HtmlMerge(object):

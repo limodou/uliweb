@@ -3,7 +3,7 @@ from uliweb.i18n import ugettext as _
 
 class RegisterForm(Form):
     form_buttons = Submit(value=_('Register'), _class="btn btn-primary")
-    form_title = _('Register')
+#    form_title = _('Register')
     
     username = StringField(label=_('Username'), required=True)
     password = PasswordField(label=_('Password'), required=True)
@@ -25,7 +25,7 @@ class RegisterForm(Form):
     
 class LoginForm(Form):
     form_buttons = Submit(value=_('Login'), _class="btn btn-primary")
-    form_title = _('Login')
+#    form_title = _('Login')
     
     username = UnicodeField(label=_('Username'), required=True)
     password = PasswordField(label=_('Password'), required=True)
@@ -45,7 +45,7 @@ class LoginForm(Form):
             
 class ChangePasswordForm(Form):
     form_buttons = Submit(value=_('Save'), _class="btn btn-primary")
-    form_title = _('Change Password')
+#    form_title = _('Change Password')
     
     oldpassword = PasswordField(label=_('Old Password'), required=True)
     password = PasswordField(label=_('Password'), required=True)

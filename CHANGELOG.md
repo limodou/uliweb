@@ -43,6 +43,7 @@ Uliweb Change Log
 * Fix GET and POST bind to same url but with different method will be replaced bug
 * Fix `u"""` and `u'''` buf in pyini process
 * Skip empty templates directories when startup
+* Add use configurable process
 
 0.1.5 Version
 -----------------
