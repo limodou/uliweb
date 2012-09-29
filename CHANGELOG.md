@@ -42,6 +42,7 @@ Uliweb Change Log
 * Change DateTimeField html creation with UTC to no UTC.
 * Fix GET and POST bind to same url but with different method will be replaced bug
 * Fix `u"""` and `u'''` buf in pyini process
+* Skip empty templates directories when startup
 
 0.1.5 Version
 -----------------
