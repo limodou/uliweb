@@ -157,8 +157,8 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
             ext = os.path.splitext(fpath)[1]
             if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
                 continue
+            df = os.path.join(dst, r)
             if check:
-                df = os.path.join(dst, r)
                 if os.path.exists(df):
                     a = _md5(fpath)
                     b = _md5(df)
@@ -167,7 +167,7 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
                             "it not same as source one %s, so copy failed" % (fpath, dst))
                 else:
                     if processor:
-                        if processor(fpath, dst):
+                        if processor(fpath, dst, df):
                             continue
                     shutil.copy2(fpath, dst)
                     if verbose:
@@ -175,7 +175,7 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
                     
             else:
                 if processor:
-                    if processor(fpath, dst):
+                    if processor(fpath, dst, df):
                         continue
                 shutil.copy2(fpath, dst)
                 if verbose:

@@ -1,0 +1,150 @@
+#uliweb-template-tag:[[,]]
+{{extend "[[=appname]]_layout.html"}}
+
+{{block content_main}}
+{{use "angularjs"}}
+{{use "jquery"}}
+{{use "jqutils", ajaxForm=True}}
+{{use "fontawesome"}}
+{{use "bootheme"}}
+{{include "inc_jquery_dialog2.html"}}
+{{include "inc_paginate.html"}}
+{{include "inc_show_flashes.html"}}
+
+<div class="row-fluid" ng-app="AdminApp" id="ng-app" ng-controller="adminCtrl">
+    <div class="line">
+        <button class="btn btn-primary" type="button" ng-click="add()"><i class="icon-plus"></i>{{=_('Add')}}</button>
+    </div>
+    <div class="line">
+        <table class="table table-bordered table-header">
+            <colgroup>
+                {{for f in fields:}}
+                    {{if f.get('hidden', False):}}
+                        {{continue}}
+                    {{pass}}
+                    {{w = f.get('width', -1)}}
+                    {{if w > -1:}}
+                        <col width="{{=w}}px"></col>
+                    {{else:}}
+                        <col width="*"></col>
+                    {{pass}}
+                {{pass}}
+                <col width="60px"></col>
+            </colgroup>
+            <thead>
+                <tr>
+                    {{for f in fields:}}
+                        {{if f.get('hidden', False):}}
+                            {{continue}}
+                        {{pass}}
+                        <th>{{=f.get('verbose_name') or f['name']}}</th>
+                    {{pass}}
+                    <th>{{=_('Action')}}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="obj in objects">
+                    {{for f in fields:}}
+                        {{if f.get('hidden', False):}}
+                            {{continue}}
+                        {{pass}}
+                        <td>{% obj.{{ =f['name'] }} %}</td>
+                    {{pass}}
+                    <td>
+                        <a href="#" ng-click="edit(obj.id)"><i class="icon-edit" title="{{=_('Edit')}}"></i></a> 
+                        <a href="#" ng-click="remove(obj.id)"><i class="icon-remove" title="{{=_('Remove')}}"></i></a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+var app = angular.module('AdminApp', []).config(function ($interpolateProvider) {
+    $interpolateProvider.startSymbol('{%');
+    $interpolateProvider.endSymbol('%}');
+}); 
+function adminCtrl($scope, $http) {
+    $.get('[[=url]]/query')
+        .success(function(data, status, headers, config){
+            $scope.objects = data.rows;
+            $scope.$apply();
+        });
+    $scope.find_object = function(id){
+        if (!$scope.objects) return -1;
+        for(var i=0; i<$scope.objects.length; i++){
+            if ($scope.objects[i].id == id){
+                return i;
+            }
+        }
+        return -1;
+    }
+    $scope.get_object = function(id){
+        if (id)
+            return $scope.objects[$scope.find_object(id)];
+        else
+            return {}
+    }
+    $scope.add = function(){
+        var dialog = $('<div id="add_object"></div>').dialog2(
+            {
+                autoFocus:false, 
+                url:'[[=url]]/add',
+                ajaxFormOptions: {
+                    onSuccess: common_ajaxForm_success({
+                        success:function(data){
+                            $(this).dialog2('close');
+                            $scope.objects.push(data.data);
+                            $scope.$apply();
+                        }
+                    }),
+                    dataType: 'json'
+                }
+            }); 
+        dialog.bind('dialog2.content-update', function(e){
+            //add what you want to do after the content update from server
+        });
+    }
+    $scope.edit = function(id){
+        var dialog = $('<div id="edit_object"></div>').dialog2(
+            {
+                autoFocus:false, 
+                url:'[[=url]]/edit/'+id,
+                ajaxFormOptions: {
+                    onSuccess: common_ajaxForm_success({
+                        success:function(data){
+                            $(this).dialog2('close');
+                            var index = $scope.find_object(id);
+                            if (index > -1){
+                                $scope.objects[index] = data.data;
+                                $scope.$apply();
+                                return;
+                            }
+                        }
+                    }),
+                    dataType: 'json'
+                }
+            }); 
+        dialog.bind('dialog2.content-update', function(e){
+            //add what you want to do after the content update from server
+        });
+    }
+    $scope.remove = function(id){
+        $.post('[[=url]]/delete/'+id).success(function(data){
+            if(data.success){
+                var index = $scope.find_object(id);
+                if (index > -1){
+                    $scope.objects.splice(index, 1);
+                    $scope.$apply();
+                }
+            }else{
+                show_message(data.message, 'error');
+            }
+        });
+    }
+}
+$(document).ajaxError(function(e, jqxhr, settings, exception){
+    show_message("{{=_('Request process failed!')}}", 'error');
+});
+</script>
+{{end}}

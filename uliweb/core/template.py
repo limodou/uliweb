@@ -66,11 +66,11 @@ def reindent(text):
         if line=='pass' or line[:5]=='pass ':
             credit=0
             k-=1
-        if line=='return' or line[:7]=='return ' or \
-            line=='continue' or line[:9]=='continue ' or \
-            line=='break' or line[:6]=='break':
-            credit=1
-            k-=1
+#        if line=='return' or line[:7]=='return ' or \
+#            line=='continue' or line[:9]=='continue ' or \
+#            line=='break' or line[:6]=='break':
+#            credit=1
+#            k-=1
         if line[-1:]==':' or line[:3]=='if ':
             k+=1
     text='\n'.join(new_lines)

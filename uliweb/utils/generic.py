@@ -575,7 +575,7 @@ class AddView(object):
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None, file_replace=True, template_data=None, 
-        success_data=None, meta='AddForm', get_form_field=None, post_fail=None,
+        success_data=None, fail_data=None, meta='AddForm', get_form_field=None, post_fail=None,
         types_convert_map=None, fields_convert_map=None, json_func=None,
         file_convert=True):
 
@@ -606,6 +606,7 @@ class AddView(object):
         self.post_fail = post_fail
         self.file_replace = file_replace
         self.success_data = success_data
+        self.fail_data = fail_data
         self.types_convert_map = types_convert_map or {}
         self.fields_convert_map = fields_convert_map or {}
         self.json_func = json_func or json
@@ -699,6 +700,12 @@ class AddView(object):
         else:
             return None
     
+    def on_fail_data(self, obj, errors, data):
+        if callable(self.fail_data):
+            return self.fail_data(obj, errors, data)
+        else:
+            return errors
+
     def on_success(self, d, json_result=False):
         from uliweb import response
 
@@ -728,7 +735,7 @@ class AddView(object):
         log = logging.getLogger('uliweb.app')
         log.debug(self.form.errors)
         if json_result:
-            return to_json_result(False, self.fail_msg, self.form.errors, json_func=self.json_func)
+            return to_json_result(False, self.fail_msg, self.on_fail_data(None, self.form.errors, d), json_func=self.json_func)
         else:
             if self.use_flash:
                 functions.flash(self.fail_msg, 'error')
@@ -868,7 +875,7 @@ class EditView(AddView):
         log = logging.getLogger('uliweb.app')
         log.debug(self.form.errors)
         if json_result:
-            return to_json_result(False, self.fail_msg, self.form.errors, json_func=self.json_func)
+            return to_json_result(False, self.fail_msg, self.on_fail_data(self.obj, self.form.errors, d), json_func=self.json_func)
         else:
             if self.use_flash:
                 functions.flash(self.fail_msg, 'error')
@@ -1179,7 +1186,8 @@ class DeleteView(object):
 
     def __init__(self, model, ok_url='', fail_url='', condition=None, obj=None, 
         pre_delete=None, post_delete=None, validator=None, json_func=None, 
-        use_flash=True, use_delete_fieldname=None):
+        use_flash=True, use_delete_fieldname=None, success_data=None,
+        fail_data=None):
         self.model = get_model(model)
         self.condition = condition
         self.obj = obj
@@ -1196,13 +1204,15 @@ class DeleteView(object):
         self.post_delete = post_delete
         self.use_flash = use_flash
         self.use_delete_fieldname = use_delete_fieldname
+        self.success_data = success_data
+        self.fail_data = fail_data
         
     def run(self, json_result=False):
         if self.validator:
             msg = self.validator(self.obj)
             if msg:
                 if json_result:
-                    return to_json_result(False, msg, json_func=self.json_func)
+                    return to_json_result(False, msg, self.on_fail_data(self.obj, {}, {}), json_func=self.json_func)
                 else:
                     if self.use_flash:
                         functions.flash(msg, 'error')
@@ -1215,12 +1225,24 @@ class DeleteView(object):
             self.post_delete()
         
         if json_result:
-            return to_json_result(True, self.success_msg, json_func=self.json_func)
+            return to_json_result(True, self.success_msg, self.on_success_data(None, {}), json_func=self.json_func)
         else:
             if self.use_flash:
                 functions.flash(self.success_msg)
             return redirect(self.ok_url)
     
+    def on_success_data(self, obj, data):
+        if callable(self.success_data):
+            return self.success_data(obj, data)
+        else:
+            return None
+
+    def on_fail_data(self, obj, errors, data):
+        if callable(self.fail_data):
+            return self.fail_data(obj, errors, data)
+        else:
+            return errors
+
     def delete(self, obj):
         if obj:
             self.delete_manytomany(obj)

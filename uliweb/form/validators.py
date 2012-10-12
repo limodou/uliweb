@@ -1,4 +1,5 @@
 from uliweb.i18n import gettext_lazy as _
+import re
 
 def __get_choices_keys(choices):
     if callable(choices):
@@ -68,6 +69,16 @@ def IS_LENGTH_LESSTHAN(length):
             return _('The length of data should be less than %d.' % length)
     return f
     
+def IS_LENGTH_GREATTHAN(length):
+    """
+    Validate the length of value should be less than specified range, not include the
+    length.
+    """
+    def f(data, length=length):
+        if not (len(data) > length):
+            return _('The length of data should be great than %d.' % length)
+    return f
+
 def IS_LENGTH_BETWEEN(min, max):
     """
     Validate the length of value should be between in specified range, not include
@@ -77,3 +88,19 @@ def IS_LENGTH_BETWEEN(min, max):
         if not (min < len(data) < max):
             return _('The length of data should be bwtween in (%s, %s).' % (min, max))
     return f
+
+r_url = re.compile(
+        r'^(?:http|ftp)s?://' # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' #domain...
+        r'localhost|' #localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
+        r'(?::\d+)?' # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
+def IS_URL(data):
+    """
+    Validate if the data is a valid url
+    """
+    b = r_url.match(data)
+    if not b:
+        return _('The input value is not a valid url')

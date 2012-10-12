@@ -44,6 +44,9 @@ Uliweb Change Log
 * Fix `u"""` and `u'''` buf in pyini process
 * Skip empty templates directories when startup
 * Add use configurable process
+* Add `df` parameter to common.copy_dir processor callback function
+* Remove return, continue, break unindent process, so only pass will unindent used
+* Add `generic` command
 
 0.1.5 Version
 -----------------

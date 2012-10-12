@@ -305,7 +305,7 @@ class ExportStaticCommand(Command):
         self.global_options = global_options
         copy_dir_with_check(dirs, outputdir, False, options.check, processor=self.process_file)
         
-    def process_file(self, sfile, dpath):
+    def process_file(self, sfile, dpath, dfile):
         from rjsmin.rjsmin import jsmin
         from rcssmin.rcssmin import cssmin
         
@@ -313,13 +313,11 @@ class ExportStaticCommand(Command):
         css_compressor = None
         
         if sfile.endswith('.js') and ('.min.' not in sfile and '.pack.' not in sfile) and (self.options.js or self.options.auto):
-            dfile = os.path.join(dpath, os.path.basename(sfile))
             open(dfile, 'w').write(jsmin(open(sfile).read()))
             if self.global_options.verbose:
                 print 'Compress %s to %s' % (sfile, dfile)
             return True
         if sfile.endswith('.css') and ('.min.' not in sfile and '.pack.' not in sfile) and (self.options.css or self.options.auto):
-            dfile = os.path.join(dpath, os.path.basename(sfile))
             open(dfile, 'w').write(cssmin(open(sfile).read()))
             if self.global_options.verbose:
                 print 'Compress %s to %s' % (sfile, dfile)
@@ -441,7 +439,8 @@ class MakeCmdCommand(Command):
     name = 'makecmd'
     help = 'Created a commands.py to the apps or current directory.'
     args = '[appname, appname, ...]'
-    check_apps = True
+    check_apps = False
+    check_apps_dirs = False
     
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import extract_dirs
