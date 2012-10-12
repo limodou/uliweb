@@ -48,7 +48,7 @@
                         {{if f.get('hidden', False):}}
                             {{continue}}
                         {{pass}}
-                        <td>{% obj.{{ =f['name'] }} %}</td>
+                        <td><div ng-bind-html-unsafe="obj.{{ =f['name'] }}"></div></td>
                     {{pass}}
                     <td>
                         <a href="#" ng-click="edit(obj.id)"><i class="icon-edit" title="{{=_('Edit')}}"></i></a> 
