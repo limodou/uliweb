@@ -47,6 +47,8 @@ Uliweb Change Log
 * Add `df` parameter to common.copy_dir processor callback function
 * Remove return, continue, break unindent process, so only pass will unindent used
 * Add `generic` command
+* Add body property to DetailView class. So you can use view_obj.body to get the 
+  detail body without `<table></table>`
 
 0.1.5 Version
 -----------------

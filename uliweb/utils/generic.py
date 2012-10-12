@@ -11,6 +11,7 @@ from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
 from uliweb.contrib.upload import FileServing, FilenameConverter
 from uliweb.utils.common import safe_unicode, safe_str
+from werkzeug.utils import cached_property
 
 __default_fields_builds__ = {}
 class __default_value__(object):pass
@@ -1150,36 +1151,41 @@ class DetailView(object):
         self.f = Storage({})    #结果字段
         
     def run(self):
-        view_text = self.render(self.obj)
+        text = self.render()
         result = self.template_data.copy()
-        result.update({'object':self.obj, 'view':''.join(view_text), 'view_obj':self})
+        result.update({'object':self.obj, 'view':text, 'view_obj':self})
         return result
     
     def query(self):
         return self.model.get(self.condition)
     
-    def render(self, obj):
+    def render(self):
         if self.layout:
             fields = dict(get_fields(self.model, self.fields, self.meta))
             def get_field(name):
                 prop = fields[name]
-                return make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
+                return make_view_field(prop, self.obj, self.types_convert_map, self.fields_convert_map)
             
             return str(self.layout_class(self.layout, get_field, self.model))
         else:
-            return self._render(obj)
+            return self._render()
         
-    def _render(self, obj):
-        view_text = ['<table class="%s">' % self.table_class_attr]
+    def _render(self):
+        text = ['<table class="%s">' % self.table_class_attr]
+        text.append(self.body)                
+        text.append('</table>')
+        return '\n'.join(text)
+
+    @cached_property
+    def body(self):
+        text = []
         for field_name, prop in get_fields(self.model, self.fields, self.meta):
-            field = make_view_field(prop, obj, self.types_convert_map, self.fields_convert_map)
+            field = make_view_field(prop, self.obj, self.types_convert_map, self.fields_convert_map)
             if field:
-                view_text.append('<tr><th align="right" width=150>%s</th><td>%s</td></tr>' % (field["label"], field["display"]))
+                text.append('<tr><th align="right" width=150>%s</th><td>%s</td></tr>' % (field["label"], field["display"]))
                 self.result_fields[field_name] = field
                 self.f[field_name] = field['display']
-                
-        view_text.append('</table>')
-        return view_text
+        return '\n'.join(text)
 
 class DeleteView(object):
     success_msg = _('The object has been deleted successfully!')
