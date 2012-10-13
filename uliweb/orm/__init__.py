@@ -1452,9 +1452,9 @@ class Result(object):
             if _f:
                 _f(self)
         if self.condition is not None:
-            query = select(self.get_columns(), self.condition)
+            query = select(self.get_columns(), self.condition, **self.kwargs)
         else:
-            query = select(self.get_columns())
+            query = select(self.get_columns(), **self.kwargs)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         if self._group_by:
@@ -1467,6 +1467,10 @@ class Result(object):
         else:
             return self.model.create_obj(values.items())
         
+    def for_update(self):
+        self.kwargs['for_update'] = True
+        return self
+    
     def one(self):
         self.run(1)
         if not self.result:
@@ -1569,6 +1573,7 @@ class ManyResult(Result):
         self.distinct_field = None
         self._values_flag = False
         self.connection = self.modela.get_connection()
+        self.kwargs = {}
         
     def get(self, condition=None):
         if not isinstance(condition, ColumnElement):
@@ -1702,7 +1707,12 @@ class ManyResult(Result):
             columns = list(self.table.c) + self.columns
         else:
             columns = self.columns
-        query = select(self.get_columns(self.modelb, columns), (self.table.c[self.fielda] == self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition)
+        query = select(
+            self.get_columns(self.modelb, columns), 
+            (self.table.c[self.fielda] == self.valuea) & 
+            (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & 
+            self.condition,
+            **self.kwargs)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         if self._group_by:
@@ -2596,7 +2606,7 @@ class Model(object):
             cls._c_lock.release()
             
     @classmethod
-    def get(cls, condition=None, connection=None):
+    def get(cls, condition=None, connection=None, **kwargs):
         if condition is None:
             return None
         if isinstance(condition, (int, long)):
@@ -2608,7 +2618,7 @@ class Model(object):
         if obj:
             return obj
         #if there is no cached object, then just fetch from database
-        obj = cls.connect(connection).filter(_cond).one()
+        obj = cls.connect(connection).filter(_cond, **kwargs).one()
         #send 'set_object' topic to stored the object to cache
         if obj:
             dispatch.call(cls, 'set_object', condition=_cond, instance=obj, signal=cls.tablename)
@@ -2633,8 +2643,8 @@ class Model(object):
         return d
     
     @classmethod
-    def all(cls):
-        return Result(cls)
+    def all(cls, **kwargs):
+        return Result(cls, **kwargs)
         
     @classmethod
     def filter(cls, condition=None, **kwargs):

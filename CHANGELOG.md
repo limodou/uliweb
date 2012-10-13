@@ -49,6 +49,11 @@ Uliweb Change Log
 * Add `generic` command
 * Add `Builder` class to generic.py, then refactor `DetailView` , so you can use
   `{{<< view.body}}` to get the body result but not the whole paragraph.
+* Add `kwargs` to ORM get, filter, and also add `for_update` method to Result, so
+  you can do select with for update lock, for example:
+
+    Model.get(Model.c.id==id, for_update=True)
+    Model.filter(condition).for_update().filter(condition)
 
 0.1.5 Version
 -----------------

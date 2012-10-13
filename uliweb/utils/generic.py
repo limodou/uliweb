@@ -12,51 +12,10 @@ from sqlalchemy.sql import Select
 from uliweb.contrib.upload import FileServing, FilenameConverter
 from uliweb.utils.common import safe_unicode, safe_str
 from werkzeug.utils import cached_property
-from uliweb.core.html import Buf
+from uliweb.core.html import Builder
 
 __default_fields_builds__ = {}
 class __default_value__(object):pass
-
-class Builder(object):
-    """
-    Builder can be used to create multiple parts of code, such as
-    
-    b = Builder('begin', 'body', 'end')
-    
-    Then you can put something to each part:
-        
-    b.begin << '<table>'
-    b.body << '<tbody></tbody>'
-    b.end << '</table>'
-    
-    Then you can output the result:
-        
-    print b.text
-    print b.body
-    """
-    def __init__(self, *parts):
-        self.parts = parts or ['body']
-        self.data = {}
-    
-    def __getattr__(self, key):
-        if not key in self.parts:
-            raise KeyError("Can't find the key %s" % key)
-        return self.data.setdefault(key, Buf())
-
-    @property
-    def text(self):
-        txt = []
-        for x in self.parts:
-            v = self.data.get(x, '')
-            txt.append(str(v))
-        return ''.join(txt)
-    
-    def __str__(self):
-        return safe_str(self.text)
-        
-    def __unicode__(self):
-        return safe_unicode(self.text)
-    
 
 def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
     if not __default_fields_builds__:
