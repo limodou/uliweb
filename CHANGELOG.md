@@ -70,6 +70,7 @@ Uliweb Change Log
     des = functions.get_cipher()
     d = des.encrypt('hello')
     des.descrypt(d)
+* Remove pagecache app
 
 0.1.5 Version
 -----------------
