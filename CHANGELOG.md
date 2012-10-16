@@ -40,12 +40,12 @@ Uliweb Change Log
 * Change generic.py `json_body` to `json_result`, add `.f` attributes to DetailView object
 * Change IntField build class to Number, so the html code will be `<input type="number"/>`
 * Change DateTimeField html creation with UTC to no UTC.
-* Fix GET and POST bind to same url but with different method will be replaced bug
-* Fix `u"""` and `u'''` buf in pyini process
+* Fix `GET` and `POST` bind to same url but with different method will be replaced bug
+* Fix `u"""` and `u'''` bug in pyini process
 * Skip empty templates directories when startup
-* Add use configurable process
+* Module of template_plugins can be configured in settings.ini
 * Add `df` parameter to common.copy_dir processor callback function
-* Remove return, continue, break unindent process, so only pass will unindent used
+* Remove `return`, `continue`, `break` unindent process, so only `pass` will unindent used
 * Add `generic` command
 * Add `Builder` class to html.py, then refactor `generic.DetailView` , so you can use
   `{{<< view.body}}` to get the body result but not the whole paragraph.
@@ -60,6 +60,16 @@ Uliweb Change Log
   and SimpleListView will parse them automatically
 * `Result.for_update` can receive an argument, default it `True`, and string also
   can be accpeted, please see the sqlalchemy doc http://docs.sqlalchemy.org/en/latest/core/expression_api.html for details.
+* Add secretkey app, when you installed this app, you can execute cmd:
+
+    uliweb makekey
+    
+  to create a secretkey file, which will be locate in current directory by default. Then:
+
+    from uliweb import functions
+    des = functions.get_cipher()
+    d = des.encrypt('hello')
+    des.descrypt(d)
 
 0.1.5 Version
 -----------------
