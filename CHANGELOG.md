@@ -47,7 +47,7 @@ Uliweb Change Log
 * Add `df` parameter to common.copy_dir processor callback function
 * Remove return, continue, break unindent process, so only pass will unindent used
 * Add `generic` command
-* Add `Builder` class to generic.py, then refactor `DetailView` , so you can use
+* Add `Builder` class to html.py, then refactor `generic.DetailView` , so you can use
   `{{<< view.body}}` to get the body result but not the whole paragraph.
 * Add `kwargs` to ORM get, filter, and also add `for_update` method to Result, so
   you can do select with for update lock, for example:
