@@ -1467,8 +1467,11 @@ class Result(object):
         else:
             return self.model.create_obj(values.items())
         
-    def for_update(self):
-        self.kwargs['for_update'] = True
+    def for_update(self, flag=True):
+        """
+        please see http://docs.sqlalchemy.org/en/latest/core/expression_api.html search for update
+        """
+        self.kwargs['for_update'] = flag
         return self
     
     def one(self):

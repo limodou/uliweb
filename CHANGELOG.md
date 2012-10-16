@@ -49,7 +49,7 @@ Uliweb Change Log
 * Add `generic` command
 * Add `Builder` class to html.py, then refactor `generic.DetailView` , so you can use
   `{{<< view.body}}` to get the body result but not the whole paragraph.
-* Add `kwargs` to ORM get, filter, and also add `for_update` method to Result, so
+* Add `kwargs` to ORM get, filter, and also add `for_update` method to Result, so.
   you can do select with for update lock, for example:
 
     Model.get(Model.c.id==id, for_update=True)
@@ -58,6 +58,8 @@ Uliweb Change Log
   so if you pass these variables in the GET or POST, you don't need to parse them
   and then pass them to ListView or SimpleListView, you can just skip them, ListView
   and SimpleListView will parse them automatically
+* `Result.for_update` can receive an argument, default it `True`, and string also
+  can be accpeted, please see the sqlalchemy doc http://docs.sqlalchemy.org/en/latest/core/expression_api.html for details.
 
 0.1.5 Version
 -----------------
