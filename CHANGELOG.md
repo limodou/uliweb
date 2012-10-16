@@ -54,6 +54,10 @@ Uliweb Change Log
 
     Model.get(Model.c.id==id, for_update=True)
     Model.filter(condition).for_update().filter(condition)
+* generic ListView and SimpleListView can get value of page and rows from request,
+  so if you pass these variables in the GET or POST, you don't need to parse them
+  and then pass them to ListView or SimpleListView, you can just skip them, ListView
+  and SimpleListView will parse them automatically
 
 0.1.5 Version
 -----------------

@@ -1321,6 +1321,14 @@ class SimpleListView(object):
         self.downloader = GenericFileServing()
         self.render_func = render
         
+    def init(self):
+        from uliweb import request
+        
+        if 'page' in request.values:
+            self.pageno = int(request.values.get('page')) - 1
+        if 'rows' in request.values:
+            self.rows_per_page = int(request.values.get('rows'))
+        
     def create_total_infos(self, total_fields):
         if total_fields:
             self.total_fields = {}
@@ -1894,6 +1902,7 @@ class ListView(SimpleListView):
         """
         If pageno is None, then the ListView will not paginate 
         """
+        
         self.model = get_model(model)
         self.meta = meta
         self.condition = condition
@@ -1919,6 +1928,8 @@ class ListView(SimpleListView):
         self.init()
         
     def init(self):
+        super(ListView, self).init()
+        
         if not self.id:
             self.id = self.model.tablename
         
