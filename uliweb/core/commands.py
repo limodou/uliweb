@@ -39,7 +39,7 @@ def get_answer(message, answers='Yn', default='Y', quit='n'):
     if quit and quit not in answers:
         answers = answers + quit
         
-    message = message + '[' + '/'.join(answers) + ']'
+    message = message + '(' + '/'.join(answers) + ')[' + default + ']:'
     ans = raw_input(message).strip().upper()
     if default and not ans:
         ans = default.upper()
@@ -49,6 +49,28 @@ def get_answer(message, answers='Yn', default='Y', quit='n'):
         print "Command be cancelled!"
         sys.exit(1)
     return ans
+
+def get_input(prompt, default=None, choices=None, option_value=None):
+    """
+    If option_value is not None, then return it. Otherwise get the result from 
+    input.
+    """
+    if option_value is not None:
+        return option_value
+    
+    choices = choices or []
+    r = raw_input(prompt+' ') or default
+    while 1:
+        if not r:
+            r = raw_input(prompt)
+        if choices:
+            if r not in choices:
+                r = None
+            else:
+                break
+        else:
+            break
+    return r
 
 class CommandMetaclass(type):
     def __init__(cls, name, bases, dct):
