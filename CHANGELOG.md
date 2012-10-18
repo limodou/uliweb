@@ -52,8 +52,11 @@ Uliweb Change Log
 * Add `kwargs` to ORM get, filter, and also add `for_update` method to Result, so.
   you can do select with for update lock, for example:
 
+    ```
     Model.get(Model.c.id==id, for_update=True)
     Model.filter(condition).for_update().filter(condition)
+    ```
+    
 * generic ListView and SimpleListView can get value of page and rows from request,
   so if you pass these variables in the GET or POST, you don't need to parse them
   and then pass them to ListView or SimpleListView, you can just skip them, ListView
@@ -62,15 +65,21 @@ Uliweb Change Log
   can be accpeted, please see the sqlalchemy doc http://docs.sqlalchemy.org/en/latest/core/expression_api.html for details.
 * Add secretkey app, when you installed this app, you can execute cmd:
 
+    ```
     uliweb makekey
+    ```
     
   to create a secretkey file, which will be locate in current directory by default. Then:
 
+    ```
     from uliweb import functions
     des = functions.get_cipher()
     d = des.encrypt('hello')
     des.descrypt(d)
+    ```
+    
 * Remove pagecache app
+* Add `safe_unicode` and `safe_str` support i18n LazyString class
 
 0.1.5 Version
 -----------------

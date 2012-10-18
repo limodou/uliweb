@@ -240,14 +240,22 @@ def timeit(func):
     return f
 
 def safe_unicode(s, encoding='utf-8'):
+    from uliweb.i18n.lazystr import LazyString
+    
     if isinstance(s, unicode):
         return s
+    elif isinstance(s, LazyString):
+        return unicode(s)
     else:
         return unicode(str(s), encoding)
 
 def safe_str(s, encoding='utf-8'):
+    from uliweb.i18n.lazystr import LazyString
+
     if isinstance(s, unicode):
         return s.encode(encoding)
+    elif isinstance(s, LazyString):
+        return unicode(s).encode(encoding)
     else:
         return str(s)
 
