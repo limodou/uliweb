@@ -42,13 +42,15 @@ class Password(Text): type = 'password'
 class Number(Text): type = 'number'
 class TextArea(Build):
     def __init__(self, value='', **kwargs):
-        self.value = value
+        self.value = value or ''
         super(TextArea, self).__init__(**kwargs)
 
     def to_html(self):
-        args = self.kwargs
-        args.setdefault('rows', 5)
-        args.setdefault('cols', 40)
+        args = self.kwargs.copy()
+        if not args.get('rows'):
+            args['rows'] = 5
+        if not args.get('cols'):
+            args['cols'] = 40
         return str(Tag('textarea', self.value, **args))
 class Hidden(Text): type = 'hidden'
 class Button(Build): 
