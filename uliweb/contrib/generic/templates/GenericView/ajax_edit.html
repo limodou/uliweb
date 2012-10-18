@@ -1,0 +1,8 @@
+<h1>{{=defined('title') or _('Edit')}}</h1>
+<div>
+<form class="ajax {{=defined('form_class') or 'form-horizontal'}}" method="POST" action="{{=defined('action') or request.url}}">
+{{build = form.build}}
+{{<< build.body}}
+{{<< build.buttons_line}}
+</form>
+</div>

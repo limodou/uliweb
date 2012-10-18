@@ -1,0 +1,43 @@
+#uliweb-template-tag:[[,]]
+{{extend "[[=appname]]_layout.html"}}
+
+{{block content_main}}
+[[if addview_ajax:]]
+{{use "jqutils",ajaxForm=True}}
+[[pass]]
+
+<h1>{{=defined('title') or _('Edit')}}</h1>
+<div>
+<form class="[[if addview_ajax:]]ajax [[pass]]{{=defined('form_class') or 'form-horizontal'}}" 
+    method="POST" 
+    action="{{=defined('action') or request.url}}"
+    id="edit_form">
+{{build = form.build}}
+{{<< build.body}}
+{{<< build.buttons_line}}
+</form>
+</div>
+
+[[if addview_ajax:]]
+<script>
+$(function(){
+    var el = $('#edit_form');
+    
+    $(el).submit(function(){
+        var result_process = create_ajax_callback(function success(){
+            window.location.href = '[[=url]]';
+        });
+    	
+    	var options = { 
+    		success: result_process,
+    		dataType: 'json'
+    	}; 
+    
+    	$(this).ajaxSubmit(options);
+    
+    	return false;
+    });
+});
+</script>
+[[pass]]
+{{end}}

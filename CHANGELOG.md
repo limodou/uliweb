@@ -46,7 +46,8 @@ Uliweb Change Log
 * Module of template_plugins can be configured in settings.ini
 * Add `df` parameter to common.copy_dir processor callback function
 * Remove `return`, `continue`, `break` unindent process, so only `pass` will unindent used
-* Add `generic` command
+* Add `generic` command, you can use it to create scafold of List, Add, View, Edit, Delete,
+  it support angularjs, html, easyui theme.
 * Add `Builder` class to html.py, then refactor `generic.DetailView` , so you can use
   `{{<< view.body}}` to get the body result but not the whole paragraph.
 * Add `kwargs` to ORM get, filter, and also add `for_update` method to Result, so.
@@ -90,6 +91,9 @@ Uliweb Change Log
     table.body
     table.end
     ```
+
+* Add `get_input()` to command.py, you can use it to get a value from command line
+  if an option is not given
 
 0.1.5 Version
 -----------------

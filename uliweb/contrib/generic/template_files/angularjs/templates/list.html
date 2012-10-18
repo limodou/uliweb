@@ -13,12 +13,12 @@
 
 <div class="row-fluid" ng-app="AdminApp" id="ng-app" ng-controller="adminCtrl">
     <div class="line">
-        <button class="btn btn-primary" type="button" ng-click="add()"><i class="icon-plus"></i>{{=_('Add')}}</button>
+        <a class="btn btn-primary" [[if not addview_popup:]]href="[[=url]]/add"[[pass]] type="button" [[if addview_popup:]]ng-click="add()"[[pass]]><i class="icon-plus icon-white"></i>{{=_('Add')}}</a>
     </div>
     <div class="line">
         <table class="table table-bordered table-header">
             <colgroup>
-                {{for f in fields:}}
+                {{for f in view.table_info['fields_list']:}}
                     {{if f.get('hidden', False):}}
                         {{continue}}
                     {{pass}}
@@ -29,11 +29,11 @@
                         <col width="*"></col>
                     {{pass}}
                 {{pass}}
-                <col width="60px"></col>
+                <col width="70px"></col>
             </colgroup>
             <thead>
                 <tr>
-                    {{for f in fields:}}
+                    {{for f in view.table_info['fields_list']:}}
                         {{if f.get('hidden', False):}}
                             {{continue}}
                         {{pass}}
@@ -44,32 +44,59 @@
             </thead>
             <tbody>
                 <tr ng-repeat="obj in objects">
-                    {{for f in fields:}}
+                    {{for f in view.table_info['fields_list']:}}
                         {{if f.get('hidden', False):}}
                             {{continue}}
                         {{pass}}
                         <td><div ng-bind-html-unsafe="obj.{{ =f['name'] }}"></div></td>
                     {{pass}}
                     <td>
-                        <a href="#" ng-click="edit(obj.id)"><i class="icon-edit" title="{{=_('Edit')}}"></i></a> 
-                        <a href="#" ng-click="remove(obj.id)"><i class="icon-remove" title="{{=_('Remove')}}"></i></a>
+                        <a ng-href="[[=url]]/view/{%obj.id%}" data-click="view"><i class="icon-eye-open" title="{{=_('View')}}"></i></a> 
+                        <a [[if not editview_popup:]]ng-href="[[=url]]/edit/{%obj.id%}"[[pass]] [[if editview_popup:]]ng-click="edit(obj.id)"[[pass]]><i class="icon-edit" title="{{=_('Edit')}}"></i></a> 
+                        <a [[if not deleteview_ajax:]]ng-href="[[=url]]/delete/{%obj.id%}"[[pass]] [[if deleteview_ajax:]]ng-click="remove(obj.id)"[[pass]]><i class="icon-remove" title="{{=_('Remove')}}"></i></a>
                     </td>
                 </tr>
             </tbody>
         </table>
+        [[if pagination:]]
+        <div class="pagination pagination-centered"></div>
+        [[pass]]
     </div>
 </div>
+<!-- Download code -->
+[[if download:]]
+<script>
+	$(function(){
+		$('a[data-click="download"]').click(function(e){
+			var query_string = $.query_string.remove('data').set('download', '').toString();
+			$.download('{{=request.path}}' + query_string);
+		});
+	});
+</script>
+[[pass]]
+
 <script>
 var app = angular.module('AdminApp', []).config(function ($interpolateProvider) {
     $interpolateProvider.startSymbol('{%');
     $interpolateProvider.endSymbol('%}');
 }); 
 function adminCtrl($scope, $http) {
-    $.get('[[=url]]/query')
-        .success(function(data, status, headers, config){
-            $scope.objects = data.rows;
-            $scope.$apply();
-        });
+    $scope.query = function(page){
+        page = page || 1;
+        $.get('[[=url]]?data=1'[[if pagination:]]+'&page='+page[[pass]])
+            .success(function(data, status, headers, config){
+                $scope.objects = data.rows;
+                $scope.$apply();
+                
+                [[if pagination:]]
+                function callback(page){
+                    $scope.query(page);
+                }
+                create_pagination('.pagination', data.total, data.page_rows, data.pageno, callback, {first:'', last:'', totalMessage:''});
+                [[pass]]
+            });
+    }
+    $scope.query();
     $scope.find_object = function(id){
         if (!$scope.objects) return -1;
         for(var i=0; i<$scope.objects.length; i++){
@@ -130,6 +157,8 @@ function adminCtrl($scope, $http) {
         });
     }
     $scope.remove = function(id){
+        if(!confirm('{{=_("Do you want to delete this record?")}}'))
+            return;
         $.post('[[=url]]/delete/'+id).success(function(data){
             if(data.success){
                 var index = $scope.find_object(id);

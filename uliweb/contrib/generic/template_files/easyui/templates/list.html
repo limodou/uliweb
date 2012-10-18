@@ -1,0 +1,118 @@
+#uliweb-template-tag:[[,]]
+{{extend "[[=appname]]_layout.html"}}
+
+{{block content_main}}
+{{#use "fontawesome"}}
+{{use "bootheme"}}
+{{use "jqutils", ajaxForm=True}}
+[[if addview_popup or editview_popup:]]
+{{include "inc_jquery_dialog2.html"}}
+[[pass]]
+
+<div class="line">
+    <a class="btn btn-primary" href="[[=url]]/add" data-click="add"><i class="icon-plus icon-white"></i>{{=_('Add')}}</a>
+</div>
+
+<div class="content">
+    [[if query:]]
+    <div class="query">
+        {{<< query_form}}
+    </div>
+    [[pass]]
+    
+    
+{{table_id='risk_table'}}
+{{include "inc_table.html"}}
+</div>
+
+<script>
+    $(function(){
+        create_table("{{=request.path}}", true, {nowrap:true});
+    });
+</script>
+
+[[if addview_popup:]]
+<script>
+    $(function(){
+        $('a[data-click="add"]').click(function(e){
+            e.preventDefault();
+            var dialog = $('<div id="add_object"></div>').dialog2(
+                {
+                    autoFocus:false
+                    , url:$(this).attr('href')
+                    [[if addview_ajax:]]
+                    , ajaxFormOptions: {
+                        onSuccess: common_ajaxForm_success({
+                            success:function(data){
+                                $(this).dialog2('close');
+                                /*
+                                    write your code
+                                */
+                                window.location.href = '[[=url]]';
+                            }
+                        })
+                        , dataType: 'json'
+                    }
+                    [[pass]]
+                }); 
+            dialog.bind('dialog2.content-update', function(e){
+                //add what you want to do after the content update from server
+            });
+        });
+    });
+</script>
+[[pass]]
+
+[[if editview_popup:]]
+<script>
+    $(function(){
+        $('a[data-click="edit"]').click(function(e){
+            e.preventDefault();
+            var dialog = $('<div id="edit_object"></div>').dialog2(
+                {
+                    autoFocus:false
+                    , url:$(this).attr('href')
+                    [[if editview_ajax:]]
+                    , ajaxFormOptions: {
+                        onSuccess: common_ajaxForm_success({
+                            success:function(data){
+                                $(this).dialog2('close');
+                                /************************
+                                    write your code
+                                ************************/
+                                window.location.href = '[[=url]]';
+                            }
+                        })
+                        , dataType: 'json'
+                    }
+                    [[pass]]
+                }); 
+            dialog.bind('dialog2.content-update', function(e){
+                //add what you want to do after the content update from server
+            });
+        });
+    });
+</script>
+[[pass]]
+
+[[if deleteview_ajax:]]
+<script>
+$(function(){
+    $('a[data-click="delete"]').click(function(e){
+        e.preventDefault();
+        $.post($(this).attr('href')).success(function(data){
+            if(data.success){
+                /************************
+                    write your code
+                ************************/
+                window.location.href = '[[=url]]';
+            }else{
+                show_message(data.message, 'error');
+            }
+        });
+    });
+});
+</script>
+[[pass]]
+
+{{end}}
