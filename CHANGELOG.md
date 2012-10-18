@@ -80,6 +80,16 @@ Uliweb Change Log
     
 * Remove pagecache app
 * Add `safe_unicode` and `safe_str` support i18n LazyString class
+* Refactor generic.ListView and generic.SimpleListView output, the table will be
+  and Builder object, so you can:
+
+    ```
+    table.begine
+    table.colgroup
+    table.head
+    table.body
+    table.end
+    ```
 
 0.1.5 Version
 -----------------

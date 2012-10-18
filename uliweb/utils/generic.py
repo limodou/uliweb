@@ -4,15 +4,14 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 import os, sys
 import time
-from uliweb.orm import get_model, Model, Result
+from uliweb.orm import get_model, Model, Result, do_
 import uliweb.orm as orm
 from uliweb import redirect, json, functions, UliwebError, Storage
-from uliweb.core.storage import Storage
 from sqlalchemy.sql import Select
 from uliweb.contrib.upload import FileServing, FilenameConverter
 from uliweb.utils.common import safe_unicode, safe_str
-from werkzeug.utils import cached_property
 from uliweb.core.html import Builder
+from uliweb.utils.sorteddict import SortedDict
 
 __default_fields_builds__ = {}
 class __default_value__(object):pass
@@ -764,8 +763,6 @@ class AddView(object):
         return data
     
     def execute(self, json_result=False):
-        from uliweb import request
-        
         flag = self.form.validate(*self._get_data())
         if flag:
             d = self.default_data.copy()
@@ -826,8 +823,6 @@ class EditView(AddView):
         return d
     
     def execute(self, json_result=False):
-        from uliweb import request
-        
         flag = self.form.validate(*self._get_data())
         if flag:
             d = self.default_data.copy()
@@ -1321,6 +1316,8 @@ class SimpleListView(object):
         self.downloader = GenericFileServing()
         self.render_func = render
         
+        self.init()
+        
     def init(self):
         from uliweb import request
         
@@ -1328,6 +1325,9 @@ class SimpleListView(object):
             self.pageno = int(request.values.get('page')) - 1
         if 'rows' in request.values:
             self.rows_per_page = int(request.values.get('rows'))
+        
+        #create table header
+        self.table_info = self.get_table_info()
         
     def create_total_infos(self, total_fields):
         if total_fields:
@@ -1346,11 +1346,11 @@ class SimpleListView(object):
             self.total_field_name = None
         self.total_sums = {}
             
-    def cal_total(self, table, record):
+    def cal_total(self, record):
         if self.total_fields:
             for f in self.total_fields:
                 if isinstance(record, (tuple, list)):
-                    i = table['fields'].index(f)
+                    i = self.table_info['fields'].index(f)
                     v = record[i]
                 elif isinstance(record, dict):
                     v = record.get(f)
@@ -1362,10 +1362,10 @@ class SimpleListView(object):
                 if cal:
                     self.total_sums[f] = self.total_sums.setdefault(f, 0) + v
                 
-    def get_total(self, table):
+    def get_total(self):
         s = []
         if self.total_fields:
-            for i, f in enumerate(table['fields']):
+            for i, f in enumerate(self.table_info['fields']):
                 if i == 0:
                     v = self.total_field_name
                 else:
@@ -1388,17 +1388,17 @@ class SimpleListView(object):
                 s.append(v)
         return s
 
-    def render_total(self, table, json=False):
+    def render_total(self, json=False):
         s = []
         if self.total_fields:
             if json:
-                for v in self.get_total(table):
+                for v in self.get_total():
                     v = str(v)
                     s.append(v)
-                return s
+                return dict(zip(self.table_info['fields'], s))
             else:
                 s.append('<tr class="sum">')
-                for v in self.get_total(table):
+                for v in self.get_total():
                     v = str(v) or '&nbsp;'
                     s.append('<td>%s</td>' % v)
                 s.append('</tr>')
@@ -1484,7 +1484,6 @@ class SimpleListView(object):
             if timeout and os.path.getmtime(t_filename) + timeout > time.time():
                 return self.downloader.download(filename, action)
             
-        table = self.table_info()
         if not query:
             query = self.query_all()
         if not type:
@@ -1496,12 +1495,11 @@ class SimpleListView(object):
         if type in ('xlt', 'xls'):
             if not domain:
                 domain = settings.get_var('PARA/DOMAIN')
-            return self.download_xlt(filename, query, table, action, fields_convert_map, domain, not_tempfile=bool(timeout))
+            return self.download_xlt(filename, query, action, fields_convert_map, domain, not_tempfile=bool(timeout))
         else:
-            return self.download_csv(filename, query, table, action, fields_convert_map, not_tempfile=bool(timeout))
+            return self.download_csv(filename, query, action, fields_convert_map, not_tempfile=bool(timeout))
        
-    def get_data(self, query, table, fields_convert_map, encoding='utf-8', plain=True):
-        from uliweb.orm import do_
+    def get_data(self, query, fields_convert_map, encoding='utf-8', plain=True):
 
         fields_convert_map = fields_convert_map or {}
         d = self.fields_convert_map.copy() 
@@ -1517,18 +1515,18 @@ class SimpleListView(object):
             return safe_unicode(value, encoding)
         
         for record in query:
-            self.cal_total(table, record)
+            self.cal_total(record)
             row = []
             if not isinstance(record, (orm.Model, dict)):
                 if not isinstance(record, (tuple, list)):
                     record = list(record)
-                record = dict(zip(table['fields'], record))
+                record = dict(zip(self.table_info['fields'], record))
             if isinstance(record, orm.Model):
                 model = record.__class__
             else:
                 model = None
                 
-            for i, x in enumerate(table['fields_list']):
+            for i, x in enumerate(self.table_info['fields_list']):
                 if model:
                     if hasattr(model, x['name']):
                         field = getattr(model, x['name'])
@@ -1543,7 +1541,7 @@ class SimpleListView(object):
                 row.append(value)
                 
             yield row
-        total = self.get_total(table)
+        total = self.get_total()
         if total:
             row = []
             for x in total:
@@ -1575,7 +1573,7 @@ class SimpleListView(object):
         ufile = os.path.join(os.path.dirname(filename), os.path.basename(tfile.name))
         return tfile, bfile, ufile
     
-    def download_xlt(self, filename, data, table, action, fields_convert_map=None, domain=None, not_tempfile=False):
+    def download_xlt(self, filename, data, action, fields_convert_map=None, domain=None, not_tempfile=False):
         from uliweb.utils.xlt import ExcelWriter
         from uliweb import request, settings
         
@@ -1584,14 +1582,14 @@ class SimpleListView(object):
         if not domain:
             domain = settings.get_var('GENERIC/DOWNLOAD_DOMAIN', request.host_url)
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
-        w = ExcelWriter(header=table['fields_list'], data=self.get_data(data, 
-            table, fields_convert_map, default_encoding, plain=False), 
+        w = ExcelWriter(header=self.table_info['fields_list'], data=self.get_data(data, 
+            fields_convert_map, default_encoding, plain=False), 
             encoding=default_encoding, domain=domain)
         w.save(tfile.name)
         return self.downloader.download(bfile, action=action, x_filename=ufile, 
             real_filename=tfile.name)
         
-    def download_csv(self, filename, data, table, action, fields_convert_map=None, not_tempfile=False):
+    def download_csv(self, filename, data, action, fields_convert_map=None, not_tempfile=False):
         from uliweb import settings
         from uliweb.utils.common import simple_value, safe_unicode
         import csv
@@ -1603,86 +1601,88 @@ class SimpleListView(object):
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
         with tfile as f:
             w = csv.writer(f)
-            row = [safe_unicode(x, default_encoding) for x in table['fields_name']]
+            row = [safe_unicode(x, default_encoding) for x in self.table_info['fields_name']]
             w.writerow(simple_value(row, encoding))
-            for row in self.get_data(data, table, fields_convert_map, default_encoding):
+            for row in self.get_data(data, fields_convert_map, default_encoding):
                 w.writerow(simple_value(row, encoding))
         return self.downloader.download(bfile, action=action, x_filename=ufile, 
             real_filename=tfile.name)
         
-    def json(self):
-        return self.run(head=False, body=True, json_result=True)
-
     def run(self, head=True, body=True, json_result=False):
-        #create table header
-        table = self.table_info()
-            
-        query = self.query()
         result = self.template_data.copy()
-        if head:
-            result.update(self.render(table, head=head, body=body, query=query))
-        else:
-            result.update(self.render(table, head=head, body=body, query=query, json_body=json_result))
-        return result
-
-    def render(self, table, head=True, body=True, query=None, json_body=False):
-        """
-        table is a dict, just like
-        table = {'fields_name':[fieldname,...],
-            'fields_list':[{'name':fieldname,'width':100,'align':'left'},...],
-            'total':10,
-        """
-        result = {}
-        s = []
-        if head:
-            if self.table_width:
-                width = ' width="%dpx"' % table['width']
-            else:
-                width = ''
-                
-            s = ['<table class="%s" id=%s%s>' % (self.table_class_attr, self.id, width)]
-            s.append('<thead>')
-            s.extend(self.create_table_head(table))
-            s.append('</thead>')
-            s.append('<tbody>')
-            result = {'info':{'total':self.total, 'rows_per_page':self.rows_per_page, 'pageno':self.pageno, 'id':self.id}}
-            
-        if body:
-            #create table body
-            self.rows_num = 0
-            for record in query:
-                self.cal_total(table, record)
-                self.rows_num += 1
-                
-                r = []
-                if not isinstance(record, dict):
-                    record = dict(zip(table['fields'], record))
-                r = []
-                for i, x in enumerate(table['fields_list']):
-                    v = self.make_view_field(x, record, self.fields_convert_map)
-                    r.append((x['name'], v['display']))
-                    
-                if json_body:
-                    render_func = self.render_func or self.json_body_render
-                    s.append(render_func(r, record))
-                else:
-                    render_func = self.render_func or self.default_body_render
-                    s.append(render_func(r, record))
-            if json_body:
-                total = self.render_total(table, json_body)
-                if total:
-                    s.append(dict(zip(table['fields'], total)))
-                return {'total':self.total, 'rows':s}
-            else:
-                s.append(self.render_total(table))
-        
-        if head:
-            s.append('</tbody>')
-            s.append('</table>')
-        
-        result['table'] = '\n'.join(s)
+        result.update(self.render(json_result=json_result))
         return result
     
+    def json(self):
+        return self.run(json_result=True)
+    
+    def render(self, json_result=False):
+        result = {
+            'table_id':self.id, 
+            'pageno':self.pageno+1,
+            'page':self.pageno+1,
+            'page_rows':self.rows_per_page,
+            }
+        if not json_result:
+            s = Builder('begin', 'colgroup', 'head', 'body', 'end')
+            s.begin << '<table class="%s" id=%s>' % (self.table_class_attr, self.id)
+            with s.colgroup.colgroup:
+                s.colgroup << self.create_table_colgroup()
+            with s.head.thead:
+                s.head << self.create_table_head()
+        
+            s.body << '<tbody>'
+            for r in self.objects():
+                render_func = self.render_func or self.default_body_render
+                data = []
+                for f in self.table_info['fields_list']:
+                    data.append( (f['name'], r[f['name']]) )
+                s.body << render_func(data, r.get('_obj_', {}))
+            s.body << '</tbody>'
+            s.end << '</table>'
+            
+            result['table'] = s
+        else:
+            s = []
+            for r in self.objects():
+                render_func = self.render_func or self.json_body_render
+                data = []
+                for f in self.table_info['fields_list']:
+                    data.append( (f['name'], r[f['name']]) )
+                s.append(render_func(data, r.get('_obj_', {})))
+            result['rows'] = s
+        result['total'] = self.total
+        return result
+
+    def objects(self):
+        """
+        Return a generator of all processed data, it just like render
+        but it'll not return a table or json format data but just
+        data. And the data will be processed by fields_convert_map if passed.
+        """
+        self.rows_num = 0
+        query = self.query()
+        if isinstance(query, Select):
+            query = do_(query)
+        for record in query:
+            self.rows_num += 1
+            r = self.object(record)
+            self.cal_total(record)
+            yield r
+        total = self.render_total(True)
+        if total:
+            yield total
+            
+    def object(self, record):
+        r = SortedDict()
+        if not isinstance(record, dict):
+            record = dict(zip(self.table_info['fields'], record))
+        for i, x in enumerate(self.table_info['fields_list']):
+            v = self.make_view_field(x, record, self.fields_convert_map)
+            r[x['name']] = v['display']
+        r['_obj_'] = record
+        return r
+
     def json_body_render(self, data, record):
         d = dict(data)
         if 'id' not in d and hasattr(record, 'id'):
@@ -1690,11 +1690,9 @@ class SimpleListView(object):
         return d
         
     def default_body_render(self, data, record):
-        from uliweb.core.html import Tag
-        
         s = ['<tr>']
-        for n, f in data:
-            s.append(str(Tag('td', f)))
+        for k, v in data:
+            s.append('<td>%s</td>' % v)
         s.append('</tr>')
         return ''.join(s)
 
@@ -1719,21 +1717,27 @@ class SimpleListView(object):
             
         return {'label':label, 'value':value, 'display':display}
         
-    def create_table_head(self, table):
+    def create_table_colgroup(self):
+        s = []
+        for f in self.table_info['fields_list']:
+            s.append('<col width="%s"></col>\n' % f.get('width_str', '*'))
+        return ''.join(s)
+    
+    def create_table_head(self):
         from uliweb.core.html import Tag
         from uliweb.utils.common import simple_value
 
         s = []
         fields = []
         max_rowspan = 0
-        for i, f in enumerate(table['fields_name']):
+        for i, f in enumerate(self.table_info['fields_name']):
             _f = list(f.split('/'))
             max_rowspan = max(max_rowspan, len(_f))
             fields.append((_f, i))
         
         def get_field(fields, i, m_rowspan):
             f_list, col = fields[i]
-            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1, 'title':table['fields_list'][col].get('help_string', '')}
+            field = {'name':f_list[0], 'col':col, 'width':self.table_info['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1, 'title':self.table_info['fields_list'][col].get('help_string', '')}
             if len(f_list) == 1:
                 field['rowspan'] = m_rowspan
             return field
@@ -1772,19 +1776,11 @@ class SimpleListView(object):
                     kwargs['align'] = 'center'
                 if field['rowspan'] > 1:
                     kwargs['rowspan'] = field['rowspan']
-                kwargs['width'] = field['width']
-                if not kwargs['width']:
-                    kwargs['width'] = self.default_column_width
-                _f = table['fields_list'][field['col']]
+                _f = self.table_info['fields_list'][field['col']]
                 kwargs['field'] = _f['name']
                 if kwargs.get('rowspan', 1) + y != max_rowspan:
-                    kwargs.pop('width', None)
                     kwargs.pop('field', None)
                 
-#                else:
-#                    kwargs['width'] = '100'
-#                if kwargs.get('rowspan', 1) + y == max_rowspan:
-#                    kwargs['title'] = field['title']
                 s.append(str(Tag('th', field['name'], **kwargs)))
                 
                 i = j
@@ -1798,21 +1794,19 @@ class SimpleListView(object):
     def get_columns(self, frozen=None):
         from uliweb.utils.common import simple_value
     
-        table = self.table_info()
-        
         columns = []
         if frozen:
             columns = [[]]
         fields = []
         max_rowspan = 0
-        for i, f in enumerate(table['fields_name']):
+        for i, f in enumerate(self.table_info['fields_name']):
             _f = list(f.split('/'))
             max_rowspan = max(max_rowspan, len(_f))
             fields.append((_f, i))
         
         def get_field(fields, i, m_rowspan):
             f_list, col = fields[i]
-            field = {'name':f_list[0], 'col':col, 'width':table['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1, 'title':table['fields_list'][col].get('help_string', '')}
+            field = {'name':f_list[0], 'col':col, 'width':self.table_info['fields_list'][col].get('width', 0), 'colspan':1, 'rowspan':1, 'title':self.table_info['fields_list'][col].get('help_string', '')}
             if len(f_list) == 1:
                 field['rowspan'] = m_rowspan
             return field
@@ -1844,7 +1838,7 @@ class SimpleListView(object):
                         j += 1
                     else:
                         break
-                _f = table['fields_list'][field['col']].copy()
+                _f = self.table_info['fields_list'][field['col']].copy()
                 kwargs = {}
                 kwargs['field'] = _f.pop('name')
                 _f.pop('verbose_name', None)
@@ -1880,17 +1874,24 @@ class SimpleListView(object):
             
         return columns
 
-    def table_info(self):
+    def get_table_info(self):
         t = {'fields_name':[], 'fields':[]}
         t['fields_list'] = self.fields
         
-        w = 0
         for x in self.fields:
             t['fields_name'].append(x['verbose_name'])
             t['fields'].append(x['name'])
-            w += x.get('width', 0)
             
-        t['width'] = w
+            w = x.get('width')
+            if w:
+                if isinstance(w, int):
+                    width = '%dpx' % w
+                else:
+                    width = w
+            else:
+                width = '*'
+            x['width_str'] = width
+
         return t
     
 class ListView(SimpleListView):
@@ -1934,17 +1935,8 @@ class ListView(SimpleListView):
             self.id = self.model.tablename
         
         #create table header
-        self.table = self.table_info()
+        self.table_info = self.get_table_info()
         
-    def run(self, head=True, body=True, json_result=False):
-        query = self.query()
-        result = self.template_data.copy()
-        if head:
-            result.update(self.render(self.table, query, head=head, body=body))
-        else:
-            result.update(self.render(self.table, query, head=head, body=body, json_body=json_result))
-        return result
-    
     def query(self):
         if self._query is None or isinstance(self._query, (orm.Result, Select)): #query result
             offset = self.pageno*self.rows_per_page
@@ -1958,104 +1950,28 @@ class ListView(SimpleListView):
             query = self.query_range(self.pageno, self.pagination)
         return query
     
-    def json(self):
-        return self.run(head=False, body=True, json_result=True)
-
-    def get_field_display(self, record, field_name):
-        if hasattr(self.model, field_name):
-            field = getattr(self.model, field_name)
-        else:
-            for x in self.table['fields_list']:
-                if x['name'] == field_name:
-                    field = x
-        v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
-        return v
-    
-    def render(self, table, query, head=True, body=True, json_body=False):
-        """
-        table is a dict, just like
-        table = {'fields_name':[fieldname,...],
-            'fields_list':[{'name':fieldname,'width':100,'align':'left'},...],
-            'count':10,
-        """
-        from uliweb.orm import do_
-        result = {'total':self.total, 'table_id':self.id, 'pageno':self.pageno+1,
-            'page_rows':self.rows_per_page}
-        s = []
-        if head:
-            if self.table_width:
-                width = ' width="%dpx"' % table['width']
-            else:
-                width = ''
-            s = ['<table class="%s" id=%s%s>' % (self.table_class_attr, self.id, width)]
-            s.append('<thead>')
-            s.extend(self.create_table_head(table))
-            s.append('</thead>')
-            s.append('<tbody>')
-        
-        if body:
-            self.rows_num = 0
-            #create table body
-            if isinstance(query, Select):
-                query = do_(query)
-            for record in query:
-                self.rows_num += 1
-                r = []
-                for i, x in enumerate(table['fields_list']):
-                    if hasattr(self.model, x['name']):
-                        field = getattr(self.model, x['name'])
-                    else:
-                        field = x
-                    v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
-                    r.append((x['name'], v['display']))
-                    
-                if json_body:
-                    render_func = self.render_func or self.json_body_render
-                    s.append(render_func(r, record))
-                else:
-                    render_func = self.render_func or self.default_body_render
-                    s.append(render_func(r, record))
-                self.cal_total(table, record)
-            if json_body:
-                total = self.render_total(table, json_body)
-                if total:
-                    s.append(dict(zip(table['fields'], total)))
-                result['rows'] = s
-            else:
-                s.append(self.render_total(table))
-            
-        if head:
-            s.append('</tbody>')
-            s.append('</table>')
-        
-        if not json_body:
-            result['table'] = '\n'.join(s)
-        return result
-    
-    def objects(self):
-        """
-        Return a generator of all processed data, it just like render
-        but it'll not return a table or json format data but just
-        data. And the data will be processed by fields_convert_map if passed.
-        """
-        query = self.query()
-        for record in query:
-            self.rows_num += 1
-            r = self.object(record)
-            yield r
-            
     def object(self, record):
-        r = Storage()
-        r['_obj_'] = record
-        for i, x in enumerate(self.table['fields_list']):
+        r = SortedDict()
+        for i, x in enumerate(self.table_info['fields_list']):
             if hasattr(self.model, x['name']):
                 field = getattr(self.model, x['name'])
             else:
                 field = x
             v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
             r[x['name']] = v['display']
+        r['_obj_'] = record
         return r
         
+#    def get_field_display(self, record, field_name):
+#        if hasattr(self.model, field_name):
+#            field = getattr(self.model, field_name)
+#        else:
+#            for x in self.table_info['fields_list']:
+#                if x['name'] == field_name:
+#                    field = x
+#        v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
+#        return v
+#    
     def query_all(self):
         """
         Query all records without limit and offset.
@@ -2085,7 +2001,7 @@ class ListView(SimpleListView):
                 query = query.order_by(order_by)
         return query
         
-    def table_info(self):
+    def get_table_info(self):
         t = {'fields_name':[], 'fields_list':[], 'fields':[]}
     
         if self.fields:
@@ -2104,7 +2020,6 @@ class ListView(SimpleListView):
                     elif isinstance(f, str):
                         return None
             
-        w = 0
         fields_list = []
         for x in fields:
             if isinstance(x, (str, unicode)):
@@ -2121,12 +2036,22 @@ class ListView(SimpleListView):
                     d['verbose_name'] = getattr(self.model, name).verbose_name or name
                 else:
                     d['verbose_name'] = name
+            
+            #process field width
+            w = d.get('width')
+            if w:
+                if isinstance(w, int):
+                    width = '%dpx' % w
+                else:
+                    width = w
+            else:
+                width = '*'
+            d['width_str'] = width
+            
             t['fields_list'].append(d)
             t['fields_name'].append(d['verbose_name'])
             t['fields'].append(name)
-            w += d.get('width', 100)
             
-        t['width'] = w
         return t
     
 class QueryView(object):
