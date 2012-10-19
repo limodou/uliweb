@@ -94,6 +94,15 @@ Uliweb Change Log
 
 * Add `get_input()` to command.py, you can use it to get a value from command line
   if an option is not given
+* Remove APP_LAYOUT functionality, and it can be replaced with 
+
+    ```
+    settings.APP_LAYOUTS.get('messages', 'layout.html')
+    ```
+    
+  so you can still config app's layout template in settings.ini. Another way is
+  to replace app's layout template in a new app with the same filename, and then
+  install it after the original app in `INSTALLED_APPS`.
 
 0.1.5 Version
 -----------------

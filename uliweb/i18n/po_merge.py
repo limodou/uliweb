@@ -53,7 +53,7 @@ def parse_translation(f, lineno):
         msgstr = value
         
     if line != '':
-        print 'Error Line: ', line
+        print 'File: %s Error Line: %s' % (f.name, line)
         raise RuntimeError("parse error")
 
     return lineno, comments, msgid, msgstr
