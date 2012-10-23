@@ -3,6 +3,11 @@ from optparse import make_option
 from uliweb.core.commands import Command, get_input, get_answer
 from uliweb.core.template import template_file
 
+def camel_to_cap(s):
+    import re
+    
+    return re.sub('^\w|_\w', lambda x:x.group()[-1].upper(), s)
+    
 class GenericCommand(Command):
     name = 'generic'
     option_list = (
@@ -34,7 +39,7 @@ class GenericCommand(Command):
         d['appname'] = get_input("Appname:", option_value=options.appname)
         d['tablename'] = get_input("Table Name:", option_value=options.tablename)
         d['theme'] = get_input("Creation Theme([a]ngularjs, [h]tml), [e]sayui)[a]:", default="a", choices='ahe', option_value=options.theme)
-        view_name = d['tablename'].capitalize()+'View'
+        view_name = camel_to_cap(d['tablename'])+'View'
         view_file_name = 'views_%s.py' % d['tablename']
         url_prefix = '/'+d['appname']
         d['classname'] = get_input("View Class Name [%s]:" % view_name, default=view_name, option_value=options.classname)

@@ -5,6 +5,7 @@ Uliweb Change Log
 -----------------
 
 * Fix `uliweb.contrib.tables` dbinit.py bug
+* Improve generic command can process `camel_view` to `CamelView`
 
 0.1.6 Version
 -----------------
