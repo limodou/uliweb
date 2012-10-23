@@ -4,6 +4,8 @@ Uliweb Change Log
 0.1.7 Version
 -----------------
 
+* Fix `uliweb.contrib.tables` dbinit.py bug
+
 0.1.6 Version
 -----------------
 

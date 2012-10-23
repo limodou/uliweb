@@ -8,10 +8,10 @@ for tablename, v in __models__.iteritems():
     else:
         verbose_name = tablename
        
-    obj = Tables.get(Tables.c.tablename == tablename)
+    obj = Tables.get(Tables.c.table_name == tablename)
     if obj:
         obj.verbose_name = verbose_name
     else:
-        obj = Tables(tablename=tablename, verbose_name=verbose_name)
+        obj = Tables(table_name=tablename, verbose_name=verbose_name)
     obj.save()
     print 'Process %s...[%s]' % (tablename, verbose_name)
