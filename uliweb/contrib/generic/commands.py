@@ -57,7 +57,7 @@ class GenericCommand(Command):
         self.process(theme_name, d, options, global_options, args)
         
     def copy_view(self, viewfile_template, data, viewfile_dst, replace):
-        text = template_file(viewfile_template, data)
+        text = template_file(viewfile_template, data).replace('\r\n', '\n')
         if replace or not os.path.exists(viewfile_dst):
             text = '#coding=utf8\n' + text
             f = open(viewfile_dst, 'w')
@@ -69,7 +69,7 @@ class GenericCommand(Command):
         f.close()
         
     def copy_template(self, src_template, data, dst_template):
-        text = template_file(src_template, data)
+        text = template_file(src_template, data).replace('\r\n', '\n')
         f = open(dst_template, 'w')
         f.write(text)
         f.close()
@@ -88,7 +88,7 @@ class GenericCommand(Command):
         gpath = pkg.resource_filename('uliweb.contrib.generic', 'template_files/%s' % theme_name)
         
         def render(fpath, dst, df):
-            text = template_file(fpath, data)
+            text = template_file(fpath, data).replace('\r\n', '\n')
             open(df, 'w').write(text)
             return True
         

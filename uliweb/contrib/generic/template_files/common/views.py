@@ -53,7 +53,7 @@ class {{=classname}}(object):
         
         {{if download:}}
         if 'download' in request.values:
-            return view.download({{=downloadfile}}, action='download', timeout=0)
+            return view.download('{{=downloadfile}}', action='download', timeout=0)
         {{pass}}
         
         if 'data' in request.values:
