@@ -448,6 +448,36 @@ def get_uuid(type=4):
     u = getattr(uuid, name)
     return u().hex
 
+def pretty_dict(d, leading=' ', newline='\n', indent=0, tabstop=4, process=None):
+    """
+    Output pretty formatted dict, for example:
+        
+        d = {"a":"b",
+            "c":{
+                "d":"e",
+                "f":"g",
+                }
+            }
+        
+    will output:
+        
+        a : 'b'
+        c : 
+            d : 'e'
+            f : 'g'
+        
+    """
+    for k, v in d.items():
+        if process:
+            k, v = process(k, v)
+        if isinstance(v, dict):
+            yield '%s%s : %s' % (indent*tabstop*leading, k, newline)
+            for x in pretty_dict(v, leading=leading, newline=newline, indent=indent+1, tabstop=tabstop):
+                yield x
+            continue
+        yield '%s%s : %s%s' % (indent*tabstop*leading, k, simple_value(v), newline)
+
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:
