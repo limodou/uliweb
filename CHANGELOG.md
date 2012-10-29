@@ -7,6 +7,7 @@ Uliweb Change Log
 * Fix `uliweb.contrib.tables` dbinit.py bug
 * Improve generic command can process `camel_view` to `CamelView`
 * Add `pretty_dict` function to common
+* Fix xmlrpc not compatiable with `prepare_request`
 
 0.1.6 Version
 -----------------
