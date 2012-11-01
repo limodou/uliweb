@@ -1,7 +1,6 @@
 import re
 import datetime
 import decimal
-from html import Builder
 
 ESCAPE = re.compile(r'[\x00-\x1f\\"\b\f\n\r\t]')
 ESCAPE_DCT = {
@@ -107,10 +106,8 @@ class JSONEncoder(object):
             yield '"' + obj.strftime('%Y-%m-%d') + '"'
         elif isinstance(obj, datetime.time):
             yield '"' + obj.strftime('%H:%M:%S') + '"'
-        elif isinstance(obj, Builder):
-            yield str(obj)
         else:
-            raise TypeError(repr(obj) + " can't be serialized to JSON")
+            yield str(obj)
         
     def encode(self, obj):
         return ''.join(self.iterencode(obj))
