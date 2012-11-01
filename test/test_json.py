@@ -25,5 +25,12 @@ def test():
     "2011-11-08 00:00:00"
     >>> print json_dumps(['中文', unicode('中文', 'utf-8')])
     ["\xe4\xb8\xad\xe6\x96\x87","\xe4\xb8\xad\xe6\x96\x87"]
+    >>> from uliweb.core.html import Builder
+    >>> b = Builder('head', 'body', 'end')
+    >>> b.head << '<h1>'
+    >>> b.body << 'test'
+    >>> b.end << '</h1>'
+    >>> json_dumps({'b':b})
+    '{"b":<h1>\ntest\n</h1>\n}'
     """
     
