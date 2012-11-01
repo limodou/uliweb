@@ -8,7 +8,8 @@ Uliweb Change Log
 * Improve generic command can process `camel_view` to `CamelView`
 * Add `pretty_dict` function to common
 * Fix xmlrpc not compatiable with `prepare_request`
-* Add `Builder` support in json_dumps
+* Convert unknown object with `str()` in json_dumps
+* Add `encrypt` and `decrypt` function to functions
 
 0.1.6 Version
 -----------------

@@ -1,5 +1,5 @@
 from uliweb import settings
-from uliweb.utils.common import import_attr
+from uliweb.utils.common import import_attr, application_path
 from hashlib import md5
 
 def get_cipher(key=None):
@@ -17,11 +17,25 @@ def get_cipher(key=None):
     cipher = des_func(key, **kwargs)
     return cipher
 
+def encrypt(v, key=None):
+    """
+    Encrypt an string
+    """
+    cipher = get_cipher(key)
+    return cipher.encrypt(v)
+
+def decrypt(v, key=None):
+    """
+    Encrypt an string
+    """
+    cipher = get_cipher(key)
+    return cipher.decrypt(v)
+
 def get_key():
     """
     Read the key content from secret_file
     """
-    with file(settings.SECRETKEY.SECRET_FILE, 'rb') as f:
+    with file(application_path(settings.SECRETKEY.SECRET_FILE), 'rb') as f:
         return f.read()
     
 def get_cipher_key():
