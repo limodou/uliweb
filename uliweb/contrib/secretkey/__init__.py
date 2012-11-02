@@ -1,4 +1,4 @@
-from uliweb import settings
+from uliweb import settings, functions
 from uliweb.utils.common import import_attr, application_path
 from hashlib import md5
 
@@ -13,7 +13,7 @@ def get_cipher(key=None):
     kwargs = settings.SECRETKEY.CIPHER_ARGS
     
     if not key:
-        key = get_cipher_key()
+        key = functions.get_cipher_key()
     cipher = des_func(key, **kwargs)
     return cipher
 
@@ -21,14 +21,14 @@ def encrypt(v, key=None):
     """
     Encrypt an string
     """
-    cipher = get_cipher(key)
+    cipher = functions.get_cipher(key)
     return cipher.encrypt(v)
 
 def decrypt(v, key=None):
     """
     Encrypt an string
     """
-    cipher = get_cipher(key)
+    cipher = functions.get_cipher(key)
     return cipher.decrypt(v)
 
 def get_key():
