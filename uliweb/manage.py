@@ -34,7 +34,7 @@ def get_commands(global_options):
             try:
                 mod = __import__(m, fromlist=['*'])
             except ImportError as e:
-                if str(e) != 'No module named commands':
+                if not str(e).startswith('No module named'):
                     import traceback
                     traceback.print_exc()
                 continue
