@@ -11,7 +11,9 @@ Uliweb Change Log
 * Convert unknown object with `str()` in json_dumps
 * Add `encrypt` and `decrypt` function to functions
 * Fix pyini list value process bug for set can't process un-hashed object
-* Change file tempalte result, also will list the parent template file with the same name
+* Change find tempalte result, also will list the parent template file with the same name
+* Improve find template with `--tree` parameter, and it'll show a tree view of 
+  tmplate extend or include.
 
 0.1.6 Version
 -----------------

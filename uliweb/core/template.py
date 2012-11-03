@@ -395,7 +395,7 @@ class Out(object):
 class Template(object):
     def __init__(self, text='', vars=None, env=None, dirs=None, 
         default_template=None, use_temp=False, compile=None, skip_error=False, 
-        encoding='utf-8', begin_tag=None, end_tag=None):
+        encoding='utf-8', begin_tag=None, end_tag=None, see=None):
         self.text = text
         self.filename = None
         self.vars = vars or {}
@@ -417,6 +417,7 @@ class Template(object):
         self.encoding = encoding
         self.begin_tag = begin_tag or BEGIN_TAG
         self.end_tag = end_tag or END_TAG
+        self.see = see #will used to track the derive relation of templates
         
         for k, v in __nodes__.iteritems():
             if hasattr(v, 'init'):
@@ -589,10 +590,14 @@ class Template(object):
             
             self.depend_files.append(fname)
             
+            #track template tree
+            if self.see:
+                self.see('include', self.filename, fname)
+                
             f = open(fname, 'rb')
             text, begin_tag, end_tag = self.get_text(f.read(), inherit_tags=False)
             f.close()
-            t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag)
+            t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag, see=self.see)
             t.set_filename(fname)
             t.add_root(self)
             t.parse()
@@ -616,10 +621,14 @@ class Template(object):
             
             self.depend_files.append(fname)
             
+            #track template tree
+            if self.see:
+                self.see('extend', self.filename, fname)
+            
             f = open(fname, 'rb')
             text, begin_tag, end_tag = self.get_text(f.read(), inherit_tags=False)
             f.close()
-            t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag)
+            t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag, see=self.see)
             t.set_filename(fname)
             t.add_root(self)
             t.parse()
