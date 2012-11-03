@@ -598,11 +598,12 @@ class FindCommand(Command):
 
     def _find_template(self, template):
         from uliweb import application
-        from uliweb.core.template import get_templatefile
         
-        filename = get_templatefile(template, application.template_dirs)
-        print '%s' % (filename or 'Not Found')
-        
+        for dir in application.template_dirs:
+            filename = os.path.join(dir, template)
+            if os.path.exists(filename):
+                print filename.replace('\\', '/')
+                
     def _find_static(self, global_options, static):
         from uliweb import get_app_dir
         
