@@ -10,6 +10,7 @@ Uliweb Change Log
 * Fix xmlrpc not compatiable with `prepare_request`
 * Convert unknown object with `str()` in json_dumps
 * Add `encrypt` and `decrypt` function to functions
+* Fix pyini list value process bug for set can't process un-hashed object
 
 0.1.6 Version
 -----------------

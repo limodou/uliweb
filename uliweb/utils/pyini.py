@@ -139,7 +139,11 @@ class Section(SortedDict):
             #for mutable object, will merge them but not replace
             if isinstance(v, (list, dict)):
                 if isinstance(v, list):
-                    value = list(set(v + value))
+                    new_value = v[:]
+                    for x in value:
+                        if x not in new_value:
+                            new_value.append(x)
+                    value = new_value
                 else:
                     v.update(value)
                     value = v
