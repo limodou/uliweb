@@ -101,7 +101,9 @@ class ReferenceSelectField(SelectField):
         return r
     
     def to_python(self, data):
-        return int(data)
+        attr = getattr(get_model(self.model), self.value_field)
+        print 'xxxxxxxxxxxxxxxxxxxx', attr, attr.validate(data)
+        return attr.validate(data)
 
 class ManyToManySelectField(ReferenceSelectField):
     def __init__(self, model, group_field=None, value_field='id', 
@@ -1008,10 +1010,11 @@ class DetailWriter(uaml.Writer):
         
         
 class DetailLayout(object):
-    def __init__(self, layout_file, get_field, model=None, writer=None):
+    def __init__(self, layout_file, get_field, model=None, writer=None, **kwargs):
         self.layout_file = layout_file
         self.writer = writer or DetailWriter(get_field)
         self.model = model
+        self.kwargs = kwargs
         
     def get_text(self):
         from uliweb import application
@@ -1024,10 +1027,11 @@ class DetailLayout(object):
         return str(uaml.Parser(self.get_text(), self.writer))
 
 class DetailTableLayout(object):
-    def __init__(self, layout, get_field, model=None):
+    def __init__(self, layout, get_field, model=None, table_class='table'):
         self.layout = layout
         self.get_field = get_field
         self.model = model
+        self.table_class = table_class
         
     def line(self, fields, n):
         from uliweb.core.html import Tag
@@ -1055,13 +1059,16 @@ class DetailTableLayout(object):
                     with tr.div:
                         with tr.span(_class='view-label'):
                             tr << '<b>' + f['label'] + ': </b>'
+                        if isinstance(x, dict) and x.get('break'):
+                            tr << '<br/>'
                         with tr.span(_class='view-content'):
                             tr << f['display']
                 
         return tr
         
+    
     def render(self):
-        from uliweb.core.html import Buf
+        from uliweb.core.html import Builder
         from uliweb.form.layout import min_times
 
         m = []
@@ -1080,24 +1087,24 @@ class DetailTableLayout(object):
                 m.append(1)
         n = min_times(m)
         
-        buf = Buf()
+        buf = Builder('begin', 'body', 'end')
         table = None
         fieldset = None
         first = True
         for fields in self.layout:
             if not isinstance(fields, (tuple, list)):
-                if fields.startswith('--') and fields.endswith('--'):
+                if isinstance(fields, (str, unicode)) and fields.startswith('--') and fields.endswith('--'):
                     #THis is a group line
                     if table:
-                        buf << '</tbody></table>'
+                        buf.body << '</tbody></table>'
                     if fieldset:
-                        buf << '</fieldset>'
+                        buf.body << '</fieldset>'
                     title = fields[2:-2].strip()
                     if title:
                         fieldset = True
-                        buf << '<fieldset><legend>%s</legend>' % title
+                        buf.body << '<fieldset><legend>%s</legend>' % title
                     
-                    buf << '<table class="table width100"><tbody>'
+                    buf.body << '<table class="%s"><tbody>' % self.table_class
                     table = True
                     first = False
                     continue
@@ -1105,14 +1112,16 @@ class DetailTableLayout(object):
                     fields = [fields]
             if first:
                 first = False
-                buf << '<table class="table width100"><tbody>'
+                buf.begin << '<table class="%s">' % self.table_class
+                buf.body << '<tbody>'
                 table = True
-            buf << self.line(fields, n)
+            buf.body << self.line(fields, n)
         #close the tags
         if table:
-            buf << '</tbody></table>'
+            buf.end << '</table>'
+            buf.body << '</tbody>'
         if fieldset:
-            buf << '</fieldset>'
+            buf.body << '</fieldset>'
             
         return buf
     
@@ -1121,8 +1130,8 @@ class DetailTableLayout(object):
     
 class DetailView(object):
     def __init__(self, model, condition=None, obj=None, fields=None, 
-        types_convert_map=None, fields_convert_map=None, table_class_attr='table width100',
-        layout_class=None, layout=None, template_data=None, meta='DetailView'):
+        types_convert_map=None, fields_convert_map=None, table_class_attr='table',
+        layout_class=None, layout=None, layout_kwargs=None, template_data=None, meta='DetailView'):
         self.model = get_model(model)
         self.meta = meta
         self.condition = condition
@@ -1145,6 +1154,7 @@ class DetailView(object):
         self.result_fields = Storage({})
         self.r = self.result_fields
         self.f = Storage({})    #结果字段
+        self.layout_kwargs = layout_kwargs or {}
         
     def run(self):
         text = self.render()
@@ -1162,7 +1172,7 @@ class DetailView(object):
                 prop = fields[name]
                 return make_view_field(prop, self.obj, self.types_convert_map, self.fields_convert_map)
             
-            return str(self.layout_class(self.layout, get_field, self.model))
+            return self.layout_class(self.layout, get_field, self.model, **self.layout_kwargs).render()
         else:
             return self._render()
         
