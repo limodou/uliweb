@@ -12,9 +12,12 @@ class InitCommand(SQLCommand, Command):
         from uliweb.core.template import template_file
         from uliweb.manage import make_simple_application
         from uliweb import settings
-        from sqlalchemy import *
+        from sqlalchemy import create_engine, MetaData, Table
+        from shutil import rmtree
         
         alembic_path = os.path.join(global_options.project, 'alembic', options.engine).replace('\\', '/')
+        #delete alembic path
+        rmtree(alembic_path)
         extract_dirs('uliweb.contrib.orm', 'templates/alembic', alembic_path, 
             verbose=global_options.verbose, replace=True)
         make_simple_application(project_dir=global_options.project,

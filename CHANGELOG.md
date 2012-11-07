@@ -14,6 +14,7 @@ Uliweb Change Log
 * Change find tempalte result, also will list the parent template file with the same name
 * Improve find template with `--tree` parameter, and it'll show a tree view of 
   tmplate extend or include.
+* Improve alembic init, it will remove alembic path first.
 
 0.1.6 Version
 -----------------
