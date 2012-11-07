@@ -102,7 +102,6 @@ class ReferenceSelectField(SelectField):
     
     def to_python(self, data):
         attr = getattr(get_model(self.model), self.value_field)
-        print 'xxxxxxxxxxxxxxxxxxxx', attr, attr.validate(data)
         return attr.validate(data)
 
 class ManyToManySelectField(ReferenceSelectField):
@@ -1023,8 +1022,11 @@ class DetailLayout(object):
         f.close()
         return text
     
+    def render(self):
+        return uaml.Parser(self.get_text(), self.writer)
+    
     def __str__(self):
-        return str(uaml.Parser(self.get_text(), self.writer))
+        return str(self.render())
 
 class DetailTableLayout(object):
     def __init__(self, layout, get_field, model=None, table_class='table'):
