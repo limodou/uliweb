@@ -17,7 +17,8 @@ class InitCommand(SQLCommand, Command):
         
         alembic_path = os.path.join(global_options.project, 'alembic', options.engine).replace('\\', '/')
         #delete alembic path
-        rmtree(alembic_path)
+        if os.path.exists(alembic_path):
+            rmtree(alembic_path)
         extract_dirs('uliweb.contrib.orm', 'templates/alembic', alembic_path, 
             verbose=global_options.verbose, replace=True)
         make_simple_application(project_dir=global_options.project,
