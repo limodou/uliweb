@@ -1788,9 +1788,14 @@ class SimpleListView(object):
                     kwargs['align'] = 'center'
                 if field['rowspan'] > 1:
                     kwargs['rowspan'] = field['rowspan']
+#                _f = self.table_info['fields_list'][field['col']]
+                kwargs['width'] = field['width']
+                if not kwargs['width']:
+                    kwargs['width'] = self.default_column_width
                 _f = self.table_info['fields_list'][field['col']]
                 kwargs['field'] = _f['name']
                 if kwargs.get('rowspan', 1) + y != max_rowspan:
+                    kwargs.pop('width', None)
                     kwargs.pop('field', None)
                 
                 s.append(str(Tag('th', field['name'], **kwargs)))

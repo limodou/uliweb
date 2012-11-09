@@ -107,7 +107,7 @@ class JSONEncoder(object):
         elif isinstance(obj, datetime.time):
             yield '"' + obj.strftime('%H:%M:%S') + '"'
         else:
-            yield str(obj)
+            yield encode_basestring(str(obj))
         
     def encode(self, obj):
         return ''.join(self.iterencode(obj))
