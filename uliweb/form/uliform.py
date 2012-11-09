@@ -344,7 +344,7 @@ class ListField(StringField):
 class TextField(StringField):
     default_build = TextArea
 
-    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=10, cols=None, convert_html=False, **kwargs):
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=4, cols=None, convert_html=False, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.rows = rows
         self.cols = cols
@@ -361,7 +361,7 @@ class TextField(StringField):
         return str(self.build(value, id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
 
 class TextLinesField(TextField):
-    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, datatype=str, rows=4, cols=40, **kwargs):
+    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, datatype=str, rows=4, cols=None, **kwargs):
         TextField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, rows=rows, cols=cols, **kwargs)
         self._default = default or []
         self.datatype = datatype
