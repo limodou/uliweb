@@ -36,6 +36,9 @@ class SortedDict(object):
         except KeyError, k: 
             raise AttributeError, k
         
+    def __len__(self):
+        return len(self._dict)
+        
     def __contains__(self, key):
         return key in self._dict
     
