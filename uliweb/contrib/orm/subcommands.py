@@ -14,11 +14,12 @@ class InitCommand(SQLCommand, Command):
         from uliweb import settings
         from sqlalchemy import create_engine, MetaData, Table
         from shutil import rmtree
+        from uliweb.orm import get_connection, engine_manager
         
         alembic_path = os.path.join(global_options.project, 'alembic', options.engine).replace('\\', '/')
         #delete alembic path
         if os.path.exists(alembic_path):
-            rmtree(alembic_path)
+            rmtree(alembic_path, True)
         extract_dirs('uliweb.contrib.orm', 'templates/alembic', alembic_path, 
             verbose=global_options.verbose, replace=True)
         make_simple_application(project_dir=global_options.project,
@@ -26,7 +27,7 @@ class InitCommand(SQLCommand, Command):
             local_settings_file=global_options.local_settings)
         ini_file = os.path.join(alembic_path, 'alembic.ini')
         text = template_file(ini_file, 
-            {'connection':settings.ORM.CONNECTION, 
+            {'connection':engine_manager[options.engine].options.connection_string, 
             'engine_name':options.engine,
             'script_location':alembic_path})
         
@@ -34,7 +35,7 @@ class InitCommand(SQLCommand, Command):
             f.write(text)
             
         #drop old alembic_version table
-        db = create_engine(settings.ORM.CONNECTION)
+        db = get_connection(engine=options.engine)
         metadata = MetaData(db)
         if db.dialect.has_table(db.connect(), 'alembic_version'):
             version = Table('alembic_version', metadata, autoload=True) 
