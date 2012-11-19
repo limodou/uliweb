@@ -557,13 +557,13 @@ class ModelMetaclass(type):
         defined = set()
         for base in bases:
             if hasattr(base, 'properties'):
-                property_keys = base.properties.keys()
-                duplicate_properties = defined.intersection(property_keys)
-                if duplicate_properties:
-                    raise DuplicatePropertyError(
-                        'Duplicate properties in base class %s already defined: %s' %
-                        (base.__name__, list(duplicate_properties)))
-                defined.update(property_keys)
+#                property_keys = base.properties.keys()
+#                duplicate_properties = defined.intersection(property_keys)
+#                if duplicate_properties:
+#                    raise DuplicatePropertyError(
+#                        'Duplicate properties in base class %s already defined: %s' %
+#                        (base.__name__, list(duplicate_properties)))
+#                defined.update(property_keys)
                 cls.properties.update(base.properties)
         
         cls._manytomany = {}
@@ -2390,8 +2390,8 @@ class Model(object):
     def add_property(cls, name, prop, config=True, set_property=True):
         if isinstance(prop, Property):
             check_reserved_word(name)
-            if name in cls.properties:
-                raise DuplicatePropertyError('Duplicate property: %s' % name)
+#            if name in cls.properties:
+#                raise DuplicatePropertyError('Duplicate property: %s' % name)
             cls.properties[name] = prop
             if config:
                 prop.__property_config__(cls, name)
