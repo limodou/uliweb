@@ -477,6 +477,13 @@ def pretty_dict(d, leading=' ', newline='\n', indent=0, tabstop=4, process=None)
             continue
         yield '%s%s : %s%s' % (indent*tabstop*leading, k, simple_value(v), newline)
 
+def request_url():
+    from uliweb import request
+    
+    if request.query_string:
+        return request.path + '?' + request.query_string
+    else:
+        return request.path
 
 #if __name__ == '__main__':
 #    log.info('Info: info')

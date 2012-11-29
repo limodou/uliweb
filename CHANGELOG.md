@@ -17,6 +17,7 @@ Uliweb Change Log
 * Improve alembic init, it will remove alembic path first.
 * Remove orm derived duplication check, so that user can overwrite the property of parent
 * Add Decimal default precision to 10, and scale to 2
+* Add functions.request_url() this can be replace request.url.
 
 0.1.6 Version
 -----------------
