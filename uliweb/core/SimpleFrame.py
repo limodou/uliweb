@@ -115,7 +115,7 @@ def Redirect(url):
 def error(message='', errorpage=None, request=None, appname=None, **kwargs):
     kwargs.setdefault('message', message)
     if request:
-        kwargs.setdefault('link', request.url)
+        kwargs.setdefault('link', functions.request_url())
     raise HTTPError(errorpage, **kwargs)
 
 def function(fname, *args, **kwargs):
