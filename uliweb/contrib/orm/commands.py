@@ -76,17 +76,32 @@ def get_tables(apps_dir, apps=None, engine=None, import_models=False, tables=Non
         t = {}
         for tablename, m in engine.metadata.tables.items():
             if hasattr(m, '__appname__') and m.__appname__ in apps:
-                t[tablename] = engine.metadata.tables[tablename]
+                table = engine.metadata.tables[tablename]
+                table.__appname__ = m.__appname__
+                t[tablename] = table
     elif tables:
         t = {}
         for tablename, m in engine.metadata.tables.items():
             if tablename in tables:
-                t[tablename] = engine.metadata.tables[tablename]
+                table = engine.metadata.tables[tablename]
+                table.__appname__ = m.__appname__
+                t[tablename] = table
+                t[tablename] = table
     else:
-        t = engine.metadata.tables
-                
+        t = {}
+        for tablename, m in engine.metadata.tables.items():
+            table = engine.metadata.tables[tablename]
+            table.__appname__ = m.__appname__
+            t[tablename] = table
+           
     return t
 
+def get_sorted_tables(tables):
+    def _cmp(x, y):
+        return cmp(x[1].__appname__, y[1].__appname__)
+    
+    return sorted(tables.items(), cmp=_cmp)
+    
 def dump_table(table, filename, con, std=None, delimiter=',', format=None, encoding='utf-8', inspector=None):
     from uliweb.utils.common import str_value
     from StringIO import StringIO
@@ -173,7 +188,17 @@ def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8
                 raise
     finally:
         f.close()
-        
+  
+def show_table(name, table, i, total):
+    """
+    Display table info,
+    name is tablename
+    table is table object
+    i is current Index
+    total is total of tables
+    """
+    return '[%d/%d, %s] %s' % (i+1, total, table.__appname__, name)
+
 class SQLCommandMixin(object):
     option_list = [
         make_option('--engine', dest='engine', default='default',
@@ -188,12 +213,16 @@ class SyncdbCommand(SQLCommandMixin, Command):
     def handle(self, options, global_options, *args):
         engine = get_engine(options, global_options)
         
-        for name, t in get_tables(global_options.apps_dir, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, 
+            engine=options.engine, settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings))
+        _len = len(tables)
+        for i, (name, t) in enumerate(tables):
             exist = engine.dialect.has_table(engine.connect(), name)
             if not exist:
                 t.create(engine)
             if not exist or global_options.verbose:
-                print '[%s] Creating %s...%s' % (options.engine, name, 'CREATED' if not exist else 'EXISTED')
+                print '[%s] Creating %s...%s' % (options.engine, show_table(name, t, i, _len), 'CREATED' if not exist else 'EXISTED')
 
 class ResetCommand(SQLCommandMixin, Command):
     name = 'reset'
@@ -211,9 +240,13 @@ class ResetCommand(SQLCommandMixin, Command):
         
         engine = get_engine(options, global_options)
         
-        for name, t in get_tables(global_options.apps_dir, args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
+            engine=options.engine, settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings))
+        _len = len(tables)
+        for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print '[%s] Resetting %s...' % (options.engine, name)
+                print '[%s] Resetting %s...' % (options.engine, show_table(name, t, i, _len))
             t.drop(engine, checkfirst=True)
             t.create(engine)
 
@@ -233,9 +266,14 @@ class ResetTableCommand(SQLCommandMixin, Command):
         
         engine = get_engine(options, global_options)
         
-        for name, t in get_tables(global_options.apps_dir, tables=args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, 
+            tables=args, engine=options.engine, 
+            settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings))
+        _len = len(tables)
+        for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print '[%s] Resetting %s...' % (options.engine, name)
+                print '[%s] Resetting %s...' % (options.engine, show_table(name, t, i, _len))
             t.drop(engine, checkfirst=True)
             t.create(engine)
 
@@ -255,9 +293,14 @@ class DropTableCommand(SQLCommandMixin, Command):
         
         engine = get_engine(options, global_options)
         
-        for name, t in get_tables(global_options.apps_dir, tables=args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items():
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, 
+            tables=args, engine=options.engine, 
+            settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings))
+        _len = len(tables)
+        for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print '[%s] Dropping %s...' % (options.engine, name)
+                print '[%s] Dropping %s...' % (options.engine, show_table(name, t, i, _len))
             t.drop(engine, checkfirst=True)
 
 class SQLCommand(SQLCommandMixin, Command):
@@ -271,7 +314,10 @@ class SQLCommand(SQLCommandMixin, Command):
         
         engine = get_engine(options, global_options)
         
-        for name, t in sorted(get_tables(global_options.apps_dir, args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings).items()):
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
+            engine=options.engine, settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings))
+        for name, t in tables:
             _t = CreateTable(t)
             print _t
             
@@ -310,13 +356,13 @@ class DumpCommand(SQLCommandMixin, Command):
             
         inspector = Inspector.from_engine(engine)
 
-        tables = get_tables(global_options.apps_dir, args, engine=options.engine, 
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, args, engine=options.engine, 
             settings_file=global_options.settings, 
-            local_settings_file=global_options.local_settings)
-
-        for name, t in tables.items():
+            local_settings_file=global_options.local_settings))
+        _len = len(tables)
+        for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print 'Dumpping %s...' % name
+                print 'Dumpping %s...' % show_table(name, t, i, _len)
             filename = os.path.join(output_dir, name+'.txt')
             if options.text:
                 format = 'txt'
@@ -366,14 +412,15 @@ class DumpTableCommand(SQLCommandMixin, Command):
             
         inspector = Inspector.from_engine(engine)
         
-        tables = get_tables(global_options.apps_dir, tables=args,
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, tables=args,
             engine=options.engine, settings_file=global_options.settings, 
-            local_settings_file=global_options.local_settings)
+            local_settings_file=global_options.local_settings))
+        _len = len(tables)
 
-        for tablename, t in tables.items():
+        for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print '[%s] Dumpping %s...' % (options.engine, tablename)
-            filename = os.path.join(output_dir, tablename+'.txt')
+                print '[%s] Dumpping %s...' % (options.engine, show_table(name, t, i, _len))
+            filename = os.path.join(output_dir, name+'.txt')
             if options.text:
                 format = 'txt'
             else:
@@ -411,7 +458,7 @@ class DumpTableFileCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings)
         t = tables[name]
         if global_options.verbose:
-            print '[%s] Dumpping %s...' % (options.engine, name)
+            print '[%s] Dumpping %s...' % (options.engine, show_table(name, t, 0, 1))
         if options.text:
             format = 'txt'
         else:
@@ -454,12 +501,14 @@ are you sure to load data""" % options.engine
         
         engine = get_engine(options, global_options)
 
-        tables = get_tables(global_options.apps_dir, args, engine=options.engine, 
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
+            engine=options.engine, 
             settings_file=global_options.settings, 
-            local_settings_file=global_options.local_settings)
-        for name, t in tables.items():
+            local_settings_file=global_options.local_settings))
+        _len = len(tables)
+        for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print '[%s] Loading %s...' % (options.engine, name)
+                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
             try:
                 orm.Begin()
                 filename = os.path.join(path, name+'.txt')
@@ -508,12 +557,14 @@ are you sure to load data""" % (options.engine, ','.join(args))
         
         engine = get_engine(options, global_options)
 
-        tables = get_tables(global_options.apps_dir, engine=options.engine, 
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, engine=options.engine, 
             settings_file=global_options.settings, tables=args,
-            local_settings_file=global_options.local_settings)
-        for name, t in tables.items():
+            local_settings_file=global_options.local_settings))
+        _len = len(tables)
+        
+        for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print '[%s] Loading %s...' % (options.engine, name)
+                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
             try:
                 orm.Begin()
                 filename = os.path.join(path, name+'.txt')
@@ -565,7 +616,7 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings)
         t = tables[name]
         if global_options.verbose:
-            print '[%s] Loading %s...' % (options.engine, name)
+            print '[%s] Loading %s...' % (options.engine, show_table(name, t, 0, 1))
         try:
             orm.Begin()
             if options.text:
@@ -668,11 +719,13 @@ class ValidatedbCommand(SQLCommandMixin, Command):
         else:
             apps = self.get_apps(global_options)
         
-        tables = get_tables(global_options.apps_dir, apps, engine=options.engine, 
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, apps, 
+            engine=options.engine, 
             settings_file=global_options.settings, 
-            local_settings_file=global_options.local_settings)
+            local_settings_file=global_options.local_settings))
+        _len = len(tables)
         
-        for name, t in tables.items():
+        for i, (name, t) in enumerate(tables):
             exist = engine.dialect.has_table(engine.connect(), name)
             if not exist:
                 flag = 'NOT EXISTED'
@@ -687,7 +740,7 @@ class ValidatedbCommand(SQLCommandMixin, Command):
                     flag = 'FAILED'
                 
             if global_options.verbose or flag!='OK':
-                print 'Validating [%s] %s...%s' % (options.engine, name, flag)
+                print 'Validating [%s] %s...%s' % (options.engine, show_table(name, t, i, _len), flag)
 
 def get_commands(mod):
     import types
