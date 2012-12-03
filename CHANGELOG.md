@@ -19,6 +19,7 @@ Uliweb Change Log
 * Add Decimal default precision to 10, and scale to 2
 * Add functions.request_url() this can be replace request.url.
 * Add count number to orm command when process multiple tables and also display appname of the model
+* Add `post_commit` to transcation middleware. So you can bind a callback to it.
 
 0.1.6 Version
 -----------------

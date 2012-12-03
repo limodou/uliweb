@@ -19,6 +19,10 @@ class TransactionMiddle(Middleware):
             if self.settings.ORM.CONNECTION_TYPE == 'short':
                 db = get_connection()
                 db.dispose()
+                
+            #add post_commit process
+            if hasattr(response, 'post_commit') and response.post_commit:
+                response.post_commit()
             
     def process_exception(self, request, exception):
         RollbackAll(close=True)
