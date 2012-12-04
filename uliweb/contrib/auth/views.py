@@ -7,6 +7,11 @@ def login():
     
     form = functions.get_form('auth.LoginForm')()
     
+    if request.user:
+        next = request.GET.get('next')
+        if next:
+            return redirect(next)
+    
     if request.method == 'GET':
         form.next.data = request.GET.get('next', request.referrer or '/')
         return {'form':form, 'msg':''}
