@@ -114,3 +114,4 @@ class JSONEncoder(object):
     
 def json_dumps(obj, unicode=False, **kwargs):
     return JSONEncoder(unicode=unicode, default=simple_value, **kwargs).encode(obj)
+
