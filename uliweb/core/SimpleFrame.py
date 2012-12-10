@@ -755,7 +755,7 @@ class Dispatcher(object):
                 d = None
             response.write(self.template(tmpfile, result, env, default_template=d))
         elif isinstance(result, (str, unicode)):
-            response = Response(result, content_type='text/html')
+            response.write(result)
         elif isinstance(result, (Response, BaseResponse)):
             response = result
         else:
