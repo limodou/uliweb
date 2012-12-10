@@ -62,7 +62,7 @@ class {{=classname}}(object):
         result = view.run()
         result['view'] = view
         {{if theme_name=='html':}}
-        result['pagination'] = functions.create_pagination(request.url, view.total, view.pageno+1, view.rows_per_page)
+        result['pagination'] = functions.create_pagination(functions.request_url(), view.total, view.pageno+1, view.rows_per_page)
         result['query_form'] = query.form
         {{pass}}
         {{if theme_name=='easyui':}}

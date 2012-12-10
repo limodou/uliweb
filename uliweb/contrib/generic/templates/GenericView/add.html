@@ -3,7 +3,7 @@
 {{block content_main}}
 <h1>{{=defined('title') or _('Add')}}</h1>
 <div>
-<form class="{{=defined('form_class') or 'form-horizontal'}}" method="POST" action="{{=defined('action') or request.url}}">
+<form class="{{=defined('form_class') or 'form-horizontal'}}" method="POST" action="{{=defined('action') or functions.request_url()}}">
 {{build = form.build}}
 {{<< build.body}}
 {{<< build.buttons_line}}

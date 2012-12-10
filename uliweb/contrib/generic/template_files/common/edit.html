@@ -10,7 +10,7 @@
 <div>
 <form class="[[if addview_ajax:]]ajax [[pass]]{{=defined('form_class') or 'form-horizontal'}}" 
     method="POST" 
-    action="{{=defined('action') or request.url}}"
+    action="{{=defined('action') or functions.request_url()}}"
     id="edit_form">
 {{build = form.build}}
 {{<< build.body}}

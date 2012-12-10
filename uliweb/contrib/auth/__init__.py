@@ -1,6 +1,7 @@
 from uliweb.orm import get_model
 import logging
 from uliweb.i18n import ugettext_lazy as _
+from uliweb import functions
 
 log = logging.getLogger('uliweb.app')
 
@@ -88,7 +89,7 @@ def require_login(f=None, next=None):
         from uliweb import request, Redirect, url_for
         
         if not request.user:
-            path = request.url
+            path = functions.request_url()
             Redirect(next or url_for('login', next=path))
     
     if not f:
