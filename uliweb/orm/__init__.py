@@ -605,7 +605,7 @@ class Property(object):
         required=False, validators=None, choices=None, max_length=None, 
         hint='', auto=None, auto_add=None, type_class=None, type_attrs=None, 
         placeholder='', extra=None,
-        **kwargs):
+        sequence=False, **kwargs):
         self.verbose_name = verbose_name
         self.property_name = None
         self.name = name
@@ -620,6 +620,7 @@ class Property(object):
         self.choices = choices
         self.max_length = max_length
         self.kwargs = kwargs
+        self.sequence = sequence
         self.creation_counter = Property.creation_counter
         self.value = None
         self.placeholder = placeholder
@@ -639,18 +640,21 @@ class Property(object):
         return d
         
     def create(self, cls):
-        args = self.kwargs.copy()
-        args['key'] = self.name
+        kwargs = self.kwargs.copy()
+        kwargs['key'] = self.name
 #        if callable(self.default):
-#            args['default'] = self.default()
-        args['default'] = self.default
-        args['primary_key'] = self.kwargs.get('primary_key', False)
-        args['autoincrement'] = self.kwargs.get('autoincrement', False)
-        args['index'] = self.kwargs.get('index', False)
-        args['unique'] = self.kwargs.get('unique', False)
-        args['nullable'] = self.kwargs.get('nullable', True)
+#            kwargs['default'] = self.default()
+        kwargs['default'] = self.default
+        kwargs['primary_key'] = self.kwargs.get('primary_key', False)
+        kwargs['autoincrement'] = self.kwargs.get('autoincrement', False)
+        kwargs['index'] = self.kwargs.get('index', False)
+        kwargs['unique'] = self.kwargs.get('unique', False)
+        kwargs['nullable'] = self.kwargs.get('nullable', True)
         f_type = self._create_type()
-        return Column(self.property_name, f_type, **args)
+        args = ()
+        if self.sequence:
+            args = (self.sequence, )
+        return Column(self.property_name, f_type, *args, **kwargs)
 
     def _create_type(self):
         if self.max_length:
@@ -2115,9 +2119,9 @@ _fields_mapping = {
     DECIMAL:DecimalProperty,
     PICKLE:PickleProperty,
 }
-def Field(type, **kwargs):
+def Field(type, *args, **kwargs):
     t = _fields_mapping.get(type, type)
-    return t(**kwargs)
+    return t(*args, **kwargs)
 
 class Model(object):
 

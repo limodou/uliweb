@@ -1751,18 +1751,30 @@ def test_self_manytomany():
     [<Group {'name':u'python','id':1}>]
     """
     
+def test_sequence():
+    """
+    >>> from sqlalchemy import Sequence
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     num = Field(int, sequence=Sequence('num_id'))
+    >>> a = User(username='limodou')
+    >>> a.save()
+    True
+    """
+
 #if __name__ == '__main__':
+#    from sqlalchemy import Sequence
 #    db = get_connection('sqlite://')
+#    db.echo = False
 #    db.metadata.drop_all()
-#    class Test(Model):
-#        date1 = DateTimeProperty()
-#        date2 = DateProperty()
-#        date3 = TimeProperty()
-#    a = Test()
-#    #test common datetime object
-#    a.date1 = None
-#    a.date1 = datetime.datetime(2009,1,1,14,0,5)
+#    class User(Model):
+#        username = Field(unicode)
+#        num = Field(int, sequence=Sequence('num_id'))
 #    
+    
     
     
     
