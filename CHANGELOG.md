@@ -21,6 +21,7 @@ Uliweb Change Log
 * Add count number to orm command when process multiple tables and also display appname of the model
 * Add `post_commit` to transcation middleware. So you can bind a callback to it.
 * Add `sequence` to Property.
+* Remove LoginForm validate process, because authenticate already done this.
 
 
 0.1.6 Version

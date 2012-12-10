@@ -32,17 +32,6 @@ class LoginForm(Form):
     rememberme = BooleanField(label=_('Remember Me'))
     next = HiddenField()
     
-    def form_validate(self, all_data):
-        from uliweb import settings
-        from uliweb.orm import get_model
-        
-        User = get_model('user')
-        user = User.get(User.c.username==all_data['username'])
-        if not user:
-            return {'username': _('User "%s" is not existed!') % all_data['username']}
-        if not user.check_password(all_data['password']):
-            return {'password' : _('Password is not right.')}
-            
 class ChangePasswordForm(Form):
     form_buttons = Submit(value=_('Save'), _class="btn btn-primary")
 #    form_title = _('Change Password')
