@@ -22,6 +22,7 @@ Uliweb Change Log
 * Add `post_commit` to transcation middleware. So you can bind a callback to it.
 * Add `sequence` to Property.
 
+
 0.1.6 Version
 -----------------
 
