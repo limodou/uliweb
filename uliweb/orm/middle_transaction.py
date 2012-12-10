@@ -12,6 +12,7 @@ class TransactionMiddle(Middleware):
         Begin()
 
     def process_response(self, request, response):
+        from uliweb import response as res
         try:
             return response
         finally:
@@ -23,6 +24,9 @@ class TransactionMiddle(Middleware):
             #add post_commit process
             if hasattr(response, 'post_commit') and response.post_commit:
                 response.post_commit()
+                
+            if hasattr(res, 'post_commit') and res.post_commit:
+                res.post_commit()
             
     def process_exception(self, request, exception):
         RollbackAll(close=True)
