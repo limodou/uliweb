@@ -15,6 +15,7 @@ Uliweb Change Log
 * Improve find template with `--tree` parameter, and it'll show a tree view of 
   tmplate extend or include.
 * Improve alembic init, it will remove alembic path first.
+* Remove orm derived duplication check, so that user can overwrite the property of parent
 
 0.1.6 Version
 -----------------
