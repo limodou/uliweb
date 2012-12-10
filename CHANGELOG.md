@@ -18,6 +18,7 @@ Uliweb Change Log
 * Remove orm derived duplication check, so that user can overwrite the property of parent
 * Add Decimal default precision to 10, and scale to 2
 * Add functions.request_url() this can be replace request.url.
+* Add count number to orm command when process multiple tables and also display appname of the model
 
 0.1.6 Version
 -----------------
