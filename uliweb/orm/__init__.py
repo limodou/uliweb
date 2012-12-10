@@ -1033,7 +1033,7 @@ class DecimalProperty(Property):
     data_type = decimal.Decimal
     field_class = Numeric
     
-    def __init__(self, verbose_name=None, default='0.0', precision=None, scale=None, **kwds):
+    def __init__(self, verbose_name=None, default='0.0', precision=10, scale=2, **kwds):
         super(DecimalProperty, self).__init__(verbose_name, default=default, **kwds)
         self.precision = precision
         self.scale = scale
