@@ -25,7 +25,7 @@ def login():
                 next = urllib.unquote(request.POST.get('next', '/'))
                 return redirect(next)
             else:
-                data = d
+                form.errors.update(d)
         msg = form.errors.get('_', '') or _('Login failed!')
         return {'form':form, 'msg':str(msg)}
 
