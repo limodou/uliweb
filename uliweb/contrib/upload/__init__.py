@@ -1,7 +1,7 @@
 import os
 from uliweb import settings, request, url_for
 from uliweb.utils import files
-from uliweb.utils.common import import_attr, application_path
+from uliweb.utils.common import import_attr, application_path, log
 import random
 import time
 
@@ -159,8 +159,11 @@ class FileServing(object):
             
     def delete_filename(self, filename):
         f = self.get_filename(filename, filesystem=True, convert=False)
-        if os.path.exists:
-            os.unlink(f)
+        if os.path.exists(f):
+            try:
+                os.unlink(f)
+            except Exception, e:
+                log.exception(e)
     
     def get_href(self, filename, **kwargs):
         if not filename:

@@ -23,6 +23,13 @@ Uliweb Change Log
 * Add `sequence` to Property.
 * Remove LoginForm validate process, because authenticate already done this.
 * Add `authenticate` to functions
+* Add functions to uliweb shell
+* Add ORM Lazy and cache support
+* Refactor manage.py get_commands process
+* Add flat_list and remove cach_get in common.py
+* Refactor objcache app
+* Add redis_cli app
+* Fix upload app bug
 
 0.1.6 Version
 -----------------
