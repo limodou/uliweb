@@ -531,11 +531,13 @@ class ShellCommand(Command):
     banner = "Uliweb Command Shell"
     
     def make_shell_env(self, global_options):
+        from uliweb import functions
+        
         application = SimpleFrame.Dispatcher(project_dir=global_options.project, 
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings, 
             start=False)
-        env = {'application':application, 'settings':application.settings}
+        env = {'application':application, 'settings':application.settings, 'functions':functions}
         return env
     
     def handle(self, options, global_options, *args):
@@ -721,11 +723,12 @@ def collect_files(apps_dir, apps):
 def call(args=None):
     from uliweb.core.commands import execute_command_line
     
-    apps_dir = os.path.join(os.getcwd(), 'apps')
-    if os.path.exists(apps_dir):
-        sys.path.insert(0, apps_dir)
-       
-    install_config(apps_dir)
+    def callback(global_options):
+        apps_dir = global_options.apps_dir or os.path.join(os.getcwd(), 'apps')
+        if os.path.exists(apps_dir) and apps_dir not in sys.path:
+            sys.path.insert(0, apps_dir)
+           
+        install_config(apps_dir)
     
     from uliweb.i18n.i18ntool import I18nCommand
     register_command(I18nCommand)
@@ -734,7 +737,7 @@ def call(args=None):
         import shlex
         args = shlex.split(args)
     
-    execute_command_line(args or sys.argv, get_commands, 'uliweb')
+    execute_command_line(args or sys.argv, get_commands, 'uliweb', callback)
 
 def main():
     call()

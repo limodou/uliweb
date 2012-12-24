@@ -1,95 +1,130 @@
-import datetime
-from decimal import Decimal
-from uliweb import function
+from uliweb import functions
+from uliweb.utils.common import log, flat_list
 
-def get_key(tablename):
+def get_fields(tablename):
     from uliweb import settings
     
-    tables = settings.get_var('OBJCACHE/config')
+    tables = settings.get_var('OBJCACHE_TABLES')
     if not tablename in tables:
         return 
     
     return tables[tablename]
 
-def get_id(tablename, condition):
-    from uliweb.utils.common import safe_str
-    return "__objcache__:%s:%s" % (tablename, safe_str(condition.right.value))
+def get_id(tablename, id):
+    return "objcache:%s:%d" % (tablename, id)
 
-def get_cache():
-    from weto.cache import NoSerial
-    return function('get_cache')(serial_cls=NoSerial)
+def get_redis():
+    try:
+        redis = functions.get_redis()
+    except Exception, e:
+        log.exception(e)
+        redis = None
+    return redis
+
+def check_enable():
+    from uliweb import settings
     
-def get_object(sender, condition):
+    if settings.OBJCACHE.enable:
+        return True
+    
+def get_object(model, tablename, id):
     """
-    Only support simple condition, for example: Model.c.id == n
+    Get cached object from redis
     """
-    from sqlalchemy.sql.expression import _BinaryExpression
     from uliweb.utils.common import log
     
-    tablename = sender.tablename
-    log.debug("get:begin")
+    if not check_enable():
+        return
     
-    _key = get_key(tablename)
-    log.debug("get:_key="+_key)
-    if _key and (isinstance(condition, _BinaryExpression) and
-        (condition.left.name == _key)):
-        cache = get_cache()
-        _id = get_id(tablename, condition)
-        log.debug("get:id=" + _id)
-        v = cache.get(_id, None)
-        log.debug("get:value="+str(v))
-        if v:
-            d = eval(v)
-            o = sender(**d)
-            o.set_saved()
+    redis = get_redis()
+    if not redis: return
+    _id = get_id(tablename, id)
+    try:
+        if redis.exists(_id):
+            v = redis.hgetall(_id)
+            o = model.load(v)
+            log.debug("objcache:get:id="+_id)
             return o
+    except Exception, e:
+        log.exception(e)
         
-def set_object(sender, condition, instance):
+def set_object(model, tablename, instance, fields=None):
     """
     Only support simple condition, for example: Model.c.id == n
     """
-    from sqlalchemy.sql.expression import _BinaryExpression
     from uliweb import settings
     from uliweb.utils.common import log
     
-    tablename = sender.tablename
+    if not check_enable():
+        return
     
-    _key = get_key(tablename)
-    if _key and (isinstance(condition, _BinaryExpression) and (condition.left.name == _key)):
-        v = repr(instance.to_dict())
-        cache = get_cache()
-        _id = get_id(tablename, condition)
-        log.debug("set:id=" + _id)
-        ret = cache.set(_id, v, settings.get_var('OBJCACHE/expiry_time'))
-        log.debug("set:value="+v)
-        return ret
+    if not fields:
+        fields = get_fields(tablename)
+    if fields:
+        redis = get_redis()
+        if not redis: return
         
-def post_save(sender, instance, created, data, old_data):
+        v = instance.dump(fields)
+        _id = get_id(tablename, instance.id)
+        try:
+            pipe = redis.pipeline()
+            r = pipe.delete(_id).hmset(_id, v).expire(_id, settings.get_var('OBJCACHE/timeout')).execute()
+            log.debug("objcache:set:id="+_id)
+        except Exception, e:
+            log.exception(e)
+        
+    else:
+        log.debug("There is no fields defined or not configured, so it'll not saved in cache, [%s:%d]" % (tablename, instance.id))
+        
+def post_save(model, instance, created, data, old_data):
     from uliweb.utils.common import log
-    from uliweb import settings
+    from uliweb import response
 
-    tablename = sender.tablename
+    if not check_enable():
+        return
     
-    _key = get_key(tablename)
-    if _key:
-        _id = get_id(tablename, sender.c[_key]==instance.id)
-        log.debug("post_save:id=" + _id)
-        cache = get_cache()
-        v = repr(instance.to_dict())
-        log.debug("post_save:value="+v)
-        ret = cache.set(_id, v, settings.get_var('OBJCACHE/expiry_time'))
-        return ret
-
-def post_delete(sender, instance):
+    tablename = model.tablename
+    
+    fields = get_fields(tablename)
+    if fields:
+        #if response is False, then it means you may in batch program
+        #so it can't use post_commit machenism
+        def f():
+            #check if the record has changed
+            flag = created
+            if not flag:
+                flag = bool(filter(lambda x:x in data, fields))
+            if flag:
+                set_object(model, tablename, instance)
+                log.debug("objcache:post_save:id=%d" % instance.id)
+        if response:
+            response.post_commit = f
+        else:
+            f()
+        
+def post_delete(model, instance):
     from uliweb.utils.common import log
+    from uliweb import response
 
-    tablename = sender.tablename
+    if not check_enable():
+        return
     
-    _key = get_key(tablename)
-    if _key:
-        _id = get_id(tablename, sender.c[_key]==instance.id)
-        log.debug("post_delete:id=" + _id)
-        cache = get_cache()
-        ret = cache.delete(_id)
-        return ret
+    tablename = model.tablename
     
+    if get_fields(tablename):
+        def f():
+            _id = get_id(tablename)
+            redis = get_redis()
+            if not redis: return
+            
+            try:
+                redis.delete(_id)
+                log.debug("objcache:post_delete:id="+_id)
+            except Exception, e:
+                log.exception(e)
+            
+        if response:
+            response.post_commit = f
+        else:
+            f()
+        

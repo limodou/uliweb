@@ -4,7 +4,7 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 import os, sys
 import time
-from uliweb.orm import get_model, Model, Result, do_
+from uliweb.orm import get_model, Model, Result, do_, Lazy
 import uliweb.orm as orm
 from uliweb import redirect, json, functions, UliwebError, Storage
 from sqlalchemy.sql import Select
@@ -480,6 +480,9 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
         if old_value is __default_value__:
             if isinstance(obj, Model):
                 value = prop.get_value_for_datastore(obj)
+                if value is Lazy:
+                    getattr(obj, prop.property_name)
+                    value = prop.get_value_for_datastore(obj)
             else:
                 value = obj[prop.property_name]
         display = prop.get_display_value(value)

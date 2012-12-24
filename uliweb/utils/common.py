@@ -334,16 +334,6 @@ def str_value(v, encoding='utf-8', bool_int=True, none='NULL'):
     else:
         return str(v)
 
-__caches__ = {}
-def cache_get(key, func, _type='default'):
-    global __caches__
-    v = __caches__.setdefault(_type, {})
-    if key in v and v[key]:
-        return v[key]
-    else:
-        v[key] = func(key)
-        return v[key]
-    
 def norm_path(path):
     return os.path.normcase(os.path.abspath(path))
 
@@ -485,6 +475,30 @@ def request_url():
     else:
         return request.path
 
+def flat_list(*alist):
+    """
+    Flat a tuple, list, single value or list of list to flat list
+    e.g.
+    
+    >>> flat_list(1,2,3)
+    [1, 2, 3]
+    >>> flat_list(1)
+    [1]
+    >>> flat_list([1,2,3])
+    [1, 2, 3]
+    >>> flat_list([None])
+    []
+    """
+    a = []
+    for x in alist:
+        if x is None:
+            continue
+        if isinstance(x, (tuple, list)):
+            a.extend([i for i in x if i is not None])
+        else:
+            a.append(x)
+    return a
+    
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:

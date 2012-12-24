@@ -1,14 +1,11 @@
 # This module is used for wrapping SqlAlchemy to a simple ORM
 # Author: limodou <limodou@gmail.com>
-# 2008.06.11
-# Update:
-#   2010.4.1 Add get() support to Result and ManyResult
 
 
 __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
     'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
-    'set_tablename_converter',
+    'set_tablename_converter', 'Lazy',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
@@ -16,7 +13,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
-    'PickleType', 'BigIntegerProperty',
+    'PickleProperty', 'BigIntegerProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError',
@@ -38,6 +35,7 @@ import decimal
 import threading
 import datetime
 from uliweb.utils import date
+from uliweb.utils.common import flat_list
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement
 from sqlalchemy.pool import NullPool
@@ -69,6 +67,7 @@ class KindError(Error):pass
 class ConfigurationError(Error):pass
 
 _SELF_REFERENCE = object()
+class Lazy(object): pass
 
 class SQLStorage(dict):
     """
@@ -669,12 +668,22 @@ class Property(object):
         if not self.name:
             self.name = property_name
 
+    def get_lazy(self, model_instance, name, default=None):
+        v = getattr(model_instance, name, default)
+        if v is Lazy:
+            _id = getattr(model_instance, 'id')
+            if not _id:
+                raise BadValueError('Instance is not a validate object of Model %s, ID property is not found' % model_class.__name__)
+            model_instance.refresh()
+            v = getattr(model_instance, name, default)
+        return v
+        
     def __get__(self, model_instance, model_class):
         if model_instance is None:
             return self
 
         try:
-            return getattr(model_instance, self._attr_name(), self.default_value())
+            return self.get_lazy(model_instance, self._attr_name(), self.default_value())
         except AttributeError:
             return None
         
@@ -696,10 +705,7 @@ class Property(object):
             d = self.default()
         else:
             d = self.default
-        if d:
-            return self.convert(d)
-        else:
-            return d
+        return d
     
     def get_choices(self):
         if callable(self.choices):
@@ -748,19 +754,26 @@ class Property(object):
 #                            c.append(choice)
 #                    raise BadValueError('Property %s is %r; must be one of %r' %
 #                        (self.name, value, c))
+        #skip Lazy value
+        if value is Lazy:
+            return value
+        
         if value is not None:
             try:
                 value = self.convert(value)
             except TypeError, err:
                 raise BadValueError('Property %s must be convertible '
                     'to %s, but the value is (%s)' % (self.name, self.data_type, err))
-        
+            
+            if hasattr(self, 'custom_validate'):
+                value = self.custom_validate(value)
+                
         for v in self.validators:
             v(value)
         return value
 
     def empty(self, value):
-        return value is None
+        return (value is None) or (isinstance(value, (str, unicode)) and not value.strip())
 
     def get_value_for_datastore(self, model_instance):
         return getattr(model_instance, self._attr_name(), None)
@@ -800,6 +813,8 @@ class Property(object):
         elif isinstance(v, str):
             return v
         else:
+            if v is None:
+                return ''
             return str(v)
         
     def to_unicode(self, v):
@@ -808,6 +823,8 @@ class Property(object):
         elif isinstance(v, unicode):
             return v
         else:
+            if v is None:
+                return u''
             return unicode(v)
     
 class CharProperty(Property):
@@ -816,9 +833,6 @@ class CharProperty(Property):
     
     def __init__(self, verbose_name=None, default=u'', max_length=255, **kwds):
         super(CharProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
-    
-    def empty(self, value):
-        return not value
     
     def convert(self, value):
         if isinstance(value, str):
@@ -869,15 +883,6 @@ class PickleProperty(BlobProperty):
     field_class = PickleType
     data_type = None
     
-    def __init__(self, verbose_name=None, default='', **kwds):
-        super(PickleProperty, self).__init__(verbose_name, default=default, **kwds)
-
-    def convert(self, value):
-        return value
-    
-    def validate(self, value):
-        return value
-    
 class DateTimeProperty(Property):
     data_type = datetime.datetime
     field_class = DateTime
@@ -889,8 +894,7 @@ class DateTimeProperty(Property):
         self.auto_now_add = auto_now_add
         self.format = format
 
-    def validate(self, value):
-        value = super(DateTimeProperty, self).validate(value)
+    def custom_validate(self, value):
         if value and not isinstance(value, self.data_type):
             raise BadValueError('Property %s must be a %s' %
                 (self.name, self.data_type.__name__))
@@ -900,95 +904,55 @@ class DateTimeProperty(Property):
     def now():
         return date.now()
 
+    def make_value_from_datastore(self, value):
+        if value is not None:
+            value = self._convert_func(value)
+        return value
+
+    @staticmethod
+    def _convert_func(*args, **kwargs):
+        return date.to_datetime(*args, **kwargs)
+    
     def convert(self, value):
         if not value:
             return None
-        d = date.to_datetime(value, format=self.format)
+        d = self._convert_func(value, format=self.format)
         if d:
             return d
         raise BadValueError('The datetime value is not a valid format')
     
     def to_str(self, v):
-        if isinstance(v, datetime.datetime):
-            return v.strftime('%Y-%m-%d %H:%M:%S')
+        if isinstance(v, self.data_type):
+            return date.to_string(v, timezone=False)
         else:
+            if not v:
+                return ''
             return str(v)
     
     def to_unicode(self, v):
-        if isinstance(v, datetime.datetime):
-            return unicode(v.strftime(u'%Y-%m-%d %H:%M:%S'))
+        if isinstance(v, self.data_type):
+            return unicode(date.to_string(v, timezone=False))
         else:
+            if not v:
+                return u''
             return unicode(v)
 
 class DateProperty(DateTimeProperty):
     data_type = datetime.date
     field_class = Date
     
-    #if the value is datetime.datetime, this convert will not be invoked at all
-    #Todo: so if I need to fix it?
-    #this is fixed by call date.to_date(value) in validate() method
-#    def validate(self, value):
-#        value = super(DateProperty, self).validate(value)
-#        if value:
-#            return date.to_date(value)
-#        return value
-
-    def make_value_from_datastore(self, value):
-        if value is not None:
-            value = date.to_date(value)
-        return value
-
-    def convert(self, value):
-        if not value:
-            return None
-        d = date.to_date(value, format=self.format)
-        if d:
-            return d
-        raise BadValueError('The date value is not a valid format')
+    @staticmethod
+    def _convert_func(*args, **kwargs):
+        return date.to_date(*args, **kwargs)
     
-    def to_str(self, v):
-        if isinstance(v, datetime.date):
-            return v.strftime('%Y-%m-%d')
-        else:
-            return str(v)
-        
-    def to_unicode(self, v):
-        if isinstance(v, datetime.date):
-            return unicode(v.strftime('%Y-%m-%d'))
-        else:
-            return unicode(v)
-
 class TimeProperty(DateTimeProperty):
-    """A time property, which stores a time without a date."""
-
     data_type = datetime.time
     field_class = Time
     
-    def make_value_from_datastore(self, value):
-        if value is not None:
-            value = date.to_time(value)
-        return value
-
-    def convert(self, value):
-        if value is None:
-            return None
-        d = date.to_time(value, format=self.format)
-        if d is not None:
-            return d
-        raise BadValueError('The time value is not a valid format')
+    @staticmethod
+    def _convert_func(*args, **kwargs):
+        return date.to_time(*args, **kwargs)
     
-    def to_str(self, v):
-        if isinstance(v, datetime.time):
-            return v.strftime('%H:%M:%S')
-        else:
-            return str(v)
-
-    def to_unicode(self, v):
-        if isinstance(v, datetime.time):
-            return unicode(v.strftime('%H:%M:%S'))
-        else:
-            return unicode(v)
-
 class IntegerProperty(Property):
     """An integer property."""
 
@@ -998,8 +962,7 @@ class IntegerProperty(Property):
     def __init__(self, verbose_name=None, default=0, **kwds):
         super(IntegerProperty, self).__init__(verbose_name, default=default, **kwds)
     
-    def validate(self, value):
-        value = super(IntegerProperty, self).validate(value)
+    def custom_validate(self, value):
         if value and not isinstance(value, (int, long, bool)):
             raise BadValueError('Property %s must be an int, long or bool, not a %s'
                 % (self.name, type(value).__name__))
@@ -1022,9 +985,8 @@ class FloatProperty(Property):
         f_type = self.type_class(precision=self.precision, **self.type_attrs)
         return f_type
     
-    def validate(self, value):
-        value = super(FloatProperty, self).validate(value)
-        if value is not None and not isinstance(value, float):
+    def custom_validate(self, value):
+        if value and not isinstance(value, float):
             raise BadValueError('Property %s must be a float, not a %s' 
                 % (self.name, type(value).__name__))
         if abs(value) < __zero_float__:
@@ -1042,8 +1004,7 @@ class DecimalProperty(Property):
         self.precision = precision
         self.scale = scale
    
-    def validate(self, value):
-        value = super(DecimalProperty, self).validate(value)
+    def custom_validate(self, value):
         if value is not None and not isinstance(value, decimal.Decimal):
             raise BadValueError('Property %s must be a decimal, not a %s'
                 % (self.name, type(value).__name__))
@@ -1073,13 +1034,20 @@ class BooleanProperty(Property):
     def __init__(self, verbose_name=None, default=False, **kwds):
         super(BooleanProperty, self).__init__(verbose_name, default=default, **kwds)
     
-    def validate(self, value):
-        value = super(BooleanProperty, self).validate(value)
+    def custom_validate(self, value):
         if value is not None and not isinstance(value, bool):
             raise BadValueError('Property %s must be a boolean, not a %s' 
                 % (self.name, type(value).__name__))
         return value
 
+    def convert(self, value):
+        if not value:
+            return False
+        if value in ['1', 'True', 'true', True]:
+            return True
+        else:
+            return False
+    
 class ReferenceProperty(Property):
     """A property that represents a many-to-one reference to another model.
     """
@@ -1169,7 +1137,8 @@ class ReferenceProperty(Property):
         if model_instance is None:
             return self
         if hasattr(model_instance, self._attr_name()):
-            reference_id = getattr(model_instance, self._attr_name())
+#            reference_id = getattr(model_instance, self._attr_name())
+            reference_id = self.get_lazy(model_instance, self._attr_name(), None)
         else:
             reference_id = None
         if reference_id is not None:
@@ -1393,6 +1362,15 @@ class Result(object):
         self._group_by = args
         return self
     
+    def fields(self, *args, **kwargs):
+        if args:
+            args = flat_list(args)
+            if args:
+                if 'id' not in args:
+                    args.append('id')
+                self.funcs.append(('with_only_columns', ([self.get_column(self.model, x) for x in args],), kwargs))
+        return self
+        
     def values(self, *args, **kwargs):
         self.funcs.append(('with_only_columns', ([self.get_column(self.model, x) for x in args],), kwargs))
         self._values_flag = True
@@ -1465,11 +1443,11 @@ class Result(object):
             query = query.group_by(*self._group_by)
         return query
     
-    def create_obj(self, values):
+    def load(self, values):
         if self._values_flag:
             return values
         else:
-            return self.model.create_obj(values.items())
+            return self.model.load(values.items())
         
     def for_update(self, flag=True):
         """
@@ -1485,7 +1463,7 @@ class Result(object):
         
         result = self.result.fetchone()
         if result:
-            return self.create_obj(result)
+            return self.load(result)
     
     def clear(self):
         if self.condition is None:
@@ -1505,7 +1483,7 @@ class Result(object):
             result = self.result.fetchone()
             if not result:
                 raise StopIteration
-            yield self.create_obj(result)
+            yield self.load(result)
   
 class ReverseResult(Result):
     def __init__(self, model, condition, a_field, b_table, instance, b_field, *args, **kwargs):
@@ -1668,6 +1646,15 @@ class ManyResult(Result):
         count = self.do_(self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids)))).scalar()
         return count > 0
         
+    def fields(self, *args, **kwargs):
+        if args:
+            args = flat_list(args)
+            if args:
+                if 'id' not in args:
+                    args.append('id')
+                self.funcs.append(('with_only_columns', ([self.get_column(self.modelb, x) for x in args],), kwargs))
+        return self
+
     def values(self, *args, **kwargs):
         self.funcs.append(('with_only_columns', ([self.get_column(self.modelb, x) for x in args],), kwargs))
         self._values_flag = True
@@ -1739,10 +1726,10 @@ class ManyResult(Result):
             if self.with_relation_name:
                 offset = len(self.table.columns)
                 
-            o = self.modelb.create_obj(zip(result.keys()[offset:], result.values()[offset:]))
+            o = self.modelb.load(zip(result.keys()[offset:], result.values()[offset:]))
             
             if self.with_relation_name:
-                r = self.through_model.create_obj(zip(result.keys()[:offset], result.values()[:offset]))
+                r = self.through_model.load(zip(result.keys()[:offset], result.values()[:offset]))
                 setattr(o, self.with_relation_name, r)
                 
             return o
@@ -1769,10 +1756,10 @@ class ManyResult(Result):
                 yield result
                 continue
            
-            o = self.modelb.create_obj(zip(result.keys()[offset:], result.values()[offset:]))
+            o = self.modelb.load(zip(result.keys()[offset:], result.values()[offset:]))
             
             if self.with_relation_name:
-                r = self.through_model.create_obj(zip(result.keys()[:offset], result.values()[:offset]))
+                r = self.through_model.load(zip(result.keys()[:offset], result.values()[:offset]))
                 setattr(o, self.with_relation_name, r)
                 
             yield o
@@ -1938,7 +1925,7 @@ class ManyToMany(ReferenceProperty):
         if model_instance is None:
             return
         
-        if value:
+        if value and value is not Lazy:
             value = get_objs_columns(value, self.reference_fieldname)
         setattr(model_instance, self._attr_name(), value)
     
@@ -2138,24 +2125,7 @@ class Model(object):
     def __init__(self, **kwargs):
         self._old_values = {}
         
-        #compounds fields will be processed in the end
-        compounds = []
-        for prop in self.properties.values():
-            if prop.name in kwargs:
-                if prop.property_type == 'compound':
-                    compounds.append(prop)
-                    continue
-                value = kwargs[prop.name]
-            else:
-                if prop.property_type == 'compound':
-                    continue
-                value = prop.default_value()
-            prop.__set__(self, value)
-        
-        for prop in compounds:
-            if prop.name in kwargs:
-                value = kwargs[prop.name]
-                prop.__set__(self, value)
+        self._load(kwargs)
         
     def set_saved(self):
         self._old_values = self.to_dict()
@@ -2613,31 +2583,48 @@ class Model(object):
             cls._c_lock.release()
             
     @classmethod
-    def get(cls, condition=None, connection=None, **kwargs):
+    def get(cls, condition=None, connection=None, fields=None, **kwargs):
+        """
+        Get object from Model, if given fields, then only fields will be loaded
+        into object, other properties will be Lazy
+        """
+        
         if condition is None:
             return None
         if isinstance(condition, (int, long)):
             _cond = cls.c.id==condition
         else:
             _cond = condition
+        #if there is no cached object, then just fetch from database
+        return cls.connect(connection).filter(_cond, **kwargs).fields(fields).one()
+    
+    @classmethod
+    def get_or_notfound(cls, condition=None, connection=None, fields=None):
+        obj = cls.get(condition, connection, fields=fields)
+        if not obj:
+            raise NotFound("Can't found the object", cls, condition)
+        return obj
+    
+    @classmethod
+    def get_cached(cls, id=None, connection=None, fields=None, **kwargs):
+        _cond = cls.c.id==id
         #send 'get_object' topic to get cached object
-        obj = dispatch.get(cls, 'get_object', condition=_cond, signal=cls.tablename)
+        obj = dispatch.get(cls, 'get_object', cls.tablename, id)
         if obj:
             return obj
         #if there is no cached object, then just fetch from database
         obj = cls.connect(connection).filter(_cond, **kwargs).one()
         #send 'set_object' topic to stored the object to cache
         if obj:
-            dispatch.call(cls, 'set_object', condition=_cond, instance=obj, signal=cls.tablename)
+            dispatch.call(cls, 'set_object', cls.tablename, instance=obj, fields=fields)
         return obj
-    
-    @classmethod
-    def get_or_notfound(cls, condition=None, connection=None):
-        obj = cls.get(condition, connection)
-        if not obj:
-            raise NotFound("Can't found the object", cls, condition)
-        return obj
-    
+
+    def push_cached(self, fields=None):
+        """
+        Save object to cache
+        """
+        dispatch.call(self.__class__, 'set_object', self.tablename, instance=self, fields=fields)
+        
     @classmethod
     def _data_prepare(cls, record):
         d = {}
@@ -2671,7 +2658,7 @@ class Model(object):
         return count
             
     @classmethod
-    def create_obj(cls, values):
+    def load(cls, values):
         if isinstance(values, (list, tuple)):
             d = cls._data_prepare(values)
         elif isinstance(values, dict):
@@ -2679,8 +2666,105 @@ class Model(object):
         else:
             raise BadValueError("Can't support the data type %r" % values)
         
-        o = cls(**d)
+        if 'id' not in d or not d['id']:
+            raise BadValueError("ID property must be existed or could not be empty.")
+        
+        o = cls()
+        o._load(d, use_delay=True)
         o.set_saved()
         return o
     
-    
+    def refresh(self, fields=None, connection=None, **kwargs):
+        """
+        Re get the instance of current id
+        """
+        cond = self.c.id==self.id
+        query = self.connect(connection).filter(cond, **kwargs)
+        if not fields:
+            fields = list(self.table.c)
+        
+        v = query.values_one(*fields)
+        if not v:
+            raise NotFound('Instance <%s:%d> can not be found' % (self.tablename, self.id))
+        
+        d = self._data_prepare(v.items())
+        self.update(**d)
+        self.set_saved()
+        
+    def _load(self, data, use_delay=False):
+        if not data:
+            return
+        
+        #compounds fields will be processed in the end
+        compounds = []
+        for prop in self.properties.values():
+            if prop.name in data:
+                if prop.property_type == 'compound':
+                    compounds.append(prop)
+                    continue
+                value = data[prop.name]
+            else:
+                if prop.property_type == 'compound':
+                    continue
+                if use_delay:
+                    value = Lazy
+                else:
+                    value = prop.default_value()
+            prop.__set__(self, value)
+        
+        for prop in compounds:
+            if prop.name in data:
+                value = data[prop.name]
+                prop.__set__(self, value)
+        
+    def dump(self, fields=None):
+        """
+        Dump current object to dict, but the value is string
+        """
+        d = {}
+        fields = fields or []
+        if not isinstance(fields, (tuple, list)):
+            fields = [fields]
+        if fields and 'id' not in fields:
+            fields = list(fields)
+            fields.append('id')
+        for k, v in self.properties.items():
+            if fields and not k in fields:
+                continue
+            if not isinstance(v, ManyToMany):
+                t = v.get_value_for_datastore(self)
+                if isinstance(t, Model):
+                    t = t.id
+                d[k] = v.to_unicode(t)
+        return d
+        
+#    def get_delay_field(self, name, default=None):
+#        v = getattr(self, name, default)
+#        if v is Lazy:
+#            _id = self.id
+#            if not _id:
+#                raise BadValueError('Instance is not a validate object of Model %s, ID property is not found' % model_class.__name__)
+#            self.refresh()
+#            v = getattr(self, name, default)
+#        return v
+#    
+    def get_cached_reference(self, fieldname, connection=None):
+        prop = self.properties[fieldname]
+        if not isinstance(prop, ReferenceProperty):
+            raise BadPropertyTypeError("Property %s is not instance of RefernceProperty" % fieldname)
+        
+        reference_id = getattr(self, fieldname, None)
+        if reference_id is not None:
+            #this will cache the reference object
+            resolved = getattr(self, prop._resolved_attr_name())
+            if resolved is not None:
+                return resolved
+            else:
+                instance = prop.reference_class.get_cached(reference_id, connection=connection)
+                if instance is None:
+                    raise NotFound('ReferenceProperty %s failed to be resolved' % self.reference_fieldname, self.reference_class, reference_id)
+                setattr(model_instance, self._resolved_attr_name(), instance)
+                return instance
+        else:
+            return None
+

@@ -16,7 +16,7 @@ from js import json_dumps
 from storage import Storage
 import dispatch
 from uliweb.utils.common import (pkg, log, import_attr, 
-    myimport, wraps, norm_path, cache_get)
+    myimport, wraps, norm_path)
 import uliweb.utils.pyini as pyini
 from uliweb.i18n import gettext_lazy
 from uliweb.utils.localproxy import LocalProxy, Global
@@ -264,14 +264,14 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
     if not os.path.exists(apps_dir):
         return apps
     if os.path.exists(inifile):
-        x = cache_get(inifile, lambda x:pyini.Ini(x), 'ini')
+        x = pyini.Ini(inifile)
         if x:
             for app in x.GLOBAL.get('INSTALLED_APPS', []):
                 apps.extend(list(get_app_depends(app, visited)))
 
     local_inifile = norm_path(os.path.join(apps_dir, local_settings_file))
     if os.path.exists(local_inifile):
-        x = cache_get(local_inifile, lambda x:pyini.Ini(x), 'ini')
+        x = pyini.Ini(local_inifile)
         if x and 'GLOBAL' in x:
             for app in x.GLOBAL.get('INSTALLED_APPS', []):
                 apps.extend(list(get_app_depends(app, visited)))

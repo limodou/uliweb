@@ -244,6 +244,8 @@ def test_7():
     False
     >>> list(g1.users.all())
     [<User {'username':u'limodou','id':1}>, <User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
+    >>> list(g1.users.all().fields('username'))
+    [<User {'username':u'limodou','id':1}>, <User {'username':u'user','id':2}>, <User {'username':u'abc','id':3}>]
     >>> g1.users.clear(a)
     >>> g1.users.clear()
     >>> g1.users.count()
@@ -543,13 +545,13 @@ def test_to_dict():
     >>> a.float = 200.02
     >>> a.decimal = decimal.Decimal("10.2")
     >>> a.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02..., 'boolean': True, 'integer': 200, 'id': None}
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'id': None}
     >>> a.save()
     True
     >>> a # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
     <Test {'string':u'limodou','boolean':True,'integer':200,'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'float':200.02...,'decimal':Decimal('10.2'),'id':1}> 
     >>> a.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02..., 'boolean': True, 'integer': 200, 'id': 1}
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'id': 1}
     """
     
 def test_match():
@@ -1765,16 +1767,152 @@ def test_sequence():
     True
     """
 
+def test_validate():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> import datetime
+    >>> class Test(Model):
+    ...     string = StringProperty(max_length=40)
+    ...     boolean = BooleanProperty()
+    ...     integer = IntegerProperty()
+    ...     date1 = DateTimeProperty()
+    ...     date2 = DateProperty()
+    ...     date3 = TimeProperty()
+    ...     float = FloatProperty()
+    ...     decimal = DecimalProperty()
+    ...     pickle = PickleProperty()
+    >>> a = Test()
+    >>> a.date1='2009-01-01 14:00:05'
+    >>> a.date2='2009-01-01'
+    >>> a.date3='14:00:00'
+    >>> a.string = 'limodou'
+    >>> a.boolean = '1'
+    >>> a.integer = '200'
+    >>> a.float = '200.02'
+    >>> a.decimal = '10.2'
+    >>> a.pickle = ''
+    >>> a.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': '', 'id': None}
+    >>> a.save()
+    True
+    >>> a # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    <Test {'string':u'limodou','boolean':True,'integer':200,'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0),'float':200.02,'decimal':Decimal('10.2'),'pickle':'','id':1}> 
+    >>> a.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': '', 'id': 1}
+    >>> a.boolean = 'False'
+    >>> a.boolean
+    False
+    """
+
+def test_load_dump():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> import datetime
+    >>> class Test(Model):
+    ...     string = StringProperty(max_length=40)
+    ...     boolean = BooleanProperty()
+    ...     integer = IntegerProperty()
+    ...     date1 = DateTimeProperty()
+    ...     date2 = DateProperty()
+    ...     date3 = TimeProperty()
+    ...     float = FloatProperty()
+    ...     decimal = DecimalProperty()
+    ...     pickle = PickleProperty()
+    >>> a = {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': '', 'id':1}
+    >>> b = Test.load(a)
+    >>> b.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': '', 'id': 1}
+    >>> b.dump()
+    {'date1': u'2009-01-01 14:00:05', 'date3': u'14:00:00', 'date2': u'2009-01-01', 'string': u'limodou', 'decimal': u'10.2', 'float': u'200.02', 'boolean': u'True', 'integer': u'200', 'pickle': u'', 'id': u'1'}
+    >>> b.dump(fields=['boolean', 'decimal'])
+    {'decimal': u'10.2', 'boolean': u'True', 'id': u'1'}
+    >>> b.date1=Lazy
+    >>> b.date2=Lazy
+    >>> b.date3=Lazy
+    >>> b.string = Lazy
+    >>> b.boolean = Lazy
+    >>> b.integer = Lazy
+    >>> b.float = Lazy
+    >>> b.decimal = Lazy
+    """
+
+def test_delay():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(unicode)
+    ...     year = Field(int, default=0)
+    ...     birth = Field(datetime.date)
+    >>> c = Test(username='limodou', birth='2011-03-04', year=2012)
+    >>> c.save()
+    True
+    >>> a = dict(username='limodou', id=1)
+    >>> b = Test.load(a)
+    >>> b.birth
+    datetime.date(2011, 3, 4)
+    >>> b.year
+    2012
+    """
+    
+def test_delay_filter():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(unicode)
+    ...     year = Field(int, default=0)
+    ...     birth = Field(datetime.date)
+    >>> c = Test(username='limodou', birth='2011-03-04', year=2012)
+    >>> c.save()
+    True
+    >>> c = Test(username='test', birth='2012-12-04', year=2011)
+    >>> c.save()
+    True
+    >>> a = Test.all().fields('username').one()
+    >>> a.birth
+    datetime.date(2011, 3, 4)
+    >>> a.year
+    2012
+    """
+
 #if __name__ == '__main__':
-#    from sqlalchemy import Sequence
 #    db = get_connection('sqlite://')
-#    db.echo = False
+#    db.echo = True
 #    db.metadata.drop_all()
 #    class User(Model):
 #        username = Field(unicode)
-#        num = Field(int, sequence=Sequence('num_id'))
+#    class Group(Model):
+#        name = Field(str)
+#        deleted = Field(bool)
+#        users = ManyToMany(User)
+#    a = User(username='limodou')
+#    a.save()
 #    
-    
-    
-    
-    
+#    b = User(username='user')
+#    b.save()
+#    
+#    c = User(username='abc')
+#    c.save()
+#    
+#    g1 = Group(name='python')
+#    g1.save()
+#    
+#    g2 = Group(name='perl')
+#    g2.save()
+#    
+#    g3 = Group(name='java')
+#    g3.save()
+#    
+#    g1.users.add(a)
+#    
+#    g1.users.add(b, 3) #add can support multiple object, and object can also int
+#    
+#    g1.users.add(a, b)  #can has duplicated records
+#    
+#    list(g1.users.all().fields('username'))
+#    

@@ -260,7 +260,7 @@ class CommandManager(Command):
             sys.exit(1)
         return klass
     
-    def execute(self):
+    def execute(self, callback=None):
         """
         Given the command-line arguments, this figures out which subcommand is
         being run, creates a parser appropriate to that command, and runs it.
@@ -284,6 +284,9 @@ class CommandManager(Command):
             global_options = self.global_options
             args = self.argv
     
+        if callback:
+            callback(global_options)
+            
         def print_help(global_options):
             parser.print_help()
             sys.stderr.write(self.print_help_info(global_options) + '\n')
@@ -346,9 +349,9 @@ class ApplicationCommandManager(CommandManager):
     help = ''
     args = ''
     
-def execute_command_line(argv=None, commands=None, prog_name=None):
+def execute_command_line(argv=None, commands=None, prog_name=None, callback=None):
     m = ApplicationCommandManager(argv, commands, prog_name)
-    m.execute()
+    m.execute(callback)
     
 if __name__ == '__main__':
     execute_command_line(sys.argv)
