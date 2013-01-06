@@ -5,7 +5,7 @@
 __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
     'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
-    'set_tablename_converter', 'Lazy',
+    'set_tablename_converter', 'set_check_max_length', 'Lazy',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
@@ -30,6 +30,7 @@ __models__ = {}
 __model_paths__ = {}
 __pk_type__ = 'int'
 __default_tablename_converter__ = None
+__check_max_length__ = False
 
 import decimal
 import threading
@@ -95,6 +96,10 @@ def set_auto_set_model(flag):
 def set_debug_query(flag):
     global __debug_query__
     __debug_query__ = flag
+    
+def set_check_max_length(flag):
+    global __check_max_length__
+    __check_max_length__ = flag
     
 def set_encoding(encoding):
     global __default_encoding__
@@ -831,7 +836,10 @@ class CharProperty(Property):
     data_type = unicode
     field_class = CHAR
     
-    def __init__(self, verbose_name=None, default=u'', max_length=255, **kwds):
+    def __init__(self, verbose_name=None, default=u'', max_length=None, **kwds):
+        if __check_max_length__ and not max_length:
+            raise BadPropertyTypeError("max_length parameter not passed for property %s" % self.__class__.__name__)
+        max_length = max_length or 255
         super(CharProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
     
     def convert(self, value):
@@ -866,7 +874,7 @@ class TextProperty(StringProperty):
     def __init__(self, verbose_name=None, default='', **kwds):
         super(TextProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
     
-class BlobProperty(StringProperty):
+class BlobProperty(Property):
     field_class = BLOB
     data_type = str
     

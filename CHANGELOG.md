@@ -30,6 +30,9 @@ Uliweb Change Log
 * Refactor objcache app
 * Add redis_cli app
 * Fix upload app bug
+* Add CHECK_MAX_LENGTH to orm app. So if it's True, and if max_length is not passed
+  a value, it'll raise an Exception. Or if CHECK_MAX_LENGTH is False, max_length will
+  be 255 by default.
 
 0.1.6 Version
 -----------------

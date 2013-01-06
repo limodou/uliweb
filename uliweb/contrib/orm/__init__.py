@@ -9,6 +9,7 @@ def after_init_apps(sender):
     orm.set_auto_create(settings.get_var('ORM/AUTO_CREATE'))
     orm.set_pk_type(settings.get_var('ORM/PK_TYPE'))
     orm.set_auto_set_model(False)
+    orm.set_check_max_length(settings.get_var('ORM/CHECK_MAX_LENGTH'))
     convert_path = settings.get_var('ORM/TABLENAME_CONVERTER')
     convert = import_attr(convert_path) if convert_path else None
     orm.set_tablename_converter(convert)
