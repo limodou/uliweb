@@ -34,6 +34,7 @@ Uliweb Change Log
   a value, it'll raise an Exception. Or if CHECK_MAX_LENGTH is False, max_length will
   be 255 by default.
 * Add `post_do` and `print_sql` function to orm.
+* Change `generic/template_files/common/views.py` to `views.py.tmpl`
 
 0.1.6 Version
 -----------------

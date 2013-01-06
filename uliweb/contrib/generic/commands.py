@@ -117,7 +117,7 @@ class GenericCommand(Command):
         cpath = pkg.resource_filename('uliweb.contrib.generic', 'template_files/common')
         
         #copy views file
-        self.copy_view(os.path.join(cpath, 'views.py'), data, 
+        self.copy_view(os.path.join(cpath, 'views.py.tmpl'), data, 
             os.path.join(path, data['viewfile']), options.replace)
         
         #copy add, edit, view
