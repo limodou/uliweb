@@ -33,6 +33,7 @@ Uliweb Change Log
 * Add CHECK_MAX_LENGTH to orm app. So if it's True, and if max_length is not passed
   a value, it'll raise an Exception. Or if CHECK_MAX_LENGTH is False, max_length will
   be 255 by default.
+* Add `post_do` and `print_sql` function to orm.
 
 0.1.6 Version
 -----------------

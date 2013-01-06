@@ -1880,6 +1880,23 @@ def test_delay_filter():
     2012
     """
 
+def test_post_do():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> def log(query, conn):
+    ...     #print print_sql(query)
+    ...     pass
+    >>> uliweb.orm.__default_post_do__ = log
+    >>> class Test(Model):
+    ...     username = Field(unicode)
+    ...     year = Field(int, default=0)
+    ...     birth = Field(datetime.date)
+    >>> c = Test(username='limodou', birth='2011-03-04', year=2012)
+    >>> c.save()
+    True
+    """
+    
 #if __name__ == '__main__':
 #    db = get_connection('sqlite://')
 #    db.echo = True

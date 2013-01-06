@@ -5,7 +5,8 @@
 __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
     'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
-    'set_tablename_converter', 'set_check_max_length', 'Lazy',
+    'set_tablename_converter', 'set_check_max_length', 'set_post_do',
+    'print_sql', 'Lazy',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
@@ -30,7 +31,8 @@ __models__ = {}
 __model_paths__ = {}
 __pk_type__ = 'int'
 __default_tablename_converter__ = None
-__check_max_length__ = False
+__check_max_length__ = False #used to check max_length parameter
+__default_post_do__ = None #used to process post_do topic
 
 import decimal
 import threading
@@ -100,6 +102,10 @@ def set_debug_query(flag):
 def set_check_max_length(flag):
     global __check_max_length__
     __check_max_length__ = flag
+    
+def set_post_do(func):
+    global __default_post_do__
+    __default_post_do__ = func
     
 def set_encoding(encoding):
     global __default_encoding__
@@ -340,6 +346,16 @@ def ResetAll():
             v.close()
             Local.conn[k] = None
 
+@dispatch.bind('post_do', kind=dispatch.LOW)
+def default_post_do(sender, query, conn):
+    if __default_post_do__:
+        __default_post_do__(query, conn)
+       
+def print_sql(query):
+    d2 = query.compile()
+    d2.visit_bindparam = d2.render_literal_bindparam
+    return d2.process(query)
+    
 def do_(query, ec=None):
     """
     Execute a query
@@ -347,7 +363,9 @@ def do_(query, ec=None):
     then auto created an connection, and auto begin transaction
     """
     conn = local_conection(ec)
-    return conn.execute(query)
+    result = conn.execute(query)
+    dispatch.call(None, 'post_do', query, conn)
+    return result
     
 def Begin(ec=None):
     ec = ec or 'default'
@@ -862,7 +880,7 @@ class StringProperty(CharProperty):
     field_class = VARCHAR
     
 class FileProperty(StringProperty):
-    def __init__(self, verbose_name=None, default='', max_length=255, **kwds):
+    def __init__(self, verbose_name=None, default='', max_length=None, **kwds):
         super(FileProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
         
 class UnicodeProperty(CharProperty):
