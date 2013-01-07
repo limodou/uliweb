@@ -205,6 +205,8 @@ class GenericReference(orm.Property):
                     raise ValueError("The value of GenericRelation should be two-elements tuple/list, or instance of Model, but %r found" % value)
                 
                 table_id, object_id = value
+                if issubclass(table_id, orm.Model):
+                    table_id = table_id.tablename
                 if isinstance(table_id, (str, unicode)):
                     table_id = self.table.get_table(table_id).id
             elif isinstance(value, orm.Model):

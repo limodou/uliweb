@@ -35,6 +35,7 @@ Uliweb Change Log
   be 255 by default.
 * Add `post_do` and `print_sql` function to orm.
 * Change `generic/template_files/common/views.py` to `views.py.tmpl`
+* Add GenericReference value `(Model, object_id)` support
 
 0.1.6 Version
 -----------------
