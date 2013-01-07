@@ -104,7 +104,7 @@ def test_ini2():
     <BLANKLINE>
     >>> x.default.list = ['cde'] #for mutable object will merge the data, including dict type
     >>> print x.default.list
-    ['cde', 'abc']
+    ['abc', 'cde']
     >>> x.default.d = {'a':'a'}
     >>> x.default.d = {'b':'b'}
     >>> print x.default.d

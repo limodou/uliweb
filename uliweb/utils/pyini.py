@@ -339,6 +339,9 @@ class Ini(SortedDict):
         for s in self.keys():
             section = self[s]
             section.dumps(f)
+            
+        if need_close:
+            f.close()
 
     def __read_line(self, f):
         g = tokenize.generate_tokens(f.readline)
