@@ -886,7 +886,7 @@ class FileProperty(StringProperty):
 class UnicodeProperty(CharProperty):
     field_class = Unicode
     
-class TextProperty(StringProperty):
+class TextProperty(Property):
     field_class = Text
     
     def __init__(self, verbose_name=None, default='', **kwds):
