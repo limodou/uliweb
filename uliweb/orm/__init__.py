@@ -888,6 +888,7 @@ class UnicodeProperty(CharProperty):
     
 class TextProperty(Property):
     field_class = Text
+    data_type = unicode
     
     def __init__(self, verbose_name=None, default='', **kwds):
         super(TextProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
