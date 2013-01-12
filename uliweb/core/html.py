@@ -21,7 +21,7 @@ def str_u(v, encoding='utf-8'):
     else:
         return unicode(v, encoding)
 
-def _create_kwargs(args, nocreate_if_none=['id', 'for']):
+def to_attrs(args, nocreate_if_none=['id', 'for']):
     """
     Make python dict to k="v" format
     """
@@ -39,10 +39,7 @@ def _create_kwargs(args, nocreate_if_none=['id', 'for']):
                 t = u_str(v)
             else:
                 t = cgi.escape(u_str(v))
-            if t and t[0] not in "\"'":
-                t = '"%s"' % t
-            elif not t:
-                t = '""'
+            t = '"%s"' % t.replace('"', '&quot;')
             s.append('%s=%s' % (k, t))
     return ' '.join(s)
 
@@ -95,12 +92,12 @@ class Tag(Buf):
         self.attributes = attrs or {}
         self(_value, **kwargs)
 #        if _value is None:
-#            self._builder._write('<%s%s />' % (self.name, _create_kwargs(self.attributes)))
+#            self._builder._write('<%s%s />' % (self.name, to_attrs(self.attributes)))
 #        elif _value != DefaultValue:
-#            self._builder._write('<%s%s>%s</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value), self.name))
+#            self._builder._write('<%s%s>%s</%s>' % (self.name, to_attrs(self.attributes), u_str(_value), self.name))
     
     def __enter__(self):
-        self._builder._write('<%s%s>' % (self.name, _create_kwargs(self.attributes)))
+        self._builder._write('<%s%s>' % (self.name, to_attrs(self.attributes)))
         self._builder._indentation += 1
         return self
     
@@ -113,12 +110,12 @@ class Tag(Buf):
         self.attributes.update(attrs)
         self.attributes.update(kwargs)
         if _value is None:
-            self._builder._write('<%s%s />' % (self.name, _create_kwargs(self.attributes)))
+            self._builder._write('<%s%s />' % (self.name, to_attrs(self.attributes)))
         elif _value != DefaultValue:
             if self._newline:
-               self._builder._write('<%s%s>\n%s\n</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value, self._encoding), self.name))
+               self._builder._write('<%s%s>\n%s\n</%s>' % (self.name, to_attrs(self.attributes), u_str(_value, self._encoding), self.name))
             else:
-                self._builder._write('<%s%s>%s</%s>' % (self.name, _create_kwargs(self.attributes), u_str(_value, self._encoding), self.name))
+                self._builder._write('<%s%s>%s</%s>' % (self.name, to_attrs(self.attributes), u_str(_value, self._encoding), self.name))
             return
         return self
     
@@ -169,7 +166,7 @@ class Builder(object):
         return safe_unicode(self.text)
 
 def begin_tag(tag, **kwargs):
-    return '<%s%s>' % (tag, _create_kwargs(kwargs))
+    return '<%s%s>' % (tag, to_attrs(kwargs))
 
 def end_tag(tag):
     return '</%s>' % tag

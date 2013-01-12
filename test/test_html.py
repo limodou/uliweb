@@ -1,7 +1,7 @@
 #coding=utf-8
 from uliweb.core.js import simple_value, json_dumps
 from uliweb.core.html import *
-from uliweb.core.html import _create_kwargs
+from uliweb.core.html import to_attrs
 
 def test_simple_value():
     """
@@ -23,22 +23,24 @@ def test_simple_value():
     'bbb'
     """
 
-def test_create_kwargs():
+def testto_attrs():
     """
-    >>> print _create_kwargs({'name':'title'})
+    >>> print to_attrs({'name':'title'})
      name="title"
-    >>> print _create_kwargs({'_class':'color', 'id':'title'})
+    >>> print to_attrs({'_class':'color', 'id':'title'})
      class="color" id="title"
-    >>> print _create_kwargs({'_class':'color', 'id':None})
+    >>> print to_attrs({'_class':'color', 'id':None})
      class="color"
-    >>> print _create_kwargs({'_class':'color', 'checked':None})
+    >>> print to_attrs({'_class':'color', 'checked':None})
      class="color" checked
-    >>> print _create_kwargs({'_class':'color', '_for':None})
+    >>> print to_attrs({'_class':'color', '_for':None})
      class="color"
-    >>> print _create_kwargs({'action': '', '_class': 'yform', 'method': 'POST'})
+    >>> print to_attrs({'action': '', '_class': 'yform', 'method': 'POST'})
      class="yform" action="" method="POST"
-    >>> print _create_kwargs({'action': '"hello"'})
-     action="hello"
+    >>> print to_attrs({'action': '"hello"'})
+     action="&quot;hello&quot;"
+    >>> print to_attrs({'action': ''})
+     action=""
     """
     
 def test_json_dumps():
