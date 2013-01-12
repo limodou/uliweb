@@ -880,9 +880,8 @@ class StringProperty(CharProperty):
     field_class = VARCHAR
     
 class FileProperty(StringProperty):
-    def __init__(self, verbose_name=None, default='', max_length=None, **kwds):
-        super(FileProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
-        
+    pass
+
 class UnicodeProperty(CharProperty):
     field_class = Unicode
     
@@ -892,6 +891,12 @@ class TextProperty(Property):
     
     def __init__(self, verbose_name=None, default='', **kwds):
         super(TextProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
+    
+    def convert(self, value):
+        if isinstance(value, str):
+            return unicode(value, __default_encoding__)
+        else:
+            return self.data_type(value)
     
 class BlobProperty(Property):
     field_class = BLOB
