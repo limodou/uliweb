@@ -710,6 +710,10 @@ def test_reference_not_id():
     <Test {'username':u'limodou1','year':20,'id':1}>
     >>> print b2._test_
     limodou1
+    >>> #Test get with fields and lazy load _field_
+    >>> b3 = Test1.get(Test1.c.name=='aaaa', fields=['name'])
+    >>> print b3._test_
+    limodou1
     >>> print a1.tttt.has(b1, b2)
     True
     >>> print a1.tttt.ids()
@@ -1901,35 +1905,22 @@ def test_post_do():
 #    db = get_connection('sqlite://')
 #    db.echo = True
 #    db.metadata.drop_all()
-#    class User(Model):
-#        username = Field(unicode)
-#    class Group(Model):
-#        name = Field(str)
-#        deleted = Field(bool)
-#        users = ManyToMany(User)
-#    a = User(username='limodou')
-#    a.save()
-#    
-#    b = User(username='user')
-#    b.save()
-#    
-#    c = User(username='abc')
-#    c.save()
-#    
-#    g1 = Group(name='python')
-#    g1.save()
-#    
-#    g2 = Group(name='perl')
-#    g2.save()
-#    
-#    g3 = Group(name='java')
-#    g3.save()
-#    
-#    g1.users.add(a)
-#    
-#    g1.users.add(b, 3) #add can support multiple object, and object can also int
-#    
-#    g1.users.add(a, b)  #can has duplicated records
-#    
-#    list(g1.users.all().fields('username'))
-#    
+#    class Test(Model):
+#        username = Field(CHAR, max_length=20)
+#        year = Field(int)
+#    class Test1(Model):
+#        test = Reference(Test, collection_name='tttt', reference_fieldname='username')
+#        year = Field(int)
+#        name = Field(CHAR, max_length=20)
+#    a1 = Test(username='limodou1', year=20)
+#    a1.save()
+#
+#    b1 = Test1(name='user', year=5, test=a1)
+#    b1.save()
+#
+#    b2 = Test1(name='aaaa', year=10, test=a1)
+#    b2.save()
+#
+#    b3 = Test1.get(Test1.c.name=='aaaa', fields=['name'])
+#    print b3
+#    print b3._test_

@@ -6,7 +6,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
     'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
     'set_tablename_converter', 'set_check_max_length', 'set_post_do',
-    'print_sql', 'Lazy',
+    'print_', 'Lazy',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
@@ -351,7 +351,7 @@ def default_post_do(sender, query, conn):
     if __default_post_do__:
         __default_post_do__(query, conn)
        
-def print_sql(query):
+def print_(query):
     d2 = query.compile()
     d2.visit_bindparam = d2.render_literal_bindparam
     return d2.process(query)
@@ -617,6 +617,26 @@ class ModelMetaclass(type):
         cls._bound = False
         cls.bind(auto_create=__auto_create__)
         
+class LazyValue(object):
+    def __init__(self, name, property):
+        self.name = name
+        self.property = property
+        
+    def __get__(self, model_instance, model_class):
+        if model_instance is None:
+            return self
+        
+        try:
+            return self.property.get_lazy(model_instance, self.name, self.property.default_value())
+        except AttributeError:
+            return None
+
+    def __set__(self, model_instance, value):
+        if model_instance is None:
+            return
+        
+        setattr(model_instance, self.name, value)
+        
 class Property(object):
     data_type = str
     field_class = String
@@ -690,7 +710,8 @@ class Property(object):
         self.property_name = property_name
         if not self.name:
             self.name = property_name
-
+        setattr(model_class, self._lazy_value(), LazyValue(self._attr_name(), self))
+        
     def get_lazy(self, model_instance, name, default=None):
         v = getattr(model_instance, name, default)
         if v is Lazy:
@@ -828,6 +849,9 @@ class Property(object):
             )
             
     def _attr_name(self):
+        return '_STORED_' + self.name + '_'
+    
+    def _lazy_value(self):
         return '_' + self.name + '_'
     
     def to_str(self, v):
@@ -1156,7 +1180,7 @@ class ReferenceProperty(Property):
         self.collection_name = self.reference_class.get_collection_name(self.collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
             _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
-
+        
     def __get__(self, model_instance, model_class):
         """Get reference object.
 
@@ -1210,7 +1234,7 @@ class ReferenceProperty(Property):
         else:
             setattr(model_instance, self._attr_name(), None)
             setattr(model_instance, self._resolved_attr_name(), None)
-
+        
     def validate(self, value):
         """Validate reference.
 
@@ -2628,7 +2652,7 @@ class Model(object):
         else:
             _cond = condition
         #if there is no cached object, then just fetch from database
-        return cls.connect(connection).filter(_cond, **kwargs).fields(fields).one()
+        return cls.connect(connection).filter(_cond, **kwargs).fields(*(fields or [])).one()
     
     @classmethod
     def get_or_notfound(cls, condition=None, connection=None, fields=None):

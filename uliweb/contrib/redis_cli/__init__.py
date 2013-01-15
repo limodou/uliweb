@@ -2,6 +2,7 @@ __connection_pool__ = None
 
 def get_redis():
     from uliweb import settings
+    from uliweb.utils.common import log
     import redis
         
     options = settings.REDIS
@@ -15,5 +16,12 @@ def get_redis():
             d.update(options['connection_pool'])
             __connection_pool__ = (d, redis.ConnectionPool(**d))
         client = redis.Redis(connection_pool=__connection_pool__[1])
+        
+    if settings.REDIS.test_first:
+        try:
+            client.info()
+        except Exception as e:
+            log.exception(e)
+            client = None
     return client
     

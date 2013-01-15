@@ -30,8 +30,13 @@ def check_enable():
 def get_object(model, tablename, id):
     """
     Get cached object from redis
+    
+    if id is None then return None:
     """
     from uliweb.utils.common import log
+    
+    if not id:
+        return 
     
     if not check_enable():
         return
