@@ -364,7 +364,7 @@ def do_(query, ec=None):
     """
     conn = local_conection(ec)
     result = conn.execute(query)
-    dispatch.call(None, 'post_do', query, conn)
+    dispatch.call(ec, 'post_do', query, conn)
     return result
     
 def Begin(ec=None):
@@ -565,6 +565,7 @@ def get_model(model, engine_name=None):
                 model_inst = getattr(mod, name)
                 item['model'] = model_inst
                 model_inst.__alias__ = model
+                model_inst.connect(engine_name)
                 return model_inst
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
@@ -2550,10 +2551,13 @@ class Model(object):
         m1 = __model_paths__.get(cls.__module__ + '.' + cls.__name__, None)
         engine_name = cls.__engine_name__ or m.get('engine_name') or m1 or 'default'
         if isinstance(engine_name, (tuple, list)):
-            if len(engine_name) == 1:
-                engine_name = engine_name[0]
-            else:
-                raise Error("You should specify Model %s with one engine name, but there are more than one engine name found" % cls.__name__) 
+            #default use the first engine_name, it'll be set correct outside via get_model
+            engine_name = engine_name[0]
+#            if len(engine_name) == 1:
+#                engine_name = engine_name[0]
+#            else:
+#                #If there are multiple database, then it'll be set in get_model or outside
+#                engine_name = None
         return engine_name
     
     @classmethod
