@@ -349,7 +349,7 @@ def ResetAll():
 @dispatch.bind('post_do', kind=dispatch.LOW)
 def default_post_do(sender, query, conn):
     if __default_post_do__:
-        __default_post_do__(query, conn)
+        __default_post_do__(sender, query, conn)
        
 def print_(query):
     d2 = query.compile()

@@ -10,8 +10,8 @@ def get_fields(tablename):
     
     return tables[tablename]
 
-def get_id(tablename, id):
-    return "objcache:%s:%d" % (tablename, id)
+def get_id(engine, tablename, id):
+    return "objcache:%s:%s:%d" % (engine, tablename, id)
 
 def get_redis():
     try:
@@ -43,7 +43,7 @@ def get_object(model, tablename, id):
     
     redis = get_redis()
     if not redis: return
-    _id = get_id(tablename, id)
+    _id = get_id(model.get_engine_name(), tablename, id)
     try:
         if redis.exists(_id):
             v = redis.hgetall(_id)
@@ -70,7 +70,7 @@ def set_object(model, tablename, instance, fields=None):
         if not redis: return
         
         v = instance.dump(fields)
-        _id = get_id(tablename, instance.id)
+        _id = get_id(model.get_engine_name(), tablename, instance.id)
         try:
             pipe = redis.pipeline()
             r = pipe.delete(_id).hmset(_id, v).expire(_id, settings.get_var('OBJCACHE/timeout')).execute()
@@ -118,7 +118,7 @@ def post_delete(model, instance):
     
     if get_fields(tablename):
         def f():
-            _id = get_id(tablename)
+            _id = get_id(model.get_engine_name(), tablename, instance.id)
             redis = get_redis()
             if not redis: return
             
