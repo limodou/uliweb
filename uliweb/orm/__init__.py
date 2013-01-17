@@ -905,7 +905,9 @@ class StringProperty(CharProperty):
     field_class = VARCHAR
     
 class FileProperty(StringProperty):
-    pass
+    def __init__(self, verbose_name=None, max_length=None, **kwds):
+        max_length = max_length or 255
+        super(FileProperty, self).__init__(verbose_name, max_length=max_length, **kwds)
 
 class UnicodeProperty(CharProperty):
     field_class = Unicode
