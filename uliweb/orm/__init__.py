@@ -249,6 +249,12 @@ class EngineManager(object):
     
 engine_manager = EngineManager()
 
+def print_pool_status(ec=None):
+    ec = ec or 'default'
+    engine = engine_manager[ec]
+    if engine.engine.pool:
+        print engine.engine.pool.status()
+    
 def get_connection(connection='', default=True, 
     debug=None, engine_name=None, connection_type='long', **args):
     """
@@ -307,6 +313,7 @@ def local_conection(ec, auto_transaction=False):
         else:
             engine = engine_manager[ec]
             conn = engine.connect()
+            
             if not hasattr(Local, 'conn'):
                 Local.conn = {}
             Local.conn[ec] = conn
@@ -328,6 +335,7 @@ def reset_local_connection(ec):
     if hasattr(Local, 'conn') and Local.conn.get(ec):
         conn = Local.conn[ec]
         conn.close()
+        engine = engine_manager[ec]
         Local.conn[ec] = None
     if hasattr(Local, 'trans') and Local.trans.get(ec):
         Local.trans[ec] = None
@@ -2671,6 +2679,9 @@ class Model(object):
     
     @classmethod
     def get_cached(cls, id=None, connection=None, fields=None, **kwargs):
+        if id is None:
+            return None
+        
         _cond = cls.c.id==id
         #send 'get_object' topic to get cached object
         obj = dispatch.get(cls, 'get_object', cls.tablename, id)
