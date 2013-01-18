@@ -1977,8 +1977,6 @@ class ListView(SimpleListView):
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
-            from uliweb.orm import print_
-            print print_(query.get_query())
             if isinstance(query, Select):
                 self.total = self.model.count(query._whereclause)
             else:
