@@ -352,6 +352,8 @@ def default_post_do(sender, query, conn):
         __default_post_do__(sender, query, conn)
        
 def print_(query):
+    if isinstance(query, Result):
+        query = query.get_query()
     d2 = query.compile()
     d2.visit_bindparam = d2.render_literal_bindparam
     return d2.process(query)

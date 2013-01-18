@@ -32,16 +32,29 @@ def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
 def get_sort_field(model, sort_field='sort', order_name='asc'):
     from uliweb import request
     
-    model = get_model(model)
+    models = []
+    if isinstance(model, (list, tuple)):
+        for m in model:
+            models.append(get_model(m))
+    else:
+        models = [get_model(model)]
+    
+    def get_field(name):
+        for m in models:
+            if name in m.c:
+                return m.c[name]
+            
     if request.values.getlist('sort'):
         sort_fields = request.values.getlist('sort')
         order_by = []
         orders = request.values.getlist('order')
         for i, f in enumerate(sort_fields):
-            if orders[i] == 'asc':
-                order_by.append(model.c[f])
-            else:
-                order_by.append(model.c[f].desc())
+            field = get_field(f)
+            if field:
+                if orders[i] == 'asc':
+                    order_by.append(field)
+                else:
+                    order_by.append(field.desc())
     else:
         order_by = None
         
@@ -1964,6 +1977,8 @@ class ListView(SimpleListView):
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
+            from uliweb.orm import print_
+            print print_(query.get_query())
             if isinstance(query, Select):
                 self.total = self.model.count(query._whereclause)
             else:
