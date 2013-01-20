@@ -31,15 +31,14 @@ def reflect_table(engine, tablename):
     insp.reflecttable(table, None)
     return table
 
-def get_tables(apps_dir, apps=None, engine=None, import_models=False, tables=None,
+def get_tables(apps_dir, apps=None, engine_name=None, import_models=False, tables=None,
     settings_file='settings.ini', local_settings_file='local_settings.ini'):
     from uliweb.core.SimpleFrame import get_apps, get_app_dir
     from uliweb import orm
     from StringIO import StringIO
     
-    engine = orm.engine_manager[engine]
+    engine = orm.engine_manager[engine_name]
     e = engine.options['connection_string']
-    engine_name = e[:e.find('://')+3]
     
     buf = StringIO()
     
@@ -66,8 +65,8 @@ def get_tables(apps_dir, apps=None, engine=None, import_models=False, tables=Non
     else:
         old_models = orm.__models__.keys()
         try:
-            for tablename, m in orm.__models__.items():
-                orm.get_model(tablename)
+            for tablename, m in engine.models.items():
+                orm.get_model(tablename, engine_name)
         except:
             print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
             raise
@@ -214,7 +213,7 @@ class SyncdbCommand(SQLCommandMixin, Command):
         engine = get_engine(options, global_options)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, 
-            engine=options.engine, settings_file=global_options.settings, 
+            engine_name=options.engine, settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
@@ -241,7 +240,7 @@ class ResetCommand(SQLCommandMixin, Command):
         engine = get_engine(options, global_options)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
-            engine=options.engine, settings_file=global_options.settings, 
+            engine_name=options.engine, settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
@@ -267,7 +266,7 @@ class ResetTableCommand(SQLCommandMixin, Command):
         engine = get_engine(options, global_options)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, 
-            tables=args, engine=options.engine, 
+            tables=args, engine_name=options.engine, 
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         _len = len(tables)
@@ -294,7 +293,7 @@ class DropTableCommand(SQLCommandMixin, Command):
         engine = get_engine(options, global_options)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, 
-            tables=args, engine=options.engine, 
+            tables=args, engine_name=options.engine, 
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         _len = len(tables)
@@ -315,7 +314,7 @@ class SQLCommand(SQLCommandMixin, Command):
         engine = get_engine(options, global_options)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
-            engine=options.engine, settings_file=global_options.settings, 
+            engine_name=options.engine, settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         for name, t in tables:
             _t = CreateTable(t)
@@ -356,7 +355,8 @@ class DumpCommand(SQLCommandMixin, Command):
             
         inspector = Inspector.from_engine(engine)
 
-        tables = get_sorted_tables(get_tables(global_options.apps_dir, args, engine=options.engine, 
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
+            engine_name=options.engine, 
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         _len = len(tables)
@@ -413,7 +413,7 @@ class DumpTableCommand(SQLCommandMixin, Command):
         inspector = Inspector.from_engine(engine)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, tables=args,
-            engine=options.engine, settings_file=global_options.settings, 
+            engine_name=options.engine, settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         _len = len(tables)
 
@@ -454,7 +454,7 @@ class DumpTableFileCommand(SQLCommandMixin, Command):
 
         name = args[0]
         tables = get_tables(global_options.apps_dir, tables=[name],
-            engine=options.engine, settings_file=global_options.settings, 
+            engine_name=options.engine, settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings)
         t = tables[name]
         if global_options.verbose:
@@ -502,7 +502,7 @@ are you sure to load data""" % options.engine
         engine = get_engine(options, global_options)
 
         tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
-            engine=options.engine, 
+            engine_name=options.engine, 
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         _len = len(tables)
@@ -557,7 +557,8 @@ are you sure to load data""" % (options.engine, ','.join(args))
         
         engine = get_engine(options, global_options)
 
-        tables = get_sorted_tables(get_tables(global_options.apps_dir, engine=options.engine, 
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, 
+            engine_name=options.engine, 
             settings_file=global_options.settings, tables=args,
             local_settings_file=global_options.local_settings))
         _len = len(tables)
@@ -611,7 +612,7 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
         engine = get_engine(options, global_options)
 
         name = args[0]
-        tables = get_tables(global_options.apps_dir, engine=options.engine, 
+        tables = get_tables(global_options.apps_dir, engine_name=options.engine, 
             settings_file=global_options.settings, tables=[name],
             local_settings_file=global_options.local_settings)
         t = tables[name]
@@ -677,7 +678,9 @@ class SqldotCommand(SQLCommandMixin, Command):
         else:
             apps = self.get_apps(global_options)
         
-        tables = get_tables(global_options.apps_dir, apps, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, apps, engine_name=options.engine, 
+            settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings)
         print generate_dot(tables, apps)
         
 class SqlHtmlCommand(SQLCommandMixin, Command):
@@ -696,7 +699,9 @@ class SqlHtmlCommand(SQLCommandMixin, Command):
         else:
             apps = self.get_apps(global_options)
         
-        tables = get_tables(global_options.apps_dir, args, engine=options.engine, settings_file=global_options.settings, local_settings_file=global_options.local_settings)
+        tables = get_tables(global_options.apps_dir, args, engine_name=options.engine, 
+            settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings)
         print generate_html(tables, apps)
     
 class ValidatedbCommand(SQLCommandMixin, Command):
@@ -720,7 +725,7 @@ class ValidatedbCommand(SQLCommandMixin, Command):
             apps = self.get_apps(global_options)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, apps, 
-            engine=options.engine, 
+            engine_name=options.engine, 
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         _len = len(tables)
