@@ -6,7 +6,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
     'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
     'set_tablename_converter', 'set_check_max_length', 'set_post_do',
-    'print_', 'Lazy',
+    'rawsql', 'Lazy',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
@@ -359,12 +359,24 @@ def default_post_do(sender, query, conn):
     if __default_post_do__:
         __default_post_do__(sender, query, conn)
        
-def print_(query):
+def rawsql(query, ec=None):
+    from MySQLdb.converters import conversions, escape
     if isinstance(query, Result):
         query = query.get_query()
-    d2 = query.compile()
-    d2.visit_bindparam = d2.render_literal_bindparam
-    return d2.process(query)
+
+    ec = ec or 'default'
+    engine = engine_manager[ec]
+    dialect = engine.engine.dialect
+    enc = dialect.encoding
+    comp = query.compile(dialect=dialect)
+    params = []
+    for k in comp.positiontup:
+        v = comp.params[k]
+        if isinstance(v, unicode):
+            v = v.encode(enc)
+        params.append( escape(v, conversions) )
+    return (comp.string.encode(enc) % tuple(params)).decode(enc)
+    
     
 def do_(query, ec=None):
     """

@@ -33,7 +33,7 @@ Uliweb Change Log
 * Add CHECK_MAX_LENGTH to orm app. So if it's True, and if max_length is not passed
   a value, it'll raise an Exception. Or if CHECK_MAX_LENGTH is False, max_length will
   be 255 by default.
-* Add `post_do` and `print_` function to orm.
+* Add `post_do` and `rawsql` function to orm.
 * Change `generic/template_files/common/views.py` to `views.py.tmpl`
 * Add GenericReference value `(Model, object_id)` support
 * Fix pyini save process
