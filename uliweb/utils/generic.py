@@ -146,7 +146,7 @@ class GenericReference(orm.Property):
     def __init__(self, verbose_name=None, table_fieldname='table_id', 
         object_fieldname='object_id', **attrs):
         """
-        Definition of GenericRelation property
+        Definition of GenericReference property
         """
             
         super(GenericReference, self).__init__(
@@ -215,7 +215,7 @@ class GenericReference(orm.Property):
         if value:
             if isinstance(value, (tuple, list)):
                 if not len(value) == 2:
-                    raise ValueError("The value of GenericRelation should be two-elements tuple/list, or instance of Model, but %r found" % value)
+                    raise ValueError("The value of GenericReference should be two-elements tuple/list, or instance of Model, but %r found" % value)
                 
                 table_id, object_id = value
                 if issubclass(table_id, orm.Model):
@@ -226,7 +226,7 @@ class GenericReference(orm.Property):
                 table_id = self.table.get_table(value.tablename).id
                 object_id = value.id
             else:
-                raise ValueError("The value of GenericRelation should be two-elements tuple/list, or instance of Model, but %r found" % value)
+                raise ValueError("The value of GenericReference should be two-elements tuple/list, or instance of Model, but %r found" % value)
         
             model_instance.properties[self.table_fieldname].__set__(model_instance, table_id)
             model_instance.properties[self.object_fieldname].__set__(model_instance, object_id)
