@@ -1888,7 +1888,7 @@ def test_post_do():
     """
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
-    >>> def log(query, conn):
+    >>> def log(ec, query, conn):
     ...     #print print_sql(query)
     ...     pass
     >>> uliweb.orm.__default_post_do__ = log

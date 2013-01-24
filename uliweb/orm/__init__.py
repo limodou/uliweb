@@ -588,6 +588,8 @@ def get_model(model, engine_name=None):
                 item['model'] = model_inst
                 model_inst.__alias__ = model
                 model_inst.connect(engine_name)
+                #add bind process
+                model_inst.bind(engine.metadata)
                 return model_inst
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
@@ -2603,7 +2605,7 @@ class Model(object):
             if not check_model(cls):
                 return
             cls.metadata = metadata or find_metadata(cls)
-            if cls.metadata and not cls._bound:
+            if cls.metadata:
                 cols = []
                 cls.manytomany = []
                 #add pre_create process
@@ -2636,8 +2638,6 @@ class Model(object):
                 if hasattr(cls, 'OnInit'):
                     cls.OnInit()
                 
-                cls._bound = True
-            if cls._bound:
                 if auto_create:
                     #only metadata is and bound 
                     #then the table will be created
