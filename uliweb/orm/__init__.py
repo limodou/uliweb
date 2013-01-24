@@ -1922,6 +1922,7 @@ class ManyToMany(ReferenceProperty):
             Column(self.fieldb, self.get_type(self.reference_class, self.reference_fieldname)),
 #            ForeignKeyConstraint([a], [a_id]),
 #            ForeignKeyConstraint([b], [b_id]),
+            extend_existing=True
         )
         return _table
     
