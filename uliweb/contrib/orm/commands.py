@@ -85,14 +85,13 @@ def get_tables(apps_dir, apps=None, engine_name=None, import_models=False, table
                 table = engine.metadata.tables[tablename]
                 table.__appname__ = m.__appname__
                 t[tablename] = table
-                t[tablename] = table
     else:
         t = {}
         for tablename, m in engine.metadata.tables.items():
             table = engine.metadata.tables[tablename]
             table.__appname__ = m.__appname__
             t[tablename] = table
-           
+     
     return t
 
 def get_sorted_tables(tables):

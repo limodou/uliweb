@@ -518,7 +518,7 @@ def set_model(model, tablename=None, created=None, engine_name=None):
     if not isinstance(engine_name, (tuple, list)):
         engine_name = [engine_name]
     for c in engine_name:
-        engine_manager[c].models[tablename] = item
+        engine_manager[c].models[tablename] = item.copy()
     
     #set global __models__
     d = __models__.setdefault(tablename, {})
@@ -530,9 +530,12 @@ def set_model(model, tablename=None, created=None, engine_name=None):
 def valid_model(model, engine_name=None):
     if isinstance(model, type) and issubclass(model, Model):
         return True
-    engine = engine_manager[engine_name]
-    return model in engine.models
-
+    if engine_name:
+        engine = engine_manager[engine_name]
+        return model in engine.models
+    else:
+        return True
+    
 def check_model(model):
     """
     :param model: Model instance
@@ -553,6 +556,13 @@ def find_metadata(model):
     engine = engine_manager[engine_name]
     return engine.metadata
     
+def clone_model(model, ec=None):
+    ec = ec or default
+    name = '%s_%s' % (ec, model.__name__)
+    cls = type(name, (model,), {'__tablename__':model.tablename, '__bind__':False})
+    cls.__module__ = model.__module__
+    return cls
+
 def get_model(model, engine_name=None):
     """
     Return a real model object, so if the model is already a Model class, then
@@ -570,21 +580,23 @@ def get_model(model, engine_name=None):
     if model in __models__:
         engines = __models__[model]['engine_name']
         if engine_name is None:
-            if len(engines) == 1:
-                engine_name = engines[0]
-            else:
-                raise Error("The model %s has multiple engine names, "
-                    "please pass the one which you want to search in" % model)
+            engine_name = engines[0]
+            
         engine = engine_manager[engine_name]
         if model in engine.models:
             item = engine.models[model]
             m = item['model']
-            if isinstance(m, type)  and issubclass(m, Model):
+            if isinstance(m, type) and issubclass(m, Model):
+                m.connect(engine_name)
+#                m.bind(engine.metadata)
                 return m
             else:
                 m, name = item['model_path'].rsplit('.', 1)
                 mod = __import__(m, fromlist=['*'])
-                model_inst = getattr(mod, name)
+                model_cls = getattr(mod, name)
+
+                #clone model class
+                model_inst = clone_model(model_cls, engine_name)
                 item['model'] = model_inst
                 model_inst.__alias__ = model
                 model_inst.connect(engine_name)
@@ -639,8 +651,8 @@ class ModelMetaclass(type):
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls._fields_list = fields_list
         
-        cls._bound = False
-        cls.bind(auto_create=__auto_create__)
+        if cls.__bind__:
+            cls.bind(auto_create=__auto_create__)
         
 class LazyValue(object):
     def __init__(self, name, property):
@@ -1138,7 +1150,7 @@ class ReferenceProperty(Property):
     field_class = PKCLASS()
 
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
-        reference_fieldname=None, required=False, **attrs):
+        reference_fieldname=None, required=False, engine_name=None, **attrs):
         """Construct ReferenceProperty.
 
         Args:
@@ -1155,6 +1167,7 @@ class ReferenceProperty(Property):
         self.collection_name = collection_name
         self.reference_fieldname = reference_fieldname or 'id'
         self.required = required
+        self.engine_name = engine_name
 
         if reference_class is None:
             reference_class = Model
@@ -1162,10 +1175,10 @@ class ReferenceProperty(Property):
         if not (
                 (isinstance(reference_class, type) and issubclass(reference_class, Model)) or
                 reference_class is _SELF_REFERENCE or
-                valid_model(reference_class)):
+                valid_model(reference_class, self.engine_name)):
             raise KindError('reference_class %r must be Model or _SELF_REFERENCE or available table name' % reference_class)
         
-        self.reference_class = get_model(reference_class)
+        self.reference_class = get_model(reference_class, self.engine_name)
         
     def create(self, cls):
         args = self.kwargs.copy()
@@ -2202,6 +2215,7 @@ class Model(object):
     __connection__ = None
     __alias__ = None #can be used via get_model(alias)
     __collection_set_id__ = 1
+    __bind__ = True
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
@@ -2603,8 +2617,9 @@ class Model(object):
         cls._lock.acquire()
         try:
             #if the module if not available then skip process
-            if not check_model(cls):
-                return
+#            if not check_model(cls):
+#                return
+            
             cls.metadata = metadata or find_metadata(cls)
             if cls.metadata:
                 cols = []
@@ -2630,8 +2645,10 @@ class Model(object):
                 cls.table = Table(cls.tablename, cls.metadata, *cols, **args)
                 #add appname to self.table
                 appname = cls.__module__
-                if appname.rsplit('.', 1)[-1].startswith('models'):
-                    cls.table.__appname__ = appname[:-7]
+#                if appname.rsplit('.', 1)[-1].startswith('models'):
+#                    cls.table.__appname__ = appname[:-7]
+                #model should be defined in models*.py
+                cls.table.__appname__ = appname[:appname.rfind('.')]
                 
                 cls.c = cls.table.c
                 cls.columns = cls.table.c
