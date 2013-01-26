@@ -515,10 +515,10 @@ def set_model(model, tablename=None, created=None, engine_name=None):
     item['appname'] = appname
     
     engine_name = engine_name or 'default'
-    if not isinstance(engine_name, (tuple, list)):
-        engine_name = [engine_name]
-    for c in engine_name:
-        engine_manager[c].models[tablename] = item.copy()
+    if not isinstance(engine_name, (str, unicode)):
+        raise BadValueError('engine name should be string type, but %r found' % engine_name)
+    
+    engine_manager[engine_name].models[tablename] = item
     
     #set global __models__
     d = __models__.setdefault(tablename, {})
@@ -556,12 +556,12 @@ def find_metadata(model):
     engine = engine_manager[engine_name]
     return engine.metadata
     
-def clone_model(model, ec=None):
-    ec = ec or default
-    name = '%s_%s' % (ec, model.__name__)
-    cls = type(name, (model,), {'__tablename__':model.tablename, '__bind__':False})
-    cls.__module__ = model.__module__
-    return cls
+#def clone_model(model, ec=None):
+#    ec = ec or default
+#    name = '%s_%s' % (ec, model.__name__)
+#    cls = type(name, (model,), {'__tablename__':model.tablename, '__bind__':False})
+#    cls.__module__ = model.__module__
+#    return cls
 
 def get_model(model, engine_name=None):
     """
@@ -578,10 +578,7 @@ def get_model(model, engine_name=None):
         raise Error("Model %r should be string or unicode type" % model)
     
     if model in __models__:
-        engines = __models__[model]['engine_name']
-        if engine_name is None:
-            engine_name = engines[0]
-            
+        engine_name = __models__[model]['engine_name']
         engine = engine_manager[engine_name]
         if model in engine.models:
             item = engine.models[model]
@@ -593,10 +590,7 @@ def get_model(model, engine_name=None):
             else:
                 m, name = item['model_path'].rsplit('.', 1)
                 mod = __import__(m, fromlist=['*'])
-                model_cls = getattr(mod, name)
-
-                #clone model class
-                model_inst = clone_model(model_cls, engine_name)
+                model_inst = getattr(mod, name)
                 item['model'] = model_inst
                 model_inst.__alias__ = model
                 model_inst.connect(engine_name)
@@ -2462,15 +2456,26 @@ class Model(object):
     def add_property(cls, name, prop, config=True, set_property=True):
         if isinstance(prop, Property):
             check_reserved_word(name)
-#            if name in cls.properties:
-#                raise DuplicatePropertyError('Duplicate property: %s' % name)
+            
+            #process if there is already the same property
+            old_prop = cls.properties.get(name)
+            if old_prop:
+                prop.creation_counter = old_prop.creation_counter
             cls.properties[name] = prop
             if config:
                 prop.__property_config__(cls, name)
             if set_property:
                 setattr(cls, name, prop)
             if hasattr(cls, '_fields_list'):
-                if (name, prop) not in cls._fields_list:
+                index = -1
+                for i, (n, p) in enumerate(cls._fields_list):
+                    if name == n:
+                        index = i
+                        break
+                    
+                if index >= 0:
+                    cls._fields_list[index] = (name, prop)
+                else:
                     cls._fields_list.append((name, prop))
                     cls._fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         else:
@@ -2591,14 +2596,8 @@ class Model(object):
         m = __models__.get(cls.__alias__, {})
         m1 = __model_paths__.get(cls.__module__ + '.' + cls.__name__, None)
         engine_name = cls.__engine_name__ or m.get('engine_name') or m1 or 'default'
-        if isinstance(engine_name, (tuple, list)):
-            #default use the first engine_name, it'll be set correct outside via get_model
-            engine_name = engine_name[0]
-#            if len(engine_name) == 1:
-#                engine_name = engine_name[0]
-#            else:
-#                #If there are multiple database, then it'll be set in get_model or outside
-#                engine_name = None
+        if not isinstance(engine_name, (str, unicode)):
+            raise BadValueError('engine name should be string type, but %r found' % engine_name)
         return engine_name
     
     @classmethod
