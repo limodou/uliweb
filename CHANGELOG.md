@@ -38,6 +38,7 @@ Uliweb Change Log
 * Add GenericReference value `(Model, object_id)` support
 * Fix pyini save process
 * Fix `_create_kwargs` quote characters bug, and change the function to `to_attrs`
+* Refactor multiple db support, only one engine supported for each class.
 
 0.1.6 Version
 -----------------
