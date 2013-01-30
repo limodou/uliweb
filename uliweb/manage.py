@@ -290,6 +290,8 @@ class ExportStaticCommand(Command):
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import copy_dir_with_check
         
+        self.get_application(global_options)
+        
         if not args:
             print >>sys.stderr, "Error: outputdir should be a directory and existed"
             sys.exit(0)
@@ -304,6 +306,35 @@ class ExportStaticCommand(Command):
         self.options = options
         self.global_options = global_options
         copy_dir_with_check(dirs, outputdir, False, options.check, processor=self.process_file)
+        
+        self.process_combine(outputdir, global_options.verbose)
+        
+    def process_combine(self, outputdir, verbose=False):
+        #automatically process static combine
+        from uliweb.contrib.template import init_static_combine
+        from rjsmin.rjsmin import jsmin
+        from rcssmin.rcssmin import cssmin
+
+        d = init_static_combine()
+        for k, v in d.items():
+            filename = os.path.join(outputdir, k)
+            if verbose:
+                print 'Process ... %s' % filename
+            with open(filename, 'w') as f:
+                ext = os.path.splitext(k)[1]
+                if ext == '.js':
+                    processor = jsmin
+                elif ext == '.css':
+                    processor = cssmin
+                else:
+                    print "Error: Unsupport type %s" % ext
+                    sys.exit(1)
+                for x in v:
+                    fname = os.path.join(outputdir, x)
+                    if verbose:
+                        print '    add %s' % fname
+                    f.write(processor(open(fname).read()))
+                    f.write('\n')
         
     def process_file(self, sfile, dpath, dfile):
         from rjsmin.rjsmin import jsmin

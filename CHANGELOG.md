@@ -39,6 +39,8 @@ Uliweb Change Log
 * Fix pyini save process
 * Fix `_create_kwargs` quote characters bug, and change the function to `to_attrs`
 * Refactor multiple db support, only one engine supported for each class.
+* Add static combine functionality, so you can combine some js or css files into
+  one file.
 
 0.1.6 Version
 -----------------

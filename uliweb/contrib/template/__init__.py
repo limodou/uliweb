@@ -10,3 +10,18 @@ def startup_installed(sender):
     
     template.BEGIN_TAG = sender.settings.TEMPLATE.BEGIN_TAG
     template.END_TAG = sender.settings.TEMPLATE.END_TAG
+
+def init_static_combine():
+    """
+    Process static combine, create md5 key according each static filename
+    """
+    from uliweb import settings
+    from hashlib import md5
+    import os
+    
+    d = {}
+    for k, v in settings.get('STATIC_COMBINE', {}).items():
+        key = md5(''.join(v)).hexdigest()+os.path.splitext(v[0])[1]
+        d[key] = v
+        
+    return d

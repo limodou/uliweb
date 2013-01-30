@@ -9,6 +9,10 @@ r_head = re.compile('(?i)<head>(.*?)</head>', re.DOTALL)
 r_top = re.compile('<!--\s*toplinks\s*-->')
 r_bottom = re.compile('<!--\s*bottomlinks\s*-->')
 
+#used to remember static files combine infos
+__static_combine__ = None
+__static_mapping__ = {}
+
 class UseModuleNotFound(Exception): pass
 class TemplateDefineError(Exception): pass
 
@@ -155,6 +159,17 @@ class HtmlMerge(object):
         self.links = links
         self.env = env
         self.vars = vars
+        self.init()
+        
+    def init(self):
+        global __static_combine__, __static_mapping__
+        from __init__ import init_static_combine
+        
+        if __static_combine__ is None:
+            __static_combine__ = init_static_combine()
+            for k, v in __static_combine__.items():
+                for x in v:
+                    __static_mapping__[x] = k
         
     def __call__(self):
 #        b = r_head.search(self.text)
@@ -223,12 +238,15 @@ class HtmlMerge(object):
                 #link will also be template string
                 if '{{' in link and '}}' in link:
                     link = template(link, self.env)
-                if link.endswith('.js') or link.endswith('.css'):
-                    _link = functions.url_for_static(link)
+                    
+                #process static combine
+                new_link = __static_mapping__.get(link, link)
+                if new_link.endswith('.js') or new_link.endswith('.css'):
+                    _link = functions.url_for_static(new_link)
                 else:
-                    _link = link
-                if not link in r[_type] and not _link in existlinks:
-                    r[_type].append(link)
+                    _link = new_link
+                if not new_link in r[_type] and not _link in existlinks:
+                    r[_type].append(new_link)
         return r
 
     def cal_position(self, text, has_toplinks, has_bottomlinks, head_len, head_start):

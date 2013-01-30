@@ -18,7 +18,7 @@ class StaticFilesMiddleware(SharedDataMiddleware):
         self.exports = {}
         self.cache = cache
         self.cache_timeout = cache_timeout
-        self.exports[self.url_suffix] = self.loader(settings.STATICFILES.STATIC_FOLDER)
+        self.exports[self.url_suffix] = self.loader(os.path.normpath(settings.STATICFILES.STATIC_FOLDER))
         if disallow is not None:
             from fnmatch import fnmatch
             self.is_allowed = lambda x: not fnmatch(x, disallow)
@@ -37,26 +37,21 @@ class StaticFilesMiddleware(SharedDataMiddleware):
             from uliweb.utils.common import pkg
             
             app = self.app
-            f = None
             if dir:
                 fname = os.path.normpath(os.path.join(dir, filename)).replace('\\', '/')
                 if not fname.startswith(dir):
                     return Forbidden("You can only visit the files under static directory."), None
                 if os.path.exists(fname):
-                    f = fname
-            else:
-                for p in reversed(app.apps):
-                    fname = os.path.normpath(os.path.join('static', filename)).replace('\\', '/')
-                    if not fname.startswith('static/'):
-                        return Forbidden("You can only visit the files under static directory."), None
+                    return fname, self._opener(fname)
                     
-                    ff = pkg.resource_filename(p, fname)
-                    if os.path.exists(ff):
-                        f = ff
-                        break
-            
-            if f:
-                return f, self._opener(f)
+            for p in reversed(app.apps):
+                fname = os.path.normpath(os.path.join('static', filename)).replace('\\', '/')
+                if not fname.startswith('static/'):
+                    return Forbidden("You can only visit the files under static directory."), None
+                
+                f = pkg.resource_filename(p, fname)
+                if os.path.exists(f):
+                    return f, self._opener(f)
             
             return NotFound("Can't found the file %s" % filename), None
         return _loader
