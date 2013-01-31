@@ -1074,11 +1074,12 @@ class Dispatcher(object):
                         if pre_call:
                             response = pre_call(req)
                         if response is None:
-                            response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
+                            try:
+                                response = self.call_view(mod, handler_cls, handler, req, res, kwargs=values)
+                            except RedirectException as e:
+                                response = e.get_response()
                         if post_call:
                             response = post_call(req, response)
-                    except RedirectException, e:
-                        raise
                     except Exception, e:
                         for cls in reversed(middlewares):
                             if hasattr(cls, 'process_exception'):
@@ -1097,12 +1098,18 @@ class Dispatcher(object):
                             ins = cls(self, settings)
                         response = ins.process_response(req, response)
                 
+                #process post_response call, you can set some async process in here
+                #but the sync may fail, so you should think about the checking mechanism
+                if hasattr(response, 'post_response') and response.post_response:
+                    response.post_response()
+                    
+                if hasattr(res, 'post_response') and res.post_response:
+                    res.post_response()
+                
             #endif
             
         except HTTPError, e:
             response = self.render(e.errorpage, Storage(e.errors))
-        except RedirectException, e:
-            response = e.get_response()
         except NotFound, e:
             response = self.not_found(e)
         except HTTPException, e:
