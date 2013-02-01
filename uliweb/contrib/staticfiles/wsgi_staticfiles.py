@@ -18,7 +18,10 @@ class StaticFilesMiddleware(SharedDataMiddleware):
         self.exports = {}
         self.cache = cache
         self.cache_timeout = cache_timeout
-        self.exports[self.url_suffix] = self.loader(os.path.normpath(settings.STATICFILES.STATIC_FOLDER))
+        path = os.path.normpath(settings.STATICFILES.STATIC_FOLDER)
+        if path == '.':
+            path = ''
+        self.exports[self.url_suffix] = self.loader(path)
         if disallow is not None:
             from fnmatch import fnmatch
             self.is_allowed = lambda x: not fnmatch(x, disallow)
