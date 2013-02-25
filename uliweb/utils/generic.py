@@ -468,7 +468,12 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     
         return f
 
-def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=None, value=__default_value__):
+def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=None, 
+    value=__default_value__, auto_convert=True):
+    """
+    If convert_auto, then all values will be converted to string format, otherwise
+    remain the orignal value
+    """
     from uliweb.utils.textconvert import text2html
     from uliweb.core.html import Tag
     
@@ -501,7 +506,10 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                     value = prop.get_value_for_datastore(obj)
             else:
                 value = obj[prop.property_name]
-        display = prop.get_display_value(value)
+        if auto_convert:
+            display = prop.get_display_value(value)
+        else:
+            display = value
         name = prop.property_name
         
         if isinstance(field, dict):
@@ -1530,8 +1538,10 @@ class SimpleListView(object):
         else:
             return self.download_csv(filename, query, action, fields_convert_map, not_tempfile=bool(timeout))
        
-    def get_data(self, query, fields_convert_map, encoding='utf-8', plain=True):
-
+    def get_data(self, query, fields_convert_map, encoding='utf-8', auto_convert=True):
+        """
+        If convert=True, will convert field value
+        """
         fields_convert_map = fields_convert_map or {}
         d = self.fields_convert_map.copy() 
         d.update(fields_convert_map)
@@ -1566,7 +1576,7 @@ class SimpleListView(object):
                 else:
                     field = x
                     field['value'] = record[x['name']]
-                v = make_view_field(field, record, fields_convert_map=d)
+                v = make_view_field(field, record, fields_convert_map=d, auto_convert=auto_convert)
                 value = v['display']
                 #value = safe_unicode(v['display'], encoding)
                 row.append(value)
@@ -1614,7 +1624,7 @@ class SimpleListView(object):
             domain = settings.get_var('GENERIC/DOWNLOAD_DOMAIN', request.host_url)
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
         w = ExcelWriter(header=self.table_info['fields_list'], data=self.get_data(data, 
-            fields_convert_map, default_encoding, plain=False), 
+            fields_convert_map, default_encoding, auto_convert=False), 
             encoding=default_encoding, domain=domain)
         w.save(tfile.name)
         return self.downloader.download(bfile, action=action, x_filename=ufile, 
