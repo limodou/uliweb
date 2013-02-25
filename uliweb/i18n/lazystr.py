@@ -12,6 +12,7 @@ class LazyString(object):
     def __init__(self, func, message):
         self._func = func
         self.msg = message
+        self._format = []
         
     def __unicode__(self):
         if not self.msg:
@@ -31,8 +32,15 @@ class LazyString(object):
         else:
             return str(value)
     
+    def format(self, *args, **kwargs):
+        self._format.append((args, kwargs))
+        return self
+        
     def getvalue(self):
-        return self._func(self.msg)
+        v = self._func(self.msg)
+        for args, kwargs in self._format:
+            v = v.format(*args, **kwargs)
+        return v
     
     def __repr__(self):
         return "%s_lazy(%r)" % (self._func.__name__, self.msg)

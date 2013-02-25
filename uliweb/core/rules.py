@@ -189,7 +189,11 @@ class Expose(object):
         from uliweb.utils.common import safe_import
         
         if isinstance(f, (str, unicode)):
-            _, f = safe_import(f)
+            try:
+                _, f = safe_import(f)
+            except:
+                log.error('Import error: rule=%s' % f)
+                raise
         self.parse(f)
         return f
     

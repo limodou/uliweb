@@ -30,7 +30,7 @@ def test_1():
     <div class="control-group" id="div_field_content">
         <label class="control-label" for="field_content">Content:</label>
         <div class="controls">
-        <textarea class="field" cols id="field_content" name="content" placeholder="" rows="10"></textarea>
+        <textarea class="field" cols id="field_content" name="content" placeholder="" rows="4"></textarea>
         <p class="help help-block"></p>
     </div>
     <BLANKLINE>
@@ -192,14 +192,14 @@ def test_text_field():
     """
     >>> a = TextField(name='text', id='field_text')
     >>> print a.html('Test')
-    <textarea class="field" cols id="field_text" name="text" placeholder="" rows="10">Test</textarea>
+    <textarea class="field" cols id="field_text" name="text" placeholder="" rows="4">Test</textarea>
     """
 
 def test_textlines_field():
     """
     >>> a = TextLinesField(name='list', id='field_list')
     >>> print a.html(['a', 'b'])
-    <textarea class="field" cols="40" id="field_list" name="list" placeholder="" rows="4">a
+    <textarea class="field" cols id="field_list" name="list" placeholder="" rows="4">a
     b</textarea>
     """
 
@@ -220,7 +220,7 @@ def test_int_field():
     """
     >>> a = IntField(name='int', id='field_int')
     >>> print a.html('Test')
-    <input class="field" id="field_int" name="int" placeholder="" type="text" value="Test"></input>
+    <input class="field" id="field_int" name="int" placeholder="" type="number" value="Test"></input>
     >>> print a.validate('')
     (True, 0)
     >>> print a.validate(None)

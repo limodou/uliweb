@@ -18,7 +18,7 @@ class StaticFilesMiddleware(SharedDataMiddleware):
         self.exports = {}
         self.cache = cache
         self.cache_timeout = cache_timeout
-        path = os.path.normpath(settings.STATICFILES.STATIC_FOLDER)
+        path = os.path.normpath(settings.STATICFILES.get('STATIC_FOLDER', ''))
         if path == '.':
             path = ''
         self.exports[self.url_suffix] = self.loader(path)

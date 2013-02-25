@@ -292,7 +292,8 @@ class StringField(BaseField):
         """
         Convert a data to python format. 
         """
-        data = data.strip()
+        if data is None:
+            return ''
         if isinstance(data, unicode):
             data = data.encode(DEFAULT_ENCODING)
         else:
@@ -300,21 +301,19 @@ class StringField(BaseField):
         return data
     
 class UnicodeField(BaseField):
-    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, encoding='utf-8', **kwargs):
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
-        self.encoding = encoding
 
     def to_python(self, data):
         """
         Convert a data to python format. 
         """
         if data is None:
-            return data
-        data = data.strip()
+            return u''
         if isinstance(data, unicode):
             return data
         else:
-            return unicode(data, self.encoding)
+            return unicode(data, DEFAULT_ENCODING)
   
 class PasswordField(StringField):
     default_build = Password
@@ -360,6 +359,19 @@ class TextField(StringField):
             value = value.replace('&', '&amp;')
         return str(self.build(value, id='field_'+self.name, name=self.name, rows=self.rows, cols=self.cols, **self.html_attrs))
 
+    def to_python(self, data):
+        """
+        Convert a data to python format. 
+        """
+        if data is None:
+            return ''
+        if isinstance(data, self.datatype):
+            return data
+        if self.datatype is unicode:
+            return unicode(data, DEFAULT_ENCODING)
+        else:
+            return data.encode(DEFAULT_ENCODING)
+    
 class TextLinesField(TextField):
     def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, datatype=str, rows=4, cols=None, **kwargs):
         TextField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, rows=rows, cols=cols, **kwargs)

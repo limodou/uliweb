@@ -453,7 +453,7 @@ class CallCommand(Command):
         for f in apps:
             m = '%s.%s' % (f, command)
             try:
-                mod = __import__(m, {}, {}, [''])
+                mod = __import__(m, fromlist=['*'])
                 if global_options.verbose:
                     print "Importing... %s.%s" % (f, command)
                 if hasattr(mod, 'call'):

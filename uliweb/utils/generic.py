@@ -4,6 +4,7 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 import os, sys
 import time
+import inspect
 from uliweb.orm import get_model, Model, Result, do_, Lazy
 import uliweb.orm as orm
 from uliweb import redirect, json, functions, UliwebError, Storage
@@ -218,10 +219,10 @@ class GenericReference(orm.Property):
                     raise ValueError("The value of GenericReference should be two-elements tuple/list, or instance of Model, but %r found" % value)
                 
                 table_id, object_id = value
-                if issubclass(table_id, orm.Model):
-                    table_id = table_id.tablename
                 if isinstance(table_id, (str, unicode)):
                     table_id = self.table.get_table(table_id).id
+                if inspect.isclass(table_id) and issubclass(table_id, orm.Model):
+                    table_id = table_id.tablename
             elif isinstance(value, orm.Model):
                 table_id = self.table.get_table(value.tablename).id
                 object_id = value.id

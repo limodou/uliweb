@@ -1,6 +1,6 @@
 #coding=utf-8
 
-from uliweb.orm import Model, Field, get_model as _get_model
+from uliweb.orm import Model, Field, get_model as _get_model, NotFound
 from uliweb.utils.common import get_var
 import datetime
 
@@ -24,12 +24,22 @@ class Tables(Model):
             obj = cls.get(cls.c.table_name == table)
         if obj:
             return _get_model(obj.table_name)
+        else:
+            raise NotFound("Can't find model of table [%s]" % str(table))
+        
+    @classmethod
+    def get_tablename(cls, table_id):
+        obj = cls.get(cls.c.id == table)
+        if obj:
+            return obj.table_name
+        else:
+            raise NotFound("Can't find table according to table_id [%d]" % table_id)
         
     @classmethod
     def get_object(cls, table, object_id):
         model = cls.get_model(table)
         if not model:
-            raise Error('Table %r is not existed' % table)
+            raise NotFound('Table %r is not existed' % table)
         return model.get(object_id)
     
     def __unicode__(self):
