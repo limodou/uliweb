@@ -41,6 +41,7 @@ Uliweb Change Log
 * Refactor multiple db support, only one engine supported for each class.
 * Add static combine functionality, so you can combine some js or css files into
   one file.
+* Improve `sql` command, add index output, and also add `sqltable` command.
 
 0.1.6 Version
 -----------------

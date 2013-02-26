@@ -1909,7 +1909,9 @@ class ManyToMany(ReferenceProperty):
             if appname.rsplit('.', 1)[-1].startswith('models'):
                 self.table.__appname__ = appname[:-7]
             self.model_class.manytomany.append(self.table)
-            Index('%s_mindx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
+            index_name = '%s_mindx' % self.tablename
+            if index_name not in [x.name for x in self.table.indexes]:
+                Index(index_name, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
     
     def get_real_property(self, model, field):
         return getattr(model, field).field_class

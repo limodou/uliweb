@@ -31,7 +31,7 @@ def reflect_table(engine, tablename):
     insp.reflecttable(table, None)
     return table
 
-def get_tables(apps_dir, apps=None, engine_name=None, import_models=False, tables=None,
+def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
     settings_file='settings.ini', local_settings_file='local_settings.ini'):
     from uliweb.core.SimpleFrame import get_apps, get_app_dir
     from uliweb import orm
@@ -40,37 +40,14 @@ def get_tables(apps_dir, apps=None, engine_name=None, import_models=False, table
     engine = orm.engine_manager[engine_name]
     e = engine.options['connection_string']
     
-    buf = StringIO()
+    old_models = orm.__models__.keys()
+    try:
+        for tablename, m in engine.models.items():
+            orm.get_model(tablename, engine_name)
+    except:
+        print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
+        raise
     
-    if import_models:
-        apps = get_apps(apps_dir, settings_file=settings_file, local_settings_file=local_settings_file)
-        if apps:
-            apps_list = apps
-        else:
-            apps_list = apps[:]
-        models = []
-        for p in apps_list:
-            if p not in apps:
-                log.error('Error: Appname %s is not a valid app' % p)
-                continue
-            if not is_pyfile_exist(get_app_dir(p), 'models'):
-                continue
-            m = '%s.models' % p
-            try:
-                mod = __import__(m, {}, {}, [''])
-                models.append(mod)
-            except ImportError:
-                log.exception("There are something wrong when importing module [%s]" % m)
-        
-    else:
-        old_models = orm.__models__.keys()
-        try:
-            for tablename, m in engine.models.items():
-                orm.get_model(tablename, engine_name)
-        except:
-            print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
-            raise
-            
     if apps:
         t = {}
         for tablename, m in engine.metadata.tables.items():
@@ -80,11 +57,13 @@ def get_tables(apps_dir, apps=None, engine_name=None, import_models=False, table
                 t[tablename] = table
     elif tables:
         t = {}
-        for tablename, m in engine.metadata.tables.items():
-            if tablename in tables:
+        for tablename in tables:
+            if tablename in engine.metadata.tables:
                 table = engine.metadata.tables[tablename]
                 table.__appname__ = m.__appname__
                 t[tablename] = table
+            else:
+                print "Table [%s] can't be found, it'll be skipped." % tablename
     else:
         t = {}
         for tablename, m in engine.metadata.tables.items():
@@ -308,17 +287,41 @@ class SQLCommand(SQLCommandMixin, Command):
     check_apps = True
     
     def handle(self, options, global_options, *args):
-        from sqlalchemy.schema import CreateTable
+        from sqlalchemy.schema import CreateTable, CreateIndex
         
+        if not args:
+            print "Failed! You should pass one or more tables name."
+            sys.exit(1)
+
         engine = get_engine(options, global_options)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
             engine_name=options.engine, settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         for name, t in tables:
-            _t = CreateTable(t)
-            print _t
+            print "%s;" % str(CreateTable(t)).rstrip()
+            for x in t.indexes:
+                print "%s;" % CreateIndex(x)
             
+class SQLTableCommand(SQLCommandMixin, Command):
+    name = 'sqltable'
+    args = '<tablename, tablename, ...>'
+    help = 'Display the table creation sql statement.'
+    
+    def handle(self, options, global_options, *args):
+        from sqlalchemy.schema import CreateTable, CreateIndex
+        
+        engine = get_engine(options, global_options)
+        
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, 
+            tables=args, engine_name=options.engine, 
+            settings_file=global_options.settings, 
+            local_settings_file=global_options.local_settings))
+        for name, t in tables:
+            print "%s;" % str(CreateTable(t)).rstrip()
+            for x in t.indexes:
+                print "%s;" % CreateIndex(x)
+
 class DumpCommand(SQLCommandMixin, Command):
     name = 'dump'
     args = '<appname, appname, ...>'
