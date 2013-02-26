@@ -506,7 +506,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                     value = prop.get_value_for_datastore(obj)
             else:
                 value = obj[prop.property_name]
-        if auto_convert:
+        if auto_convert or prop.choices:
             display = prop.get_display_value(value)
         else:
             display = value
