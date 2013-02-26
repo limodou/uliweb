@@ -60,7 +60,7 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
         for tablename in tables:
             if tablename in engine.metadata.tables:
                 table = engine.metadata.tables[tablename]
-                table.__appname__ = m.__appname__
+                table.__appname__ = engine.metadata.tables[tablename].__appname__
                 t[tablename] = table
             else:
                 print "Table [%s] can't be found, it'll be skipped." % tablename
