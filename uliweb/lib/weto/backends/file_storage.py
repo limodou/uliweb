@@ -139,14 +139,24 @@ class Storage(BaseStorage):
     
     def load(self, filename):
         f = open(filename, 'rb')
+        error = False
         try:
             text = f.read()
             if not text:
                 return None
-            v = self._load(text)
-            return v
+            try:
+                v = self._load(text)
+                return v
+            except:
+                error = True
+                return None
         finally:
             f.close()
+            if error:
+                try:
+                    os.unlink(filename)
+                except:
+                    pass
     
     def save(self, key, stored_time, expiry_time, value):
         _file = self._get_file(key)

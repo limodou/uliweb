@@ -471,7 +471,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
 def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=None, 
     value=__default_value__, auto_convert=True):
     """
-    If convert_auto, then all values will be converted to string format, otherwise
+    If auto_convert, then all values will be converted to string format, otherwise
     remain the orignal value
     """
     from uliweb.utils.textconvert import text2html
@@ -1685,7 +1685,7 @@ class SimpleListView(object):
             result['table'] = s
         else:
             s = []
-            for r in self.objects():
+            for r in self.objects(json_result):
                 render_func = self.render_func or self.json_body_render
                 data = []
                 for f in self.table_info['fields_list']:
@@ -1695,7 +1695,7 @@ class SimpleListView(object):
         result['total'] = self.total
         return result
 
-    def objects(self):
+    def objects(self, json_result=False):
         """
         Return a generator of all processed data, it just like render
         but it'll not return a table or json format data but just
@@ -1707,14 +1707,14 @@ class SimpleListView(object):
             query = do_(query)
         for record in query:
             self.rows_num += 1
-            r = self.object(record)
+            r = self.object(record, json_result)
             self.cal_total(record)
             yield r
         total = self.render_total(True)
         if total:
             yield total
             
-    def object(self, record):
+    def object(self, record, json_result=False):
         r = SortedDict()
         if not isinstance(record, dict):
             record = dict(zip(self.table_info['fields'], record))
@@ -1996,14 +1996,14 @@ class ListView(SimpleListView):
             query = self.query_range(self.pageno, self.pagination)
         return query
     
-    def object(self, record):
+    def object(self, record, json_result=False):
         r = SortedDict()
         for i, x in enumerate(self.table_info['fields_list']):
             if hasattr(self.model, x['name']):
                 field = getattr(self.model, x['name'])
             else:
                 field = x
-            v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map)
+            v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map, auto_convert=not json_result)
             r[x['name']] = v['display']
         r['_obj_'] = record
         return r
