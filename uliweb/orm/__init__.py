@@ -19,7 +19,8 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
-    'CommitAll', 'RollbackAll']
+    'CommitAll', 'RollbackAll',
+    'begin_sql_monitor', 'close_sql_monitor']
 
 __auto_create__ = False
 __auto_set_model__ = True
@@ -45,6 +46,7 @@ from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
 import threading
+from uliweb.utils.sorteddict import SortedDict
 
 Local = threading.local()
 Local.dispatch_send = True
@@ -599,6 +601,50 @@ def get_model(model, engine_name=None):
                 return model_inst
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
+class SQLMointor(object):
+    def __init__(self, key_length=70, record_details=False):
+        self.count = SortedDict()
+        self.total = 0
+        self.key_length = key_length
+        self.details = []
+        self.record_details = record_details
+    
+    def post_do(self, sender, query, conn):
+        sql = str(query)
+        self.count[sql] = self.count.setdefault(sql, 0) + 1
+        self.total += 1
+        if self.record_details:
+            self.details.append(rawsql(query))
+        
+    def print_(self):
+        print '====== sql execution count %d =======' % self.total
+        for k, v in sorted(self.count.items(), key=lambda x:x[1]):
+            k = k.replace('\r', '')
+            k = k.replace('\n', '')
+            if self.key_length and self.key_length>1 and len(k) > self.key_length:
+                k = k[:self.key_length-3]+'...'
+            format = "%%-%ds  %%d" % self.key_length
+            print format % (k, v)
+        if self.record_details:
+            print '====== sql statements %d ====' % self.total
+            for line in self.details:
+                print '.', line
+        
+    def close(self):
+        self.count = {}
+        self.total = 0
+        self.details = []
+        
+def begin_sql_monitor(key_length=70, record_details=False):
+    sql_monitor = SQLMointor(key_length, record_details)
+    
+    dispatch.bind('post_do')(sql_monitor.post_do)
+    return sql_monitor
+    
+def close_sql_monitor(monitor):
+    dispatch.unbind('post_do', monitor.post_do)
+    monitor.close()
+
 class ModelMetaclass(type):
     def __init__(cls, name, bases, dct):
         super(ModelMetaclass, cls).__init__(name, bases, dct)

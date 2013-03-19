@@ -51,8 +51,8 @@ def unbind(topic, func):
     """
     if topic in _receivers:
         receivers = _receivers[topic]
-        for i, v in enumerate(receivers):
-            nice, f = v
+        for i in range(len(receivers)-1, -1, -1):
+            nice, f = receivers[i]
             if (callable(func) and f['func'] is func) or (f['func_name'] == func):
                 del receivers[i]
                 return

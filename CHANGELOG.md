@@ -42,6 +42,8 @@ Uliweb Change Log
 * Add static combine functionality, so you can combine some js or css files into
   one file.
 * Improve `sql` command, add index output, and also add `sqltable` command.
+* Add SQLMonitor
+* Fix unbind bug
 
 0.1.6 Version
 -----------------
