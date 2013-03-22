@@ -609,26 +609,33 @@ class SQLMointor(object):
         self.details = []
         self.record_details = record_details
     
-    def post_do(self, sender, query, conn):
-        sql = str(query)
-        self.count[sql] = self.count.setdefault(sql, 0) + 1
-        self.total += 1
-        if self.record_details:
-            self.details.append(rawsql(query))
+        def post_do(sender, query, conn, self=self):
+            sql = str(query)
+            self.count[sql] = self.count.setdefault(sql, 0) + 1
+            self.total += 1
+            if self.record_details:
+                self.details.append(rawsql(query))
+                
+        self.post_do = post_do
         
-    def print_(self):
-        print '====== sql execution count %d =======' % self.total
+    def print_(self, message=''):
+        print 
+        print '====== sql execution count %d <%s> =======' % (self.total, message)
         for k, v in sorted(self.count.items(), key=lambda x:x[1]):
             k = k.replace('\r', '')
             k = k.replace('\n', '')
             if self.key_length and self.key_length>1 and len(k) > self.key_length:
                 k = k[:self.key_length-3]+'...'
-            format = "%%-%ds  %%d" % self.key_length
+            if self.key_length > 0:
+                format = "%%-%ds  %%d" % self.key_length
+            else:
+                format = "%s  %d"
             print format % (k, v)
         if self.record_details:
             print '====== sql statements %d ====' % self.total
             for line in self.details:
                 print '.', line
+        print
         
     def close(self):
         self.count = {}
@@ -653,6 +660,7 @@ class ModelMetaclass(type):
         cls._set_tablename()
         
         cls.properties = {}
+        cls._fields_list = []
         defined = set()
         for base in bases:
             if hasattr(base, 'properties'):
@@ -673,7 +681,7 @@ class ModelMetaclass(type):
                 
                 if isinstance(attr, ManyToMany):
                     cls._manytomany[attr_name] = attr
-                
+         
         #if there is already defined primary_key, the id will not be primary_key
         has_primary_key = bool([v for v in cls.properties.itervalues() if 'primary_key' in v.kwargs])
         
@@ -2520,7 +2528,7 @@ class Model(object):
                     if name == n:
                         index = i
                         break
-                    
+                   
                 if index >= 0:
                     cls._fields_list[index] = (name, prop)
                 else:

@@ -53,7 +53,7 @@ def unbind(topic, func):
         receivers = _receivers[topic]
         for i in range(len(receivers)-1, -1, -1):
             nice, f = receivers[i]
-            if (callable(func) and f['func'] is func) or (f['func_name'] == func):
+            if (callable(func) and f['func'] == func) or (f['func_name'] == func):
                 del receivers[i]
                 return
 
