@@ -1614,19 +1614,6 @@ class SimpleListView(object):
                 
             for i, x in enumerate(self.table_info['fields_list']):
                 field = self.get_field(x['name'], model)
-#                if not field:
-#                    field = {'name':x['name']}
-#                else:
-#                    field = {'name':x['name'], 'prop':field}
-#                
-#                if model:
-#                    if hasattr(model, x['name']):
-#                        field = getattr(model, x['name'])
-#                    else:
-#                        field = x
-#                else:
-#                    field = x
-#                    field['value'] = record[x['name']]
                 if not field:
                     field = {'name':x['name']}
                 else:
