@@ -2113,9 +2113,12 @@ class ListView(SimpleListView):
                 f = self.get_table_meta_field(name, self.model)
                 if f:
                     d = f
+                else:
+                    d['verbose_name'] = x
             elif isinstance(x, dict):
                 name = x['name']
                 d = x
+
                 if 'verbose_name' not in d:
                     f = self.get_table_meta_field(name, x.get('model', self.model))
                     if f:
