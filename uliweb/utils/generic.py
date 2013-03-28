@@ -8,7 +8,7 @@ import inspect
 from uliweb.orm import get_model, Model, Result, do_, Lazy
 import uliweb.orm as orm
 from uliweb import redirect, json, functions, UliwebError, Storage
-from sqlalchemy.sql import Select
+from sqlalchemy.sql import select, Select, func
 from uliweb.contrib.upload import FileServing, FilenameConverter
 from uliweb.utils.common import safe_unicode, safe_str
 from uliweb.core.html import Builder
@@ -483,10 +483,15 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
     fields_convert_map = fields_convert_map or {}
     default_convert_map = {orm.TextProperty:lambda v,o:text2html(v)}
     
-    if isinstance(field, dict) and 'prop' in field and field.get('prop'):
-        prop = field['prop']
+    if isinstance(field, dict):
+        if 'prop' in field and field.get('prop'):
+            prop = field['prop']
+        else:
+            prop = field
+        name = field.get('name')
     else:
         prop = field
+        name = prop.property_name
         
     #not real Property instance, then return itself, so if should return
     #just like {'label':xxx, 'value':xxx, 'display':xxx}
@@ -495,7 +500,6 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
             value = prop.get('value', '')
         display = prop.get('display', value)
         label = prop.get('label', '') or prop.get('verbose_name', '')
-        name = prop.get('name', '')
         convert = prop.get('convert', None)
     else:
         if old_value is __default_value__:
@@ -505,18 +509,17 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                     getattr(obj, prop.property_name)
                     value = prop.get_value_for_datastore(obj)
             else:
-                value = obj[prop.property_name]
+                value = obj[name]
         if auto_convert or prop.choices:
             display = prop.get_display_value(value)
         else:
             display = value
-        name = prop.property_name
         
         if isinstance(field, dict):
             initial = field.get('verbose_name', None)
         else:
             initial = ''
-        label = initial or prop.verbose_name or prop.property_name
+        label = initial or prop.verbose_name or name
         
     if name in fields_convert_map:
         convert = fields_convert_map.get(name, None)
@@ -525,10 +528,12 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
             convert = types_convert_map.get(prop.__class__, None)
             if not convert:
                 convert = default_convert_map.get(prop.__class__, None)
-        
+    
+    convert_result = None
     if convert:
-        display = convert(value, obj)
-    else:
+        convert_result = convert(value, obj)
+    
+    if convert_result is None:
         if value is not None:
             if isinstance(prop, orm.ManyToMany):
                 s = []
@@ -567,6 +572,9 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
 #                display = prop.get_display_value(value)
             if prop.__class__ is orm.TextProperty:
                 display = text2html(value)
+       
+    else:
+        display = convert_result
         
     if isinstance(display, unicode):
         display = display.encode('utf-8')
@@ -1510,6 +1518,13 @@ class SimpleListView(object):
                     flag, self.total, result = repeat(query_result, -1, self.total)
                     return result
         
+    def count(self, query):
+        """
+        If query is Select object, this function will try to get count of select
+        """
+        q = query.with_only_columns([func.count()]).order_by(None).limit(None).offset(None)
+        return do_(q).scalar()
+
     def download(self, filename, timeout=3600, action=None, query=None, fields_convert_map=None, type=None, domain=None):
         """
         Default domain option is PARA/DOMAIN
@@ -1538,7 +1553,37 @@ class SimpleListView(object):
         else:
             return self.download_csv(filename, query, action, fields_convert_map, not_tempfile=bool(timeout))
        
-    def get_data(self, query, fields_convert_map, encoding='utf-8', auto_convert=True):
+    def get_column(self, name, model=None):
+        """
+        get table column according to name
+        """
+        col = None
+        if '.' in name:
+            m, fname = name.split('.')
+            model = get_model(m)
+            if fname in model.c:
+                col = get_model(m).c[fname]
+        else:
+            if name in model.c:
+                col = model.c[name]
+        return model, col
+        
+    def get_field(self, name, model=None):
+        """
+        get model field according to name
+        """
+        model, col = self.get_column(name, model)
+        if col is not None:
+            return getattr(model, col.name)
+        
+    def get_table_meta_field(self, name, model=None):
+        model, col = self.get_column(name, model)
+        if col is not None:
+            field = getattr(model, col.name)
+            d = {'name':name, 'verbose_name':field.verbose_name or field.name}
+            return d
+    
+    def get_data(self, query, fields_convert_map, encoding='utf-8', auto_convert=True, include_hidden=False):
         """
         If convert=True, will convert field value
         """
@@ -1568,15 +1613,28 @@ class SimpleListView(object):
                 model = None
                 
             for i, x in enumerate(self.table_info['fields_list']):
-                if model:
-                    if hasattr(model, x['name']):
-                        field = getattr(model, x['name'])
-                    else:
-                        field = x
+                field = self.get_field(x['name'], model)
+#                if not field:
+#                    field = {'name':x['name']}
+#                else:
+#                    field = {'name':x['name'], 'prop':field}
+#                
+#                if model:
+#                    if hasattr(model, x['name']):
+#                        field = getattr(model, x['name'])
+#                    else:
+#                        field = x
+#                else:
+#                    field = x
+#                    field['value'] = record[x['name']]
+                if not field:
+                    field = {'name':x['name']}
                 else:
-                    field = x
-                    field['value'] = record[x['name']]
-                v = make_view_field(field, record, fields_convert_map=d, auto_convert=auto_convert)
+                    field = {'name':x['name'], 'prop':field}
+                if not include_hidden and x.get('hidden'):
+                    continue
+                v = make_view_field(field, record, fields_convert_map=d, 
+                    auto_convert=auto_convert, value=record[x['name']])
                 value = v['display']
                 #value = safe_unicode(v['display'], encoding)
                 row.append(value)
@@ -1623,7 +1681,9 @@ class SimpleListView(object):
         if not domain:
             domain = settings.get_var('GENERIC/DOWNLOAD_DOMAIN', request.host_url)
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
-        w = ExcelWriter(header=self.table_info['fields_list'], data=self.get_data(data, 
+        #process hidden fields
+        header = [x for x in self.table_info['fields_list'] if not x.get('hidden')]
+        w = ExcelWriter(header=header, data=self.get_data(data, 
             fields_convert_map, default_encoding, auto_convert=False), 
             encoding=default_encoding, domain=domain)
         w.save(tfile.name)
@@ -1950,7 +2010,7 @@ class ListView(SimpleListView):
         If pageno is None, then the ListView will not paginate 
         """
         
-        self.model = get_model(model)
+        self.model = model and get_model(model)
         self.meta = meta
         self.condition = condition
         self.pageno = pageno
@@ -1989,7 +2049,8 @@ class ListView(SimpleListView):
             limit = self.rows_per_page
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
             if isinstance(query, Select):
-                self.total = self.model.count(query._whereclause)
+#                self.total = self.model.count(query._whereclause)
+                self.total = self.count(query)
             else:
                 self.total = query.count()
         else:
@@ -2033,7 +2094,7 @@ class ListView(SimpleListView):
             if condition is not None and isinstance(query, Result):
                 query = query.filter(condition)
         else:
-            query = model.filter(condition)
+            query = self.model.filter(condition)
         if self.pagination:
             if offset is not None:
                 query = query.offset(int(offset))
@@ -2057,31 +2118,23 @@ class ListView(SimpleListView):
         else:
             fields = [x for x, y in self.model._fields_list]
             
-        def get_table_meta_field(name):
-            if hasattr(self.model, self.meta):
-                for f in getattr(self.model, self.meta).fields:
-                    if isinstance(f, dict):
-                        if name == f['name']:
-                            return f
-                    elif isinstance(f, str):
-                        return None
-            
         fields_list = []
         for x in fields:
             if isinstance(x, (str, unicode)):
                 name = x
                 d = {'name':x}
-                f = get_table_meta_field(name)
+                f = self.get_table_meta_field(name, self.model)
                 if f:
                     d = f
             elif isinstance(x, dict):
                 name = x['name']
                 d = x
-            if 'verbose_name' not in d:
-                if hasattr(self.model, name):
-                    d['verbose_name'] = getattr(self.model, name).verbose_name or name
-                else:
-                    d['verbose_name'] = name
+                if 'verbose_name' not in d:
+                    f = self.get_table_meta_field(name, x.get('model', self.model))
+                    if f:
+                        d['verbose_name'] = f['verbose_name']
+                    else:
+                        d['verbose_name'] = name
             
             #process field width
             w = d.get('width')
@@ -2099,6 +2152,72 @@ class ListView(SimpleListView):
             t['fields'].append(name)
             
         return t
+    
+class SelectListView(ListView):
+    def __init__(self, model=None, fields=None, condition=None, query=None, pageno=0, order_by=None, 
+        rows_per_page=10, types_convert_map=None, pagination=True,
+        fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
+        total_fields=None, template_data=None, default_column_width=100, meta='Table',
+        render=None):
+        """
+        If pageno is None, then the ListView will not paginate 
+        """
+        super(SelectListView, self).__init__(model=model, condition=condition,
+            query=query, pageno=pageno, order_by=order_by, fields=fields,
+            rows_per_page=rows_per_page, types_convert_map=types_convert_map,
+            pagination=pagination, fields_convert_map=fields_convert_map,
+            id=id, table_class_attr=table_class_attr, table_width=table_width,
+            total_fields=total_fields, template_data=template_data, 
+            default_column_width=default_column_width, meta=meta,
+            render=render)
+
+    def get_select(self):
+        columns = []
+        for f in self.table_info['fields']:
+            model, col = self.get_column(f)
+            if col is not None:
+                columns.append(col)
+        return select(columns, use_labels=True)
+    
+    def query_model(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
+        """
+        Query all records with limit and offset, it's used for pagination query.
+        """
+        if self._query is not None:
+            query = self._query
+            if condition is not None and isinstance(query, Result):
+                query = query.filter(condition)
+        else:
+            query = self.get_select().where(condition)
+        if self.pagination:
+            if offset is not None:
+                query = query.offset(int(offset))
+            if limit is not None:
+                query = query.limit(int(limit))
+        if order_by is not None:
+            if isinstance(order_by, (tuple, list)):
+                for order in order_by:
+                    query = query.order_by(order)
+            else:
+                query = query.order_by(order_by)
+        return query
+    
+    def object(self, record, json_result=False):
+        r = SortedDict()
+        record = dict(zip(self.table_info['fields'], list(record)))
+        for i, x in enumerate(self.table_info['fields_list']):
+            field = self.get_field(x['name'], self.model)
+            if not field:
+                field = {'name':x['name']}
+            else:
+                field = {'name':x['name'], 'prop':field}
+            v = make_view_field(field, record, self.types_convert_map, 
+                self.fields_convert_map, auto_convert=not json_result, 
+                value=record[x['name']])
+            r[x['name']] = v['display']
+        r['_obj_'] = record
+        return r
+    
     
 class QueryView(object):
     success_msg = _('The information has been saved successfully!')
