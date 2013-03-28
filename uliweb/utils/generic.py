@@ -1620,8 +1620,12 @@ class SimpleListView(object):
                     field = {'name':x['name'], 'prop':field}
                 if not include_hidden and x.get('hidden'):
                     continue
-                v = make_view_field(field, record, fields_convert_map=d, 
-                    auto_convert=auto_convert, value=record[x['name']])
+                if isinstance(record, orm.Model):
+                    v = make_view_field(field, record, fields_convert_map=d, 
+                        auto_convert=auto_convert)
+                else:
+                    v = make_view_field(field, record, fields_convert_map=d, 
+                        auto_convert=auto_convert, value=record[x['name']])
                 value = v['display']
                 #value = safe_unicode(v['display'], encoding)
                 row.append(value)
