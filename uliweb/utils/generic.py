@@ -1522,8 +1522,12 @@ class SimpleListView(object):
         """
         If query is Select object, this function will try to get count of select
         """
-        q = query.with_only_columns([func.count()]).order_by(None).limit(None).offset(None)
-        return do_(q).scalar()
+        if self.manual:
+            return self.total
+        
+#        q = query.with_only_columns([func.count()]).order_by(None).limit(None).offset(None)
+#        return do_(q).scalar()
+        return do_(query.order_by(None).limit(None).offset(None).alias().count()).scalar()
 
     def download(self, filename, timeout=3600, action=None, query=None, fields_convert_map=None, type=None, domain=None):
         """
@@ -1561,10 +1565,10 @@ class SimpleListView(object):
         if '.' in name:
             m, fname = name.split('.')
             model = get_model(m)
-            if fname in model.c:
+            if model and fname in model.c:
                 col = get_model(m).c[fname]
         else:
-            if name in model.c:
+            if model and name in model.c:
                 col = model.c[name]
         return model, col
         
@@ -1572,14 +1576,16 @@ class SimpleListView(object):
         """
         get model field according to name
         """
-        model, col = self.get_column(name, model)
-        if col is not None:
-            return getattr(model, col.name)
+        if '.' in name:
+            m, name = name.split('.')
+            model = get_model(m)
+        
+        if model:
+            return getattr(model, name)
         
     def get_table_meta_field(self, name, model=None):
-        model, col = self.get_column(name, model)
-        if col is not None:
-            field = getattr(model, col.name)
+        field = self.get_field(name, model)
+        if field:
             d = {'name':name, 'verbose_name':field.verbose_name or field.name}
             return d
     
@@ -1754,7 +1760,7 @@ class SimpleListView(object):
         """
         self.rows_num = 0
         query = self.query()
-        if isinstance(query, Select):
+        if not isinstance(query, orm.Result):
             query = do_(query)
         for record in query:
             self.rows_num += 1
@@ -1996,7 +2002,7 @@ class ListView(SimpleListView):
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
         total_fields=None, template_data=None, default_column_width=100, 
-        meta='Table', render=None):
+        meta='Table', render=None, total=0, manual=False):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -2015,13 +2021,14 @@ class ListView(SimpleListView):
         self._query = query
         self.table_width = table_width
         self.table_class_attr = table_class_attr
-        self.total = 0
+        self.total = total
         self.pagination = pagination
         self.create_total_infos(total_fields)
         self.template_data = template_data or {}
         self.default_column_width = default_column_width
         self.downloader = GenericFileServing()
         self.render_func = render
+        self.manual = manual
         
         self.init()
         
@@ -2144,7 +2151,7 @@ class ListView(SimpleListView):
             t['fields_list'].append(d)
             t['fields_name'].append(d['verbose_name'])
             t['fields'].append(name)
-            
+          
         return t
     
 class SelectListView(ListView):
@@ -2152,7 +2159,7 @@ class SelectListView(ListView):
         rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
         total_fields=None, template_data=None, default_column_width=100, meta='Table',
-        render=None):
+        render=None, total=0, manual=False):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -2163,7 +2170,7 @@ class SelectListView(ListView):
             id=id, table_class_attr=table_class_attr, table_width=table_width,
             total_fields=total_fields, template_data=template_data, 
             default_column_width=default_column_width, meta=meta,
-            render=render)
+            render=render, total=total, manual=manual)
 
     def get_select(self):
         columns = []
@@ -2173,16 +2180,30 @@ class SelectListView(ListView):
                 columns.append(col)
         return select(columns, use_labels=True)
     
+    def query(self):
+        offset = self.pageno*self.rows_per_page
+        limit = self.rows_per_page
+        query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
+        if isinstance(query, orm.Result):
+            self.total = query.count()
+        else:
+            self.total = self.count(query)
+        return query
+
     def query_model(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
         """
         Query all records with limit and offset, it's used for pagination query.
         """
         if self._query is not None:
             query = self._query
-            if condition is not None and isinstance(query, Result):
-                query = query.filter(condition)
         else:
-            query = self.get_select().where(condition)
+            query = self.get_select()
+            
+        if condition is not None:
+            if isinstance(query, Result):
+                query = query.filter(condition)
+            else:
+                query = query.where(condition)
         if self.pagination:
             if offset is not None:
                 query = query.offset(int(offset))

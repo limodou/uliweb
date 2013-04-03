@@ -711,10 +711,7 @@ class LazyValue(object):
         if model_instance is None:
             return self
         
-        try:
-            return self.property.get_lazy(model_instance, self.name, self.property.default_value())
-        except AttributeError:
-            return None
+        return self.property.get_lazy(model_instance, self.name, self.property.default)
 
     def __set__(self, model_instance, value):
         if model_instance is None:
@@ -797,14 +794,24 @@ class Property(object):
             self.name = property_name
         setattr(model_class, self._lazy_value(), LazyValue(self._attr_name(), self))
         
+    def get_attr(self, model_instance, name, default):
+        if hasattr(model_instance, name):
+            v = getattr(model_instance, name)
+        else:
+            if callable(default):
+                v = default()
+            else:
+                v = default
+        return v
+    
     def get_lazy(self, model_instance, name, default=None):
-        v = getattr(model_instance, name, default)
+        v = self.get_attr(model_instance, name, default)
         if v is Lazy:
             _id = getattr(model_instance, 'id')
             if not _id:
                 raise BadValueError('Instance is not a validate object of Model %s, ID property is not found' % model_class.__name__)
             model_instance.refresh()
-            v = getattr(model_instance, name, default)
+            v = self.get_attr(model_instance, name, default)
         return v
         
     def __get__(self, model_instance, model_class):
@@ -812,7 +819,7 @@ class Property(object):
             return self
 
         try:
-            return self.get_lazy(model_instance, self._attr_name(), self.default_value())
+            return self.get_lazy(model_instance, self._attr_name(), self.default)
         except AttributeError:
             return None
         
@@ -825,10 +832,6 @@ class Property(object):
         #a object really need to save
         setattr(model_instance, self._attr_name(), value)
 
-#    def default_value(self, model_instance=None):
-#        if callable(self.default):
-#            return self.default(model_instance)
-#        return self.default
     def default_value(self):
         if callable(self.default):
             d = self.default()
