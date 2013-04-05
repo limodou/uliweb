@@ -1581,7 +1581,7 @@ class SimpleListView(object):
             model = get_model(m)
         
         if model:
-            return getattr(model, name)
+            return getattr(model, name, None)
         
     def get_table_meta_field(self, name, model=None):
         field = self.get_field(name, model)
