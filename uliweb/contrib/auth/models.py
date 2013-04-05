@@ -90,13 +90,16 @@ class User(Model):
         display_field = 'username'
         
     class AddForm:
-        fields = ('username', 'email', 'is_superuser')
+        fields = ['username', 'email', 'is_superuser']
         
     class EditForm:
-        fields = ('username', 'email')
+        fields = ['email']
+        
+    class AdminEditForm:
+        fields = ['email', 'is_superuser']
         
     class DetailView:
-        fields = ('username', 'email', 'is_superuser', 'date_join', 'last_login')
+        fields = ['username', 'email', 'is_superuser', 'date_join', 'last_login']
         
     class Table:
         fields = [
