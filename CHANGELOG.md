@@ -44,6 +44,9 @@ Uliweb Change Log
 * Improve `sql` command, add index output, and also add `sqltable` command.
 * Add SQLMonitor
 * Fix unbind bug
+* Improve ORM `auto` and `auto_add` process. If `auto` and `auto_add` are both `False` or `None`,
+  default will be used. And if one of `auto` or `auto_add` is `True`, then only
+  add or update will use default value.
 
 0.1.6 Version
 -----------------

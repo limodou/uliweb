@@ -795,9 +795,10 @@ class Property(object):
         setattr(model_class, self._lazy_value(), LazyValue(self._attr_name(), self))
         
     def get_attr(self, model_instance, name, default):
+        v = None
         if hasattr(model_instance, name):
             v = getattr(model_instance, name)
-        else:
+        if v is None:
             if callable(default):
                 v = default()
             else:
@@ -1035,7 +1036,7 @@ class DateTimeProperty(Property):
     
     def __init__(self, verbose_name=None, auto_now=False, auto_now_add=False,
             format=None, **kwds):
-        super(DateTimeProperty, self).__init__(verbose_name, auto=auto_now, auto_add=auto_now_add, **kwds)
+        super(DateTimeProperty, self).__init__(verbose_name, **kwds)
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
         self.format = format
@@ -2338,6 +2339,8 @@ class Model(object):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
                         x = x.id
+                    elif x is None and (v.auto_add or (not v.auto_add and not v.auto)):
+                        x = v.default_value()
                 else:
                     x = v.get_value_for_datastore(self, cached=True)
                 if x is not None:
@@ -2354,6 +2357,8 @@ class Model(object):
                     #todo If need to support ManyToMany and Reference except id field?
                     if isinstance(x, Model):
                         x = x.id
+                    elif x is None and (v.auto or (not v.auto_add and not v.auto)):
+                        x = v.default_value()
                 else:
                     x = v.get_value_for_datastore(self, cached=True)
                 if t != self.field_str(x):
@@ -2383,7 +2388,8 @@ class Model(object):
         saved = False
         created = False
         d = self._get_data()
-        if d:
+        #fix when d is empty, orm will not insert record bug 2013/04/07
+        if d or not self.id or insert:
             if not self.id or insert:
                 created = True
                 old = d.copy()
@@ -2421,7 +2427,6 @@ class Model(object):
                 _id = d.pop('id')
                 if d:
                     old = d.copy()
-                    
                     if get_dispatch_send() and self.__dispatch_enabled__:
                         dispatch.call(self.__class__, 'pre_save', instance=self, created=False, data=d, old_data=self._old_values, signal=self.tablename)
 
