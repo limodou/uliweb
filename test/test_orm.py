@@ -116,6 +116,15 @@ def test_3():
     >>> x = a1.save()
     >>> Test.get(1)
     <Test {'username':u'user','year':0,'id':1}>
+    >>> b2 = Test1.get(Test1.c.name == 'user')
+    >>> b2
+    <Test1 {'test1':<ReferenceProperty:1>,'test2':<ReferenceProperty:1>,'name':u'user','id':1}>
+    >>> b2.test1 = None
+    >>> b2.save()
+    True
+    >>> b3 = Test1.get(Test1.c.name == 'user')
+    >>> b3
+    <Test1 {'test1':None,'test2':<ReferenceProperty:1>,'name':u'user','id':1}>
     """
     
 #testing many2one using collection_name
@@ -636,8 +645,8 @@ def test_save():
     ...     username = Field(CHAR, max_length=20)
     ...     year = Field(datetime.datetime, auto_now_add=True, auto_now=True)
     >>> a = Test(username='limodou')
-    >>> a._get_data()
-    {'username': u'limodou'}
+    >>> a._get_data() # doctest:+ELLIPSIS
+    {'username': u'limodou', 'year': datetime.datetime(...)}
     >>> a.save()
     True
     >>> a.to_dict() # doctest:+ELLIPSIS

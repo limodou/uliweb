@@ -2339,8 +2339,11 @@ class Model(object):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
                         x = x.id
-                    elif x is None and (v.auto_add or (not v.auto_add and not v.auto)):
-                        x = v.default_value()
+                    elif x is None:
+                        if isinstance(v, DateTimeProperty) and v.auto_now_add:
+                            x = v.now()
+                        elif (v.auto_add or (not v.auto and not v.auto_add)):
+                            x = v.default_value()
                 else:
                     x = v.get_value_for_datastore(self, cached=True)
                 if x is not None:
@@ -2357,8 +2360,6 @@ class Model(object):
                     #todo If need to support ManyToMany and Reference except id field?
                     if isinstance(x, Model):
                         x = x.id
-                    elif x is None and (v.auto or (not v.auto_add and not v.auto)):
-                        x = v.default_value()
                 else:
                     x = v.get_value_for_datastore(self, cached=True)
                 if t != self.field_str(x):
@@ -2419,7 +2420,7 @@ class Model(object):
                 setattr(self, 'id', obj.inserted_primary_key[0])
                 
                 if _manytomany:
-                    for k, v in _manytomany.iteritems():
+                    for k, v in _manytomany.items():
                         if v:
                             saved = getattr(self, k).update(v) or saved
                 
@@ -2433,7 +2434,7 @@ class Model(object):
                     #process auto_now
                     _manytomany = {}
                     for k, v in self.properties.items():
-                        if v.property_type == 'compound':
+                        if v.property_type == 'compound' or k == 'id':
                             continue
                         if not isinstance(v, ManyToMany):
                             if isinstance(v, DateTimeProperty) and v.auto_now and k not in d:
@@ -2449,7 +2450,7 @@ class Model(object):
                         if old:
                             saved = True
                     if _manytomany:
-                        for k, v in _manytomany.iteritems():
+                        for k, v in _manytomany.items():
                             if v is not None:
                                 saved = getattr(self, k).update(v) or saved
             if saved:
