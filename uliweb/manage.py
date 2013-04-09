@@ -644,12 +644,12 @@ class FindCommand(Command):
                 filename = os.path.join(dir, template)
                 if os.path.exists(filename):
                     print filename.replace('\\', '/')
-            else:
-                print "Not found"
         else:
             
             def get_rel_filename(filename, path):
-                f = os.path.relpath(filename, path).replace('\\', '/')
+                f1 = os.path.splitdrive(filename)[1]
+                f2 = os.path.splitdrive(path)[1]
+                f = os.path.relpath(f1, f2).replace('\\', '/')
                 if f.startswith('..'):
                     return filename.replace('\\', '/')
                 else:
