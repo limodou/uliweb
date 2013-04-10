@@ -1760,7 +1760,7 @@ class SimpleListView(object):
         """
         self.rows_num = 0
         query = self.query()
-        if not isinstance(query, orm.Result):
+        if not isinstance(query, (orm.Result, list, dict)):
             query = do_(query)
         for record in query:
             self.rows_num += 1

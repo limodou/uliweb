@@ -8,6 +8,8 @@ def get_hexdigest(algorithm, salt, raw_password):
     Returns a string of the hexdigest of the given plaintext password and salt
     using the given algorithm ('md5', 'sha1' or 'crypt').
     """
+    if isinstance(salt, unicode):
+        salt = salt.encode('utf8')
     if algorithm == 'crypt':
         try:
             import crypt
