@@ -371,11 +371,11 @@ def date_in(d, dates):
 
 class Serial(object):
     @classmethod
-    def load(self, s):
+    def load(cls, s):
         return cPickle.loads(s)
     
     @classmethod
-    def dump(self, v):
+    def dump(cls, v):
         return cPickle.dumps(v, cPickle.HIGHEST_PROTOCOL)
 
 import urlparse
