@@ -20,7 +20,8 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'ModelInstanceError', 'KindError', 'ConfigurationError',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
     'CommitAll', 'RollbackAll',
-    'begin_sql_monitor', 'close_sql_monitor']
+    'begin_sql_monitor', 'close_sql_monitor',
+    'get_object']
 
 __auto_create__ = False
 __auto_set_model__ = True
@@ -601,6 +602,24 @@ def get_model(model, engine_name=None):
                 return model_inst
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
+def get_object(table, id, cache=False):
+    """
+    Get obj in Local.object_caches first and also use get_cached function if 
+    not found in object_caches
+    """
+    
+    if isinstance(table, (str, unicode)):
+        model = get_model(table)
+    else:
+        model = table
+      
+    if cache:
+        obj = model.get_cached(id)
+    else:
+        obj = model.get(id)
+    
+    return obj
+        
 class SQLMointor(object):
     def __init__(self, key_length=70, record_details=False):
         self.count = SortedDict()
