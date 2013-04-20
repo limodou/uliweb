@@ -16,6 +16,7 @@ except ImportError:
 from backends.base import KeyError
 
 class SessionException(Exception):pass
+class NValue(object): pass
 
 getpid = hasattr(os, 'getpid') and os.getpid or (lambda : '')
 
@@ -117,7 +118,15 @@ class Session(dict):
 #        if not self.deleted and (bool(self) or (not bool(self) and self._is_modified())):
         if flag:
             self.key = self.key or _get_id()
-            self.storage.set(self.key, dict(self), self.expiry_time)
+            d = {}
+            for k, value in dict(self).items():
+                v, accessed_time, expiry_time = self._parse_value(value)
+                if expiry_time and accessed_time:
+                    if self._is_not_expiry(accessed_time, expiry_time):
+                        d[k] = value
+                else:
+                    d[k] = v
+            self.storage.set(self.key, d, self.expiry_time)
             self.cookie.save()
             return True
         else:
@@ -135,6 +144,9 @@ class Session(dict):
         self.expiry_time = value
         self.cookie.expiry_time = value
         
+    def _is_not_expiry(self, accessed_time, expiry_time):
+        return time.time() < accessed_time + expiry_time
+    
     def _check(f):
         def _func(self, *args, **kw):
             try:
@@ -145,8 +157,45 @@ class Session(dict):
                 self._accessed_time = time.time()
         return _func
     
+    def _parse_value(self, v):
+        if isinstance(v, dict) and '_v' in v and '_atime' in v and '_etime' in v:
+            v, accessed_time, expiry_time = v['_v'], v['_atime'], v['_etime']
+        else:
+            accessed_time, expiry_time = None, None
+        return v, accessed_time, expiry_time
+    
+    @_check
+    def __getitem__(self, name):
+        v = dict.get(self, name, NValue)
+        if v is NValue:
+            raise KeyError("Key %s can not be found" % name)
+        
+        v, accessed_time, expiry_time = self._parse_value(v)
+        if expiry_time and accessed_time:
+            if self._is_not_expiry(accessed_time, expiry_time):
+                return v
+            else:
+                del self[name]
+                raise KeyError("Key %s can not be found" % name)
+        else:
+            return v
+    
+    @_check    
+    def get(self, name, default=None):
+        try:
+            v = self.__getitem__(name)
+            return v
+        except KeyError:
+            return default
+        
+    def set(self, name, value, expiry_time=None):
+        if expiry_time:
+            v = {'_v':value, '_etime':expiry_time, '_atime':time.time()}
+        else:
+            v = value
+        self.__setitem__(name, v)
+        
     clear = _check(dict.clear)
-    __getitem__ = _check(dict.__getitem__)
     __setitem__ = _check(dict.__setitem__)
     __delitem__ = _check(dict.__delitem__)
     pop = _check(dict.pop)
