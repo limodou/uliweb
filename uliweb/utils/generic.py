@@ -1393,7 +1393,7 @@ class SimpleListView(object):
             self.total_field_name = None
         self.total_sums = {}
             
-    def cal_total(self, record):
+    def _cal_sum(self, record):
         if self.total_fields:
             for f in self.total_fields:
                 if isinstance(record, (tuple, list)):
@@ -1409,7 +1409,7 @@ class SimpleListView(object):
                 if cal:
                     self.total_sums[f] = self.total_sums.setdefault(f, 0) + v
                 
-    def get_total(self):
+    def _get_sum(self):
         s = []
         if self.total_fields:
             for i, f in enumerate(self.table_info['fields']):
@@ -1435,23 +1435,39 @@ class SimpleListView(object):
                 s.append(v)
         return s
 
-    def render_total(self, json=False):
+    def _render_sum(self, json=False):
         s = []
         if self.total_fields:
             if json:
-                for v in self.get_total():
+                for v in self._get_sum():
                     v = str(v)
                     s.append(v)
                 return dict(zip(self.table_info['fields'], s))
             else:
                 s.append('<tr class="sum">')
-                for v in self.get_total():
+                for v in self._get_sum():
                     v = str(v) or '&nbsp;'
                     s.append('<td>%s</td>' % v)
                 s.append('</tr>')
                 return ''.join(s)
         return ''
     
+    def get_total(self, func=None):
+        """
+        Get total number of records according total and manual parameters
+        """
+        if self.manual:
+            if callable(self.total):
+                total = self.total()
+            else:
+                total = self.total
+            return total
+        
+        if func:
+            return func()
+        else:
+            return self.count()
+        
     def query_all(self):
         return self.query_range(0, pagination=False)
     
@@ -1518,6 +1534,7 @@ class SimpleListView(object):
                     flag, self.total, result = repeat(query_result, -1, self.total)
                     return result
         
+    
     def count(self, query):
         """
         If query is Select object, this function will try to get count of select
@@ -1525,8 +1542,10 @@ class SimpleListView(object):
         if self.manual:
             return self.total
         
-#        q = query.with_only_columns([func.count()]).order_by(None).limit(None).offset(None)
-#        return do_(q).scalar()
+        if isinstance(query, Select):
+            q = query.with_only_columns([func.count()]).order_by(None).limit(None).offset(None)
+            return do_(q).scalar()
+            
         return do_(query.order_by(None).limit(None).offset(None).alias().count()).scalar()
 
     def download(self, filename, timeout=3600, action=None, query=None, fields_convert_map=None, type=None, domain=None):
@@ -1607,7 +1626,7 @@ class SimpleListView(object):
             return safe_unicode(value, encoding)
         
         for record in query:
-            self.cal_total(record)
+            self._cal_sum(record)
             row = []
             if not isinstance(record, (orm.Model, dict)):
                 if not isinstance(record, (tuple, list)):
@@ -1637,7 +1656,7 @@ class SimpleListView(object):
                 row.append(value)
                 
             yield row
-        total = self.get_total()
+        total = self._get_sum()
         if total:
             row = []
             for x in total:
@@ -1765,9 +1784,9 @@ class SimpleListView(object):
         for record in query:
             self.rows_num += 1
             r = self.object(record, json_result)
-            self.cal_total(record)
+            self._cal_sum(record)
             yield r
-        total = self.render_total(True)
+        total = self._render_sum(True)
         if total:
             yield total
             
@@ -2046,11 +2065,10 @@ class ListView(SimpleListView):
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
-            if isinstance(query, Select):
-#                self.total = self.model.count(query._whereclause)
-                self.total = self.count(query)
-            else:
+            if isinstance(query, orm.Result):
                 self.total = query.count()
+            else:
+                self.total = self.count(query)
         else:
             query = self.query_range(self.pageno, self.pagination)
         return query
