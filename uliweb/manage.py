@@ -296,8 +296,10 @@ class ExportStaticCommand(Command):
             print >>sys.stderr, "Error: outputdir should be a directory and existed"
             sys.exit(0)
         else:
-            outputdir = args[0]
-
+            outputdir = os.path.abspath(args[0])
+            if global_options.verbose:
+                print "Export direcotry is %s ..." % outputdir
+                
         if not args[1:]:
             apps = self.get_apps(global_options)
         else:

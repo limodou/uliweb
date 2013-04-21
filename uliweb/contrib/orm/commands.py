@@ -342,7 +342,7 @@ class DumpCommand(SQLCommandMixin, Command):
     check_apps = True
     
     def handle(self, options, global_options, *args):
-        from zipfile import ZipFile
+        from zipfile import ZipFile, ZIP_DEFLATED
         from StringIO import StringIO
 
         output_dir = os.path.join(options.output_dir, options.engine)
@@ -353,7 +353,7 @@ class DumpCommand(SQLCommandMixin, Command):
         
         zipfile = None
         if options.zipfile:
-            zipfile = ZipFile(options.zipfile, 'w')
+            zipfile = ZipFile(options.zipfile, 'w', compression=ZIP_DEFLATED)
             
         inspector = Inspector.from_engine(engine)
 
@@ -397,10 +397,14 @@ class DumpTableCommand(SQLCommandMixin, Command):
             help='delimiter character used in text file. Default is ",".'),
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
+        make_option('-z', dest='zipfile', 
+            help='Compress table files into a zip file.'),
    )
     has_options = True
     
     def handle(self, options, global_options, *args):
+        from zipfile import ZipFile, ZIP_DEFLATED
+        from StringIO import StringIO
         
         output_dir = os.path.join(options.output_dir, options.engine)
         if not os.path.exists(output_dir):
@@ -412,6 +416,10 @@ class DumpTableCommand(SQLCommandMixin, Command):
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
             
+        zipfile = None
+        if options.zipfile:
+            zipfile = ZipFile(options.zipfile, 'w', compression=ZIP_DEFLATED)
+
         inspector = Inspector.from_engine(engine)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, tables=args,
@@ -427,9 +435,22 @@ class DumpTableCommand(SQLCommandMixin, Command):
                 format = 'txt'
             else:
                 format = None
-            dump_table(t, filename, engine, delimiter=options.delimiter, 
+            #process zipfile
+            if options.zipfile:
+                fileobj = StringIO()
+                filename = os.path.basename(filename)
+            else:
+                fileobj = filename
+                
+            dump_table(t, fileobj, engine, delimiter=options.delimiter, 
                 format=format, encoding=options.encoding, inspector=inspector)
 
+            #write zip content
+            if options.zipfile and zipfile:
+                zipfile.writestr(filename, fileobj.getvalue())
+        if zipfile:
+            zipfile.close()
+            
 class DumpTableFileCommand(SQLCommandMixin, Command):
     name = 'dumptablefile'
     args = 'tablename text_filename'
