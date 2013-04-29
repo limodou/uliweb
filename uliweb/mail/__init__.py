@@ -83,15 +83,16 @@ class EmailMessage(object):
         return self.msg.as_string()
         
 class Mail(object):
-    def __init__(self, host=None, port=None, user=None, password=None, backend=None):
+    def __init__(self, host=None, port=None, user=None, password=None, backend=None, sendmail_location=None):
         from uliweb import settings
         from uliweb.utils.common import import_attr
         
-        self.host = host or (settings and settings.get_var('MAIL/HOST'))
-        self.port = port or (settings and settings.get_var('MAIL/PORT', 25))
-        self.user = user or (settings and settings.get_var('MAIL/USER'))
-        self.password = password or (settings and settings.get_var('MAIL/PASSWORD'))
-        self.backend = backend or (settings and settings.get_var('MAIL/BACKEND', 'uliweb.mail.backends.smtp'))
+        self.host = host or settings.get_var('MAIL/HOST')
+        self.port = port or settings.get_var('MAIL/PORT', 25)
+        self.user = user or settings.get_var('MAIL/USER')
+        self.password = password or settings.get_var('MAIL/PASSWORD')
+        self.backend = backend or settings.get_var('MAIL/BACKEND', 'uliweb.mail.backends.smtp')
+        self.sendmail_location = sendmail_location or settings.get_var('MAIL/SENDMAIL_LOCATION', '/usr/sbin/sendmail')
         cls = import_attr(self.backend + '.MailConnection')
         self.con = cls(self)
         
