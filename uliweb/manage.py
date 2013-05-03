@@ -551,16 +551,69 @@ class DevelopCommand(RunserverCommand):
     develop = True
 register_command(DevelopCommand)
 
+from code import interact, InteractiveConsole
+class MyInteractive(InteractiveConsole):
+    def interact(self, banner=None, call=None):
+        """Closely emulate the interactive Python console.
+    
+        The optional banner argument specify the banner to print
+        before the first interaction; by default it prints a banner
+        similar to the one printed by the real Python interpreter,
+        followed by the current class name in parentheses (so as not
+        to confuse this with the real interpreter -- since it's so
+        close!).
+    
+        """
+        try:
+            sys.ps1
+        except AttributeError:
+            sys.ps1 = ">>> "
+        try:
+            sys.ps2
+        except AttributeError:
+            sys.ps2 = "... "
+        cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
+        if banner is None:
+            self.write("Python %s on %s\n%s\n(%s)\n" %
+                       (sys.version, sys.platform, cprt,
+                        self.__class__.__name__))
+        else:
+            self.write("%s\n" % str(banner))
+        more = 0
+        if call:
+            call()
+        while 1:
+            try:
+                if more:
+                    prompt = sys.ps2
+                else:
+                    prompt = sys.ps1
+                try:
+                    line = self.raw_input(prompt)
+                    # Can be None if sys.stdin was redefined
+                    encoding = getattr(sys.stdin, "encoding", None)
+                    if encoding and not isinstance(line, unicode):
+                        line = line.decode(encoding)
+                except EOFError:
+                    self.write("\n")
+                    break
+                else:
+                    more = self.push(line)
+            except KeyboardInterrupt:
+                self.write("\nKeyboardInterrupt\n")
+                self.resetbuffer()
+                more = 0
+    
 class ShellCommand(Command):
     name = 'shell'
     help = 'Create a new interactive python shell environment.'
-    args = ''
+    args = '<filename>'
     check_apps_dirs = True
     has_options = True
-    option_list = (
-        make_option('-i', dest='ipython', default=False, action='store_true',
-            help='Using ipython if exists.'),
-    )
+#    option_list = (
+#        make_option('-i', dest='ipython', default=False, action='store_true',
+#            help='Using ipython if exists.'),
+#    )
     banner = "Uliweb Command Shell"
     
     def make_shell_env(self, global_options):
@@ -575,17 +628,23 @@ class ShellCommand(Command):
     
     def handle(self, options, global_options, *args):
         namespace = self.make_shell_env(global_options)
-        if options.ipython:
-            try:
-                import IPython
-            except ImportError:
-                pass
-            else:
-                sh = IPython.Shell.IPShellEmbed(banner=self.banner)
-                sh(global_ns={}, local_ns=namespace)
-                return
-        from code import interact
-        interact(self.banner, local=namespace)
+#        if options.ipython:
+#            try:
+#                import IPython
+#            except ImportError:
+#                pass
+#            else:
+#                sh = IPython.Shell.IPShellEmbed(banner=self.banner)
+#                sh(global_ns={}, local_ns=namespace)
+#                return
+        from code import interact, InteractiveConsole
+        Interpreter = MyInteractive(namespace)
+        if args:
+            def call():
+                execfile(args[0], namespace)
+        else:
+            call = None
+        Interpreter.interact(self.banner, call=call)
 register_command(ShellCommand)
 
 class FindCommand(Command):
