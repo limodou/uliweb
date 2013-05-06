@@ -132,7 +132,7 @@ class ExcelWriter(object):
                     self.style(style=_f['head_style'] or 'font: bold on;align: vert center,horz center; pattern: pattern solid, fore-colour pale_blue;borders:left thin, right thin, top thin, bottom thin;'))
                 width = _f['width']
                 if width and x1 == x2:
-                    self.sh.col(x1).width = width*36.5
+                    self.sh.col(x1).width = width*36
                 
                 i = j
             posx = clear_fields(fields)
