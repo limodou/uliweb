@@ -89,6 +89,7 @@ def call(sender, topic, *args, **kwargs):
     i = 0
     while i<len(items):
         nice, f = items[i]
+        i = i + 1
         _f = f['func']
         if not _f:
             try:
@@ -109,8 +110,6 @@ def call(sender, topic, *args, **kwargs):
                 raise
         else:
             raise Exception, "Dispatch point [%s] %r can't been invoked" % (topic, _f)
-        
-        i = i+1
         
 def call_once(sender, topic, *args, **kwargs):
     signal = kwargs.get('signal')
