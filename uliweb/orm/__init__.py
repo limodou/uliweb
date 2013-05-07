@@ -367,9 +367,9 @@ def ResetAll():
             Local.conn[k] = None
 
 @dispatch.bind('post_do', kind=dispatch.LOW)
-def default_post_do(sender, query, conn):
+def default_post_do(sender, query, conn, usetime):
     if __default_post_do__:
-        __default_post_do__(sender, query, conn)
+        __default_post_do__(sender, query, conn, usetime)
        
 def rawsql(query, ec=None):
     from MySQLdb.converters import conversions, escape
@@ -402,7 +402,7 @@ def do_(query, ec=None):
     b = time()
     result = conn.execute(query)
     t = time() - b
-    dispatch.call(ec, 'post_do', query, conn)
+    dispatch.call(ec, 'post_do', query, conn, t)
     
     if hasattr(Local, 'echo') and Local.echo:
         Local.echo_func('\n===>>>>> \n')
@@ -639,16 +639,18 @@ def get_object(table, id, cache=False):
     return obj
         
 class SQLMointor(object):
-    def __init__(self, key_length=70, record_details=False):
+    def __init__(self, key_length=65, record_details=False):
         self.count = SortedDict()
         self.total = 0
         self.key_length = key_length
         self.details = []
         self.record_details = record_details
     
-        def post_do(sender, query, conn, self=self):
+        def post_do(sender, query, conn, usetime, self=self):
             sql = str(query)
-            self.count[sql] = self.count.setdefault(sql, 0) + 1
+            c = self.count.setdefault(sql, {'count':0, 'time':0})
+            c['count'] += 1
+            c['time'] += usetime
             self.total += 1
             if self.record_details:
                 self.details.append(rawsql(query))
@@ -664,10 +666,10 @@ class SQLMointor(object):
             if self.key_length and self.key_length>1 and len(k) > self.key_length:
                 k = k[:self.key_length-3]+'...'
             if self.key_length > 0:
-                format = "%%-%ds  %%d" % self.key_length
+                format = "%%-%ds  %%3d  %%.3f" % self.key_length
             else:
-                format = "%s  %d"
-            print format % (k, v)
+                format = "%s  %5d  %%.3f"
+            print format % (k, v['count'], v['time'])
         if self.record_details:
             print '====== sql statements %d ====' % self.total
             for line in self.details:
