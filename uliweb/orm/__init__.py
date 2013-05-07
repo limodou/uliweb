@@ -6,7 +6,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
     'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
     'set_tablename_converter', 'set_check_max_length', 'set_post_do',
-    'rawsql', 'Lazy',
+    'rawsql', 'Lazy', 'set_echo',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
@@ -36,6 +36,7 @@ __default_tablename_converter__ = None
 __check_max_length__ = False #used to check max_length parameter
 __default_post_do__ = None #used to process post_do topic
 
+import sys
 import decimal
 import threading
 import datetime
@@ -53,6 +54,8 @@ Local = threading.local()
 Local.dispatch_send = True
 Local.conn = {}
 Local.trans = {}
+Local.echo = False
+Local.echo_func = sys.stdout.write
 
 class Error(Exception):pass
 class NotFound(Error):
@@ -136,6 +139,12 @@ def get_dispatch_send(default=True):
         Local.dispatch_send = default
     return Local.dispatch_send
 
+def set_echo(flag, out=sys.stdout.write):
+    global Local
+    
+    Local.echo = flag
+    Local.echo_func = out
+    
 def set_pk_type(name):
     global __pk_type__
     
@@ -387,9 +396,18 @@ def do_(query, ec=None):
     if auto_transaction is True, then if there is no connection existed,
     then auto created an connection, and auto begin transaction
     """
+    from time import time
+    
     conn = local_conection(ec)
+    b = time()
     result = conn.execute(query)
+    t = time() - b
     dispatch.call(ec, 'post_do', query, conn)
+    
+    if hasattr(Local, 'echo') and Local.echo:
+        Local.echo_func('\n===>>>>> \n')
+        Local.echo_func(rawsql(query))
+        Local.echo_func('\n===<<<<< time used %fs\n' % t)
     return result
     
 def Begin(ec=None):
