@@ -387,7 +387,7 @@ def rawsql(query, ec=None):
         if isinstance(v, unicode):
             v = v.encode(enc)
         params.append( escape(v, conversions) )
-    return (comp.string.encode(enc) % tuple(params)).decode(enc)
+    return (comp.string.encode(enc) % tuple(params))
     
     
 def do_(query, ec=None):
@@ -668,7 +668,7 @@ class SQLMointor(object):
             if self.key_length > 0:
                 format = "%%-%ds  %%3d  %%.3f" % self.key_length
             else:
-                format = "%s  %5d  %%.3f"
+                format = "%s  %3d  %.3f"
             print format % (k, v['count'], v['time'])
         if self.record_details:
             print '====== sql statements %d ====' % self.total

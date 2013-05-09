@@ -499,6 +499,16 @@ def flat_list(*alist):
             a.append(x)
     return a
     
+def compare_dict(da, db):
+    """
+    Compare differencs from two dicts
+    """
+    sa = set(da.items())
+    sb = set(db.items())
+    
+    diff = sa & sb
+    return dict(sa - diff), dict(sb - diff)
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:
