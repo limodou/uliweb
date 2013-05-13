@@ -2190,6 +2190,14 @@ class SelectListView(ListView):
             default_column_width=default_column_width, meta=meta,
             render=render, total=total, manual=manual)
 
+        #process multiple table fields for use_labels
+        self._field_labels = []
+        for f in self.table_info['fields']:
+            if '.' in f:
+                self._field_labels.append((f, f.replace('.', '_')))
+            else:
+                self._field_labels.append((f, f))
+                
     def get_select(self):
         columns = []
         for f in self.table_info['fields']:
@@ -2237,18 +2245,21 @@ class SelectListView(ListView):
     
     def object(self, record, json_result=False):
         r = SortedDict()
-        record = dict(zip(self.table_info['fields'], list(record)))
+        _record = {}
+        d = dict(record)
+        for name, label in self._field_labels:
+            _record[name] = d.get(label, None)
         for i, x in enumerate(self.table_info['fields_list']):
             field = self.get_field(x['name'], self.model)
             if not field:
                 field = {'name':x['name']}
             else:
                 field = {'name':x['name'], 'prop':field}
-            v = make_view_field(field, record, self.types_convert_map, 
+            v = make_view_field(field, _record, self.types_convert_map, 
                 self.fields_convert_map, auto_convert=not json_result, 
-                value=record[x['name']])
+                value=_record[x['name']])
             r[x['name']] = v['display']
-        r['_obj_'] = record
+        r['_obj_'] = _record
         return r
     
     
