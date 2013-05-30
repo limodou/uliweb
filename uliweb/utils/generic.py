@@ -1328,7 +1328,8 @@ class SimpleListView(object):
     def __init__(self, fields=None, query=None, 
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
         table_class_attr='table', table_width=False, pagination=True, total_fields=None, 
-        template_data=None, default_column_width=100, total=None, manual=False, render=None):
+        template_data=None, default_column_width=100, total=None, manual=False, 
+        render=None, record_render=None, post_record_render=None):
         """
         Pass a data structure to fields just like:
             [
@@ -1362,6 +1363,8 @@ class SimpleListView(object):
         self.manual = manual
         self.downloader = GenericFileServing()
         self.render_func = render
+        self.record_render = record_render
+        self.post_record_render = post_record_render
         
         self.init()
         
@@ -1794,10 +1797,15 @@ class SimpleListView(object):
         r = SortedDict()
         if not isinstance(record, dict):
             record = dict(zip(self.table_info['fields'], record))
-        for i, x in enumerate(self.table_info['fields_list']):
-            v = self.make_view_field(x, record, self.fields_convert_map)
-            r[x['name']] = v['display']
+        if self.record_render:
+            r = self.record_render(record)
+        else:
+            for i, x in enumerate(self.table_info['fields_list']):
+                v = self.make_view_field(x, record, self.fields_convert_map)
+                r[x['name']] = v['display']
         r['_obj_'] = record
+        if self.post_record_render:
+            self.post_record_render(r)
         return r
 
     def json_body_render(self, data, record):
@@ -2021,7 +2029,8 @@ class ListView(SimpleListView):
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
         total_fields=None, template_data=None, default_column_width=100, 
-        meta='Table', render=None, total=0, manual=False):
+        meta='Table', render=None, total=0, manual=False,
+        record_render=None, post_record_render=None):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -2048,6 +2057,8 @@ class ListView(SimpleListView):
         self.downloader = GenericFileServing()
         self.render_func = render
         self.manual = manual
+        self.record_render=record_render
+        self.post_record_render=post_record_render
         
         self.init()
         
@@ -2074,15 +2085,20 @@ class ListView(SimpleListView):
         return query
     
     def object(self, record, json_result=False):
-        r = SortedDict()
-        for i, x in enumerate(self.table_info['fields_list']):
-            if hasattr(self.model, x['name']):
-                field = getattr(self.model, x['name'])
-            else:
-                field = x
-            v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map, auto_convert=not json_result)
-            r[x['name']] = v['display']
+        if self.record_render:
+            r = self.record_render(record)
+        else:
+            r = SortedDict()
+            for i, x in enumerate(self.table_info['fields_list']):
+                if hasattr(self.model, x['name']):
+                    field = getattr(self.model, x['name'])
+                else:
+                    field = x
+                v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map, auto_convert=not json_result)
+                r[x['name']] = v['display']
         r['_obj_'] = record
+        if self.post_record_render:
+            self.post_record_render(r)
         return r
         
 #    def get_field_display(self, record, field_name):
@@ -2177,7 +2193,7 @@ class SelectListView(ListView):
         rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
         total_fields=None, template_data=None, default_column_width=100, meta='Table',
-        render=None, total=0, manual=False):
+        render=None, total=0, manual=False, record_render=None, post_record_render=None):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -2188,7 +2204,8 @@ class SelectListView(ListView):
             id=id, table_class_attr=table_class_attr, table_width=table_width,
             total_fields=total_fields, template_data=template_data, 
             default_column_width=default_column_width, meta=meta,
-            render=render, total=total, manual=manual)
+            render=render, total=total, manual=manual, record_render=record_render,
+            post_record_render=post_record_render)
 
         #process multiple table fields for use_labels
         self._field_labels = []
@@ -2249,17 +2266,22 @@ class SelectListView(ListView):
         d = dict(record)
         for name, label in self._field_labels:
             _record[name] = d.get(label, None)
-        for i, x in enumerate(self.table_info['fields_list']):
-            field = self.get_field(x['name'], self.model)
-            if not field:
-                field = {'name':x['name']}
-            else:
-                field = {'name':x['name'], 'prop':field}
-            v = make_view_field(field, _record, self.types_convert_map, 
-                self.fields_convert_map, auto_convert=not json_result, 
-                value=_record[x['name']])
-            r[x['name']] = v['display']
+        if self.record_render:
+            r = self.record_render(_record)
+        else:
+            for i, x in enumerate(self.table_info['fields_list']):
+                field = self.get_field(x['name'], self.model)
+                if not field:
+                    field = {'name':x['name']}
+                else:
+                    field = {'name':x['name'], 'prop':field}
+                v = make_view_field(field, _record, self.types_convert_map, 
+                    self.fields_convert_map, auto_convert=not json_result, 
+                    value=_record[x['name']])
+                r[x['name']] = v['display']
         r['_obj_'] = _record
+        if self.post_record_render:
+            self.post_record_render(r)
         return r
     
     
