@@ -807,7 +807,7 @@ class Property(object):
         kwargs['key'] = self.name
 #        if callable(self.default):
 #            kwargs['default'] = self.default()
-        kwargs['default'] = self.default
+#        kwargs['default'] = self.default
         kwargs['primary_key'] = self.kwargs.get('primary_key', False)
         kwargs['autoincrement'] = self.kwargs.get('autoincrement', False)
         kwargs['index'] = self.kwargs.get('index', False)
@@ -1275,7 +1275,7 @@ class ReferenceProperty(Property):
         args = self.kwargs.copy()
         args['key'] = self.name
 #        if not callable(self.default):
-        args['default'] = self.default
+#        args['default'] = self.default
         args['primary_key'] = self.kwargs.get('primary_key', False)
         args['autoincrement'] = self.kwargs.get('autoincrement', False)
         args['index'] = self.kwargs.get('index', False)
@@ -1414,7 +1414,7 @@ class OneToOne(ReferenceProperty):
         args = self.kwargs.copy()
         args['key'] = self.name
 #        if not callable(self.default):
-        args['default'] = self.default
+#        args['default'] = self.default
         args['primary_key'] = self.kwargs.get('primary_key', False)
         args['autoincrement'] = self.kwargs.get('autoincrement', False)
         args['index'] = self.kwargs.get('index', False)
