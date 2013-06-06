@@ -499,7 +499,7 @@ class BootstrapLayout(Layout):
         
         div_group = Div(_class=_class, id='div_'+obj.id, newline=True)
         with div_group: 
-            div_group << obj.get_label(_class='control-label')
+            div_group << input.get_label(_class='control-label')
             div = Div(_class='controls', newline=True)
             with div:
                 div << input                    
