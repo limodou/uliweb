@@ -1776,12 +1776,13 @@ class ManyResult(Result):
         return modified
          
     def ids(self, cache=False):
-        ids = self.modela.properties[self.property_name].get_value_for_datastore(self.instance, cached=True)
-        if not cache or not ids or ids is Lazy:
+        key = 'CACHED_IDS_' + self.property_name
+        ids = getattr(self.instance, key, None)
+        if not cache or ids is None:
             query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
             ids = [x[0] for x in self.do_(query)]
         if cache:
-            setattr(self.instance, self.property_name, ids)
+            setattr(self.instance, key, ids)
         return ids
     
     def update(self, *objs):
