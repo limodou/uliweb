@@ -2758,6 +2758,9 @@ class Model(object):
                 #model should be defined in models*.py
                 cls.table.__appname__ = appname[:appname.rfind('.')]
                 
+                #add __mapping_only__ property to Table object
+                cls.table.__mapping_only__ = getattr(cls, '__mapping_only__', False)
+                
                 cls.c = cls.table.c
                 cls.columns = cls.table.c
                 

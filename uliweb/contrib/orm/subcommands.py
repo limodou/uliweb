@@ -48,6 +48,7 @@ class RevisionCommand(SQLCommand, Command):
         make_option('--autogenerate', dest='autogenerate', action='store_true', default=False,
             help='Populate revision script with candidate migration operations, based on comparison of database to model.'),
         make_option('-m', '--message', dest='message', help="Message string to use with 'revision'"),
+        make_option('--remove', dest='remove', action='store_true', default=False, help="Remove tables if not Model found."),
     )
     check_apps = True
     has_options = True
@@ -66,6 +67,7 @@ class RevisionCommand(SQLCommand, Command):
         alembic_cfg.set_main_option("sqlalchemy.url", engine_manager[options.engine].options.connection_string)
         alembic_cfg.set_main_option("engine_name", options.engine)
         alembic_cfg.set_main_option("script_location", alembic_path)
+        alembic_cfg.set_main_option("remove_tables", '1' if options.remove else '0')
         self.do(alembic_cfg, args, options, global_options)
         
     def do(self, config, args, options, global_options):

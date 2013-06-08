@@ -196,10 +196,18 @@ class SyncdbCommand(SQLCommandMixin, Command):
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
             exist = engine.dialect.has_table(engine.connect(), name)
-            if not exist:
-                t.create(engine)
-            if not exist or global_options.verbose:
-                print '[%s] Creating %s...%s' % (options.engine, show_table(name, t, i, _len), 'CREATED' if not exist else 'EXISTED')
+            created = False
+            if t.__mapping_only__:
+                msg = 'SKIPPED(Mapping Table)'
+            else:
+                if not exist:
+                    t.create(engine)
+                    created = True
+                    msg = 'CREATED'
+                else:
+                    msg = 'EXISTED'
+            if created or global_options.verbose:
+                print '[%s] Creating %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
 
 class ResetCommand(SQLCommandMixin, Command):
     name = 'reset'
@@ -222,10 +230,14 @@ class ResetCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
+            if t.__mapping_only__:
+                msg = 'SKIPPED(Mapping Table)'
+            else:
+                t.drop(engine, checkfirst=True)
+                t.create(engine)
+                msg = 'SUCCESS'
             if global_options.verbose:
-                print '[%s] Resetting %s...' % (options.engine, show_table(name, t, i, _len))
-            t.drop(engine, checkfirst=True)
-            t.create(engine)
+                print '[%s] Resetting %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
 
 class ResetTableCommand(SQLCommandMixin, Command):
     name = 'resettable'
@@ -249,10 +261,14 @@ class ResetTableCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
+            if t.__mapping_only__:
+                msg = 'SKIPPED(Mapping Table)'
+            else:
+                t.drop(engine, checkfirst=True)
+                t.create(engine)
+                msg = 'SUCCESS'
             if global_options.verbose:
-                print '[%s] Resetting %s...' % (options.engine, show_table(name, t, i, _len))
-            t.drop(engine, checkfirst=True)
-            t.create(engine)
+                print '[%s] Resetting %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
 
 class DropTableCommand(SQLCommandMixin, Command):
     name = 'droptable'
@@ -276,9 +292,13 @@ class DropTableCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
+            if t.__mapping_only__:
+                msg = 'SKIPPED(Mapping Table)'
+            else:
+                t.drop(engine, checkfirst=True)
+                msg = 'SUCCESS'
             if global_options.verbose:
-                print '[%s] Dropping %s...' % (options.engine, show_table(name, t, i, _len))
-            t.drop(engine, checkfirst=True)
+                print '[%s] Dropping %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
 
 class SQLCommand(SQLCommandMixin, Command):
     name = 'sql'
@@ -299,6 +319,9 @@ class SQLCommand(SQLCommandMixin, Command):
             engine_name=options.engine, settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         for name, t in tables:
+            if t.__mapping_only__:
+                continue
+            
             print "%s;" % str(CreateTable(t)).rstrip()
             for x in t.indexes:
                 print "%s;" % CreateIndex(x)
@@ -318,6 +341,8 @@ class SQLTableCommand(SQLCommandMixin, Command):
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings))
         for name, t in tables:
+            if t.__mapping_only__:
+                continue
             print "%s;" % str(CreateTable(t)).rstrip()
             for x in t.indexes:
                 print "%s;" % CreateIndex(x)
@@ -530,6 +555,11 @@ are you sure to load data""" % options.engine
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
+            if t.__mapping_only__:
+                if global_options.verbose:
+                    msg = 'SKIPPED(Mapping Table)'
+                    print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+                continue
             if global_options.verbose:
                 print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
             try:
@@ -587,6 +617,11 @@ are you sure to load data""" % (options.engine, ','.join(args))
         _len = len(tables)
         
         for i, (name, t) in enumerate(tables):
+            if t.__mapping_only__:
+                if global_options.verbose:
+                    msg = 'SKIPPED(Mapping Table)'
+                    print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+                continue
             if global_options.verbose:
                 print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
             try:
@@ -639,6 +674,12 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
             settings_file=global_options.settings, tables=[name],
             local_settings_file=global_options.local_settings)
         t = tables[name]
+        if t.__mapping_only__:
+            if global_options.verbose:
+                msg = 'SKIPPED(Mapping Table)'
+                print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+            return
+        
         if global_options.verbose:
             print '[%s] Loading %s...' % (options.engine, show_table(name, t, 0, 1))
         try:
