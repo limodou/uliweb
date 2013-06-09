@@ -62,7 +62,8 @@ def run_migrations_online():
     
     context.configure(
                 connection=connection, 
-                target_metadata=target_metadata
+                target_metadata=target_metadata,
+                compare_server_default=True
                 )
 
     try:

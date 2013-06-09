@@ -49,6 +49,7 @@ class RevisionCommand(SQLCommand, Command):
             help='Populate revision script with candidate migration operations, based on comparison of database to model.'),
         make_option('-m', '--message', dest='message', help="Message string to use with 'revision'"),
         make_option('--remove', dest='remove', action='store_true', default=False, help="Remove tables if not Model found."),
+        make_option('-f', '--force', dest='force', action='store_true', default=False, help="Directly diff without check last unfinished version."),
     )
     check_apps = True
     has_options = True
@@ -87,7 +88,7 @@ class DiffCommand(RevisionCommand):
     has_options = True
     
     def do(self, config, args, options, global_options):
-        self.run('revision', config, message=options.message, autogenerate=True)
+        self.run('revision', config, message=options.message, autogenerate=True, skip=options.force)
     
 class UpgradeCommand(RevisionCommand):
     name = 'upgrade'
