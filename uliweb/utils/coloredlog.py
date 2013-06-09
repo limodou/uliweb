@@ -49,7 +49,7 @@ class ColoredStream(object):
         
 class ColoredStreamHandler(logging.StreamHandler):
     def __init__(self, stream=None, color_delimeter=('{{', '}}')):
-        super(ColoredStreamHandler, self).__init__(stream=stream)
+        logging.StreamHandler.__init__(self, stream)
         self.color_delimeter = color_delimeter
         self.stream = ColoredStream(self.stream, color_delimeter)
         
