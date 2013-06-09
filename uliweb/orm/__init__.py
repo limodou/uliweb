@@ -1131,6 +1131,10 @@ class DateProperty(DateTimeProperty):
     def _convert_func(*args, **kwargs):
         return date.to_date(*args, **kwargs)
     
+    @staticmethod
+    def now():
+        return date.to_date(date.now())
+    
 class TimeProperty(DateTimeProperty):
     data_type = datetime.time
     field_class = Time
@@ -1138,6 +1142,10 @@ class TimeProperty(DateTimeProperty):
     @staticmethod
     def _convert_func(*args, **kwargs):
         return date.to_time(*args, **kwargs)
+    
+    @staticmethod
+    def now():
+        return date.to_time(date.now())
     
 class IntegerProperty(Property):
     """An integer property."""
