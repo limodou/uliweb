@@ -530,16 +530,18 @@ class RunserverCommand(Command):
         extra_files = collect_files(global_options.apps_dir, self.get_apps(global_options, include_apps))
         
         if options.ssl:
-            from OpenSSL import SSL
-            ctx = SSL.Context(SSL.SSLv23_METHOD)
+            ctx = 'adhoc'
+            
+            default = False
             if not os.path.exists(options.ssl_key):
-                log.error("Can't find ssl key file [%s], please check it first." % options.ssl_key)
-                sys.exit(1)
-            if not os.path.exists(options.ssl_cert):
-                log.error("Can't find ssl certificate file [%s], please check it first." % options.ssl_key)
-                sys.exit(1)
-            ctx.use_privatekey_file(options.ssl_key)
-            ctx.use_certificate_file(options.ssl_cert)
+                log.info(' * SSL key file (%s) not found, will use default ssl config' % options.ssl_key)
+                default = True
+            if not os.path.exists(options.ssl_cert) and not default:
+                log.info(' * SSL cert file (%s) not found, will use default ssl config' % options.ssl_cert)
+                default = True
+                
+            if not default:
+                ctx = (options.ssl_key, options.ssl_cert)
         else:
             ctx = None
         run_simple(options.hostname, options.port, app, options.reload, False, True,

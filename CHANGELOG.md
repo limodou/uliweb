@@ -47,6 +47,20 @@ Uliweb Change Log
 * Improve ORM `auto` and `auto_add` process. If `auto` and `auto_add` are both `False` or `None`,
   default will be used. And if one of `auto` or `auto_add` is `True`, then only
   add or update will use default value.
+* improve do_ process, and add set_echo() function, so you can use it to debug sql executation
+* improve shell command, add filename support
+* mail add sendmail support
+* fix zip mode bug in dump and add zip support for dumptable command
+* remove kwargs['default'] = self.default process
+* add expiry_time support for session key
+* Fix checkbox label delimeter bug
+* add cache parameter to ids()
+* add mapping_only support and add not remove table in alembic diff support, you should add --remove
+* add --force for alembic diff and add server_default compare support
+* Add colorloged.py, so you can use it to output colored log
+* fix now() for date and time
+* Upgrade werkzeug to 0.9.1
+* Improve ssl options
 
 0.1.6 Version
 -----------------
