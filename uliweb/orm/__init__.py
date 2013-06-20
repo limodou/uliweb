@@ -2022,6 +2022,13 @@ class ManyToMany(ReferenceProperty):
             index_name = '%s_mindx' % self.tablename
             if index_name not in [x.name for x in self.table.indexes]:
                 Index(index_name, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
+
+            #process __mapping_only__ property, if the modela or modelb is mapping only
+            #then manytomany table will be mapping only
+            if getattr(self.model_class, '__mapping_only__', False) or getattr(self.reference_class, '__mapping_only__', False):
+                self.table.__mapping_only__ = True
+            else:
+                self.table.__mapping_only__ = False
     
     def get_real_property(self, model, field):
         return getattr(model, field).field_class
