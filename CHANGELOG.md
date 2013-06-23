@@ -1,6 +1,11 @@
 Uliweb Change Log
 =====================
 
+0.2 Version
+-----------------
+
+* Fix auth.models `get_href` bug
+
 0.1.7 Version
 -----------------
 
