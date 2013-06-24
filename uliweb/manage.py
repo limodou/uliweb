@@ -527,7 +527,7 @@ class RunserverCommand(Command):
                 settings_file=global_options.settings,
                 local_settings_file=global_options.local_settings)
             include_apps = []
-        extra_files = collect_files(global_options.apps_dir, self.get_apps(global_options, include_apps))
+        extra_files = collect_files(global_options, global_options.apps_dir, self.get_apps(global_options, include_apps))
         
         if options.ssl:
             ctx = 'adhoc'
@@ -786,9 +786,9 @@ class FindCommand(Command):
         print model_path
 register_command(FindCommand)
 
-def collect_files(apps_dir, apps):
-    files = [os.path.join(apps_dir, 'settings.ini'), 
-        os.path.join(apps_dir, 'local_settings.ini')]
+def collect_files(options, apps_dir, apps):
+    files = [os.path.join(apps_dir, options.settings), 
+        os.path.join(apps_dir, options.local_settings)]
     
     def f(path):
         if not os.path.exists(path):

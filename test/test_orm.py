@@ -1910,6 +1910,39 @@ def test_post_do():
     True
     """
     
+def test_changed_and_saved():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     users = ManyToMany(User, reference_fieldname='username')
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='user', year=10)
+    >>> b.save()
+    True
+    >>> c = User(username='abc', year=20)
+    >>> c.save()
+    True
+    >>> g1 = Group(name='python', users=[a.id])
+    >>> g1.save()
+    True
+    >>> g1.update(users=[b.id], name='test')
+    <Group {'name':u'test','id':1}>
+    >>> def change(obj, created, old, new):
+    ...     new['name'] = 'ddd'
+    >>> def saved(obj, created, old, new):
+    ...     pass
+    >>> g1.save(changed=change, saved=saved)
+    True
+    """
+    
 #if __name__ == '__main__':
 #    db = get_connection('sqlite://')
 #    db.echo = True
@@ -1933,3 +1966,7 @@ def test_post_do():
 #    b3 = Test1.get(Test1.c.name=='aaaa', fields=['name'])
 #    print b3
 #    print b3._test_
+
+
+
+    

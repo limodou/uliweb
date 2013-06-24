@@ -5,6 +5,9 @@ Uliweb Change Log
 -----------------
 
 * Fix auth.models `get_href` bug
+* Change ORM `save()` process, it'll keep the manytomany data, before will 
+  remove them from data
+* Add changed, saved and send_disptach to save() function. 
 
 0.1.7 Version
 -----------------

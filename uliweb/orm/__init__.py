@@ -2441,11 +2441,18 @@ class Model(object):
         return self
 #                    getattr(self, k).update(*v)
             
-    def put(self, insert=False, connection=None):
+    def put(self, insert=False, connection=None, changed=None, saved=None, send_dispatch=True):
         """
         If insert=True, then it'll use insert() indead of update()
+        
+        changed will be callback function, only when the non manytomany properties
+        are saved, the signature is:
+            
+            def changed(created, old_data, new_data, obj=None):
+                if flag is true, then it means the record is changed
+                you can change new_data, and the new_data will be saved to database
         """
-        saved = False
+        _saved = False
         created = False
         d = self._get_data()
         #fix when d is empty, orm will not insert record bug 2013/04/07
@@ -2470,18 +2477,19 @@ class Model(object):
                     else:
                         if k in d:
                             _manytomany[k] = d.pop(k)
-                            old.pop(k)
                 if d:
+                    if callable(changed):
+                        changed(self, created, self._old_values, d)
+                        old.update(d)
                     obj = do_(self.table.insert().values(**d), connection or self.get_connection())
-                    if old:
-                        saved = True
+                    _saved = True
                     
                 setattr(self, 'id', obj.inserted_primary_key[0])
                 
                 if _manytomany:
                     for k, v in _manytomany.items():
                         if v:
-                            saved = getattr(self, k).update(v) or saved
+                            _saved = getattr(self, k).update(v) or _saved
                 
             else:
                 _id = d.pop('id')
@@ -2503,25 +2511,30 @@ class Model(object):
                         else:
                             if k in d:
                                 _manytomany[k] = d.pop(k)
-                                old.pop(k)
                     if d:
+                        if callable(changed):
+                            changed(self, created, self._old_values, d)
+                            old.update(d)
                         do_(self.table.update(self.table.c.id == self.id).values(**d), connection or self.get_connection())
-                        if old:
-                            saved = True
+                        _saved = True
+                        
                     if _manytomany:
                         for k, v in _manytomany.items():
                             if v is not None:
-                                saved = getattr(self, k).update(v) or saved
-            if saved:
+                                _saved = getattr(self, k).update(v) or _saved
+            if _saved:
                 for k, v in d.items():
                     x = self.properties[k].get_value_for_datastore(self)
                     if self.field_str(x) != self.field_str(v):
                         setattr(self, k, v)
-                if get_dispatch_send() and self.__dispatch_enabled__:
+                if send_dispatch and get_dispatch_send() and self.__dispatch_enabled__:
                     dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old, old_data=self._old_values, signal=self.tablename)
                 self.set_saved()
                 
-        return saved
+                if callable(saved):
+                    saved(self, created, self._old_values, old)
+                    
+        return _saved
     
     save = put
     
