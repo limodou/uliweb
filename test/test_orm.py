@@ -1,4 +1,4 @@
-#coding=utf-8
+                        #coding=utf-8
 import time, sys
 sys.path.insert(0, '../uliweb/lib')
 from uliweb.orm import *
@@ -1920,7 +1920,7 @@ def test_changed_and_saved():
     ...     year = Field(int)
     >>> class Group(Model):
     ...     name = Field(str, max_length=20)
-    ...     users = ManyToMany(User, reference_fieldname='username')
+    ...     users = ManyToMany(User)
     >>> a = User(username='limodou', year=5)
     >>> a.save()
     True
@@ -1933,6 +1933,8 @@ def test_changed_and_saved():
     >>> g1 = Group(name='python', users=[a.id])
     >>> g1.save()
     True
+    >>> g1.users.ids()
+    [1]
     >>> g1.update(users=[b.id], name='test')
     <Group {'name':u'test','id':1}>
     >>> def change(obj, created, old, new):
@@ -1941,6 +1943,13 @@ def test_changed_and_saved():
     ...     pass
     >>> g1.save(changed=change, saved=saved)
     True
+    >>> g2 = Group.get(1)
+    >>> g2._users_
+    [2]
+    >>> g2.users.ids()
+    [2]
+    >>> list(g2.users.all())
+    [<User {'username':u'user','year':10,'id':2}>]
     """
     
 #if __name__ == '__main__':
@@ -1969,4 +1978,3 @@ def test_changed_and_saved():
 
 
 
-    

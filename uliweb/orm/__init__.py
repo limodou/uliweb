@@ -2112,6 +2112,17 @@ class ManyToMany(ReferenceProperty):
         setattr(self.reference_class, self.collection_name,
             _ManyToManyReverseReferenceProperty(self, self.collection_name))
     
+    def get_lazy(self, model_instance, name, default=None):
+        v = self.get_attr(model_instance, name, default)
+        if v is Lazy:
+            _id = getattr(model_instance, 'id')
+            if not _id:
+                raise BadValueError('Instance is not a validate object of Model %s, ID property is not found' % model_class.__name__)
+            result = getattr(model_instance, self.name)
+            v = result.ids(True)
+            setattr(model_instance, name, v)
+        return v
+
     def __get__(self, model_instance, model_class):
         """Get reference object.
     
@@ -2538,7 +2549,7 @@ class Model(object):
     
     save = put
     
-    def delete(self, manytomany=True, connection=None, delete_fieldname=None):
+    def delete(self, manytomany=True, connection=None, delete_fieldname=None, send_dispatch=True):
         """
         Delete current obj
         :param manytomany: if also delete all manytomany relationships
@@ -2561,7 +2572,7 @@ class Model(object):
             do_(self.table.delete(self.table.c.id==self.id), connection or self.get_connection())
             self.id = None
             self._old_values = {}
-        if get_dispatch_send() and self.__dispatch_enabled__:
+        if send_dispatch and get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'post_delete', instance=self, signal=self.tablename)
             
     def __repr__(self):
