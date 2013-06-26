@@ -194,7 +194,7 @@ def _make_cssmin(python_only=False):
 
     #print main_sub.__self__.pattern
 
-    def main_subber(keep_bang_comments):
+    def main_subber(keep_bang_comments, base_dir=''):
         """ Make main subber """
         in_macie5, in_rule, at_media = [0], [0], [0]
 
@@ -279,6 +279,20 @@ def _make_cssmin(python_only=False):
                 return group(14) + space_sub(space_subber, group(15))
             return '>' + space_sub(space_subber, group(15))
 
+        def fn_url(group):
+            """
+            Process url
+            """
+            import os
+            
+            url = uri_space_sub(uri_space_subber, group(12))
+            if base_dir:
+                if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
+                    url = url[0] + os.path.join(base_dir, url[1:-1]).replace('\\', '/') + url[0]
+                else:
+                    url = os.path.join(base_dir, url).replace('\\', '/')
+            return 'url(%s)' % url
+        
         table = (
             None,
             None,
@@ -292,7 +306,8 @@ def _make_cssmin(python_only=False):
             fn_open,                            # {
             fn_close,                           # }
             lambda g: g(11),                    # string
-            lambda g: 'url(%s)' % uri_space_sub(uri_space_subber, g(12)),
+#            lambda g: 'url(%s)' % uri_space_sub(uri_space_subber, g(12)),
+            fn_url,
                                                 # url(...)
             fn_media,                           # @media
             None,
@@ -320,7 +335,7 @@ def _make_cssmin(python_only=False):
 
         return func
 
-    def cssmin(style, keep_bang_comments=False): # pylint: disable = W0621
+    def cssmin(style, keep_bang_comments=False, base_dir=''): # pylint: disable = W0621
         """
         Minify CSS.
 
@@ -334,7 +349,7 @@ def _make_cssmin(python_only=False):
         :Return: Minified style
         :Rtype: ``str``
         """
-        return main_sub(main_subber(keep_bang_comments), style)
+        return main_sub(main_subber(keep_bang_comments, base_dir), style)
 
     return cssmin
 
@@ -353,7 +368,7 @@ if __name__ == '__main__':
         if '-p' in _sys.argv[1:] or '-bp' in _sys.argv[1:] \
                 or '-pb' in _sys.argv[1:]:
             global cssmin # pylint: disable = W0603
-            cssmin = _make_cssmin(python_only=True)
+            cssmin = _make_cssmin(python_only=True, base_dir='jquery')
         _sys.stdout.write(cssmin(
             _sys.stdin.read(), keep_bang_comments=keep_bang_comments
         ))

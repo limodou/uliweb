@@ -21,7 +21,7 @@ def init_static_combine():
     
     d = {}
     for k, v in settings.get('STATIC_COMBINE', {}).items():
-        key = md5(''.join(v)).hexdigest()+os.path.splitext(v[0])[1]
+        key = '_cmb_'+md5(''.join(v)).hexdigest()+os.path.splitext(v[0])[1]
         d[key] = v
         
     return d

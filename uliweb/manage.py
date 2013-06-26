@@ -289,6 +289,7 @@ class ExportStaticCommand(Command):
     
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import copy_dir_with_check
+        from uliweb import settings
         
         self.get_application(global_options)
         
@@ -316,13 +317,22 @@ class ExportStaticCommand(Command):
         from uliweb.contrib.template import init_static_combine
         from rjsmin.rjsmin import jsmin
         from rcssmin.rcssmin import cssmin
+        import glob
 
+        #delete combined files
+        for f in glob.glob(os.path.join(outputdir, '_cmb_*')):
+            try:
+                os.remove(f)
+            except:
+                print "Error: static file [%s] can't be deleted"
+                
         d = init_static_combine()
         for k, v in d.items():
             filename = os.path.join(outputdir, k)
             if verbose:
                 print 'Process ... %s' % filename
-            with open(filename, 'w') as f:
+            readme = os.path.splitext(filename)[0] + '.txt'
+            with open(filename, 'w') as f, open(readme, 'w') as r:
                 ext = os.path.splitext(k)[1]
                 if ext == '.js':
                     processor = jsmin
@@ -335,8 +345,14 @@ class ExportStaticCommand(Command):
                     fname = os.path.join(outputdir, x)
                     if verbose:
                         print '    add %s' % fname
-                    f.write(processor(open(fname).read()))
+                    kwargs = {}
+                    if ext == '.css':
+                        kwargs = {'base_dir':os.path.dirname(x)}
+                    f.write(processor(open(fname).read(), **kwargs))
                     f.write('\n')
+                    
+                    r.write(x)
+                    r.write('\n')
         
     def process_file(self, sfile, dpath, dfile):
         from rjsmin.rjsmin import jsmin
