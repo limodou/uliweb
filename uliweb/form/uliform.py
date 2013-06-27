@@ -660,7 +660,9 @@ class Form(object):
         old_data = self.data.copy()
         all_data = {}
         for k, v in self.fields.items():
-            v.parse_data(data, all_data)
+            #skip static field
+            if not v.static:
+                v.parse_data(data, all_data)
 
         errors = D({})
         new_data = {}
