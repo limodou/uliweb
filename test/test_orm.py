@@ -1950,6 +1950,13 @@ def test_changed_and_saved():
     [2]
     >>> list(g2.users.all())
     [<User {'username':u'user','year':10,'id':2}>]
+    >>> g3 = Group.get(1, many_fields=['users'])
+    >>> g3._old_values
+    {'users': [2], 'id': 1, 'name': 'ddd'}
+    >>> g3 = Group.get(1, many_fields=[Group.users])
+    >>> g3._old_values
+    {'users': [2], 'id': 1, 'name': 'ddd'}
+    
     """
     
 #if __name__ == '__main__':

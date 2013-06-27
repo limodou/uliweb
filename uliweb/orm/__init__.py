@@ -2354,7 +2354,8 @@ class Model(object):
         for k, v in self.properties.items():
             if isinstance(v, ManyToMany):
                 t = v.get_value_for_datastore(self, cached=True)
-                self._old_values[k] = t
+                if not t is Lazy:
+                    self._old_values[k] = t
         
     def to_dict(self, fields=None, convert=True, manytomany=False):
         d = {}
@@ -2416,7 +2417,7 @@ class Model(object):
                             x = v.default_value()
                 else:
                     x = v.get_value_for_datastore(self, cached=True)
-                if x is not None:
+                if x is not None and not x is Lazy:
                     d[k] = x
         else:
             d = {}
@@ -2432,7 +2433,7 @@ class Model(object):
                         x = x.id
                 else:
                     x = v.get_value_for_datastore(self, cached=True)
-                if t != self.field_str(x):
+                if t != self.field_str(x) and not x is Lazy:
                     d[k] = x
         
         return d
@@ -2835,7 +2836,7 @@ class Model(object):
             cls._c_lock.release()
             
     @classmethod
-    def get(cls, condition=None, connection=None, fields=None, **kwargs):
+    def get(cls, condition=None, connection=None, fields=None, many_fields=None, **kwargs):
         """
         Get object from Model, if given fields, then only fields will be loaded
         into object, other properties will be Lazy
@@ -2847,8 +2848,30 @@ class Model(object):
             _cond = cls.c.id==condition
         else:
             _cond = condition
+            
         #if there is no cached object, then just fetch from database
-        return cls.connect(connection).filter(_cond, **kwargs).fields(*(fields or [])).one()
+        result = cls.connect(connection).filter(_cond, **kwargs).fields(*(fields or []))
+        result.run(1)
+        if not result.result:
+            return
+        
+        #add many_fields process
+        obj = None
+        r = result.result.fetchone()
+        if r:
+            obj = cls.load(r.items(), set_saved=False)
+            
+            if many_fields:
+                for f in many_fields:
+                    if isinstance(f, (str, unicode)):
+                        f_name = '_' + f + '_'
+                    elif isinstance(f, Property):
+                        f_name = '_' + f.property_name + '_'
+                    else:
+                        raise BadValueError("many_fields needs property name or instance, but %r found" % f)
+                    getattr(obj, f_name, None)
+            obj.set_saved()
+        return obj
     
     @classmethod
     def get_or_notfound(cls, condition=None, connection=None, fields=None):
@@ -2913,7 +2936,7 @@ class Model(object):
         return count
             
     @classmethod
-    def load(cls, values):
+    def load(cls, values, set_saved=True):
         if isinstance(values, (list, tuple)):
             d = cls._data_prepare(values)
         elif isinstance(values, dict):
@@ -2926,7 +2949,8 @@ class Model(object):
         
         o = cls()
         o._load(d, use_delay=True)
-        o.set_saved()
+        if set_saved:
+            o.set_saved()
         return o
     
     def refresh(self, fields=None, connection=None, **kwargs):
