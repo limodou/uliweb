@@ -2874,8 +2874,8 @@ class Model(object):
         return obj
     
     @classmethod
-    def get_or_notfound(cls, condition=None, connection=None, fields=None):
-        obj = cls.get(condition, connection, fields=fields)
+    def get_or_notfound(cls, condition=None, connection=None, fields=None, many_fields=None):
+        obj = cls.get(condition, connection, fields=fields, many_fields=many_fields)
         if not obj:
             raise NotFound("Can't found the object", cls, condition)
         return obj
