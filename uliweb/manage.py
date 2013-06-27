@@ -332,7 +332,7 @@ class ExportStaticCommand(Command):
             if verbose:
                 print 'Process ... %s' % filename
             readme = os.path.splitext(filename)[0] + '.txt'
-            with open(filename, 'w') as f, open(readme, 'w') as r:
+            with open(filename, 'w') as f:
                 ext = os.path.splitext(k)[1]
                 if ext == '.js':
                     processor = jsmin
@@ -350,7 +350,9 @@ class ExportStaticCommand(Command):
                         kwargs = {'base_dir':os.path.dirname(x)}
                     f.write(processor(open(fname).read(), **kwargs))
                     f.write('\n')
-                    
+                 
+            with open(readme, 'w') as r:
+                for x in v:
                     r.write(x)
                     r.write('\n')
         
