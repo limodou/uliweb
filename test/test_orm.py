@@ -1956,7 +1956,17 @@ def test_changed_and_saved():
     >>> g3 = Group.get(1, many_fields=[Group.users])
     >>> g3._old_values
     {'users': [2], 'id': 1, 'name': 'ddd'}
-    
+    >>> g2.users.add(c)
+    True
+    >>> g2._users_
+    [2, 3]
+    >>> g2.users.clear()
+    >>> g2._users_
+    []
+    >>> g2.users.update(b,c)
+    True
+    >>> g2._users_
+    [2, 3]
     """
     
 #if __name__ == '__main__':
@@ -1985,3 +1995,45 @@ def test_changed_and_saved():
 
 
 
+#if __name__ == '__main__':
+#    #set_debug_query(True)
+#    db = get_connection('sqlite://')
+#    db.metadata.drop_all()
+#    class User(Model):
+#        username = Field(unicode)
+#    class Group(Model):
+#        name = Field(str)
+#    Group.ManyToMany('users', User)
+#    a = User(username='limodou')
+#    a.save()
+#    
+#    b = User(username='user')
+#    b.save()
+#    
+#    c = User(username='abc')
+#    c.save()
+#    
+#    g1 = Group(name='python')
+#    g1.save()
+#    
+#    g1.users.add(a)
+#    
+#    g1.users.add(b, 3) #add can support multiple object, and object can also int
+#    
+#    g1.users.add(a, b)  #can has duplicated records
+#    g2 = Group.get(2)
+#    g1.users.count()
+#    g1.users.add(a, b, c)
+#    g1.users.add([a, b, c])
+##    set_echo(True)
+#    g1.to_dict()
+#    print g1._users_
+#    print g1.to_dict(manytomany=True)
+#    g1.users.add(b)
+#    print g1._users_
+#    
+#    g1.users.clear()
+#    print g1._users_
+#    
+#    g1.users.update([b,c])
+#    print g1._users_

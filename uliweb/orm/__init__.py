@@ -387,7 +387,7 @@ def rawsql(query, ec=None):
         if isinstance(v, unicode):
             v = v.encode(enc)
         params.append( escape(v, conversions) )
-    return (comp.string.encode(enc) % tuple(params))
+    return (comp.string.encode(enc).replace('?', '%s') % tuple(params))
     
     
 def do_(query, ec=None):
@@ -1781,12 +1781,23 @@ class ManyResult(Result):
                 d = {self.fielda:self.valuea, self.fieldb:v}
                 self.do_(self.table.insert().values(**d))
                 modified = modified or True
+        
+        #cache [] to _STORED_attr_name
+        setattr(self.instance, self.store_key, Lazy)
+        
         return modified
          
+    @property
+    def store_key(self):
+        if self.property_name in self.instance.properties:
+            return self.instance.properties[self.property_name]._attr_name()
+        else:
+            return '_CACHED_'+self.property_name
+    
     def ids(self, cache=False):
-        key = 'CACHED_IDS_' + self.property_name
+        key = self.store_key
         ids = getattr(self.instance, key, None)
-        if not cache or ids is None:
+        if not cache or ids is None or ids is Lazy:
             query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
             ids = [x[0] for x in self.do_(query)]
         if cache:
@@ -1812,6 +1823,10 @@ class ManyResult(Result):
         if ids: #if there are still ids, so delete them
             self.clear(*ids)
             modified = True
+        
+        #cache [] to _STORED_attr_name
+        setattr(self.instance, self.store_key, new_ids)
+        
         return modified
             
     def clear(self, *objs):
@@ -1823,7 +1838,9 @@ class ManyResult(Result):
             self.do_(self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))))
         else:
             self.do_(self.table.delete(self.table.c[self.fielda]==self.valuea))
-       
+        #cache [] to _STORED_attr_name
+        setattr(self.instance, self.store_key, Lazy)
+        
     remove = clear
     
     def count(self):
@@ -2115,9 +2132,9 @@ class ManyToMany(ReferenceProperty):
     def get_lazy(self, model_instance, name, default=None):
         v = self.get_attr(model_instance, name, default)
         if v is Lazy:
-            _id = getattr(model_instance, 'id')
-            if not _id:
-                raise BadValueError('Instance is not a validate object of Model %s, ID property is not found' % model_class.__name__)
+#            _id = getattr(model_instance, 'id')
+#            if not _id:
+#                raise BadValueError('Instance is not a validate object of Model %s, ID property is not found' % model_instance.__class__.__name__)
             result = getattr(model_instance, self.name)
             v = result.ids(True)
             setattr(model_instance, name, v)
@@ -2373,7 +2390,7 @@ class Model(object):
                     d[k] = t
             else:
                 if manytomany:
-                    d[k] = getattr(self, k).ids()
+                    d[k] = getattr(self, v._lazy_value(), [])
         return d
     
     def field_str(self, v, strict=False):
@@ -2985,7 +3002,7 @@ class Model(object):
             else:
                 if prop.property_type == 'compound':
                     continue
-                if use_delay:
+                if use_delay or isinstance(prop, ManyToMany):
                     value = Lazy
                 else:
                     value = prop.default_value()
