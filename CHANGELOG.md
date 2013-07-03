@@ -8,6 +8,8 @@ Uliweb Change Log
 * Change ORM `save()` process, it'll keep the manytomany data, before will 
   remove them from data
 * Add changed, saved and send_disptach to save() function. 
+* Improve `set_echo()`, add time, explain, caller parameters.
+* Add `get_caller()` to utils.common module.
 
 0.1.7 Version
 -----------------

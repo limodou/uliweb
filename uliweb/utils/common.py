@@ -509,6 +509,35 @@ def compare_dict(da, db):
     diff = sa & sb
     return dict(sa - diff), dict(sb - diff)
 
+def get_caller(skip=None):
+    """
+    Get the caller information, it'll return: module, filename, line_no
+    """
+    import inspect
+    from fnmatch import fnmatch
+    
+    stack = inspect.stack()
+    if len(stack) > 1:
+        stack.pop(0)
+        if not isinstance(skip, (list, tuple)):
+            skip = [skip]
+        ptn = [os.path.splitext(s.replace('\\', '/'))[0] for s in skip]
+        for frame in stack:
+            #see doc: inspect
+            #the frame object, the filename, the line number of the current line, 
+            #the function name, a list of lines of context from the source code, 
+            #and the index of the current line within that list
+            filename, funcname, lineno = frame[1], frame[3], frame[2] 
+            del frame
+            found = False
+            for k in ptn:
+                filename = os.path.splitext(filename.replace('\\', '/'))[0]
+                if fnmatch(filename, k):
+                    found = True
+                    break
+            if not found:
+                return filename, lineno, funcname
+            
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:

@@ -139,12 +139,12 @@ def get_dispatch_send(default=True):
         Local.dispatch_send = default
     return Local.dispatch_send
 
-def set_echo(flag, time=None, explain=False, out=sys.stdout.write):
+def set_echo(flag, time=None, explain=False, caller=True, out=sys.stdout.write):
     global Local
     
     Local.echo = flag
     Local.echo_func = out
-    Local.echo_args = {'time':time, 'explain':explain}
+    Local.echo_args = {'time':time, 'explain':explain, 'caller':caller}
     
 def set_pk_type(name):
     global __pk_type__
@@ -398,6 +398,7 @@ def do_(query, ec=None):
     then auto created an connection, and auto begin transaction
     """
     from time import time
+    from uliweb.utils.common import get_caller
     
     conn = local_conection(ec)
     b = time()
@@ -410,18 +411,21 @@ def do_(query, ec=None):
     if hasattr(Local, 'echo') and Local.echo:
         if hasattr(Local, 'echo_args') and Local.echo_args['time']:
             if t >= Local.echo_args['time']:
-                Local.echo_func('\n===>>>>> \n')
                 sql = rawsql(query)
-                Local.echo_func(sql)
                 
                 flag = True
         else:
-            Local.echo_func('\n===>>>>> \n')
             sql = rawsql(query)
-            Local.echo_func(sql)
             flag = True
         
         if flag:
+            Local.echo_func('\n===>>>>> ')
+            if hasattr(Local, 'echo_args') and Local.echo_args['caller']:
+                v = get_caller(skip=__file__)
+                Local.echo_func('(%s:%d:%s)\n' % v)
+            else:
+                Local.echo_func('\n')
+            Local.echo_func(sql)
             if hasattr(Local, 'echo_args') and Local.echo_args['explain'] and sql:
                 r = conn.execute('explain '+sql).fetchone()
                 Local.echo_func('\n----\nExplain: %s' % ''.join(["%s=%r, " % (k, v) for k, v in r.items()]))
