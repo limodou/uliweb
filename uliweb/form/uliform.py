@@ -125,11 +125,12 @@ class BaseField(object):
             _cls = '_class'
         elif 'class' in self.html_attrs:
             _cls = 'class'
-        if _cls:
-            self.html_attrs['class'] = ' '.join([self.html_attrs.pop(_cls), self.field_css_class])
-        else:
+        if not _cls:
+#            self.html_attrs['class'] = ' '.join([self.html_attrs.pop(_cls), self.field_css_class])
+#        else:
             self.html_attrs['class'] = ' '.join([self.field_css_class])
-        self.html_attrs['placeholder'] = placeholder
+        if placeholder:
+            self.html_attrs['placeholder'] = placeholder
         self.multiple = multiple
         self.build = build or self.default_build
         self.help_string = help_string
@@ -489,6 +490,13 @@ class SelectField(BaseField):
 
 class RadioSelectField(SelectField):
     default_build = RadioSelect
+
+class CheckboxSelectField(SelectField):
+    default_build = CheckboxSelect
+    
+    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, multiple=None, **kwargs):
+        multiple = multiple if multiple is not None else True
+        SelectField.__init__(self, label=label, default=default, choices=choices, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, multiple=multiple, **kwargs)
     
 class FileField(BaseField):
     default_build = File

@@ -113,8 +113,12 @@ class RadioSelect(Select):
             kwargs = self.kwargs.copy()
             args['name'] = kwargs.pop('name')
             args['id'] = kwargs.pop('id')
-            if v == self.value:
-                args['checked'] = None
+            if isinstance(self.value, (tuple, list)):
+                if v in self.value:
+                    args['checked'] = None
+            else:
+                if v == self.value:
+                    args['checked'] = None
             r = str(Radio(**args))
             s.append(str(Tag('label', r+caption, **kwargs)))
         return '\n'.join(s)
@@ -122,15 +126,38 @@ class RadioSelect(Select):
     def get_id(self):
         RadioSelect._id += 1
         return self._id
+
+class CheckboxSelect(Select):
+    _id = 0
+    def __init__(self, choices, value=None, **kwargs):
+        super(CheckboxSelect, self).__init__(choices, value, **kwargs)
+
+    def to_html(self):
+        s = []
+        for v, caption in self.choices:
+            args = {'value' : v}
+            kwargs = self.kwargs.copy()
+            args['name'] = kwargs.pop('name')
+            args['id'] = kwargs.pop('id')
+            if isinstance(self.value, (tuple, list)):
+                if v in self.value:
+                    args['checked'] = None
+            else:
+                if v == self.value:
+                    args['checked'] = None
+            r = str(Checkbox(**args))
+            s.append(str(Tag('label', r+caption, **kwargs)))
+        return '\n'.join(s)
     
+    def get_id(self):
+        RadioSelect._id += 1
+        return self._id
+
 class Checkbox(Build):
-    def __init__(self, value=False, **kwargs):
-        self.value = value
+    def __init__(self, **kwargs):
         super(Checkbox, self).__init__(**kwargs)
 
     def to_html(self):
         args = self.kwargs.copy()
-        if self.value:
-            args.setdefault('checked', None)
         args.setdefault('type', 'checkbox')
         return str(Tag('input', '', **args))
