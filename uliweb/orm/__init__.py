@@ -139,11 +139,12 @@ def get_dispatch_send(default=True):
         Local.dispatch_send = default
     return Local.dispatch_send
 
-def set_echo(flag, out=sys.stdout.write):
+def set_echo(flag, time=None, explain=False, out=sys.stdout.write):
     global Local
     
     Local.echo = flag
     Local.echo_func = out
+    Local.echo_args = {'time':time, 'explain':explain}
     
 def set_pk_type(name):
     global __pk_type__
@@ -404,10 +405,28 @@ def do_(query, ec=None):
     t = time() - b
     dispatch.call(ec, 'post_do', query, conn, t)
     
+    flag = False
+    sql = ''
     if hasattr(Local, 'echo') and Local.echo:
-        Local.echo_func('\n===>>>>> \n')
-        Local.echo_func(rawsql(query))
-        Local.echo_func('\n===<<<<< time used %fs\n' % t)
+        if hasattr(Local, 'echo_args') and Local.echo_args['time']:
+            if t >= Local.echo_args['time']:
+                Local.echo_func('\n===>>>>> \n')
+                sql = rawsql(query)
+                Local.echo_func(sql)
+                
+                flag = True
+        else:
+            Local.echo_func('\n===>>>>> \n')
+            sql = rawsql(query)
+            Local.echo_func(sql)
+            flag = True
+        
+        if flag:
+            if hasattr(Local, 'echo_args') and Local.echo_args['explain'] and sql:
+                r = conn.execute('explain '+sql).fetchone()
+                Local.echo_func('\n----\nExplain: %s' % ''.join(["%s=%r, " % (k, v) for k, v in r.items()]))
+            Local.echo_func('\n===<<<<< time used %fs\n\n' % t)
+                
     return result
     
 def Begin(ec=None):

@@ -2121,12 +2121,20 @@ class ListView(SimpleListView):
         """
         Query all records with limit and offset, it's used for pagination query.
         """
+        from uliweb import settings, request
+        from uliweb.utils.common import log
+        from uliweb.orm import rawsql
+        
         if self._query is not None:
             query = self._query
             if condition is not None and isinstance(query, Result):
                 query = query.filter(condition)
         else:
             query = self.model.filter(condition)
+            
+        if settings.GLOBAL.DEBUG and request.GET.get('_debug_'):
+            log.info(rawsql(query.get_query()))
+        
         if self.pagination:
             if offset is not None:
                 query = query.offset(int(offset))
