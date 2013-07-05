@@ -18,7 +18,7 @@ def fix_filename(filename, suffix=''):
         return filename
         
 def resize_image(fobj, size=(50, 50), quality=None):
-    import Image
+    from PIL import Image
     from StringIO import StringIO
     
     image = Image.open(fobj)
@@ -38,7 +38,7 @@ def thumbnail_image(realfile, filename, size=(200, 75), suffix=True, quality=Non
     
     return value should be a tuple, (saved_real_filename, saved_filename)
     """
-    import Image
+    from PIL import Image
 
     im = Image.open(realfile)
     file, ext = os.path.splitext(realfile)
@@ -68,13 +68,13 @@ def resize_image_string(buf, size=(50, 50)):
     return resize_image(f, size).getvalue()
     
 def image_size(filename):
-    import Image
+    from PIL import Image
 
     image = Image.open(filename)
     return image.size
 
 def crop_resize(fobj, outfile, x, y, w, h, size=(50, 50), quality=None):
-    import Image
+    from PIL import Image
 
     image = Image.open(fobj)
     if image.mode not in ('L', 'RGB'):

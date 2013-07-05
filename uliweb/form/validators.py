@@ -28,7 +28,7 @@ def IS_IN_SET(choices):
 
 def IS_IMAGE(size=None):
     def f(data):
-        import Image
+        from PIL import Image
         try:
             try:
                 image = Image.open(data.file)
