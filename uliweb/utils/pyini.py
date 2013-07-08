@@ -51,7 +51,8 @@ def set_env(env=None):
     
     __default_env__.update(env or {})
     
-def uni_prt(a, encoding='utf-8', beautiful=False, indent=0):
+def uni_prt(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
+    convertors = convertors or {}
     escapechars = [("\\", "\\\\"), ("'", r"\'"), ('\"', r'\"'), ('\b', r'\b'),
         ('\t', r"\t"), ('\r', r"\r"), ('\n', r"\n")]
     s = []
@@ -68,7 +69,7 @@ def uni_prt(a, encoding='utf-8', beautiful=False, indent=0):
                 ind = indent + 1
             else:
                 ind = indent
-            s.append(indent_char*ind + uni_prt(k, encoding, beautiful, indent+1))
+            s.append(indent_char*ind + uni_prt(k, encoding, beautiful, indent+1, convertors=convertors))
             if i<len(a)-1:
                 if beautiful:
                     s.append(',\n')
@@ -92,7 +93,7 @@ def uni_prt(a, encoding='utf-8', beautiful=False, indent=0):
                 ind = indent + 1
             else:
                 ind = indent
-            s.append('%s: %s' % (indent_char*ind + uni_prt(key, encoding, beautiful, indent+1), uni_prt(value, encoding, beautiful, indent+1)))
+            s.append('%s: %s' % (indent_char*ind + uni_prt(key, encoding, beautiful, indent+1, convertors=convertors), uni_prt(value, encoding, beautiful, indent+1, convertors=convertors)))
             if i<len(a.items())-1:
                 if beautiful:
                     s.append(',\n')
@@ -116,7 +117,12 @@ def uni_prt(a, encoding='utf-8', beautiful=False, indent=0):
             import traceback
             traceback.print_exc()
     else:
-        s.append(str(a))
+        _type = type(a)
+        c_func = convertors.get(_type)
+        if c_func:
+            s.append(c_func(a))
+        else:
+            s.append(str(a))
     return ''.join(s)
 
 class Section(SortedDict):
@@ -167,7 +173,7 @@ class Section(SortedDict):
     def del_comment(self, key=None):
         self.add_comment(key, None)
         
-    def dumps(self, out):
+    def dumps(self, out, convertors=None):
         if self._comments:
             print >> out, '\n'.join(self._comments)
         print >> out, '[%s]' % self._name
@@ -179,9 +185,9 @@ class Section(SortedDict):
                 op = ' <= '
             else:
                 op = ' = '
-            buf = f + op + uni_prt(self[f], self._encoding)
+            buf = f + op + uni_prt(self[f], self._encoding, convertors=convertors)
             if len(buf) > 79:
-                buf = f + op + uni_prt(self[f], self._encoding, True)
+                buf = f + op + uni_prt(self[f], self._encoding, True, convertors=convertors)
             print >> out, buf
             
     def __delitem__(self, key):
@@ -200,7 +206,7 @@ class Section(SortedDict):
         return buf.getvalue()
     
 class Ini(SortedDict):
-    def __init__(self, inifile=None, commentchar='#', encoding='utf-8', env=None):
+    def __init__(self, inifile=None, commentchar='#', encoding='utf-8', env=None, convertors=None):
         super(Ini, self).__init__()
         self._inifile = inifile
 #        self.value = value
@@ -208,6 +214,7 @@ class Ini(SortedDict):
         self._encoding = 'utf-8'
         self._env = __default_env__.copy()
         self._env.update(env or {})
+        self._convertors = convertors or {}
         
         if self._inifile:
             self.read(self._inifile)
@@ -338,7 +345,7 @@ class Ini(SortedDict):
         print >> f, '#coding=%s' % self._encoding
         for s in self.keys():
             section = self[s]
-            section.dumps(f)
+            section.dumps(f, convertors=self._convertors)
             
         if need_close:
             f.close()

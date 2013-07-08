@@ -218,3 +218,32 @@ def test_triple_string():
     >>> print repr(x.DEFAULT.a)
     u'hello\\n\\u4e2d\\u6587\\n'
     """
+
+def test_save():
+    """
+    >>> from uliweb.i18n import gettext_lazy as _
+    >>> from uliweb.i18n.lazystr import LazyString
+    >>> from StringIO import StringIO
+    >>> def lazy(v):
+    ...  return "_(%s)" % uni_prt(v.msg, encoding='utf8')
+    >>> x = Ini(env={'_':_}, convertors={LazyString:lazy})
+    >>> buf = StringIO(\"\"\"
+    ... [default]
+    ... option = _('中"文')
+    ... str = 'str'
+    ... str1 = "str"
+    ... float = 1.2
+    ... int = 1
+    ... list = [1, 'str', 0.12]
+    ... dict = {'a':'b', 1:2}
+    ... [other]
+    ... option = 'default'
+    ... options1 = '{option} xxx'
+    ... options2 = '{default.int}'
+    ... options3 = option
+    ... \"\"\")
+    >>> x.read(buf)
+    >>> out = StringIO()
+    >>> x.save(out)
+    
+    """

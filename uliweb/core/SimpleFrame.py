@@ -444,6 +444,18 @@ class Dispatcher(object):
             config['level'] = _get_level(s.get_var('LOG/level'))
         logging.basicConfig(**config)
         
+        if config.get('filename'):
+            Handler = 'logging.FileHandler'
+            if config.get('filemode'):
+                _args =(config.get('filename'), config.get('filemode'))
+            else:
+                _args = (config.get('filename'),)
+        else:
+            Handler = 'logging.StreamHandler'
+            _args = ()
+        
+        default_handler = import_attr(Handler)(*_args)
+        
         #process formatters
         formatters = {}
         for f, v in s.get_var('LOG.Formatters', {}).items():
@@ -452,8 +464,8 @@ class Dispatcher(object):
         #process handlers
         handlers = {}
         for h, v in s.get_var('LOG.Handlers', {}).items():
-            handler_cls = v.get('class', 'logging.StreamHandler')
-            handler_args = v.get('args', ())
+            handler_cls = v.get('class', Handler)
+            handler_args = v.get('args', _args)
             
             handler = import_attr(handler_cls)(*handler_args)
             if v.get('level'):
@@ -491,9 +503,8 @@ class Dispatcher(object):
                     fmt = logging.Formatter(v['format'])
                 else:
                     fmt = formatters[v['format']]
-                handler = logging.StreamHandler()
-                handler.setFormatter(fmt)
-                log.addHandler(handler)
+                default_handler.setFormatter(fmt)
+                log.addHandler(default_handler)
                 
     def process_domains(self, settings):
         from urlparse import urlparse
