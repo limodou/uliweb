@@ -140,6 +140,32 @@ def json(data, **json_kwargs):
         return f
     else:
         return Response(json_dumps(data), **json_kwargs)
+    
+def jsonp(data, **json_kwargs):
+    """
+    jsonp is callback key name
+    """
+    from uliweb import request
+    
+    if 'content_type' not in json_kwargs:
+        json_kwargs['content_type'] = 'application/json; charset=utf-8'
+    if 'jsonp' in json_kwargs:
+        cb = json_kwargs.pop('jsonp')
+    else:
+        cb = 'callback'
+        
+    begin = request.GET.get(cb)
+    if not begin:
+        raise UliwebError("Can't found %s parameter in request's query_string" % cb)
+    
+    if callable(data):
+        @wraps(data)
+        def f(*arg, **kwargs):
+            ret = data(*arg, **kwargs)
+            return Response(begin + '(' + json_dumps(ret) + ');', **json_kwargs)
+        return f
+    else:
+        return Response(begin + '(' + json_dumps(data) + ');', **json_kwargs)
 
 def expose(rule=None, **kwargs):
     e = rules.Expose(rule, **kwargs)
@@ -424,6 +450,7 @@ class Dispatcher(object):
         env['application'] = self
         env['settings'] = settings
         env['json'] = json
+        env['jsonp'] = jsonp
         return env
     
     def set_log(self):

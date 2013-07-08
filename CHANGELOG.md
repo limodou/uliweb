@@ -11,6 +11,7 @@ Uliweb Change Log
 * Improve `set_echo()`, add time, explain, caller parameters.
 * Add `get_caller()` to utils.common module.
 * Add `CheckboxSelectField` to form.
+* Add `jsonp` function, just like json.
 
 0.1.7 Version
 -----------------
