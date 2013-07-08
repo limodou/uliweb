@@ -147,8 +147,6 @@ def jsonp(data, **json_kwargs):
     """
     from uliweb import request
     
-    if 'content_type' not in json_kwargs:
-        json_kwargs['content_type'] = 'application/json; charset=utf-8'
     if 'jsonp' in json_kwargs:
         cb = json_kwargs.pop('jsonp')
     else:
