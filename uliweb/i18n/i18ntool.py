@@ -84,9 +84,9 @@ class I18nCommand(Command):
             apps_dir = os.path.normpath(os.path.abspath(global_options.apps_dir))
             for appname in _apps:
                 path = SimpleFrame.get_app_dir(appname)
-                if not path.startswith(apps_dir):
-                    continue
-                _process(SimpleFrame.get_app_dir(appname), options.locale, opts)
+                if global_options.verbose:
+                    print 'Processing... app=>[%s] path=>[%s]' % (appname, path)
+                _process(path, options.locale, opts)
         elif options.uliweb:
             path = pkg.resource_filename('uliweb', '')
             _process(path, options.locale, opts)
