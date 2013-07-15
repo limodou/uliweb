@@ -155,6 +155,8 @@ def jsonp(data, **json_kwargs):
     begin = request.GET.get(cb)
     if not begin:
         raise UliwebError("Can't found %s parameter in request's query_string" % cb)
+    if not begin.isalnum():
+        raise UliwebError("The callback name is not right, it can be alphabetic and number only")
     
     if callable(data):
         @wraps(data)

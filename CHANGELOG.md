@@ -12,6 +12,9 @@ Uliweb Change Log
 * Add `get_caller()` to utils.common module.
 * Add `CheckboxSelectField` to form.
 * Add `jsonp` function, just like json.
+* Fix rule merge bug
+* Improve `get_redis(**options)` enable pass parameters to it. 
+* Improve `jsonp()` only alphabetic and number available in `callback` parameter
 
 0.1.7 Version
 -----------------

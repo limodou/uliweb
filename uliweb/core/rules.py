@@ -1,10 +1,11 @@
 import os
 import inspect
 from uliweb.utils.common import log
+from uliweb.utils.sorteddict import SortedDict
 
 class ReservedKeyError(Exception):pass
 
-__exposes__ = {}
+__exposes__ = SortedDict()
 __no_need_exposed__ = []
 __class_methods__ = {}
 __app_rules__ = {}
@@ -26,7 +27,7 @@ def add_rule(map, url, endpoint=None, **kwargs):
 def merge_rules():
     s = []
     index = {}
-    for v in __exposes__.itervalues():
+    for v in __exposes__.values():
         for x in v:
             appname, endpoint, url, kw = x
             methods = [y.upper() for y in kw.get('methods', [])]

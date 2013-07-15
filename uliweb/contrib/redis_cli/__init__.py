@@ -1,11 +1,20 @@
 __connection_pool__ = None
 
-def get_redis():
+def get_redis(**options):
+    """
+    if no options defined, then it'll use settings options
+    
+    #unix_socket_path = '/tmp/redis.sock'
+    connection_pool = {'host':'localhost', 'port':6379}
+    #if test after created redis client object
+    test_first = False
+    
+    """
     from uliweb import settings
     from uliweb.utils.common import log
     import redis
         
-    options = settings.REDIS
+    options = (options or {}).update(settings.REDIS)
     if 'unix_socket_path' in options:
         client = redis.Redis(unix_socket_path=options['unix_socket_path'])
     else:
