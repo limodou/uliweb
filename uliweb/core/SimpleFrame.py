@@ -483,8 +483,6 @@ class Dispatcher(object):
             Handler = 'logging.StreamHandler'
             _args = ()
         
-        default_handler = import_attr(Handler)(*_args)
-        
         #process formatters
         formatters = {}
         for f, v in s.get_var('LOG.Formatters', {}).items():
@@ -532,8 +530,9 @@ class Dispatcher(object):
                     fmt = logging.Formatter(v['format'])
                 else:
                     fmt = formatters[v['format']]
-                default_handler.setFormatter(fmt)
-                log.addHandler(default_handler)
+                _handler = import_attr(Handler)(*_args)
+                _handler.setFormatter(fmt)
+                log.addHandler(_handler)
                 
     def process_domains(self, settings):
         from urlparse import urlparse
