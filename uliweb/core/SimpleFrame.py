@@ -6,9 +6,10 @@
 import os, sys
 import cgi
 import inspect
+import re
 from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
-from werkzeug.exceptions import HTTPException, NotFound
+from werkzeug.exceptions import HTTPException, NotFound, BadRequest
 from werkzeug.routing import Map
 
 import template
@@ -40,6 +41,7 @@ url_adapters = {}
 __app_dirs__ = {}
 __app_alias__ = {}
 
+r_callback = re.compile(r'^[\w_]+$')
 #Initialize pyini env
 pyini.set_env({'_':gettext_lazy, 'gettext_lazy':gettext_lazy})
 __global__.settings = pyini.Ini()
@@ -154,9 +156,9 @@ def jsonp(data, **json_kwargs):
         
     begin = request.GET.get(cb)
     if not begin:
-        raise UliwebError("Can't found %s parameter in request's query_string" % cb)
-    if not begin.isalnum():
-        raise UliwebError("The callback name is not right, it can be alphabetic and number only")
+        raise BadRequest("Can't found %s parameter in request's query_string" % cb)
+    if not r_callback.match(begin):
+        raise BadRequest("The callback name is not right, it can be alphabetic, number and underscore only")
     
     if callable(data):
         @wraps(data)
