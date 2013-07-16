@@ -1448,7 +1448,7 @@ class OneToOne(ReferenceProperty):
 #        args['default'] = self.default
         args['primary_key'] = self.kwargs.get('primary_key', False)
         args['autoincrement'] = self.kwargs.get('autoincrement', False)
-        args['index'] = self.kwargs.get('index', False)
+        args['index'] = self.kwargs.get('index', True)
         args['unique'] = self.kwargs.get('unique', True)
         args['nullable'] = self.kwargs.get('nullable', True)
         f_type = self._create_type()
