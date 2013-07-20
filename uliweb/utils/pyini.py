@@ -198,6 +198,13 @@ class EvalValue(object):
         return self.__str__()
     
 class Lazy(object):
+    """
+    Lazy class can be used to save multiple EvalValue or normal data type
+    You can use add() funciton to add new value, it'll be sotred as a list, 
+    just like:
+        
+        [EvalValue, int, str]
+    """
     def __init__(self, key, globals, sec_name, encoding):
         self.key = key
         self.values = []
@@ -214,8 +221,11 @@ class Lazy(object):
             print_exc()
             raise Exception("Converting value (%s) error" % value)
         
-    def add(self, value):
-        self.values.append(value)
+    def add(self, value, replace=False):
+        if not replace:
+            self.values.append(value)
+        else:
+            self.values = [value]
         
     def get(self):
         if self.cached_value is Empty:
@@ -327,8 +337,12 @@ class Section(SortedDict):
         return buf.getvalue()
     
 class Ini(SortedDict):
-    def __init__(self, inifile=None, commentchar=None, encoding=None, 
+    def __init__(self, inifile='', commentchar=None, encoding=None, 
         env=None, convertors=None, lazy=False, writable=False):
+        """
+        lazy is used to parse first but not deal at time, and only when 
+        the user invoke finish() function, it'll parse the data.
+        """
         super(Ini, self).__init__()
         self._inifile = inifile
         self._commentchar = commentchar or __default_env__.get('commentchar', '#')
@@ -338,7 +352,8 @@ class Ini(SortedDict):
         self._env['set'] = set
         self.update(self._env)
         self._globals = SortedDict()
-        self._convertors = convertors or __default_env__.get('convertors', {}).copy()
+        self._convertors = __default_env__.get('convertors', {}).copy()
+        self._convertors.update(convertors or {})
         self._lazy = lazy
         self._writable = writable
         
@@ -492,6 +507,12 @@ class Ini(SortedDict):
             f.close()
 
     def __read_line(self, f):
+        """
+        Get logic line according the syntax not the physical line
+        It'll return the line text and if there is identifier existed
+        
+        return line, bool
+        """
         g = tokenize.generate_tokens(f.readline)
         
         buf = []
@@ -535,12 +556,6 @@ class Ini(SortedDict):
         self.save(buf)
         return buf.getvalue()
     
-#    def keys(self):
-#        return [k for k in self._fields if k not in self._env]
-#
-#    def items(self):
-#        return [(k, self[k]) for k in self._fields if k not in self._env]
-        
     def get_var(self, key, default=None):
         obj = self
         for i in key.split('/', 1):
@@ -578,6 +593,9 @@ class Ini(SortedDict):
         return flag
 
     def freeze(self):
+        """
+        Process all EvalValue to real value
+        """
         self._lazy = False
         for k, v in self.items():
             if k in self._env:

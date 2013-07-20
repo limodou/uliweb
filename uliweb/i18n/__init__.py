@@ -12,11 +12,11 @@ from uliweb.utils.common import safe_unicode
 
 from lazystr import lazy, LazyString
 
-def lazy_ini_convertor(v):
+def lazystr_convertor(v):
     from uliweb.utils.pyini import uni_prt
     return "_(%s)" % uni_prt(v.msg, encoding='utf8')
 
-i18n_ini_convertor = {LazyString:lazy_ini_convertor}
+i18n_ini_convertor = {LazyString:lazystr_convertor}
 
 _active_locale = threading.local()
 
