@@ -15,6 +15,7 @@ Uliweb Change Log
 * Fix rule merge bug
 * Improve `get_redis(**options)` enable pass parameters to it. 
 * Improve `jsonp()` only alphabetic and number available in `callback` parameter
+* Improve pyini, support cross section variable referer and lazy process support
 
 0.1.7 Version
 -----------------

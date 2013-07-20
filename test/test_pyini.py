@@ -117,8 +117,8 @@ def test_gettext():
     >>> x = Ini(env={'_':_})
     >>> x['default'] = Section('default')
     >>> x.default.option = _('Hello')
-    >>> x
-    <Ini {'default':<Section {'option':gettext_lazy('Hello')}>}>
+    >>> x.keys()
+    ['_', 'gettext_lazy', 'default']
     """
     
 def test_replace():
@@ -221,29 +221,185 @@ def test_triple_string():
 
 def test_save():
     """
-    >>> from uliweb.i18n import gettext_lazy as _
-    >>> from uliweb.i18n.lazystr import LazyString
+    >>> from uliweb.i18n import gettext_lazy as _, i18n_ini_convertor
     >>> from StringIO import StringIO
-    >>> def lazy(v):
-    ...  return "_(%s)" % uni_prt(v.msg, encoding='utf8')
-    >>> x = Ini(env={'_':_}, convertors={LazyString:lazy})
+    >>> x = Ini(env={'_':_}, convertors=i18n_ini_convertor)
     >>> buf = StringIO(\"\"\"
     ... [default]
-    ... option = _('中"文')
+    ... option = _('English')
     ... str = 'str'
     ... str1 = "str"
     ... float = 1.2
     ... int = 1
     ... list = [1, 'str', 0.12]
     ... dict = {'a':'b', 1:2}
+    ... s = u'English'
     ... [other]
     ... option = 'default'
-    ... options1 = '{option} xxx'
-    ... options2 = '{default.int}'
+    ... options1 = '{{option}} xxx'
+    ... options2 = '{{default.int}}'
     ... options3 = option
+    ... options4 = '-- {{default.option}} --'
+    ... options5 = '-- {{default.s}} --'
+    ... options6 = u'English {{default.s}} --'
+    ... options7 = default.str + default.str1
     ... \"\"\")
     >>> x.read(buf)
-    >>> out = StringIO()
-    >>> x.save(out)
-    
+    >>> print x
+    #coding=UTF-8
+    <BLANKLINE>
+    [default]
+    option = _('English')
+    str = 'str'
+    str1 = 'str'
+    float = 1.2
+    int = 1
+    list = [1, 'str', 0.12]
+    dict = {'a': 'b', 1: 2}
+    s = u'English'
+    [other]
+    option = 'default'
+    options1 = 'default xxx'
+    options2 = '1'
+    options3 = 'default'
+    options4 = '-- English --'
+    options5 = '-- English --'
+    options6 = u'English English --'
+    options7 = 'strstr'
+    <BLANKLINE>
     """
+    
+def test_merge_data():
+    """
+    >>> from uliweb.utils.pyini import merge_data
+    >>> a = [[1,2,3], [2,3,4], [4,5]]
+    >>> b = [{'a':[1,2], 'b':{'a':[1,2]}}, {'a':[2,3], 'b':{'a':['b'], 'b':2}}]
+    >>> c = [set([1,2,3]), set([2,4])]
+    >>> print merge_data(a)
+    [1, 2, 3, 4, 5]
+    >>> print merge_data(b)
+    {'a': [1, 2, 3], 'b': {'a': [1, 2, 'b'], 'b': 2}}
+    >>> print merge_data(c)
+    set([1, 2, 3, 4])
+    >>> print merge_data([2])
+    2
+    """
+    
+def test_lazy():
+    """
+    >>> from uliweb.i18n import gettext_lazy as _, i18n_ini_convertor
+    >>> from StringIO import StringIO
+    >>> x = Ini(env={'_':_}, convertors=i18n_ini_convertor, lazy=True)
+    >>> buf = StringIO(\"\"\"
+    ... [default]
+    ... option = _('English')
+    ... str = 'str'
+    ... str1 = "str"
+    ... float = 1.2
+    ... int = 1
+    ... list = [1, 'str', 0.12]
+    ... dict = {'a':'b', 1:2}
+    ... s = u'English'
+    ... [other]
+    ... option = 'default'
+    ... options1 = '{{option}} xxx'
+    ... options2 = '{{default.int}}'
+    ... options3 = option
+    ... options4 = '-- {{default.option}} --'
+    ... options5 = '-- {{default.s}} --'
+    ... options6 = u'English {{default.s}} --'
+    ... options7 = default.str + default.str1
+    ... \"\"\")
+    >>> x.read(buf)
+    >>> x.freeze()
+    >>> print x
+    #coding=UTF-8
+    <BLANKLINE>
+    [default]
+    option = _('English')
+    str = 'str'
+    str1 = 'str'
+    float = 1.2
+    int = 1
+    list = [1, 'str', 0.12]
+    dict = {'a': 'b', 1: 2}
+    s = u'English'
+    [other]
+    option = 'default'
+    options1 = 'default xxx'
+    options2 = '1'
+    options3 = 'default'
+    options4 = '-- English --'
+    options5 = '-- English --'
+    options6 = u'English English --'
+    options7 = 'strstr'
+    <BLANKLINE>
+    """
+
+def test_multiple_read():
+    """
+    >>> from uliweb.i18n import gettext_lazy as _, i18n_ini_convertor
+    >>> from StringIO import StringIO
+    >>> x = Ini(env={'_':_}, convertors=i18n_ini_convertor, lazy=True)
+    >>> buf = StringIO(\"\"\"
+    ... [default]
+    ... option = 'abc'
+    ... [other]
+    ... option = default.option
+    ... option1 = '{{option}} xxx'
+    ... option2 = '{{default.option}}'
+    ... \"\"\")
+    >>> x.read(buf)
+    >>> buf1 = StringIO(\"\"\"
+    ... [default]
+    ... option = 'hello'
+    ... \"\"\")
+    >>> x.read(buf1)
+    >>> x.freeze()
+    >>> print x
+    #coding=UTF-8
+    <BLANKLINE>
+    [default]
+    option = 'hello'
+    [other]
+    option = 'hello'
+    option1 = 'hello xxx'
+    option2 = 'hello'
+    <BLANKLINE>
+    """
+
+def test_chinese():
+    """
+    >>> from uliweb.i18n import gettext_lazy as _, i18n_ini_convertor
+    >>> from StringIO import StringIO
+    >>> x = Ini(env={'_':_}, convertors=i18n_ini_convertor)
+    >>> buf = StringIO(\"\"\"#coding=utf-8
+    ... [default]
+    ... option = '中文'
+    ... option1 = u'中文'
+    ... option2 = _('中文')
+    ... option3 = '{{option}}'
+    ... [other]
+    ... x = '中文 {{default.option}}'
+    ... x1 = u'中文 {{default.option}}'
+    ... x2 = u'xbd {{default.option}}'
+    ... \"\"\")
+    >>> x.read(buf)
+    >>> print x
+    #coding=utf-8
+    [default]
+    option = '\xe4\xb8\xad\xe6\x96\x87'
+    option1 = u'\xe4\xb8\xad\xe6\x96\x87'
+    option2 = _('\xe4\xb8\xad\xe6\x96\x87')
+    option3 = '\xe4\xb8\xad\xe6\x96\x87'
+    [other]
+    x = '\xe4\xb8\xad\xe6\x96\x87 \xe4\xb8\xad\xe6\x96\x87'
+    x1 = u'\xe4\xb8\xad\xe6\x96\x87 \xe4\xb8\xad\xe6\x96\x87'
+    x2 = u'xbd \xe4\xb8\xad\xe6\x96\x87'
+    <BLANKLINE>
+    >>> print repr(x.other.x1)
+    u'\u4e2d\u6587 \u4e2d\u6587'
+    >>> x.keys()
+    ['_', 'gettext_lazy', 'default', 'other']
+    """
+

@@ -19,7 +19,7 @@ import dispatch
 from uliweb.utils.common import (pkg, log, import_attr, 
     myimport, wraps, norm_path)
 import uliweb.utils.pyini as pyini
-from uliweb.i18n import gettext_lazy
+from uliweb.i18n import gettext_lazy, i18n_ini_convertor
 from uliweb.utils.localproxy import LocalProxy, Global
 from uliweb import UliwebError
 
@@ -43,8 +43,11 @@ __app_alias__ = {}
 
 r_callback = re.compile(r'^[\w_]+$')
 #Initialize pyini env
-pyini.set_env({'_':gettext_lazy, 'gettext_lazy':gettext_lazy})
-__global__.settings = pyini.Ini()
+pyini.set_env({
+    'env':{'_':gettext_lazy, 'gettext_lazy':gettext_lazy},
+    'convertors':i18n_ini_convertor,
+})
+__global__.settings = pyini.Ini(lazy=True)
 
 #User can defined decorator functions in settings DECORATORS
 #and user can user @decorators.function_name in views
@@ -208,7 +211,7 @@ def url_for(endpoint, **values):
         if isinstance(endpoint, (str, unicode)):
             #if the endpoint is string format, then find and replace
             #the module prefix with app alias which matched
-            for k, v in __app_alias__.iteritems():
+            for k, v in __app_alias__.items():
                 if endpoint.startswith(k):
                     endpoint = v + endpoint[len(k):]
                     break
@@ -336,10 +339,11 @@ def get_settings(project_dir, include_apps=None, settings_file='settings.ini',
     if os.path.exists(local_set_ini):
         settings.append(local_set_ini)
 
-    x = pyini.Ini()
+    x = pyini.Ini(lazy=True)
     for v in settings:
         x.read(v)
     x.update(default_settings or {})
+    x.freeze()
     
     #process FILESYSTEM_ENCODING
     if not x.GLOBAL.FILESYSTEM_ENCODING:
@@ -539,7 +543,7 @@ class Dispatcher(object):
 
         Dispatcher.domains = {}
         
-        for k, v in settings.DOMAINS.iteritems():
+        for k, v in settings.DOMAINS.items():
             _domain = urlparse(v['domain'])
             self.domains[k] = {'domain':v.get('domain'), 'domain_parse':_domain, 
                 'host':_domain.netloc,
@@ -825,7 +829,7 @@ class Dispatcher(object):
        
     def _call_function(self, handler, request, response, env, args=None, kwargs=None):
         
-        for k, v in env.iteritems():
+        for k, v in env.items():
             handler.func_globals[k] = v
         
         handler.func_globals['env'] = env
@@ -933,6 +937,7 @@ class Dispatcher(object):
         for v in s:
             settings.read(v)
         settings.update(self.default_settings)
+        settings.freeze()
         
         #process FILESYSTEM_ENCODING
         if not settings.GLOBAL.FILESYSTEM_ENCODING:
@@ -954,7 +959,7 @@ class Dispatcher(object):
         #bind_name = topic, func        
         #bind_name = topic, func, {args}
         d = settings.get('BINDS', {})
-        for bind_name, args in d.iteritems():
+        for bind_name, args in d.items():
             if not args:
                 continue
             is_wrong = False
@@ -982,7 +987,7 @@ class Dispatcher(object):
         #expose_name = topic, func        
         #expose_name = topic, func, {args}
         d = settings.get('EXPOSES', {})
-        for name, args in d.iteritems():
+        for name, args in d.items():
             if not args:
                 continue
             is_wrong = False

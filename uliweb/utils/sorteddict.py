@@ -49,20 +49,20 @@ class SortedDict(object):
         return [self._dict[k] for k in self._fields]
     
     def iterkeys(self):
-        return iter(self.keys)
+        return self.keys
     
     def itemvalues(self):
-        return (self._dict[k] for k in self._fields)
+        return self.values()
         
     def update(self, value):
-        for k, v in value.iteritems():
+        for k, v in value.items():
             self.__setitem__(k, v)
         
     def items(self):
-        return [(k, self._dict[k]) for k in self._fields]
+        return [(k, self[k]) for k in self._fields]
     
     def iteritems(self):
-        return ((k, self._dict[k]) for k in self._fields)
+        return self.items()
     
     def get(self, key, default=None):
         return self._dict.get(key, default)

@@ -23,6 +23,7 @@ import copy
 import tokenize
 import token
 from sorteddict import SortedDict
+from traceback import print_exc
 
 __all__ = ['SortedDict', 'Section', 'Ini', 'uni_prt']
 
@@ -44,13 +45,45 @@ except:
     defaultencoding = 'UTF-8'
 
 r_encoding = re.compile(r'\s*coding\s*[=:]\s*([-\w.]+)')
+r_var = re.compile(ur'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})', re.U)
 __default_env__ = {}
 
 def set_env(env=None):
     global __default_env__
     
     __default_env__.update(env or {})
-    
+
+def merge_data(values, prev=None):
+    if prev:
+        _type = type(prev)
+        
+    for value in values:
+        if not isinstance(value, (list, dict, set)):
+            return values[-1]
+        
+        if prev and _type != type(value):
+            raise ValueError("Value %r should be the same type as previous type %r" % (value, _type))
+        
+        if not prev:
+            prev = value
+            _type = type(prev)
+            continue
+        
+        if isinstance(value, list):
+            for x in value:
+                if x not in prev:
+                    prev.append(x)
+        elif isinstance(value, dict):
+            for k, v in value.items():
+                if k not in prev:
+                    prev[k] = v
+                else:
+                    prev[k] = merge_data([v], prev[k])
+        else:
+            prev.update(value)
+            
+    return prev
+
 def uni_prt(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
     convertors = convertors or {}
     escapechars = [("\\", "\\\\"), ("'", r"\'"), ('\"', r'\"'), ('\b', r'\b'),
@@ -114,8 +147,7 @@ def uni_prt(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
         try:
             s.append("u'%s'" % t.encode(encoding))
         except:
-            import traceback
-            traceback.print_exc()
+            print_exc()
     else:
         _type = type(a)
         c_func = convertors.get(_type)
@@ -125,36 +157,125 @@ def uni_prt(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
             s.append(str(a))
     return ''.join(s)
 
+def eval_value(value, globals, locals, encoding):
+    txt = '#coding=%s\n%s' % (encoding, value)
+    result = eval(txt, dict(globals), dict(locals))
+    
+    #process {{format}}
+    def sub_(m):
+        txt = m.group(1).strip()
+        try:
+            v = eval_value(str(txt), globals, locals, encoding)
+            _type = type(txt)
+            if not isinstance(v, (str, unicode)):
+                v = _type(v)
+            elif not isinstance(v, _type):
+                if _type is unicode:
+                    v = unicode(v, encoding)
+                else:
+                    v = v.encode(encoding)
+        except:
+            print_exc()
+            v = m.group()
+        return v
+    
+    if isinstance(result, (str, unicode)):
+        result = r_var.sub(sub_, result)
+    return result
+    
+class Empty(object): pass
+class EvalValue(object):
+    def __init__(self, value, filename, lineno, line):
+        self.value = value
+        self.filename = filename
+        self.lineno = lineno
+        self.line = line
+        
+    def __str__(self):
+        return self.value
+    
+    def __repr__(self):
+        return self.__str__()
+    
+class Lazy(object):
+    def __init__(self, key, globals, sec_name, encoding):
+        self.key = key
+        self.values = []
+        self.globals = globals
+        self.sec_name = sec_name
+        self.encoding = encoding
+        self.cached_value = Empty
+        
+    def eval(self, value):
+        try:
+            v = eval_value(value, self.globals, self.globals[self.sec_name], self.encoding)
+            return v
+        except Exception as e:
+            print_exc()
+            raise Exception("Converting value (%s) error" % value)
+        
+    def add(self, value):
+        self.values.append(value)
+        
+    def get(self):
+        if self.cached_value is Empty:
+            result = []
+            for v in self.values:
+                value = self.eval(v)
+                if not isinstance(value, (list, dict, set)):
+                    self.cached_value = self.eval(self.values[-1])
+                    break
+                else:
+                    result.append(value)
+            
+            if result:
+                self.cached_value = merge_data(result)
+                
+            #sync
+            self.globals[self.sec_name][self.key] = self.cached_value
+            
+        return self.cached_value
+    
 class Section(SortedDict):
-    def __init__(self, name, comments=None, encoding=None):
+    def __init__(self, name, comments=None, encoding=None, root=None):
         super(Section, self).__init__()
+        self._root = root
         self._name = name
         self.add_comment(comments=comments)
         self._field_comments = {}
         self._field_flag = {}
         self._encoding = encoding
-            
+        
+        #sync
+        if self._root and self._lazy:
+            self._root._globals.setdefault(name, SortedDict())
+         
+    @property
+    def _lazy(self):
+        if self._root:
+            return self._root._lazy
+        else:
+            return False
+        
     def add(self, key, value, comments=None, replace=False):
         self.__setitem__(key, value, replace)
         self._field_flag[key] = replace
         self.add_comment(key, comments)
         
     def __setitem__(self, key, value, replace=False):
-        if not replace:
-            v = self.get(key)
-            #for mutable object, will merge them but not replace
-            if isinstance(v, (list, dict)):
-                if isinstance(v, list):
-                    new_value = v[:]
-                    for x in value:
-                        if x not in new_value:
-                            new_value.append(x)
-                    value = new_value
-                else:
-                    v.update(value)
-                    value = v
-        super(Section, self).__setitem__(key, value)
-        
+        if self._lazy:
+            if not key in self or replace:
+                v = Lazy(key, self._root._globals, self._name, self._encoding)
+            else:
+                v = self[key]
+            v.add(value)
+        else:
+            v = value
+            if not replace:
+                v = merge_data([value], self.get(key))
+                
+        super(Section, self).__setitem__(key, v)
+    
     def add_comment(self, key=None, comments=None):
         comments = comments or []
         if not isinstance(comments, (tuple, list)):
@@ -206,16 +327,24 @@ class Section(SortedDict):
         return buf.getvalue()
     
 class Ini(SortedDict):
-    def __init__(self, inifile=None, commentchar='#', encoding='utf-8', env=None, convertors=None):
+    def __init__(self, inifile=None, commentchar=None, encoding=None, 
+        env=None, convertors=None, lazy=False, writable=False):
         super(Ini, self).__init__()
         self._inifile = inifile
 #        self.value = value
-        self._commentchar = commentchar
-        self._encoding = 'utf-8'
-        self._env = __default_env__.copy()
+        self._commentchar = commentchar or __default_env__.get('commentchar', '#')
+        self._encoding = encoding or __default_env__.get('encoding', 'utf-8')
+        self._env = __default_env__.get('env', {}).copy()
         self._env.update(env or {})
-        self._convertors = convertors or {}
+        self.update(self._env)
+        self._globals = SortedDict()
+        self._convertors = convertors or __default_env__.get('convertors', {}).copy()
+        self._lazy = lazy
+        self._writable = writable
         
+        if lazy:
+            self._globals = self._env.copy()
+            
         if self._inifile:
             self.read(self._inifile)
         
@@ -227,7 +356,7 @@ class Ini(SortedDict):
     
     filename = property(get_filename, set_filename)
     
-    def read(self, fobj):
+    def read(self, fobj, filename=''):
         encoding = None
         
         if isinstance(fobj, (str, unicode)):
@@ -315,16 +444,22 @@ class Ini(SortedDict):
                     else:
                         f.seek(lastpos+end)
                         try:
-                            value = self.__read_line(f)
+                            value, iden_existed = self.__read_line(f)
                         except Exception, e:
-                            import traceback
-                            traceback.print_exc()
-                            raise Exception, "Parsing ini file error in line(%d): %s" % (lineno, line)
-                        try:
-                            txt = '#coding=%s\n%s' % (self._encoding, value)
-                            v = eval(txt, self._env, section)
-                        except Exception, e:
-                            raise Exception, "Converting value (%s) error in line %d:%s" % (value, lineno, line)
+                            print_exc()
+                            raise Exception, "Parsing ini file error in %s:%d:%s" % (filename or self._inifile, lineno, line)
+                        if self._lazy:
+                            if iden_existed:
+                                v = EvalValue(value, filename or self._inifile, lineno, line)
+                            else:
+                                v = value
+                        else:
+                            try:
+                                v = eval_value(value, self, self[sec_name], self._encoding)
+                            except Exception as e:
+                                print_exc()
+                                print dict(self)
+                                raise Exception("Converting value (%s) error in %s:%d:%s" % (value, filename or self._inifile, lineno, line))
                     section.add(keyname, v, comments, replace=replace_flag)
                     comments = []
             else:
@@ -344,6 +479,8 @@ class Ini(SortedDict):
         
         print >> f, '#coding=%s' % self._encoding
         for s in self.keys():
+            if s in self._env:
+                continue
             section = self[s]
             section.dumps(f, convertors=self._convertors)
             
@@ -355,6 +492,7 @@ class Ini(SortedDict):
         
         buf = []
         time = 0
+        iden_existed = False
         while 1:
             v = g.next()
             tokentype, t, start, end, line = v
@@ -362,8 +500,10 @@ class Ini(SortedDict):
                 continue
             if tokentype in (token.INDENT, token.DEDENT, tokenize.COMMENT):
                 continue
+            if tokentype == token.NAME:
+                iden_existed = True
             if tokentype == token.NEWLINE:
-                return ''.join(buf)
+                return ''.join(buf), iden_existed
             else:
                 if t == '=' and time == 0:
                     time += 1
@@ -382,7 +522,7 @@ class Ini(SortedDict):
         if sec_name in self:
             section = self[sec_name]
         else:
-            section = Section(sec_name, comments, self._encoding)
+            section = Section(sec_name, comments, self._encoding, root=self)
             self[sec_name] = section
         return section
     
@@ -391,6 +531,12 @@ class Ini(SortedDict):
         self.save(buf)
         return buf.getvalue()
     
+#    def keys(self):
+#        return [k for k in self._fields if k not in self._env]
+#
+#    def items(self):
+#        return [(k, self[k]) for k in self._fields if k not in self._env]
+        
     def get_var(self, key, default=None):
         obj = self
         for i in key.split('/', 1):
@@ -426,3 +572,17 @@ class Ini(SortedDict):
             flag = False
         
         return flag
+
+    def freeze(self):
+        self._lazy = False
+        for k, v in self.items():
+            if k in self._env:
+                continue
+            for _k, _v in v.items():
+                if isinstance(_v, Lazy):
+                    if self.writable:
+                        _v.get()
+                    else:
+                        v.__setitem__(_k, _v.get(), replace=True)
+                        del _v
+        del self._globals
