@@ -118,7 +118,7 @@ def test_gettext():
     >>> x['default'] = Section('default')
     >>> x.default.option = _('Hello')
     >>> x.keys()
-    ['_', 'gettext_lazy', 'default']
+    ['set', '_', 'gettext_lazy', 'default']
     """
     
 def test_replace():
@@ -400,6 +400,30 @@ def test_chinese():
     >>> print repr(x.other.x1)
     u'\u4e2d\u6587 \u4e2d\u6587'
     >>> x.keys()
-    ['_', 'gettext_lazy', 'default', 'other']
+    ['set', '_', 'gettext_lazy', 'default', 'other']
     """
 
+def test_set():
+    """
+    >>> from StringIO import StringIO
+    >>> x = Ini()
+    >>> buf = StringIO(\"\"\"#coding=utf-8
+    ... [default]
+    ... set1 = {1,2,3}
+    ... set2 = set([1,2,3])
+    ... \"\"\")
+    >>> x.read(buf)
+    >>> print x
+    #coding=utf-8
+    [default]
+    set1 = set([1, 2, 3])
+    set2 = set([1, 2, 3])
+    <BLANKLINE>
+    >>> buf2 = StringIO(\"\"\"#coding=utf-8
+    ... [default]
+    ... set1 = {5,3}
+    ... \"\"\")
+    >>> x.read(buf2)
+    >>> print x.default.set1
+    set([1, 2, 3, 5])
+    """

@@ -331,11 +331,11 @@ class Ini(SortedDict):
         env=None, convertors=None, lazy=False, writable=False):
         super(Ini, self).__init__()
         self._inifile = inifile
-#        self.value = value
         self._commentchar = commentchar or __default_env__.get('commentchar', '#')
         self._encoding = encoding or __default_env__.get('encoding', 'utf-8')
         self._env = __default_env__.get('env', {}).copy()
         self._env.update(env or {})
+        self._env['set'] = set
         self.update(self._env)
         self._globals = SortedDict()
         self._convertors = convertors or __default_env__.get('convertors', {}).copy()
@@ -437,6 +437,10 @@ class Ini(SortedDict):
                         replace_flag = False
                         
                     keyname = line[:begin].strip()
+                    #check keyname
+                    if keyname in self._env:
+                        raise KeyError("Settings key %s is alread defined in env, please change it's name" % keyname)
+                    
                     rest = line[end:].strip()
                     #if key= then value will be set ''
                     if rest == '':
