@@ -348,6 +348,7 @@ def test_multiple_read():
     ... option = default.option
     ... option1 = '{{option}} xxx'
     ... option2 = '{{default.option}}'
+    ... option3 = '{{other.option}}'
     ... \"\"\")
     >>> x.read(buf)
     >>> buf1 = StringIO(\"\"\"
@@ -365,6 +366,7 @@ def test_multiple_read():
     option = 'hello'
     option1 = 'hello xxx'
     option2 = 'hello'
+    option3 = 'hello'
     <BLANKLINE>
     """
 
