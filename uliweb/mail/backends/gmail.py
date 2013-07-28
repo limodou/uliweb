@@ -1,5 +1,5 @@
 import smtplib
-from smtp import MailConnection as SmtpMailConnection
+from .smtp import MailConnection as SmtpMailConnection
 
 class MailConnection(SmtpMailConnection):
     def login(self):

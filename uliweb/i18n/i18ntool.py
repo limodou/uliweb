@@ -3,6 +3,7 @@ from optparse import make_option
 from uliweb.core import SimpleFrame
 from uliweb.utils.common import pkg
 from uliweb.core.commands import Command
+import six
 
 #def getfiles(path):
 #    files_list = []
@@ -23,8 +24,8 @@ def _get_outputfile(path, locale='en'):
     return output
 
 def _process(path, locale, options):
-    from pygettext import extrace_files
-    from po_merge import merge
+    from .pygettext import extrace_files
+    from .po_merge import merge
     from uliweb.utils import pyini
 
     output = _get_outputfile(path, locale=locale)
@@ -43,7 +44,7 @@ def _process(path, locale, options):
         vars['Plural_Forms'] = x.get_var('I18N/Plural_Forms', 'nplurals=1; plural=0;')
         
         extrace_files(path, output, {'verbose':options['verbose']}, vars=vars)
-        print 'Success! output file is %s' % output
+        six.print_('Success! output file is %s' % output)
         merge(output[:-4]+'.po', output, options['exact'])
     except:
         raise
@@ -85,7 +86,7 @@ class I18nCommand(Command):
             for appname in _apps:
                 path = SimpleFrame.get_app_dir(appname)
                 if global_options.verbose:
-                    print 'Processing... app=>[%s] path=>[%s]' % (appname, path)
+                    six.print_('Processing... app=>[%s] path=>[%s]' % (appname, path))
                 _process(path, options.locale, opts)
         elif options.uliweb:
             path = pkg.resource_filename('uliweb', '')

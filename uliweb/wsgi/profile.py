@@ -1,7 +1,7 @@
 import os, sys
 import hotshot
 import hotshot.stats
-from cStringIO import StringIO
+from six.moves import cStringIO
 
 PROFILE_DATA_DIR = "./profile"
 class ProfileApplication(object):
@@ -9,7 +9,7 @@ class ProfileApplication(object):
         self.path = path = PROFILE_DATA_DIR
         if not os.path.exists(path):
             os.makedirs(path)
-            os.chmod(path, 0755)
+            os.chmod(path, 493)
         self.app = app
         
     def __call__(self, environ, start_response):

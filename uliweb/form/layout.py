@@ -1,5 +1,7 @@
-from __future__ import with_statement
+
 from uliweb.i18n import gettext_lazy as _
+import six
+from functools import reduce
 
 __all__ = ['Layout', 'TableLayout', 'CSSLayout', 'YamlLayout',
     'BootstrapLayout', 'BootstrapTableLayout']
@@ -87,18 +89,18 @@ class TableLayout(Layout):
     def line(self, fields, n):
         _x = 0
         for _f in fields:
-            if isinstance(_f, (str, unicode)):
+            if isinstance(_f, six.string_types):
                 _x += 1
             elif isinstance(_f, dict):
                 _x += _f.get('colspan', 1)
             else:
-                raise Exception, 'Colume definition is not right, only support string or dict'
+                raise Exception('Colume definition is not right, only support string or dict')
 
         tr = Tag('tr', newline=True)
         with tr:
             for x in fields:
                 _span = n / _x
-                if isinstance(x, (str, unicode)):
+                if isinstance(x, six.string_types):
                     name = x
                 elif isinstance(x, dict):
                     name = x['name']
@@ -153,12 +155,12 @@ class TableLayout(Layout):
                 if isinstance(line, (tuple, list)):
                     _x = 0
                     for f in line:
-                        if isinstance(f, (str, unicode)):
+                        if isinstance(f, six.string_types):
                             _x += 1
                         elif isinstance(f, dict):
                             _x += f.get('colspan', 1)
                         else:
-                            raise Exception, 'Colume definition is not right, only support string or dict'
+                            raise Exception('Colume definition is not right, only support string or dict')
                     m.append(_x)
                 else:
                     m.append(1)
@@ -174,7 +176,7 @@ class TableLayout(Layout):
         cls = self.table_class
         for fields in self.layout:
             if not isinstance(fields, (tuple, list)):
-                if isinstance(fields, (str, unicode)) and fields.startswith('--') and fields.endswith('--'):
+                if isinstance(fields, six.string_types) and fields.startswith('--') and fields.endswith('--'):
                     #THis is a group line
                     if table:
                         buf << '</tbody></table>'
@@ -219,18 +221,18 @@ class BootstrapTableLayout(TableLayout):
     def line(self, fields, n):
         _x = 0
         for _f in fields:
-            if isinstance(_f, (str, unicode)):
+            if isinstance(_f, six.string_types):
                 _x += 1
             elif isinstance(_f, dict):
                 _x += _f.get('colspan', 1)
             else:
-                raise Exception, 'Colume definition is not right, only support string or dict'
+                raise Exception('Colume definition is not right, only support string or dict')
 
         tr = Tag('tr', newline=True)
         with tr:
             for x in fields:
                 _span = n / _x
-                if isinstance(x, (str, unicode)):
+                if isinstance(x, six.string_types):
                     name = x
                 elif isinstance(x, dict):
                     name = x['name']
@@ -386,7 +388,7 @@ class QueryLayout(Layout):
                     for line in layout:
                         output(buf, line)
 
-from widgets import RadioSelect, Radio
+from .widgets import RadioSelect, Radio
 
 class YamlRadioSelect(RadioSelect):
     def html(self):

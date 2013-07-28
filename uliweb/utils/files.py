@@ -1,7 +1,8 @@
 #coding=utf-8
 import os
 import sys
-from common import log
+from .common import log
+import six
 
 def save_file(fname, fobj, replace=False, buffer_size=4096):
     assert hasattr(fobj, 'read'), "fobj parameter should be a file-like object"
@@ -9,7 +10,7 @@ def save_file(fname, fobj, replace=False, buffer_size=4096):
     if not os.path.exists(path):
         try:
             os.makedirs(path)
-        except Exception, e:
+        except Exception as e:
             log.exception(e)
             raise Exception("Can't create %s directory" % path)
     
@@ -37,10 +38,10 @@ def save_file(fname, fobj, replace=False, buffer_size=4096):
         
 def unicode_filename(filename, encoding=None):
     encoding = encoding or sys.getfilesystemencoding()
-    if isinstance(filename, unicode):
+    if isinstance(filename, six.text_type):
         return filename
     else:
-        return unicode(filename, encoding)
+        return six.text_type(filename, encoding)
     
 def encode_filename(filename, from_encoding='utf-8', to_encoding=None):
     """
@@ -60,14 +61,14 @@ def encode_filename(filename, from_encoding='utf-8', to_encoding=None):
     import sys
     to_encoding = to_encoding or sys.getfilesystemencoding()
     from_encoding = from_encoding or sys.getfilesystemencoding()
-    if not isinstance(filename, unicode):
+    if not isinstance(filename, six.text_type):
         try:
-            f = unicode(filename, from_encoding)
+            f = six.text_type(filename, from_encoding)
         except UnicodeDecodeError:
             try:
-                f = unicode(filename, 'utf-8')
+                f = six.text_type(filename, 'utf-8')
             except UnicodeDecodeError:
-                raise Exception, "Unknown encoding of the filename %s" % filename
+                raise Exception("Unknown encoding of the filename %s" % filename)
         filename = f
     if to_encoding:
         return filename.encode(to_encoding)

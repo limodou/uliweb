@@ -13,16 +13,17 @@ from email.MIMEAudio import MIMEAudio
 from email.MIMEImage import MIMEImage
 from email.Encoders import encode_base64
 from email.header import Header
+import six
 
 class BaseMailConnection(object):
     def __init__(self, mail_obj):
         self.mail_obj = self.mail_obj
         
     def get_connection(self, mail_obj):
-        raise NotImplementedError, "This function is not implemented yet"
+        raise NotImplementedError("This function is not implemented yet")
 
     def send_mail(self, from_, to_, message):
-        raise NotImplementedError, "This function is not implemented yet"
+        raise NotImplementedError("This function is not implemented yet")
     
     def close(self):
         pass
@@ -98,7 +99,7 @@ class Mail(object):
         
     def send_mail(self, from_, to_, subject, message, html=False, attachments=None):
         #process to_
-        if isinstance(to_, (str, unicode)):
+        if isinstance(to_, six.string_types):
             send_to = to_.split(',')
         elif isinstance(to_, (tuple, list)):
             send_to = to_

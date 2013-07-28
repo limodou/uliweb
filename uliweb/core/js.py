@@ -1,6 +1,7 @@
 import re
 import datetime
 import decimal
+import six
 
 ESCAPE = re.compile(r'[\x00-\x1f\\"\b\f\n\r\t]')
 ESCAPE_DCT = {
@@ -32,7 +33,7 @@ def encode_unicode(s):
 def simple_value(v):
     from uliweb.i18n.lazystr import LazyString
     
-    if callable(v):
+    if six.callable(v):
         v = v()
     if isinstance(v, LazyString) or isinstance(v, decimal.Decimal) or isinstance(v, datetime.datetime):
         return str(v)
@@ -40,9 +41,9 @@ def simple_value(v):
         return v
 
 class JSONEncoder(object):
-    def __init__(self, encoding='utf-8', unicode=False, default=None):
+    def __init__(self, encoding='utf-8', use_unicode=False, default=None):
         self.encoding = encoding
-        self.unicode = unicode
+        self.use_unicode = use_unicode
         self.default = default
         
     def iterencode(self, obj, key=False):
@@ -50,12 +51,12 @@ class JSONEncoder(object):
             x = self.default(obj)
             obj = x
         if isinstance(obj, str):
-            if self.unicode:
-                yield encode_unicode(unicode(obj, self.encoding))
+            if self.use_unicode:
+                yield encode_unicode(six.text_type(obj, self.encoding))
             else:
                 yield encode_basestring(obj)
-        elif isinstance(obj, unicode):
-            if self.unicode:
+        elif isinstance(obj, six.text_type):
+            if self.use_unicode:
                 yield encode_unicode(obj)
             else:
                 yield encode_basestring(obj.encode(self.encoding))
@@ -65,7 +66,7 @@ class JSONEncoder(object):
             yield 'true'
         elif obj is False:
             yield 'false'
-        elif isinstance(obj, (int, long)):
+        elif isinstance(obj, six.integer_types):
             if key:
                 yield '"' + str(obj) + '"'
             else:
@@ -88,7 +89,7 @@ class JSONEncoder(object):
         elif isinstance(obj, dict):
             yield '{'
             first = True
-            for k, v in obj.iteritems():
+            for k, v in six.iteritems(obj):
                 if not first:
                     yield ','
                 for x in self.iterencode(k, key=True):
@@ -112,6 +113,6 @@ class JSONEncoder(object):
     def encode(self, obj):
         return ''.join(self.iterencode(obj))
     
-def json_dumps(obj, unicode=False, **kwargs):
-    return JSONEncoder(unicode=unicode, default=simple_value, **kwargs).encode(obj)
+def json_dumps(obj, use_unicode=False, **kwargs):
+    return JSONEncoder(use_unicode=use_unicode, default=simple_value, **kwargs).encode(obj)
 

@@ -1,4 +1,4 @@
-from base import BaseStorage, KeyError
+from .base import BaseStorage, KeyError
 import time
 
 import sqlalchemy as sa
@@ -22,7 +22,7 @@ class Storage(BaseStorage):
             if self._is_not_expiry(result['stored_time'], result['expiry_time']):
                 value = self._load(result['data'])
                 return value
-        raise KeyError, "Cache key [%s] not found" % key
+        raise KeyError("Cache key [%s] not found" % key)
     
     def set(self, key, value, expire):
 

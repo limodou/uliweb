@@ -1,6 +1,6 @@
-from __future__ import with_statement
 
-from layout import Layout
+
+from .layout import Layout
 from uliweb.core import uaml
 from uliweb.core.html import Tag, begin_tag, end_tag, u_str
 

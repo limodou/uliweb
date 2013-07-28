@@ -1,4 +1,5 @@
-from base import BaseStorage, KeyError
+from .base import BaseStorage, KeyError
+import six
 
 class Error(Exception):pass
 
@@ -22,16 +23,16 @@ class Storage(BaseStorage):
         because memcached does not provide a function to check if a key is existed
         so here is a heck way, if the value is None, then raise Exception
         """
-        if isinstance(key, unicode):
+        if isinstance(key, six.text_type):
             key = key.encode('utf-8')
         v = self.client.get(key)
         if v is None:
-            raise KeyError, "Cache key [%s] not found" % key
+            raise KeyError("Cache key [%s] not found" % key)
         else:
             return v
     
     def set(self, key, value, expiry_time):
-        if isinstance(key, unicode):
+        if isinstance(key, six.text_type):
             key = key.encode('utf-8')
         return self.client.set(key, value, expiry_time)
     
@@ -43,7 +44,7 @@ class Storage(BaseStorage):
             v = self.get(key)
         except KeyError:
             v = None
-        if v and isinstance(v, (int, long)):
+        if v and isinstance(v, six.integer_types):
             return self.client.incr(key, step)
         else:
             self.set(key, step, expiry_time)
@@ -54,7 +55,7 @@ class Storage(BaseStorage):
             v = self.get(key)
         except KeyError:
             v = None
-        if v and isinstance(v, (int, long)):
+        if v and isinstance(v, six.integer_types):
             return self.client.decr(key, step)
         else:
             self.set(key, 0, expiry_time)

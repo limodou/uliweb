@@ -1,6 +1,7 @@
 #coding=utf-8
 import re
 import cgi
+import six
 
 re_string_html = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)|(?P<protocal>(^|\s*)(http|ftp|https)://[\w\-\.,@?^=%&:/~\+#]+)', re.S|re.M|re.I)
 re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)', re.S|re.M|re.I)
@@ -35,5 +36,5 @@ if __name__ == '__main__':
     "UliPad <<The Python Editor>>: http://code.google.com/p/ulipad/\r\n"
     "UliWeb <<simple web framework>>: http://uliwebproject.appspot.com\r\n"
     "My Blog: http://hi.baidu.com/limodou")
-    print text2html(text)
+    six.print_(text2html(text))
     

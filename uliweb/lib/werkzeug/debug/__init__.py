@@ -17,6 +17,7 @@ from werkzeug.debug.render import debug_page, load_resource
 from werkzeug.debug.util import ThreadedStream, Namespace, get_uid, \
      get_frame_info, ExceptionRepr
 from werkzeug.urls import url_decode
+import six
 
 
 try:
@@ -62,7 +63,7 @@ class DebuggedApplication(object):
                 return
             # pastebin
             elif parameters.get('pastetb'):
-                from xmlrpclib import ServerProxy
+                from xmlrpc.client import ServerProxy
                 try:
                     length = int(environ['CONTENT_LENGTH'])
                 except (KeyError, ValueError):
@@ -97,7 +98,7 @@ class DebuggedApplication(object):
             appiter = self.application(environ, start_response)
             for line in appiter:
                 yield line
-        except system_exceptions, e:
+        except system_exceptions as e:
             raise e
         except:
             if self.evalex:
@@ -174,7 +175,7 @@ class DebuggedApplication(object):
 
         # finialize plain traceback and write it to stderr
         try:
-            if isinstance(exception_value, unicode):
+            if isinstance(exception_value, six.text_type):
                 exception_value = exception_value.encode('utf-8')
             else:
                 exception_value = str(exception_value)
@@ -198,7 +199,7 @@ class DebuggedApplication(object):
                         continue
                     try:
                         value = getattr(request, varname)
-                    except Exception, err:
+                    except Exception as err:
                         value = ExceptionRepr(err)
                     if not hasattr(value, 'im_func'):
                         req_vars.append((varname, value))
@@ -232,7 +233,7 @@ class InteractiveDebugger(code.InteractiveInterpreter):
         self.buffer = []
 
     def runsource(self, source):
-        if isinstance(source, unicode):
+        if isinstance(source, six.text_type):
             source = source.encode('utf-8')
         source = source.rstrip() + '\n'
         ThreadedStream.push()
@@ -251,7 +252,7 @@ class InteractiveDebugger(code.InteractiveInterpreter):
 
     def runcode(self, code):
         try:
-            exec code in self.globals, self.locals
+            six.exec_(code, self.globals, self.locals)
         except:
             self.write(self.middleware.format_exception(sys.exc_info()))
 
@@ -260,6 +261,6 @@ class InteractiveDebugger(code.InteractiveInterpreter):
 
     def exec_expr(self, code):
         rv = self.runsource(code)
-        if isinstance(rv, unicode):
+        if isinstance(rv, six.text_type):
             return rv.encode('utf-8')
         return rv

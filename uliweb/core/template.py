@@ -3,8 +3,9 @@
 
 import re
 import os
-import StringIO
+from six.moves import StringIO
 import cgi
+import six
 
 __templates_temp_dir__ = 'tmp/templates_temp'
 __options__ = {'use_temp_dir':False}
@@ -141,7 +142,7 @@ def eval_vars(vs, vars, env):
     if isinstance(vs, (tuple, list)):
         return [eval_vars(x, vars, env) for x in vs]
     elif isinstance(vs, dict):
-        return dict([(x, eval_vars(y, vars, env)) for x, y in vs.iteritems()])
+        return dict([(x, eval_vars(y, vars, env)) for x, y in six.iteritems(vs)])
     else:
         return eval(vs, env, vars)
 
@@ -368,9 +369,9 @@ class Out(object):
         self.buf = StringIO.StringIO()
         
     def _str(self, text):
-        if not isinstance(text, (str, unicode)):
+        if not isinstance(text, six.string_types):
             text = str(text)
-        if isinstance(text, unicode):
+        if isinstance(text, six.text_type):
             return text.encode(self.encoding)
         else:
             return text
@@ -419,7 +420,7 @@ class Template(object):
         self.end_tag = end_tag or END_TAG
         self.see = see #will used to track the derive relation of templates
         
-        for k, v in __nodes__.iteritems():
+        for k, v in six.iteritems(__nodes__):
             if hasattr(v, 'init'):
                 v.init(self)
         
@@ -436,7 +437,7 @@ class Template(object):
     def set_filename(self, filename):
         fname = get_templatefile(filename, self.dirs, self.default_template)
         if not fname:
-            raise TemplateException, "Can't find the template %s" % filename
+            raise TemplateException("Can't find the template %s" % filename)
         self.filename = fname
         self.original_filename = filename
     
@@ -460,7 +461,7 @@ class Template(object):
         for i in get_tag(self.begin_tag, self.end_tag).split(text):
             if i:
                 if len(self.stack) == 0:
-                    raise TemplateException, "The 'end' tag is unmatched, please check if you have more '{{end}}'"
+                    raise TemplateException("The 'end' tag is unmatched, please check if you have more '{{end}}'")
                 top = self.stack[-1]
                 #process multiline comment
                 if i.startswith(self.begin_tag+'##'):
@@ -586,7 +587,7 @@ class Template(object):
             self.env.update(kwargs)
             fname = get_templatefile(filename, self.dirs, skip=self.filename, skip_original=self.original_filename)
             if not fname:
-                raise TemplateException, "Can't find the template %s" % filename
+                raise TemplateException("Can't find the template %s" % filename)
             
             self.depend_files.append(fname)
             
@@ -617,7 +618,7 @@ class Template(object):
             self.env.update(kwargs)
             fname = get_templatefile(filename, self.dirs, skip=self.filename, skip_original=self.original_filename)
             if not fname:
-                raise TemplateException, "Can't find the template %s" % filename
+                raise TemplateException("Can't find the template %s" % filename)
             
             self.depend_files.append(fname)
             
@@ -727,12 +728,12 @@ class Template(object):
         
         e.update(self.exec_env)
         
-        if isinstance(code, (str, unicode)):
+        if isinstance(code, six.string_types):
             if self.compile:
                 code = self.compile(code, filename, 'exec', e)
             else:
                 code = compile(code, filename, 'exec')
-        exec code in e
+        six.exec_(code, e)
         text = out.getvalue()
         
         for f in self.callbacks:

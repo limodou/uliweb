@@ -3,13 +3,14 @@ import os
 import cgi
 import datetime
 import time
-from validators import *
+from .validators import *
 from uliweb.i18n import gettext_lazy as _
 from uliweb.core.html import Buf, Tag, begin_tag, u_str
-from widgets import *
-from layout import *
+from .widgets import *
+from .layout import *
 from uliweb.core.storage import Storage
 from uliweb.utils import date
+import six
 
 DEFAULT_FORM_CLASS = 'form'
 REQUIRED_CAPTION = '*'
@@ -37,7 +38,7 @@ class D(dict):
     def __getattr__(self, key): 
         try: 
             return self[key]
-        except KeyError, k: 
+        except KeyError as k: 
             return None
         
     def __setattr__(self, key, value): 
@@ -46,8 +47,8 @@ class D(dict):
     def __delattr__(self, key):
         try: 
             del self[key]
-        except KeyError, k: 
-            raise AttributeError, k
+        except KeyError as k: 
+            raise AttributeError(k)
 
 def check_reserved_word(f):
     if f in dir(Form):
@@ -237,11 +238,11 @@ class BaseField(object):
             if data.file:
                 v = data.filename
             else:
-                raise Exception, 'Unsupport type %s' % type(data)
+                raise Exception('Unsupport type %s' % type(data))
         else:
             v = data
 #        if v is None:
-        if not v or (isinstance(v, (str, unicode)) and not v.strip()):
+        if not v or (isinstance(v, six.string_types) and not v.strip()):
             if not self.required:
                 return True, self.default
 #                if self.default is not None:
@@ -259,7 +260,7 @@ class BaseField(object):
             else:
                 data = self.to_python(data)
         except:
-            return False, unicode(ERR_CONVERT) % (data, self.__class__.__name__)
+            return False, six.text_type(ERR_CONVERT) % (data, self.__class__.__name__)
         for v in self.default_validators + self.validators:
             msg = v(data)
             if msg:
@@ -295,7 +296,7 @@ class StringField(BaseField):
         """
         if data is None:
             return ''
-        if isinstance(data, unicode):
+        if isinstance(data, six.text_type):
             data = data.encode(DEFAULT_ENCODING)
         else:
             data = str(data)
@@ -311,10 +312,10 @@ class UnicodeField(BaseField):
         """
         if data is None:
             return u''
-        if isinstance(data, unicode):
+        if isinstance(data, six.text_type):
             return data
         else:
-            return unicode(data, DEFAULT_ENCODING)
+            return six.text_type(data, DEFAULT_ENCODING)
   
 class PasswordField(StringField):
     default_build = Password
@@ -368,8 +369,8 @@ class TextField(StringField):
             return ''
         if isinstance(data, self.datatype):
             return data
-        if self.datatype is unicode:
-            return unicode(data, DEFAULT_ENCODING)
+        if self.datatype is six.text_type:
+            return six.text_type(data, DEFAULT_ENCODING)
         else:
             return data.encode(DEFAULT_ENCODING)
     
@@ -461,7 +462,7 @@ class SelectField(BaseField):
 #        self.validators.append(IS_IN_SET(lambda :self.get_choices()))
 
     def get_choices(self):
-        if callable(self.choices):
+        if six.callable(self.choices):
             return self.choices()
         else:
             return self.choices
@@ -542,7 +543,7 @@ class _BaseDatetimeField(StringField):
         try:
             return getattr(date, self.time_func)(data, format=self.format)
         except ValueError:
-            raise Exception, _("The date is not a valid date format.")
+            raise Exception(_("The date is not a valid date format."))
     
     def to_html(self, data):
         if data:
@@ -568,7 +569,7 @@ class FormMetaclass(type):
         
         for base in bases[:1]:
             if hasattr(base, 'fields'):
-                for name, field in base.fields.iteritems():
+                for name, field in six.iteritems(base.fields):
                     cls.add_field(name, field)
         
         fields_list = [(k, v) for k, v in dct.items() if isinstance(v, BaseField)]
@@ -586,9 +587,8 @@ class FormBuild(object):
                 buf.append(str(t))
         return '\n'.join(buf)
     
+@six.patch_with_metaclass(FormMetaclass)
 class Form(object):
-
-    __metaclass__ = FormMetaclass
 
     layout_class = BootstrapLayout
     layout = None
@@ -657,11 +657,11 @@ class Form(object):
     def __init_validators(self):
         for k, obj in self.fields.items():
             func = getattr(self, 'validate_%s' % obj.field_name, None)
-            if func and callable(func):
+            if func and six.callable(func):
                 obj.validators.insert(0, func)
                 
         func = getattr(self, 'form_validate', None)
-        if func and callable(func):
+        if func and six.callable(func):
             self.validators.append(func)
 
     def validate(self, *data):
@@ -707,7 +707,7 @@ class Form(object):
             self.errors = {}
             self.data = result
             
-        for k, v in self.fields.iteritems():
+        for k, v in six.iteritems(self.fields):
             if v.static and k in old_data:
                 self.data[k] = old_data[k]
         return self.ok

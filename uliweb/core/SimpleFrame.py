@@ -12,10 +12,10 @@ from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, BadRequest
 from werkzeug.routing import Map
 
-import template
-from js import json_dumps
-from storage import Storage
-import dispatch
+from . import template
+from .js import json_dumps
+from .storage import Storage
+from . import dispatch
 from uliweb.utils.common import (pkg, log, import_attr, 
     myimport, wraps, norm_path)
 import uliweb.utils.pyini as pyini
@@ -24,7 +24,8 @@ from uliweb.utils.localproxy import LocalProxy, Global
 from uliweb import UliwebError
 
 #from rules import Mapping, add_rule
-import rules
+from . import rules
+import six
 
 try:
     set
@@ -68,7 +69,7 @@ class Finder(object):
         return obj
     
     def __setitem__(self, name, value):
-        if isinstance(value, (str, unicode)):
+        if isinstance(value, six.string_types):
             value = import_attr(value)
         self.__objects[name] = value
 
@@ -137,7 +138,7 @@ def json(data, **json_kwargs):
     if 'content_type' not in json_kwargs:
         json_kwargs['content_type'] = 'application/json; charset=utf-8'
         
-    if callable(data):
+    if six.callable(data):
         @wraps(data)
         def f(*arg, **kwargs):
             ret = data(*arg, **kwargs)
@@ -163,7 +164,7 @@ def jsonp(data, **json_kwargs):
     if not r_callback.match(begin):
         raise BadRequest("The callback name is not right, it can be alphabetic, number and underscore only")
     
-    if callable(data):
+    if six.callable(data):
         @wraps(data)
         def f(*arg, **kwargs):
             ret = data(*arg, **kwargs)
@@ -199,16 +200,11 @@ def get_url_adapter(_domain_name):
     return adapter
 
 def url_for(endpoint, **values):
-    if inspect.isfunction(endpoint):
-        point = endpoint.__module__ + '.' + endpoint.__name__
-    elif inspect.ismethod(endpoint):
-        if not endpoint.im_self:    #instance method
-            clsname = endpoint.im_class.__name__
-        else:                       #class method
-            clsname = endpoint.im_self.__name__
-        point = '.'.join([endpoint.__module__, clsname, endpoint.__name__])
+    
+    if inspect.isfunction(endpoint) or inspect.ismethod(endpoint):
+        point = rules.get_function_path(endpoint)
     else:
-        if isinstance(endpoint, (str, unicode)):
+        if isinstance(endpoint, six.string_types):
             #if the endpoint is string format, then find and replace
             #the module prefix with app alias which matched
             for k, v in __app_alias__.items():
@@ -237,7 +233,7 @@ def get_app_dir(app):
         p = app.split('.')
         try:
             path = pkg.resource_filename(p[0], '')
-        except ImportError, e:
+        except ImportError as e:
             log.error("Can't import app %s" % p[0])
             log.exception(e)
             path = ''
@@ -539,7 +535,7 @@ class Dispatcher(object):
                 log.addHandler(_handler)
                 
     def process_domains(self, settings):
-        from urlparse import urlparse
+        from six.moves.urllib.parse import urlparse
 
         Dispatcher.domains = {}
         
@@ -651,37 +647,17 @@ class Dispatcher(object):
         return e
     
     def prepare_request(self, request, rule):
-        from uliweb.utils.common import safe_import
+        from uliweb.utils.common import import_handler
 
         endpoint = rule.endpoint
         #bind endpoint to request
         request.rule = rule
         #get handler
         _klass = None
-        if isinstance(endpoint, (str, unicode)):
-            mod, handler = safe_import(endpoint)
-            if inspect.ismethod(handler):
-                if not handler.im_self:    #instance method
-                    _klass = handler.im_class()
-                else:                       #class method
-                    _klass = handler.im_self()
-                #if _klass is class method, then the mod should be Class
-                #so the real mod should be mod.__module__
-                mod = sys.modules[mod.__module__]
-                
-#            module, func = endpoint.rsplit('.', 1)
-#            #if the module contains a class name, then import the class
-#            #it set by expose()
-#            x, last = module.rsplit('.', 1)
-#            if last.startswith('views'):
-#                mod = __import__(module, {}, {}, [''])
-#                handler = getattr(mod, func)
-#            else:
-#                module = x
-#                mod = __import__(module, {}, {}, [''])
-#                _klass = getattr(mod, last)()
-#                handler = getattr(_klass, func)
-        elif callable(endpoint):
+        if isinstance(endpoint, six.string_types):
+            mod, _klass, handler = import_handler(endpoint)
+            mod = sys.modules[mod.__name__]
+        elif six.callable(endpoint):
             handler = endpoint
             mod = sys.modules[handler.__module__]
         
@@ -693,11 +669,13 @@ class Dispatcher(object):
                 break
         request.function = handler.__name__
         if _klass:
-            request.view_class = _klass.__class__.__name__
-            handler = getattr(_klass, handler.__name__)
+            cls_inst = _klass()
+            request.view_class = _klass.__name__
+            handler = getattr(cls_inst, handler.__name__)
         else:
+            cls_inst = None
             request.view_class = None
-        return mod, _klass, handler
+        return mod, cls_inst, handler
     
     def call_view(self, mod, cls, handler, request, response=None, wrap_result=None, args=None, kwargs=None):
         import types
@@ -797,7 +775,7 @@ class Dispatcher(object):
             else:
                 d = None
             response.write(self.template(tmpfile, result, env, default_template=d))
-        elif isinstance(result, (str, unicode)):
+        elif isinstance(result, six.string_types):
             response.write(result)
         elif isinstance(result, (Response, BaseResponse)):
             response = result
@@ -830,9 +808,9 @@ class Dispatcher(object):
     def _call_function(self, handler, request, response, env, args=None, kwargs=None):
         
         for k, v in env.items():
-            handler.func_globals[k] = v
+            handler.__globals__[k] = v
         
-        handler.func_globals['env'] = env
+        handler.__globals__['env'] = env
         
         args = args or ()
         kwargs = kwargs or {}
@@ -902,7 +880,7 @@ class Dispatcher(object):
         for v in views:
             try:
                 myimport(v)
-            except Exception, e:
+            except Exception as e:
                 log.exception(e)
          
     def init_urls(self):
@@ -922,9 +900,9 @@ class Dispatcher(object):
         for p in self.apps:
             try:
                 myimport(p)
-            except ImportError, e:
+            except ImportError as e:
                 pass
-            except BaseException, e:
+            except BaseException as e:
                 log.exception(e)
             
     def install_template_processors(self):
@@ -973,7 +951,7 @@ class Dispatcher(object):
                         dispatch.bind(args[0], **args[2])(args[1])
                 else:
                     is_wrong = True
-            elif isinstance(args, (str, unicode)):
+            elif isinstance(args, six.string_types):
                 dispatch.bind(args)(bind_name)
             else:
                 is_wrong = True
@@ -1001,7 +979,7 @@ class Dispatcher(object):
                         expose(args[0], name=name, **args[2])(args[1])
                 else:
                     is_wrong = True
-            elif isinstance(args, (str, unicode)):
+            elif isinstance(args, six.string_types):
                 expose(args)(name)
             else:
                 is_wrong = True
@@ -1037,7 +1015,7 @@ class Dispatcher(object):
                 order = getattr(cls, 'ORDER', 500)
             m.append((order, cls))
         
-        m.sort(cmp=lambda x, y: cmp(x[0], y[0]))
+        m.sort(key=lambda x: x[0])
             
         return [x[1] for x in m]
     
@@ -1124,7 +1102,7 @@ class Dispatcher(object):
                                 response = e.get_response()
                         if post_call:
                             response = post_call(req, response)
-                    except Exception, e:
+                    except Exception as e:
                         for cls in reversed(middlewares):
                             if hasattr(cls, 'process_exception'):
                                 ins = _inss.get(cls)
@@ -1152,13 +1130,13 @@ class Dispatcher(object):
                 
             #endif
             
-        except HTTPError, e:
+        except HTTPError as e:
             response = self.render(e.errorpage, Storage(e.errors))
-        except NotFound, e:
+        except NotFound as e:
             response = self.not_found(e)
-        except HTTPException, e:
+        except HTTPException as e:
             response = e
-        except Exception, e:
+        except Exception as e:
             if not self.settings.get_var('GLOBAL/DEBUG'):
                 response = self.internal_error(e)
             else:

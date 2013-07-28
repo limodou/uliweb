@@ -10,7 +10,8 @@ import threading
 import locale
 from uliweb.utils.common import safe_unicode
 
-from lazystr import lazy, LazyString
+from .lazystr import lazy, LazyString
+import six
 
 def lazystr_convertor(v):
     from uliweb.utils.pyini import uni_prt
@@ -114,13 +115,13 @@ def translation(domain, localedir=None, languages=None,
     
     return result
 
-def install(domain, localedir=None, unicode=True, codeset='utf-8', names=None):
+def install(domain, localedir=None, use_unicode=True, codeset='utf-8', names=None):
     global _domain, _localedir
     _domain = domain
     _localedir = localedir
     
-    import __builtin__
-    __builtin__.__dict__['_'] = unicode and ugettext_lazy or gettext_lazy
+    from six.moves import builtins
+    builtins.__dict__['_'] = use_unicode and ugettext_lazy or gettext_lazy
     
 def dgettext(domain, message):
     try:

@@ -4,15 +4,16 @@
 # storage class will ensure the sync when load and save a session from 
 # and to the storage.
 #########################################################################
-import cPickle
-from backends.base import KeyError
+from six.moves import cPickle
+from .backends.base import KeyError
 import json
+import six
 
 __modules__ = {}
 
 def wrap_func(des, src):
     des.__name__ = src.__name__
-    des.func_globals.update(src.func_globals)
+    six.get_function_globals(des).update(six.get_function_globals(src))
     des.__doc__ = src.__doc__
     des.__module__ = src.__module__
     des.__dict__.update(src.__dict__)
@@ -78,9 +79,9 @@ class Cache(object):
         """
         try:
             return self.storage.get(key)
-        except KeyError, e:
+        except KeyError as e:
             if creator is not Empty:
-                if callable(creator):
+                if six.callable(creator):
                     v = creator()
                 else:
                     v = creator
@@ -88,7 +89,7 @@ class Cache(object):
                 return v
             else:
                 if default is not Empty:
-                    if callable(default):
+                    if six.callable(default):
                         v = default()
                         return v
                     return default
@@ -96,7 +97,7 @@ class Cache(object):
                     raise
             
     def set(self, key, value=None, expire=None):
-        if callable(value):
+        if six.callable(value):
             value = value()
         return self.storage.set(key, value, expire or self.expiry_time)
         
@@ -107,7 +108,7 @@ class Cache(object):
         return self.get(key)
     
     def __setitem__(self, key, value):
-        if callable(value):
+        if six.callable(value):
             value = value()
         return self.set(key, value)
     

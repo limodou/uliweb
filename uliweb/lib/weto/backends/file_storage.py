@@ -1,7 +1,8 @@
 import os
 import time
-from base import BaseStorage, KeyError
+from .base import BaseStorage, KeyError
 import weto.lockfile as lockfile
+import six
 
 try:
     from hashlib import md5
@@ -9,7 +10,7 @@ except ImportError:
     from md5 import md5
     
 def _get_key(key):
-    if isinstance(key, unicode):
+    if isinstance(key, six.text_type):
         key = key.encode('ascii', 'backslashreplace')
     
     return md5(key).hexdigest()
@@ -40,7 +41,7 @@ class Storage(BaseStorage):
         key = _get_key(_key)
         _file = self._get_file(key)
         if not os.path.exists(_file):
-            raise KeyError, "Cache key [%s] not found" % _key
+            raise KeyError("Cache key [%s] not found" % _key)
             
         lock = self._get_lock(key)
         try:
@@ -50,7 +51,7 @@ class Storage(BaseStorage):
                 stored_time, expiry_time, value = ret
                 if self._is_not_expiry(stored_time, expiry_time):
                     return value
-            raise KeyError, "Cache key [%s] not found" % _key
+            raise KeyError("Cache key [%s] not found" % _key)
         finally:
             lock.close()
     

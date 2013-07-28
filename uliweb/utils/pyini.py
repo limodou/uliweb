@@ -17,13 +17,14 @@
 import sys, os
 import re
 import codecs
-import StringIO
+from six import StringIO, b
 import locale
 import copy
 import tokenize
 import token
-from sorteddict import SortedDict
+from .sorteddict import SortedDict
 from traceback import print_exc
+import six
 
 __all__ = ['SortedDict', 'Section', 'Ini', 'uni_prt']
 
@@ -45,7 +46,7 @@ except:
     defaultencoding = 'UTF-8'
 
 r_encoding = re.compile(r'\s*coding\s*[=:]\s*([-\w.]+)')
-r_var = re.compile(ur'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})', re.U)
+r_var = re.compile(r'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})', re.U)
 __default_env__ = {}
 
 def set_env(env=None):
@@ -140,7 +141,7 @@ def uni_prt(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
         for i in escapechars:
             t = t.replace(i[0], i[1])
         s.append("'%s'" % t)
-    elif isinstance(a, unicode):
+    elif isinstance(a, six.text_type):
         t = a
         for i in escapechars:
             t = t.replace(i[0], i[1])
@@ -167,11 +168,11 @@ def eval_value(value, globals, locals, encoding):
         try:
             v = eval_value(str(txt), globals, locals, encoding)
             _type = type(txt)
-            if not isinstance(v, (str, unicode)):
+            if not isinstance(v, six.string_types):
                 v = _type(v)
             elif not isinstance(v, _type):
-                if _type is unicode:
-                    v = unicode(v, encoding)
+                if _type is six.text_type:
+                    v = six.text_type(v, encoding)
                 else:
                     v = v.encode(encoding)
         except:
@@ -179,7 +180,7 @@ def eval_value(value, globals, locals, encoding):
             v = m.group()
         return v
     
-    if isinstance(result, (str, unicode)):
+    if isinstance(result, six.string_types):
         result = r_var.sub(sub_, result)
     return result
     
@@ -306,12 +307,12 @@ class Section(SortedDict):
         
     def dumps(self, out, convertors=None):
         if self._comments:
-            print >> out, '\n'.join(self._comments)
-        print >> out, '[%s]' % self._name
+            six.print_('\n'.join(self._comments), file=out)
+        six.print_('[%s]' % self._name, file=out)
         for f in self.keys():
             comments = self.comment(f)
             if comments:
-                print >> out, '\n'.join(comments)
+                six.print_('\n'.join(comments), file=out)
             if self._field_flag.get(f, False):
                 op = ' <= '
             else:
@@ -319,7 +320,7 @@ class Section(SortedDict):
             buf = f + op + uni_prt(self[f], self._encoding, convertors=convertors)
             if len(buf) > 79:
                 buf = f + op + uni_prt(self[f], self._encoding, True, convertors=convertors)
-            print >> out, buf
+            six.print_(buf, file=out)
             
     def __delitem__(self, key):
         super(Section, self).__delitem__(key)
@@ -328,11 +329,11 @@ class Section(SortedDict):
     def __delattr__(self, key):
         try: 
             del self[key]
-        except KeyError, k: 
-            raise AttributeError, k
+        except KeyError as k: 
+            raise AttributeError(k)
     
     def __str__(self):     
-        buf = StringIO.StringIO()
+        buf = StringIO()
         self.dumps(buf)
         return buf.getvalue()
     
@@ -374,14 +375,14 @@ class Ini(SortedDict):
     def read(self, fobj, filename=''):
         encoding = None
         
-        if isinstance(fobj, (str, unicode)):
+        if isinstance(fobj, six.string_types):
             f = open(fobj, 'rb')
             text = f.read()
             f.close()
         else:
             text = fobj.read()
             
-        text = text + '\n'
+        text = text + b('\n')
         begin = 0
         if text.startswith(codecs.BOM_UTF8):
             begin = 3
@@ -392,14 +393,17 @@ class Ini(SortedDict):
             
         if not encoding:
             try:
-                unicode(text, 'UTF-8')
+                six.text_type(text, 'UTF-8')
                 encoding = 'UTF-8'
             except:
                 encoding = defaultencoding
                 
         self._encoding = encoding
         
-        f = StringIO.StringIO(text)
+        if six.PY3:
+            text = text.decode(encoding)
+            
+        f = StringIO(text)
         f.seek(begin)
         lineno = 0
         comments = []
@@ -415,9 +419,9 @@ class Ini(SortedDict):
             if line:
                 if line.startswith(self._commentchar):
                     if lineno == 1: #first comment line
-                        b = r_encoding.search(line[1:])
-                        if b:
-                            self._encoding = b.groups()[0]
+                        r = r_encoding.search(line[1:])
+                        if r:
+                            self._encoding = r.groups()[0]
                             continue
                     comments.append(line)
                 elif line.startswith('[') and line.endswith(']'):
@@ -438,7 +442,7 @@ class Ini(SortedDict):
                     comments = []
                 elif '=' in line:
                     if section is None:
-                        raise Exception, "No section found, please define it first in %s file" % self.filename
+                        raise Exception("No section found, please define it first in %s file" % self.filename)
 
                     #if find <=, then it'll replace the old value for mutable variables
                     #because the default behavior will merge list and dict
@@ -464,9 +468,9 @@ class Ini(SortedDict):
                         f.seek(lastpos+end)
                         try:
                             value, iden_existed = self.__read_line(f)
-                        except Exception, e:
+                        except Exception as e:
                             print_exc()
-                            raise Exception, "Parsing ini file error in %s:%d:%s" % (filename or self._inifile, lineno, line)
+                            raise Exception("Parsing ini file error in %s:%d:%s" % (filename or self._inifile, lineno, line))
                         if self._lazy:
                             if iden_existed:
                                 v = EvalValue(value, filename or self._inifile, lineno, line)
@@ -477,7 +481,7 @@ class Ini(SortedDict):
                                 v = eval_value(value, self, self[sec_name], self._encoding)
                             except Exception as e:
                                 print_exc()
-                                print dict(self)
+                                six.print_(dict(self))
                                 raise Exception("Converting value (%s) error in %s:%d:%s" % (value, filename or self._inifile, lineno, line))
                     section.add(keyname, v, comments, replace=replace_flag)
                     comments = []
@@ -489,14 +493,14 @@ class Ini(SortedDict):
             filename = self.filename
         if not filename:
             filename = sys.stdout
-        if isinstance(filename, (str, unicode)):
+        if isinstance(filename, six.string_types):
             f = open(filename, 'wb')
             need_close = True
         else:
             f = filename
             need_close = False
         
-        print >> f, '#coding=%s' % self._encoding
+        six.print_('#coding=%s' % self._encoding, file=f)
         for s in self.keys():
             if s in self._env:
                 continue
@@ -519,7 +523,7 @@ class Ini(SortedDict):
         time = 0
         iden_existed = False
         while 1:
-            v = g.next()
+            v = six.next(g)
             tokentype, t, start, end, line = v
             if tokentype == 54:
                 continue
@@ -552,7 +556,7 @@ class Ini(SortedDict):
         return section
     
     def __str__(self):     
-        buf = StringIO.StringIO()
+        buf = StringIO()
         self.save(buf)
         return buf.getvalue()
     

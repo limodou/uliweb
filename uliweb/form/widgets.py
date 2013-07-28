@@ -1,7 +1,8 @@
 from uliweb.core.html import Tag, begin_tag, end_tag
+import six
 
 def safe_str(s, encoding='utf-8'):
-    if isinstance(s, unicode):
+    if isinstance(s, six.text_type):
         return s.encode(encoding)
     else:
         return str(s)

@@ -1,6 +1,7 @@
 import time, re
 from datetime import tzinfo, timedelta, datetime, date, time as time_
-from sorteddict import SortedDict
+from .sorteddict import SortedDict
+import six
 
 __timezone__ = None
 __local_timezone__ = None
@@ -80,7 +81,7 @@ __timezones__['UTC'] = UTC
 re_timezone = re.compile(r'GMT\s?([+-]?)(\d+)', re.IGNORECASE)
 
 def fix_gmt_timezone(tz):
-    if isinstance(tz, (str, unicode)):
+    if isinstance(tz, six.string_types):
         b = re_timezone.match(tz)
         if b:
             n = b.group(2)
@@ -116,17 +117,17 @@ def timezone(tzname):
     if not tzname:
         return None
     
-    if isinstance(tzname, (str, unicode)):
+    if isinstance(tzname, six.string_types):
         #not pytz module imported, so just return None
         tzname = fix_gmt_timezone(tzname)
         tz = __timezones__.get(tzname, None)
         if not tz:
-            raise DateError, "Can't find tzname %s" % tzname
+            raise DateError("Can't find tzname %s" % tzname)
         return tz
     elif isinstance(tzname, tzinfo):
         return tzname
     else:
-        raise DateError, "Unsupported tzname %r type" % tzname
+        raise DateError("Unsupported tzname %r type" % tzname)
     
 def pick_timezone(*args):
     for x in args:
@@ -184,7 +185,7 @@ def to_datetime(dt, tzinfo=None, format=None):
     
     tz = pick_timezone(tzinfo, __timezone__)
     
-    if isinstance(dt, (str, unicode)):
+    if isinstance(dt, six.string_types):
         if not format:
             formats = DEFAULT_DATETIME_INPUT_FORMATS
         else:

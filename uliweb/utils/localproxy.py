@@ -1,3 +1,4 @@
+import six
 #! /usr/bin/env python
 #coding=utf-8
 # inspired from http://code.activestate.com/recipes/496741-object-proxying/
@@ -84,3 +85,6 @@ class LocalProxy(object):
             cache[klass] = theclass = cls._create_class_proxy(klass)
         ins = object.__new__(theclass)
         return ins
+
+    def __bool__(self):
+        return self.__nonzero__()

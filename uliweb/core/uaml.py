@@ -2,7 +2,8 @@
 #coding=utf-8
 
 import re
-from StringIO import StringIO
+from six.moves.StringIO import StringIO
+import six
 
 COMMENT = 1
 BEGIN_TAG = 2
@@ -251,4 +252,4 @@ form.form#form layout='table_line' color=red Test
 #    from timeit import Timer
 #    t = Timer("test()", "from __main__ import test")
 #    print t.timeit(1000)
-    print test()
+    six.print_(test())

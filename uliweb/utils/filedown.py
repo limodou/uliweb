@@ -8,6 +8,8 @@ import mimetypes
 from werkzeug.http import http_date, is_resource_modified
 from werkzeug import Response, wrap_file
 from werkzeug.exceptions import NotFound
+import six
+from six.moves.urllib.parse import quote
 
 def _opener(filename):
     if not os.path.exists(filename):
@@ -28,18 +30,18 @@ def _generate_etag(mtime, file_size, real_filename):
 def _get_download_filename(env, filename):
     from uliweb import request
     from uliweb.utils.common import safe_str
-    import urllib2
+
     from werkzeug.useragents import UserAgent
     
     agent = UserAgent(env)
     
     fname = safe_str(filename, 'utf8')
     if agent.browser == 'msie':
-        result = 'filename=' + urllib2.quote(fname)
+        result = 'filename=' + quote(fname)
     elif agent.browser == 'safari':
         result = 'filename=' + fname
     else:
-        result = "filename*=UTF-8''" + urllib2.quote(fname)
+        result = "filename*=UTF-8''" + quote(fname)
     return result
 
 def filedown(environ, filename, cache=True, cache_timeout=None, 
@@ -75,7 +77,7 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
         headers.append(('Content-Disposition', 'inline; %s' % d_filename))
     if x_sendfile:
         if not x_header_name or not x_filename:
-            raise Exception, "x_header_name or x_filename can't be empty"
+            raise Exception("x_header_name or x_filename can't be empty")
         headers.append((x_header_name, x_filename))
         return Response('', status=200, headers=headers,
             direct_passthrough=True)
@@ -111,3 +113,4 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
     
         return Response(wrap_file(environ, f), status=200, headers=headers,
             direct_passthrough=True)
+

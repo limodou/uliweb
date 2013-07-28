@@ -1,7 +1,8 @@
-from __future__ import with_statement
+
 import cgi
-import StringIO
+from six.moves import StringIO
 from uliweb.utils.common import safe_unicode, safe_str
+import six
 
 __noescape_attrs__ = ['href', 'src']
 class DefaultValue(object):pass
@@ -9,17 +10,17 @@ class DefaultValue(object):pass
 def u_str(v, encoding='utf-8'):
     if isinstance(v, str):
         pass
-    elif isinstance(v, unicode):
+    elif isinstance(v, six.text_type):
         v = v.encode(encoding)
     else:
         v = str(v)
     return v
 
 def str_u(v, encoding='utf-8'):
-    if isinstance(v, unicode):
+    if isinstance(v, six.text_type):
         return v
     else:
-        return unicode(v, encoding)
+        return six.text_type(v, encoding)
 
 def to_attrs(args, nocreate_if_none=['id', 'for']):
     """
@@ -175,20 +176,20 @@ if __name__ == '__main__':
     b = Buf()
     with b.html(name='xml'):
         b.head('Hello')
-    print str(b)
+    six.print_(str(b))
     div = Tag('div', _class="demo", style="display:none")
     with div:
         with div.span:
             div.a('Test', href='#')
-    print div
-    print Tag('a', 'Link', href='#')
-    print Tag('br', None)
+    six.print_(div)
+    six.print_(Tag('a', 'Link', href='#'))
+    six.print_(Tag('br', None))
     with div:
         with div.span:
             div.a('Test', href='#')
         div << '<p>This is a paragraph</p>'
-    print div
+    six.print_(div)
     b = Buf()
     b << 'hello'
     b << [Tag('a', 'Link', href='#'), Tag('a', 'Link', href='#')]
-    print str(b)
+    six.print_(str(b))

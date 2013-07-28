@@ -1,5 +1,5 @@
 #coding=utf-8
-from __future__ import with_statement
+
 from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 import os, sys
@@ -13,6 +13,8 @@ from uliweb.contrib.upload import FileServing, FilenameConverter
 from uliweb.utils.common import safe_unicode, safe_str
 from uliweb.core.html import Builder
 from uliweb.utils.sorteddict import SortedDict
+import six
+from six.moves import zip
 
 __default_fields_builds__ = {}
 class __default_value__(object):pass
@@ -24,7 +26,7 @@ def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
         import uliweb.form as form
         
         if settings and section in settings:
-            for k, v in settings[section].iteritems():
+            for k, v in six.iteritems(settings[section]):
                 if v.get('build', None):
                     v['build'] = import_attr(v['build'])
                 __default_fields_builds__[getattr(form, k)] = v
@@ -72,11 +74,11 @@ class ReferenceSelectField(SelectField):
         self.value_field = value_field
         self.condition = condition
         self.query = query
-        self.get_display = get_display or unicode
+        self.get_display = get_display or six.text_type
         
     def get_choices(self):
         if self.choices:
-            if callable(self.choices):
+            if six.callable(self.choices):
                 return self.choices()
             else:
                 return self.choices
@@ -219,7 +221,7 @@ class GenericReference(orm.Property):
                     raise ValueError("The value of GenericReference should be two-elements tuple/list, or instance of Model, but %r found" % value)
                 
                 table_id, object_id = value
-                if isinstance(table_id, (str, unicode)):
+                if isinstance(table_id, six.string_types):
                     table_id = self.table.get_table(table_id).id
                 if inspect.isclass(table_id) and issubclass(table_id, orm.Model):
                     table_id = table_id.tablename
@@ -240,7 +242,7 @@ class GenericReference(orm.Property):
         return table_id, object_id
     
     def get_display_value(self, value):
-        return unicode(value)
+        return six.text_type(value)
     
 class GenericRelation(orm.Property):
     property_type = 'compound'
@@ -323,7 +325,7 @@ def get_layout(model, meta):
     return f
 
 def get_url(ok_url, *args, **kwargs):
-    if callable(ok_url):
+    if six.callable(ok_url):
         return ok_url(*args, **kwargs)
     else:
         return ok_url.format(*args, **kwargs)
@@ -339,9 +341,9 @@ def get_obj_url(obj):
         if url_prefix:
             if url_prefix.endswith('/'):
                 url_prefix = url_prefix[:-1]
-            display = str(Tag('a', unicode(obj), href=url_prefix+'/'+str(obj.id)))
+            display = str(Tag('a', six.text_type(obj), href=url_prefix+'/'+str(obj.id)))
         else:
-            display = unicode(obj)
+            display = six.text_type(obj)
     return display
     
 def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
@@ -357,7 +359,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     
     model = get_model(model)
     field_type = None
-    if isinstance(field, (str, unicode)):
+    if isinstance(field, six.string_types):
         prop = getattr(model, field)
         if not prop:
             raise UliwebError("Can't find attribute in Model(%r)" % model)
@@ -442,7 +444,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         elif cls is orm.FileProperty:
             field_type = form.FileField
         else:
-            raise Exception, "Can't support the Property [%s=%s]" % (field['name'], prop.__class__.__name__)
+            raise Exception("Can't support the Property [%s=%s]" % (field['name'], prop.__class__.__name__))
        
     if field_type:
         build_args = builds_args_map.get(field_type, {})
@@ -576,7 +578,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
     else:
         display = convert_result
         
-    if isinstance(display, unicode):
+    if isinstance(display, six.text_type):
         display = display.encode('utf-8')
     if display is None:
         display = ''
@@ -732,13 +734,13 @@ class AddView(object):
     def on_success_data(self, obj, data):
         if self.success_data is True:
             return obj.to_dict()
-        elif callable(self.success_data):
+        elif six.callable(self.success_data):
             return self.success_data(obj, data)
         else:
             return None
     
     def on_fail_data(self, obj, errors, data):
-        if callable(self.fail_data):
+        if six.callable(self.fail_data):
             return self.fail_data(obj, errors, data)
         else:
             return errors
@@ -832,7 +834,7 @@ class AddView(object):
         
     def save_manytomany(self, obj, data):
         #process manytomany property
-        for k, v in obj._manytomany.iteritems():
+        for k, v in six.iteritems(obj._manytomany):
             if k in data:
                 value = data[k]
                 if value:
@@ -946,7 +948,7 @@ class EditView(AddView):
     def save_manytomany(self, obj, data):
         #process manytomany property
         r = False
-        for k, v in obj._manytomany.iteritems():
+        for k, v in six.iteritems(obj._manytomany):
             if k in data:
                 field = getattr(obj, k)
                 value = data[k]
@@ -1075,18 +1077,18 @@ class DetailTableLayout(object):
         
         _x = 0
         for _f in fields:
-            if isinstance(_f, (str, unicode)):
+            if isinstance(_f, six.string_types):
                 _x += 1
             elif isinstance(_f, dict):
                 _x += _f.get('colspan', 1)
             else:
-                raise Exception, 'Colume definition is not right, only support string or dict'
+                raise Exception('Colume definition is not right, only support string or dict')
         
         tr = Tag('tr')
         with tr:
             for x in fields:
                 _span = n / _x
-                if isinstance(x, (str, unicode)):
+                if isinstance(x, six.string_types):
                     f = self.get_field(x)
                 elif isinstance(x, dict):
                     f = self.get_field(x['name'])
@@ -1113,12 +1115,12 @@ class DetailTableLayout(object):
             if isinstance(line, (tuple, list)):
                 _x = 0
                 for f in line:
-                    if isinstance(f, (str, unicode)):
+                    if isinstance(f, six.string_types):
                         _x += 1
                     elif isinstance(f, dict):
                         _x += f.get('colspan', 1)
                     else:
-                        raise Exception, 'Colume definition is not right, only support string or dict'
+                        raise Exception('Colume definition is not right, only support string or dict')
                 m.append(_x)
             else:
                 m.append(1)
@@ -1130,7 +1132,7 @@ class DetailTableLayout(object):
         first = True
         for fields in self.layout:
             if not isinstance(fields, (tuple, list)):
-                if isinstance(fields, (str, unicode)) and fields.startswith('--') and fields.endswith('--'):
+                if isinstance(fields, six.string_types) and fields.startswith('--') and fields.endswith('--'):
                     #THis is a group line
                     if table:
                         buf.body << '</tbody></table>'
@@ -1183,7 +1185,7 @@ class DetailView(object):
         self.table_class_attr = table_class_attr
         self.layout = layout or get_layout(model, meta)
         self.layout_class = layout_class
-        if isinstance(self.layout, (str, unicode)):
+        if isinstance(self.layout, six.string_types):
             self.layout_class = layout_class or DetailLayout
         elif isinstance(self.layout, (tuple, list)):
             self.layout_class = layout_class or DetailTableLayout
@@ -1290,13 +1292,13 @@ class DeleteView(object):
             return redirect(self.ok_url)
     
     def on_success_data(self, obj, data):
-        if callable(self.success_data):
+        if six.callable(self.success_data):
             return self.success_data(obj, data)
         else:
             return None
 
     def on_fail_data(self, obj, errors, data):
-        if callable(self.fail_data):
+        if six.callable(self.fail_data):
             return self.fail_data(obj, errors, data)
         else:
             return errors
@@ -1311,7 +1313,7 @@ class DeleteView(object):
                 obj.delete()
         
     def delete_manytomany(self, obj):
-        for k, v in obj._manytomany.iteritems():
+        for k, v in six.iteritems(obj._manytomany):
             getattr(obj, k).clear()
   
 class GenericFileServing(FileServing):
@@ -1383,12 +1385,12 @@ class SimpleListView(object):
         if total_fields:
             self.total_fields = {}
             for x in total_fields['fields']:
-                if isinstance(x, (str, unicode)):
+                if isinstance(x, six.string_types):
                     self.total_fields[x] = {}
                 elif isinstance(x, dict):
                     self.total_fields[x['name']] = x
                 else:
-                    raise Exception, "Can't support this type (%r) at define total_fields for field %s" % (type(x), x)
+                    raise Exception("Can't support this type (%r) at define total_fields for field %s" % (type(x), x))
             total_fields['fields']
             self.total_field_name = total_fields.get('total_field_name', _('Total'))
         else:
@@ -1460,7 +1462,7 @@ class SimpleListView(object):
         Get total number of records according total and manual parameters
         """
         if self.manual:
-            if callable(self.total):
+            if six.callable(self.total):
                 total = self.total()
             else:
                 total = self.total
@@ -1478,7 +1480,7 @@ class SimpleListView(object):
         return self.query_range(self.pageno, self.pagination)
     
     def query_range(self, pageno=0, pagination=True):
-        if callable(self._query):
+        if six.callable(self._query):
             query_result = self._query()
         else:
             query_result = self._query
@@ -1489,7 +1491,7 @@ class SimpleListView(object):
             i = 0
             while (begin > 0 and i < begin) or (begin == -1):
                 try:
-                    result.append(data.next())
+                    result.append(six.next(data))
                     i += 1
                     n += 1
                 except StopIteration:
@@ -1835,7 +1837,7 @@ class SimpleListView(object):
         else:
             display = value
             
-        if isinstance(display, unicode):
+        if isinstance(display, six.text_type):
             display = display.encode('utf-8')
         if display is None:
             display = '&nbsp;'
@@ -2160,7 +2162,7 @@ class ListView(SimpleListView):
             
         fields_list = []
         for x in fields:
-            if isinstance(x, (str, unicode)):
+            if isinstance(x, six.string_types):
                 name = x
                 d = {'name':x}
                 f = self.get_table_meta_field(name, self.model)
@@ -2408,7 +2410,7 @@ class QueryView(object):
         if flag:
 #            d = self.default_data.copy()
             if self.data:
-                for k, v in self.data.iteritems():
+                for k, v in six.iteritems(self.data):
                     if not self.form.data.get(k):
                         self.form.data[k] = v
             return self.form.data.copy()

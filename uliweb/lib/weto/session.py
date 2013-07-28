@@ -13,7 +13,7 @@ try:
 except ImportError:
     from md5 import md5
  
-from backends.base import KeyError
+from .backends.base import KeyError
 
 class SessionException(Exception):pass
 class NValue(object): pass
@@ -44,7 +44,7 @@ class SessionCookie(object):
     def save(self):
         self.expiry_time =  self.expiry_time or self.session.expiry_time
    
-from cache import Serial
+from .cache import Serial
 
 class Session(dict):
     force = False
@@ -100,7 +100,7 @@ class Session(dict):
         
         try:
             value = self.storage.get(key)
-        except KeyError, e:
+        except KeyError as e:
             value = {}
         self.update(value)
         self._old_value = self.copy()
@@ -151,7 +151,7 @@ class Session(dict):
         def _func(self, *args, **kw):
             try:
                 if self.deleted:
-                    raise SessionException, "The session object has been deleted!"
+                    raise SessionException("The session object has been deleted!")
                 return f(self, *args, **kw)
             finally:
                 self._accessed_time = time.time()

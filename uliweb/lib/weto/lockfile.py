@@ -44,7 +44,7 @@ def lock_file(f, lock=LOCK_SH):
             elif lock == LOCK_UN:
                 fcntl.flock(fd, fcntl.LOCK_UN)
             else:
-                raise LockError, "BUG: bad lock in lock_file"
+                raise LockError("BUG: bad lock in lock_file")
         elif LOCKTYPE == LOCKTYPE_MSVCRT:
             if lock == LOCK_SH:
                 # msvcrt does not support shared locks :-(
@@ -54,9 +54,9 @@ def lock_file(f, lock=LOCK_SH):
             elif lock == LOCK_UN:
                 msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
             else:
-                raise LockError, "BUG: bad lock in lock_file"
+                raise LockError("BUG: bad lock in lock_file")
         else:
-            raise LockError, "BUG: bad locktype in lock_file"
+            raise LockError("BUG: bad locktype in lock_file")
     except IOError:
         raise LockError("Couldn't lock %r" % f.name)
             

@@ -1,5 +1,6 @@
-from base import BaseStorage, KeyError
+from .base import BaseStorage, KeyError
 import redis
+import six
 
 #connection pool format should be: (options, connection object)
 __connection_pool__ = None
@@ -14,8 +15,6 @@ class Storage(BaseStorage):
         """
         BaseStorage.__init__(self, cache_manager, options)
 
-        self._type = (int, long)
-        
         if 'unix_socket_path' in options:
             self.client = redis.Redis(unix_socket_path=options['unix_socket_path'])
         else:
@@ -39,11 +38,11 @@ class Storage(BaseStorage):
             else:
                 return int(v)
         else:
-            raise KeyError, "Cache key [%s] not found" % key
+            raise KeyError("Cache key [%s] not found" % key)
     
     def set(self, key, value, expiry_time):
         key = self._key(key)
-        if not isinstance(value, self._type):
+        if not isinstance(value, six.integer_types):
             v = self._dump(value)
         else:
             v = value

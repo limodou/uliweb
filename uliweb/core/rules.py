@@ -2,6 +2,7 @@ import os
 import inspect
 from uliweb.utils.common import log
 from uliweb.utils.sorteddict import SortedDict
+import six
 
 class ReservedKeyError(Exception):pass
 
@@ -39,6 +40,22 @@ def merge_rules():
                 s.append(x)
                 index[(url, tuple(methods))] = len(s)-1
     return __no_need_exposed__ + s
+
+def get_func(f):
+    if inspect.ismethod(f):
+        return f.__func__
+    else:
+        return f
+
+def get_function_path(f):
+    if hasattr(f, '__qualname__'):
+        return f.__module__ + '.' + f.__qualname__
+    elif getattr(f, '__self__', None):
+        return f.__module__ + '.' + f.__self__.__name__ + '.' + f.__name__
+    elif getattr(f, 'im_class', None):
+        return f.__module__ + '.' + f.im_class.__name__ + '.' + f.__name__
+    else:
+        return f.__module__ + '.' + f.__name__
 
 def clear_rules():
     global __exposes__, __no_need_exposed__
@@ -111,8 +128,9 @@ class Expose(object):
             if (inspect.ismethod(func) or inspect.isfunction(func)) and not name.startswith('_'):
                 if hasattr(func, '__exposed__') and func.__exposed__:
                     new_endpoint = '.'.join([func.__module__, f.__name__, name])
-                    if func.im_func in __exposes__:
-                        for v in __exposes__.pop(func.im_func):
+                    f_func = get_func(func)
+                    if f_func in __exposes__:
+                        for v in __exposes__.pop(f_func):
                             #__no_rule__ used to distinct if the view function has used
                             #expose to decorator, if not then __no_rule__ will be True
                             #then it'll use default url route regular to make url
@@ -132,7 +150,7 @@ class Expose(object):
                                 if not keep and rule.startswith(prefix):
                                     rule = self._fix_url(appname, rule)
                             __no_need_exposed__.append((v[0], new_endpoint, rule, v[3]))
-                            for k in __url_names__.iterkeys():
+                            for k in six.iterkeys(__url_names__):
                                 if __url_names__[k] == v[1]:
                                     __url_names__[k] = new_endpoint
                 else:
@@ -147,7 +165,7 @@ class Expose(object):
                 args = args[1:]
             args = ['<%s>' % x for x in args]
         if f.__name__ in reserved_keys:
-            raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
+            raise ReservedKeyError('The name "%s" is a reversed key, so please change another one' % f.__name__)
         prefix = prefix.rstrip('/')
         if self.restful:
             rule = self._fix_url(appname, '/'.join([prefix] + args[:1] + [f.__name__] +args[1:]))
@@ -160,7 +178,7 @@ class Expose(object):
         if args:
             args = ['<%s>' % x for x in args]
         if f.__name__ in reserved_keys:
-            raise ReservedKeyError, 'The name "%s" is a reversed key, so please change another one' % f.__name__
+            raise ReservedKeyError('The name "%s" is a reversed key, so please change another one' % f.__name__)
         appname, path = self._get_path(f)
         if self.rule is None:
             if self.restful:
@@ -170,16 +188,13 @@ class Expose(object):
         else:
             rule = self.rule
         rule = self._fix_url(appname, rule)
-        if inspect.ismethod(f):
-            endpoint = '.'.join([f.im_class.__module__, f.im_class.__name__, f.__name__])
-        else:
-            endpoint = '.'.join([f.__module__, f.__name__])
-        f.func_dict['__exposed__'] = True
-        f.func_dict['__no_rule__'] = (self.parse_level == 1) or (self.parse_level == 2 and (self.rule is None))
+        endpoint = get_function_path(f)
+        f.__dict__['__exposed__'] = True
+        f.__dict__['__no_rule__'] = (self.parse_level == 1) or (self.parse_level == 2 and (self.rule is None))
         if not hasattr(f, '__old_rule__'):
-            f.func_dict['__old_rule__'] = {}
+            f.__dict__['__old_rule__'] = {}
     
-        f.func_dict['__old_rule__'][rule] = self.rule
+        f.__dict__['__old_rule__'][rule] = self.rule
         #add name parameter process
         if 'name' in self.kwargs:
             url_name = self.kwargs.pop('name')
@@ -189,7 +204,7 @@ class Expose(object):
     def __call__(self, f):
         from uliweb.utils.common import safe_import
         
-        if isinstance(f, (str, unicode)):
+        if isinstance(f, six.string_types):
             try:
                 _, f = safe_import(f)
             except:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os, sys
+import six
 
 def parse_translation(f, lineno):
     """Read a single translation entry from the file F and return a
@@ -16,7 +17,7 @@ def parse_translation(f, lineno):
         key, value = line.split(' ', 1)
         # Parse msgid
         if key not in need_keys:
-            print 'Error Line, need %r: %d, line=' % (need_keys, lineno, line)
+            six.print_('Error Line, need %r: %d, line=' % (need_keys, lineno, line))
             raise RuntimeError("parse error")
         v = value
         while 1:
@@ -53,7 +54,7 @@ def parse_translation(f, lineno):
         msgstr = value
         
     if line != '':
-        print 'File: %s Error Line: %s' % (f.name, line)
+        six.print_('File: %s Error Line: %s' % (f.name, line))
         raise RuntimeError("parse error")
 
     return lineno, comments, msgid, msgstr
@@ -161,7 +162,7 @@ def merge(file1, file2, exact=False):
     if _len:
         update_count += _len
         string_count += _len
-        for msgid, _v in source.iteritems():
+        for msgid, _v in six.iteritems(source):
             msgstr, comments = _v
             outfile.write(write_msg(comments, msgid, msgstr))
             
@@ -172,12 +173,12 @@ def merge(file1, file2, exact=False):
     outfile.close()
     # We're done.  Tell the user what we did.
     if string_count == 0:
-        print '0 strings updated.'
+        six.print_('0 strings updated.')
     else:
-        print('%d strings updated. %d strings removed. '
+        six.print_(('%d strings updated. %d strings removed. '
             '%d of %d strings are still untranslated (%.0f%%).' %
             (update_count, removed, untranslated, string_count,
-            100.0 * untranslated / string_count))
+            100.0 * untranslated / string_count)))
     
 def main(argv):
     if len(argv) != 3:

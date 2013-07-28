@@ -1,6 +1,7 @@
 import logging
 import inspect
 from uliweb.utils.common import import_attr
+import six
 
 __all__ = ['HIGH', 'MIDDLE', 'LOW', 'bind', 'call', 'get', 'unbind', 'call_once', 'get_once']
 
@@ -34,7 +35,7 @@ def bind(topic, signal=None, kind=MIDDLE, nice=-1):
                 n = 900
         else:
             n = nice
-        if callable(func):
+        if six.callable(func):
             func_name = func.__module__ + '.' + func.__name__
             func = func
         else:
@@ -53,7 +54,7 @@ def unbind(topic, func):
         receivers = _receivers[topic]
         for i in range(len(receivers)-1, -1, -1):
             nice, f = receivers[i]
-            if (callable(func) and f['func'] == func) or (f['func_name'] == func):
+            if (six.callable(func) and f['func'] == func) or (f['func_name'] == func):
                 del receivers[i]
                 return
 
@@ -98,7 +99,7 @@ def call(sender, topic, *args, **kwargs):
                 logging.error("Can't import function %s" % f['func_name'])
                 raise
             f['func'] = _f
-        if callable(_f):
+        if six.callable(_f):
             kw = kwargs.copy()
             if not _test(kw, f):
                 continue
@@ -109,7 +110,7 @@ def call(sender, topic, *args, **kwargs):
                 logging.exception('Calling dispatch point [%s] %s(%r, %r) error!' % (topic, func, args, kw))
                 raise
         else:
-            raise Exception, "Dispatch point [%s] %r can't been invoked" % (topic, _f)
+            raise Exception("Dispatch point [%s] %r can't been invoked" % (topic, _f))
         
 def call_once(sender, topic, *args, **kwargs):
     signal = kwargs.get('signal')
@@ -142,7 +143,7 @@ def get(sender, topic, *args, **kwargs):
                 logging.error("Can't import function %s" % f['func_name'])
                 raise
             f['func'] = _f
-        if callable(_f):
+        if six.callable(_f):
             if not _test(kwargs, f):
                 continue
             try:

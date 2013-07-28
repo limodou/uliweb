@@ -1,3 +1,4 @@
+import six
 def lazy(func):
     def f(message):
         return LazyString(func, message)
@@ -18,16 +19,16 @@ class LazyString(object):
         if not self.msg:
             return ''
         value = self.getvalue()
-        if isinstance(value, unicode):
+        if isinstance(value, six.text_type):
             return value
         else:
-            return unicode(self.getvalue(), 'utf-8')
+            return six.text_type(self.getvalue(), 'utf-8')
         
     def __str__(self):
         if not self.msg:
             return ''
         value = self.getvalue()
-        if isinstance(value, unicode):
+        if isinstance(value, six.text_type):
             return value.encode('utf-8')
         else:
             return str(value)

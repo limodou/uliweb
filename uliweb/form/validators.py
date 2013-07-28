@@ -2,7 +2,7 @@ from uliweb.i18n import gettext_lazy as _
 import re
 
 def __get_choices_keys(choices):
-    if callable(choices):
+    if six.callable(choices):
         choices = choices()
     if isinstance(choices, dict):
         keys = set(choices.keys())
@@ -14,7 +14,7 @@ def __get_choices_keys(choices):
             else:
                 keys.add(v)
     else:
-        raise Exception, _('Choices need a dict, tuple or list data.')
+        raise Exception(_('Choices need a dict, tuple or list data.'))
     return keys
     
 def IS_IN_SET(choices):
@@ -35,7 +35,7 @@ def IS_IMAGE(size=None):
                 if size:
                     if image.size[0]>size[0] or image.size[1]>size[1]:
                         return _("The image file size exceeds the limit.")
-            except Exception, e:
+            except Exception as e:
                 return _("The file is not a valid image.")
         finally:
             data.file.seek(0)

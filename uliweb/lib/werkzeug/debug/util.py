@@ -18,8 +18,9 @@ import tokenize
 import traceback
 from cgi import escape
 from random import random
-from cStringIO import StringIO
+from six.moves.cStringIO import StringIO
 from werkzeug.local import Local
+import six
 
 
 local = Local()
@@ -122,7 +123,7 @@ class PythonParser(object):
 
     def __init__(self, raw):
         self.raw = raw.expandtabs(8)
-        if isinstance(self.raw, unicode):
+        if isinstance(self.raw, six.text_type):
             self.raw = self.raw.encode('utf-8', 'ignore')
         self.out = StringIO()
 
@@ -173,7 +174,9 @@ class PythonParser(object):
             return escape(self.raw).splitlines()
         return list(html_splitlines(self.out.getvalue().splitlines()))
 
-    def __call__(self, toktype, toktext, (srow,scol), (erow,ecol), line):
+    def __call__(self, toktype, toktext, xxx_todo_changeme, xxx_todo_changeme1, line):
+        (srow,scol) = xxx_todo_changeme
+        (erow,ecol) = xxx_todo_changeme1
         oldpos = self.pos
         newpos = self.lines[srow] + scol
         self.pos = newpos + len(toktext)
@@ -264,11 +267,11 @@ def get_frame_info(tb, context_lines=7, simple=False):
                 context_line = parsed_source[lineno - 1]
                 pre_context = parsed_source[lbound:lineno - 1]
                 post_context = parsed_source[lineno:ubound]
-            except IndexError, e:
+            except IndexError as e:
                 pass
             context_lineno = lbound
 
-    if isinstance(fn, unicode):
+    if isinstance(fn, six.text_type):
         fn = fn.encode('utf-8')
     return {
         'tb':               tb,

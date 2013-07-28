@@ -1,6 +1,8 @@
 #coding=utf-8
 import logging
 import re
+from six.moves import filter
+import six
 try:
     import colorama
     colorama.init()

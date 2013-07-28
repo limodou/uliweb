@@ -5,6 +5,8 @@ import sys, os
 from optparse import make_option, OptionParser, IndentedHelpFormatter
 import uliweb
 from uliweb.utils.common import log
+import six
+from six.moves import input
 
 def handle_default_options(options):
     """
@@ -40,13 +42,13 @@ def get_answer(message, answers='Yn', default='Y', quit='n'):
         answers = answers + quit
         
     message = message + '(' + '/'.join(answers) + ')[' + default + ']:'
-    ans = raw_input(message).strip().upper()
+    ans = input(message).strip().upper()
     if default and not ans:
         ans = default.upper()
     while ans not in answers.upper():
-        ans = raw_input(message).strip().upper()
+        ans = input(message).strip().upper()
     if quit and ans == quit.upper():
-        print "Command be cancelled!"
+        six.print_("Command be cancelled!")
         sys.exit(1)
     return ans
 
@@ -59,10 +61,10 @@ def get_input(prompt, default=None, choices=None, option_value=None):
         return option_value
     
     choices = choices or []
-    r = raw_input(prompt+' ') or default
+    r = input(prompt+' ') or default
     while 1:
         if not r:
-            r = raw_input(prompt)
+            r = input(prompt)
         if choices:
             if r not in choices:
                 r = None
@@ -80,9 +82,8 @@ class CommandMetaclass(type):
                 option_list.extend(c.option_list)
         cls.option_list = option_list
         
+@six.patch_with_metaclass(CommandMetaclass)
 class Command(object):
-    __metaclass__ = CommandMetaclass
-    
     option_list = ()
     help = ''
     args = ''
@@ -167,13 +168,13 @@ class Command(object):
             args = []
             for p in apps:
                 if p not in all_apps:
-                    print 'Error: Appname %s is not a valid app' % p
+                    six.print_('Error: Appname %s is not a valid app' % p)
                     sys.exit(1)
                 else:
                     args.append(p)
         try:
             self.handle(options, global_options, *args)
-        except CommandError, e:
+        except CommandError as e:
             log.exception(e)
             sys.exit(1)
 
@@ -227,7 +228,7 @@ class CommandManager(Command):
         self.global_options = global_options
     
     def get_commands(self, global_options):
-        if callable(self.commands):
+        if six.callable(self.commands):
             commands = self.commands(global_options)
         else:
             commands = self.commands
@@ -294,7 +295,7 @@ class CommandManager(Command):
             
         if len(args) == 0:
             if global_options.version:
-                print self.get_version()
+                six.print_(self.get_version())
                 sys.exit(1)
             else:
                 print_help(global_options)

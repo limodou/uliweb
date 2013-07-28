@@ -1,4 +1,5 @@
 import os
+import six
 
 QUALITY = 95
 
@@ -19,7 +20,7 @@ def fix_filename(filename, suffix=''):
         
 def resize_image(fobj, size=(50, 50), quality=None):
     from PIL import Image
-    from StringIO import StringIO
+    from six.moves import StringIO
     
     image = Image.open(fobj)
     if image.mode not in ('L', 'RGB'):
@@ -63,7 +64,7 @@ def thumbnail_image(realfile, filename, size=(200, 75), suffix=True, quality=Non
     return ofile, ofile1
 
 def resize_image_string(buf, size=(50, 50)):
-    from StringIO import StringIO
+    from six.moves import StringIO
     f = StringIO(buf)
     return resize_image(f, size).getvalue()
     

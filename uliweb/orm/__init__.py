@@ -49,6 +49,8 @@ import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
 import threading
 from uliweb.utils.sorteddict import SortedDict
+import six
+from six.moves import zip
 
 Local = threading.local()
 Local.dispatch_send = True
@@ -84,8 +86,8 @@ class SQLStorage(dict):
     """
     def __getattr__(self, key): return self[key]
     def __setattr__(self, key, value):
-        if self.has_key(key):
-            raise SyntaxError, 'Object exists and cannot be redefined'
+        if key in self:
+            raise SyntaxError('Object exists and cannot be redefined')
         self[key] = value
     def __repr__(self): return '<SQLStorage ' + dict.__repr__(self) + '>'
 
@@ -266,7 +268,7 @@ def print_pool_status(ec=None):
     ec = ec or 'default'
     engine = engine_manager[ec]
     if engine.engine.pool:
-        print engine.engine.pool.status()
+        six.print_(engine.engine.pool.status())
     
 def get_connection(connection='', default=True, 
     debug=None, engine_name=None, connection_type='long', **args):
@@ -320,7 +322,7 @@ def local_conection(ec, auto_transaction=False):
 #    engine = engine_manager[ec]
 #    if engine.options.connection_args['strategy'] == 'threadlocal':
 #        return engine.engine_instance
-    if isinstance(ec, (str, unicode)):
+    if isinstance(ec, six.string_types):
         if hasattr(Local, 'conn') and Local.conn.get(ec):
             conn = Local.conn[ec]
         else:
@@ -385,7 +387,7 @@ def rawsql(query, ec=None):
     params = []
     for k in comp.positiontup:
         v = comp.params[k]
-        if isinstance(v, unicode):
+        if isinstance(v, six.text_type):
             v = v.encode(enc)
         params.append( escape(v, conversions) )
     return (comp.string.encode(enc).replace('?', '%s') % tuple(params))
@@ -435,7 +437,7 @@ def do_(query, ec=None):
     
 def Begin(ec=None):
     ec = ec or 'default'
-    if isinstance(ec, (str, unicode)):
+    if isinstance(ec, six.string_types):
         conn = local_conection(ec, True)
         return Local.trans[ec]
     elif isinstance(ec, EngineBase.Connection):
@@ -445,7 +447,7 @@ def Begin(ec=None):
     
 def Commit(close=False, ec=None, trans=None):
     ec = ec or 'default'
-    if isinstance(ec, (str, unicode)):
+    if isinstance(ec, six.string_types):
         if hasattr(Local, 'trans') and Local.trans.get(ec):
             try:
                 Local.trans[ec].commit()
@@ -480,7 +482,7 @@ def CommitAll(close=False):
 def Rollback(close=False, ec=None, trans=None):
     ec = ec or 'default'
     
-    if isinstance(ec, (str, unicode)):
+    if isinstance(ec, six.string_types):
         if hasattr(Local, 'trans') and Local.trans.get(ec):
             try:
                 Local.trans[ec].rollback()
@@ -544,7 +546,7 @@ def set_model(model, tablename=None, created=None, engine_name=None):
         item['created'] = created
     else:
         item['created'] = None
-    if isinstance(model, (str, unicode)):
+    if isinstance(model, six.string_types):
         model_path = model
         appname = model.rsplit('.', 2)[0]
         #for example 'uliweb.contrib.auth.models.User'
@@ -559,7 +561,7 @@ def set_model(model, tablename=None, created=None, engine_name=None):
     item['appname'] = appname
     
     engine_name = engine_name or 'default'
-    if not isinstance(engine_name, (str, unicode)):
+    if not isinstance(engine_name, six.string_types):
         raise BadValueError('engine name should be string type, but %r found' % engine_name)
     
     engine_manager[engine_name].models[tablename] = item
@@ -618,7 +620,7 @@ def get_model(model, engine_name=None):
         return model
     if isinstance(model, type) and issubclass(model, Model):
         return model
-    if not isinstance(model, (str, unicode)):
+    if not isinstance(model, six.string_types):
         raise Error("Model %r should be string or unicode type" % model)
     
     if model in __models__:
@@ -649,7 +651,7 @@ def get_object(table, id, cache=False):
     not found in object_caches
     """
     
-    if isinstance(table, (str, unicode)):
+    if isinstance(table, six.string_types):
         model = get_model(table)
     else:
         model = table
@@ -681,8 +683,8 @@ class SQLMointor(object):
         self.post_do = post_do
         
     def print_(self, message=''):
-        print 
-        print '====== sql execution count %d <%s> =======' % (self.total, message)
+        print() 
+        six.print_('====== sql execution count %d <%s> =======' % (self.total, message))
         for k, v in sorted(self.count.items(), key=lambda x:x[1]):
             k = k.replace('\r', '')
             k = k.replace('\n', '')
@@ -692,12 +694,12 @@ class SQLMointor(object):
                 format = "%%-%ds  %%3d  %%.3f" % self.key_length
             else:
                 format = "%s  %3d  %.3f"
-            print format % (k, v['count'], v['time'])
+            six.print_(format % (k, v['count'], v['time']))
         if self.record_details:
-            print '====== sql statements %d ====' % self.total
+            six.print_('====== sql statements %d ====' % self.total)
             for line in self.details:
-                print '.', line
-        print
+                six.print_('.', line)
+        print()
         
     def close(self):
         self.count = {}
@@ -745,7 +747,7 @@ class ModelMetaclass(type):
                     cls._manytomany[attr_name] = attr
          
         #if there is already defined primary_key, the id will not be primary_key
-        has_primary_key = bool([v for v in cls.properties.itervalues() if 'primary_key' in v.kwargs])
+        has_primary_key = bool([v for v in six.itervalues(cls.properties) if 'primary_key' in v.kwargs])
         
         #add __without_id__ attribute to model, if set it, uliorm will not
         #create 'id' field for the model
@@ -861,7 +863,7 @@ class Property(object):
         if hasattr(model_instance, name):
             v = getattr(model_instance, name)
         if v is None:
-            if callable(default):
+            if six.callable(default):
                 v = default()
             else:
                 v = default
@@ -896,14 +898,14 @@ class Property(object):
         setattr(model_instance, self._attr_name(), value)
 
     def default_value(self):
-        if callable(self.default):
+        if six.callable(self.default):
             d = self.default()
         else:
             d = self.default
         return d
     
     def get_choices(self):
-        if callable(self.choices):
+        if six.callable(self.choices):
             choices = self.choices()
         else:
             choices = self.choices
@@ -915,11 +917,11 @@ class Property(object):
         if self.choices:
             v = dict(self.get_choices()).get(value, '')
             if isinstance(v, str):
-                v = unicode(v, __default_encoding__)
+                v = six.text_type(v, __default_encoding__)
             return v
         else:
             if isinstance(value, Model):
-                return unicode(value)
+                return six.text_type(value)
             else:
                 return self.to_unicode(value)
 
@@ -956,7 +958,7 @@ class Property(object):
         if value is not None:
             try:
                 value = self.convert(value)
-            except TypeError, err:
+            except TypeError as err:
                 raise BadValueError('Property %s must be convertible '
                     'to %s, but the value is (%s)' % (self.name, self.data_type, err))
             
@@ -968,7 +970,7 @@ class Property(object):
         return value
 
     def empty(self, value):
-        return (value is None) or (isinstance(value, (str, unicode)) and not value.strip())
+        return (value is None) or (isinstance(value, six.string_types) and not value.strip())
 
     def get_value_for_datastore(self, model_instance):
         return getattr(model_instance, self._attr_name(), None)
@@ -1006,7 +1008,7 @@ class Property(object):
         return '_' + self.name + '_'
     
     def to_str(self, v):
-        if isinstance(v, unicode):
+        if isinstance(v, six.text_type):
             return v.encode(__default_encoding__)
         elif isinstance(v, str):
             return v
@@ -1017,16 +1019,16 @@ class Property(object):
         
     def to_unicode(self, v):
         if isinstance(v, str):
-            return unicode(v, __default_encoding__)
-        elif isinstance(v, unicode):
+            return six.text_type(v, __default_encoding__)
+        elif isinstance(v, six.text_type):
             return v
         else:
             if v is None:
                 return u''
-            return unicode(v)
+            return six.text_type(v)
     
 class CharProperty(Property):
-    data_type = unicode
+    data_type = six.text_type
     field_class = CHAR
     
     def __init__(self, verbose_name=None, default=u'', max_length=None, **kwds):
@@ -1037,7 +1039,7 @@ class CharProperty(Property):
     
     def convert(self, value):
         if isinstance(value, str):
-            return unicode(value, __default_encoding__)
+            return six.text_type(value, __default_encoding__)
         else:
             return self.data_type(value)
     
@@ -1064,14 +1066,14 @@ class UnicodeProperty(CharProperty):
     
 class TextProperty(Property):
     field_class = Text
-    data_type = unicode
+    data_type = six.text_type
     
     def __init__(self, verbose_name=None, default='', **kwds):
         super(TextProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
     
     def convert(self, value):
         if isinstance(value, str):
-            return unicode(value, __default_encoding__)
+            return six.text_type(value, __default_encoding__)
         else:
             return self.data_type(value)
     
@@ -1140,11 +1142,11 @@ class DateTimeProperty(Property):
     
     def to_unicode(self, v):
         if isinstance(v, self.data_type):
-            return unicode(date.to_string(v, timezone=False))
+            return six.text_type(date.to_string(v, timezone=False))
         else:
             if not v:
                 return u''
-            return unicode(v)
+            return six.text_type(v)
 
 class DateProperty(DateTimeProperty):
     data_type = datetime.date
@@ -1180,8 +1182,8 @@ class IntegerProperty(Property):
         super(IntegerProperty, self).__init__(verbose_name, default=default, **kwds)
     
     def custom_validate(self, value):
-        if value and not isinstance(value, (int, long, bool)):
-            raise BadValueError('Property %s must be an int, long or bool, not a %s'
+        if value and not isinstance(value, six.integer_types):
+            raise BadValueError('Property %s must be an int, long, not a %s'
                 % (self.name, type(value).__name__))
         return value
 
@@ -1237,7 +1239,7 @@ class DecimalProperty(Property):
         if self.choices:
             v = dict(self.get_choices()).get(str(value), '')
             if isinstance(v, str):
-                v = unicode(v, __default_encoding__)
+                v = six.text_type(v, __default_encoding__)
             return v
         else:
             return str(value)
@@ -1513,7 +1515,7 @@ class Result(object):
         return do_(query, self.connection)
     
     def get_column(self, model, fieldname):
-        if isinstance(fieldname, (str, unicode)):
+        if isinstance(fieldname, six.string_types):
             if issubclass(model, Model):
                 field = model.table.c[fieldname]
             else:
@@ -1545,7 +1547,7 @@ class Result(object):
         return self
     
     def get(self, condition=None):
-        if isinstance(condition, (int, long)):
+        if isinstance(condition, six.integer_types):
             return self.filter(self.model.c.id==condition).one()
         else:
             return self.filter(condition).one()
@@ -1917,9 +1919,9 @@ class ManyResult(Result):
         if not relation_name:
             relation_name = 'relation'
         if hasattr(self.modelb, relation_name):
-            raise Error, "The attribute name %s has already existed in Model %s!" % (relation_name, self.modelb.__name__)
+            raise Error("The attribute name %s has already existed in Model %s!" % (relation_name, self.modelb.__name__))
         if not self.through_model:
-            raise Error, "Only with through style in ManyToMany supports with_relation function of Model %s!" % self.modelb.__name__
+            raise Error("Only with through style in ManyToMany supports with_relation function of Model %s!" % self.modelb.__name__)
         self.with_relation_name = relation_name
         return self
         
@@ -2201,7 +2203,7 @@ class ManyToMany(ReferenceProperty):
     def get_display_value(self, value):
         s = []
         for x in value:
-            s.append(unicode(x))
+            s.append(six.text_type(x))
         return ' '.join(s)
     
     def in_(self, *objs):
@@ -2352,7 +2354,7 @@ BIGINT = BigIntegerProperty
 _fields_mapping = {
     str:StringProperty,
     CHAR:CharProperty,
-    unicode: UnicodeProperty,
+    six.text_type: UnicodeProperty,
     TEXT:TextProperty,
     BLOB:BlobProperty,
     FILE:FileProperty,
@@ -2371,9 +2373,9 @@ def Field(type, *args, **kwargs):
     t = _fields_mapping.get(type, type)
     return t(*args, **kwargs)
 
+@six.patch_with_metaclass(ModelMetaclass)
 class Model(object):
 
-    __metaclass__ = ModelMetaclass
     __dispatch_enabled__ = True
     __engine_name__ = None
     __connection__ = None
@@ -2429,7 +2431,7 @@ class Model(object):
             return v.strftime('%H:%M:%S')
         elif isinstance(v, decimal.Decimal):
             return str(v)
-        elif isinstance(v, unicode):
+        elif isinstance(v, six.text_type):
             return v.encode(__default_encoding__)
         else:
             if strict:
@@ -2482,7 +2484,7 @@ class Model(object):
         return bool(self.id) 
     
     def update(self, **data):
-        for k, v in data.iteritems():
+        for k, v in six.iteritems(data):
             if k in self.properties:
                 if not isinstance(self.properties[k], ManyToMany):
                     x = self.properties[k].get_value_for_datastore(self)
@@ -2530,7 +2532,7 @@ class Model(object):
                         if k in d:
                             _manytomany[k] = d.pop(k)
                 if d:
-                    if callable(changed):
+                    if six.callable(changed):
                         changed(self, created, self._old_values, d)
                         old.update(d)
                     obj = do_(self.table.insert().values(**d), connection or self.get_connection())
@@ -2564,7 +2566,7 @@ class Model(object):
                             if k in d:
                                 _manytomany[k] = d.pop(k)
                     if d:
-                        if callable(changed):
+                        if six.callable(changed):
                             changed(self, created, self._old_values, d)
                             old.update(d)
                         do_(self.table.update(self.table.c.id == self.id).values(**d), connection or self.get_connection())
@@ -2583,7 +2585,7 @@ class Model(object):
                     dispatch.call(self.__class__, 'post_save', instance=self, created=created, data=old, old_data=self._old_values, signal=self.tablename)
                 self.set_saved()
                 
-                if callable(saved):
+                if six.callable(saved):
                     saved(self, created, self._old_values, old)
                     
         return _saved
@@ -2600,7 +2602,7 @@ class Model(object):
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'pre_delete', instance=self, signal=self.tablename)
         if manytomany:
-            for k, v in self._manytomany.iteritems():
+            for k, v in six.iteritems(self._manytomany):
                 getattr(self, k).clear()
         if delete_fieldname:
             if delete_fieldname is True:
@@ -2785,7 +2787,7 @@ class Model(object):
         m = __models__.get(cls.__alias__, {})
         m1 = __model_paths__.get(cls.__module__ + '.' + cls.__name__, None)
         engine_name = cls.__engine_name__ or m.get('engine_name') or m1 or 'default'
-        if not isinstance(engine_name, (str, unicode)):
+        if not isinstance(engine_name, six.string_types):
             raise BadValueError('engine name should be string type, but %r found' % engine_name)
         return engine_name
     
@@ -2794,7 +2796,7 @@ class Model(object):
         """
         Engine name or connection object
         """
-        if isinstance(ec, (str, unicode)):
+        if isinstance(ec, six.string_types):
             cls.__engine_name__ = ec
         else:
             cls.__connection__ = ec
@@ -2884,7 +2886,7 @@ class Model(object):
         
         if condition is None:
             return None
-        if isinstance(condition, (int, long)):
+        if isinstance(condition, six.integer_types):
             _cond = cls.c.id==condition
         else:
             _cond = condition
@@ -2903,7 +2905,7 @@ class Model(object):
             
             if many_fields:
                 for f in many_fields:
-                    if isinstance(f, (str, unicode)):
+                    if isinstance(f, six.string_types):
                         f_name = '_' + f + '_'
                     elif isinstance(f, Property):
                         f_name = '_' + f.property_name + '_'
@@ -2964,7 +2966,7 @@ class Model(object):
             
     @classmethod
     def remove(cls, condition=None, connection=None, **kwargs):
-        if isinstance(condition, (int, long)):
+        if isinstance(condition, six.integer_types):
             condition = cls.c.id==condition
         elif isinstance(condition, (tuple, list)):
             condition = cls.c.id.in_(condition)

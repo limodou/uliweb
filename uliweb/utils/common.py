@@ -1,30 +1,54 @@
 import os, sys
 import re
 import logging
-import cPickle
+from six.moves.urllib.parse import urlencode
+from six.moves import cPickle
 import inspect
+import six
+import types
 
 log = logging
 
 def safe_import(path):
     module = path.split('.')
-    g = __import__(module[0], fromlist=['*'])
+    mod = g = __import__(module[0], fromlist=['*'])
     s = [module[0]]
     for i in module[1:]:
-        mod = g
-        if hasattr(mod, i):
-            g = getattr(mod, i)
+        if isinstance(g, types.ModuleType):
+            mod = g
+        if hasattr(g, i):
+            g = getattr(g, i)
         else:
             s.append(i)
             g = __import__('.'.join(s), fromlist=['*'])
     return mod, g
-        
+   
+def import_handler(path):
+    """
+    Will return module, class, function
+    """
+    module = path.split('.')
+    mod = g = __import__(module[0], fromlist=['*'])
+    s = [module[0]]
+    cls = None
+    for i in module[1:]:
+        if isinstance(g, types.ModuleType):
+            mod = g
+        if hasattr(g, i):
+            g = getattr(g, i)
+            if inspect.isclass(g):
+                cls = g
+        else:
+            s.append(i)
+            g = __import__('.'.join(s), fromlist=['*'])
+    return mod, cls, g
+
 def import_mod_attr(path):
     """
     Import string format module, e.g. 'uliweb.orm' or an object
     return module object and object
     """
-    if isinstance(path, (str, unicode)):
+    if isinstance(path, six.string_types):
         module, func = path.rsplit('.', 1)
         mod = __import__(module, fromlist=['*'])
         f = getattr(mod, func)
@@ -94,7 +118,7 @@ def extract_file(module, path, dist, verbose=False, replace=True):
     if replace or not f:
         shutil.copy2(inf, dist)
         if verbose:
-            print 'Copy %s to %s' % (inf, dist)
+            six.print_('Copy %s to %s' % (inf, dist))
   
 def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, recursion=True, replace=True):
     """
@@ -111,7 +135,7 @@ def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, 
     if not os.path.exists(dst):
         os.makedirs(dst)
         if verbose:
-            print 'Make directory %s' % dst
+            six.print_('Make directory %s' % dst)
     for r in pkg.resource_listdir(mod, path):
         if r in exclude or r in default_exclude:
             continue
@@ -145,7 +169,7 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
         os.makedirs(dst)
 
     if verbose:
-        print "Processing %s" % src
+        six.print_("Processing %s" % src)
         
     for r in os.listdir(src):
         if r in ['.svn', '_svn', '.git']:
@@ -163,15 +187,15 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
                     a = _md5(fpath)
                     b = _md5(df)
                     if a != b:
-                        print ("Error: Target file %s is already existed, and "
-                            "it not same as source one %s, so copy failed" % (fpath, dst))
+                        six.print_(("Error: Target file %s is already existed, and "
+                            "it not same as source one %s, so copy failed" % (fpath, dst)))
                 else:
                     if processor:
                         if processor(fpath, dst, df):
                             continue
                     shutil.copy2(fpath, dst)
                     if verbose:
-                        print "Copy %s to %s" % (fpath, dst)
+                        six.print_("Copy %s to %s" % (fpath, dst))
                     
             else:
                 if processor:
@@ -179,7 +203,7 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
                         continue
                 shutil.copy2(fpath, dst)
                 if verbose:
-                    print "Copy %s to %s" % (fpath, dst)
+                    six.print_("Copy %s to %s" % (fpath, dst))
 
 def copy_dir_with_check(dirs, dst, verbose=False, check=True, processor=None):
 #    log = logging.getLogger('uliweb')
@@ -193,7 +217,7 @@ def copy_dir_with_check(dirs, dst, verbose=False, check=True, processor=None):
 def check_apps_dir(apps_dir):
     log = logging
     if not os.path.exists(apps_dir):
-        print >>sys.stderr, "[Error] Can't find the apps_dir [%s], please check it out" % apps_dir
+        six.print_("[Error] Can't find the apps_dir [%s], please check it out" % apps_dir, file=sys.stderr)
         sys.exit(1)
 
 def is_pyfile_exist(dir, pymodule):
@@ -212,14 +236,14 @@ def wraps(src):
             from uliweb import application
             if application:
                 env = application.get_view_env()
-                for k, v in env.iteritems():
-                    src.func_globals[k] = v
+                for k, v in six.iteritems(env):
+                    six.get_function_globals(src)[k] = v
                 
-                src.func_globals['env'] = env
+                six.get_function_globals(src)['env'] = env
             return des(*args, **kwargs)
         
         f.__name__ = src.__name__
-        f.func_globals.update(src.func_globals)
+        six.get_function_globals(f).update(six.get_function_globals(src))
         f.__doc__ = src.__doc__
         f.__module__ = src.__module__
         f.__dict__.update(src.__dict__)
@@ -235,27 +259,27 @@ def timeit(func):
         begin = time.time()
         ret = func(*args, **kwargs)
         end = time.time()
-        print ("%s.%s [%s]s" % (func.__module__, func.__name__, end-begin))
+        six.print_(("%s.%s [%s]s" % (func.__module__, func.__name__, end-begin)))
         return ret
     return f
 
 def safe_unicode(s, encoding='utf-8'):
     from uliweb.i18n.lazystr import LazyString
     
-    if isinstance(s, unicode):
+    if isinstance(s, six.text_type):
         return s
     elif isinstance(s, LazyString):
-        return unicode(s)
+        return six.text_type(s)
     else:
-        return unicode(str(s), encoding)
+        return six.text_type(str(s), encoding)
 
 def safe_str(s, encoding='utf-8'):
     from uliweb.i18n.lazystr import LazyString
 
-    if isinstance(s, unicode):
+    if isinstance(s, six.text_type):
         return s.encode(encoding)
     elif isinstance(s, LazyString):
-        return unicode(s).encode(encoding)
+        return six.text_type(s).encode(encoding)
     else:
         return str(s)
 
@@ -267,7 +291,7 @@ def get_var(key):
     return f
 
 def get_choice(choices, value, default=None):
-    if callable(choices):
+    if six.callable(choices):
         choices = choices()
     return dict(choices).get(value, default)
 
@@ -275,7 +299,7 @@ def simple_value(v, encoding='utf-8', none=False):
     import datetime
     import decimal
     
-    if callable(v):
+    if six.callable(v):
         v = v()
     if isinstance(v, datetime.datetime):
         return v.strftime('%Y-%m-%d %H:%M:%S')
@@ -285,7 +309,7 @@ def simple_value(v, encoding='utf-8', none=False):
         return v.strftime('%H:%M:%S')
     elif isinstance(v, decimal.Decimal):
         return str(v)
-    elif isinstance(v, unicode):
+    elif isinstance(v, six.text_type):
         return v.encode(encoding)
     elif isinstance(v, (tuple, list)):
         s = []
@@ -294,7 +318,7 @@ def simple_value(v, encoding='utf-8', none=False):
         return s
     elif isinstance(v, dict):
         d = {}
-        for k, v in v.iteritems():
+        for k, v in six.iteritems(v):
             d[simple_value(k)] = simple_value(v, encoding, none)
         return d
     elif v is None:
@@ -309,7 +333,7 @@ def str_value(v, encoding='utf-8', bool_int=True, none='NULL'):
     import datetime
     import decimal
     
-    if callable(v):
+    if six.callable(v):
         v = v()
     if isinstance(v, datetime.datetime):
         return v.strftime('%Y-%m-%d %H:%M:%S')
@@ -319,7 +343,7 @@ def str_value(v, encoding='utf-8', bool_int=True, none='NULL'):
         return v.strftime('%H:%M:%S')
     elif isinstance(v, decimal.Decimal):
         return str(v)
-    elif isinstance(v, unicode):
+    elif isinstance(v, six.text_type):
         return v.encode(encoding)
     elif v is None:
         return none
@@ -378,15 +402,15 @@ class Serial(object):
     def dump(cls, v):
         return cPickle.dumps(v, cPickle.HIGHEST_PROTOCOL)
 
-import urlparse
+from six.moves.urllib import parse
 class QueryString(object):
     def __init__(self, url):
         self.url = str(url)
         self.scheme, self.netloc, self.script_root, qs, self.anchor = self.parse()
-        self.qs = urlparse.parse_qs(qs, True)
+        self.qs = parse.parse_qs(qs, True)
         
     def parse(self):
-        return urlparse.urlsplit(self.url)
+        return parse.urlsplit(self.url)
     
     def __getitem__(self, name):
         return self.qs.get(name, [])
@@ -403,9 +427,9 @@ class QueryString(object):
         return self
 
     def __str__(self):
-        import urllib
         
-        qs = urllib.urlencode(self.qs, True)
+        
+        qs = urlencode(self.qs, True)
         return urlparse.urlunsplit((self.scheme, self.netloc, self.script_root, qs, self.anchor))
     
 def query_string(url, replace=True, **kwargs):
