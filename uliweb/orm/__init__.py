@@ -2056,8 +2056,7 @@ class ManyToMany(ReferenceProperty):
             self.table = self.create_table()
             #add appname to self.table
             appname = self.model_class.__module__
-            if appname.rsplit('.', 1)[-1].startswith('models'):
-                self.table.__appname__ = appname[:-7]
+            self.table.__appname__ = appname[:appname.rfind('.')]
             self.model_class.manytomany.append(self.table)
             index_name = '%s_mindx' % self.tablename
             if index_name not in [x.name for x in self.table.indexes]:
@@ -2126,8 +2125,7 @@ class ManyToMany(ReferenceProperty):
                 raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fieldb, self.through))
             self.table = self.through.table
             appname = self.model_class.__module__
-            if appname.rsplit('.', 1)[-1].startswith('models'):
-                self.table.__appname__ = appname[:-7]
+            self.table.__appname__ = appname[:appname.rfind('.')]
             self.model_class.manytomany.append(self.table)
             Index('%s_mindx' % self.tablename, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
     
@@ -2833,9 +2831,6 @@ class Model(object):
                 cls.table = Table(cls.tablename, cls.metadata, *cols, **args)
                 #add appname to self.table
                 appname = cls.__module__
-#                if appname.rsplit('.', 1)[-1].startswith('models'):
-#                    cls.table.__appname__ = appname[:-7]
-                #model should be defined in models*.py
                 cls.table.__appname__ = appname[:appname.rfind('.')]
                 
                 #add __mapping_only__ property to Table object
