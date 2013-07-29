@@ -18,13 +18,54 @@ import tokenize
 import traceback
 from cgi import escape
 from random import random
-from six.moves.cStringIO import StringIO
 from werkzeug.local import Local
+from six import StringIO
 import six
 
 
 local = Local()
 inspect.getsourcefile = inspect.getfile
+
+class HTMLStringO(object):
+    """A StringO version that HTML escapes on write."""
+
+    def __init__(self):
+        self._buffer = []
+
+    def isatty(self):
+        return False
+
+    def close(self):
+        pass
+
+    def flush(self):
+        pass
+
+    def seek(self, n, mode=0):
+        pass
+
+    def readline(self):
+        if len(self._buffer) == 0:
+            return ''
+        ret = self._buffer[0]
+        del self._buffer[0]
+        return ret
+
+    def reset(self):
+        val = ''.join(self._buffer)
+        del self._buffer[:]
+        return val
+
+    def _write(self, x):
+        if isinstance(x, bytes):
+            x = x.decode('utf-8', 'replace')
+        self._buffer.append(x)
+
+    def write(self, x):
+        self._write(x)
+
+    def writelines(self, x):
+        self._write(''.join(x))
 
 class ExceptionRepr(object):
 
@@ -52,7 +93,9 @@ class ThreadedStream(object):
     """
 
     def push():
-        local.stream = StringIO()
+        if not isinstance(sys.stdout, ThreadedStream):
+            sys.stdout = ThreadedStream()
+        local.stream = HTMLStringO()
     push = staticmethod(push)
 
     def fetch():
@@ -60,8 +103,7 @@ class ThreadedStream(object):
             stream = local.stream
         except AttributeError:
             return ''
-        stream.reset()
-        return stream.read()
+        return stream.reset()
     fetch = staticmethod(fetch)
 
     def install(cls):

@@ -50,7 +50,6 @@ from uliweb.core import dispatch
 import threading
 from uliweb.utils.sorteddict import SortedDict
 import six
-from six.moves import zip
 
 Local = threading.local()
 Local.dispatch_send = True
@@ -2979,12 +2978,10 @@ class Model(object):
             
     @classmethod
     def load(cls, values, set_saved=True):
-        if isinstance(values, (list, tuple)):
-            d = cls._data_prepare(values)
-        elif isinstance(values, dict):
+        if isinstance(values, dict):
             d = values
         else:
-            raise BadValueError("Can't support the data type %r" % values)
+            d = cls._data_prepare(values)
         
         if 'id' not in d or not d['id']:
             raise BadValueError("ID property must be existed or could not be empty.")
