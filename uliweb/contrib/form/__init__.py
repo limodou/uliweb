@@ -1,5 +1,6 @@
 from uliweb import Finder, UliwebError, settings
 from uliweb.utils.common import import_attr
+import six
 
 validators = Finder('VALIDATORS')
 
@@ -12,7 +13,7 @@ def get_form(formcls):
     
     if inspect.isclass(formcls) and issubclass(formcls, Form):
         return formcls
-    elif isinstance(formcls, (str, unicode)):
+    elif isinstance(formcls, six.string_types):
         path = settings.FORMS.get(formcls)
         if path:
             _cls = import_attr(path)

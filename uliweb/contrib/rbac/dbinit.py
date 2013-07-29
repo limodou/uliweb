@@ -1,6 +1,7 @@
 import uliweb
 from uliweb.utils.common import safe_str
 from uliweb.orm import get_model, set_dispatch_send
+import six
 
 set_dispatch_send(False)
 
@@ -27,7 +28,7 @@ for name, v in r.items():
         msg = 'Update Role(%s)...' % name
     flag = role.save()
     if flag:
-        print msg
+        six.print_(msg)
 
 def process_permission_roles(perm, v):
     """
@@ -44,7 +45,7 @@ def process_permission_roles(perm, v):
             role_name, role_props = r, ''
         role = Role.get(Role.c.name == role_name)
         if not role:
-            raise Exception, 'Role [%s] not found.' % r
+            raise Exception('Role [%s] not found.' % r)
         rel = Rel.get((Rel.c.role==role.id) & (Rel.c.permission==perm.id))
         if not rel:
             rel = Rel(role=role, permission=perm, props=role_props)
@@ -55,7 +56,7 @@ def process_permission_roles(perm, v):
             
         flag = rel.save()
         if flag:
-            print msg
+            six.print_(msg)
     
 p = uliweb.settings.get('PERMISSIONS', {})
 for name, v in p.items():
@@ -80,14 +81,14 @@ for name, v in p.items():
         msg = 'Update Permission(%s)...' % name
     flag = perm.save()
     if flag:
-        print msg
+        six.print_(msg)
     process_permission_roles(perm, roles)
     
 p = uliweb.settings.get('ROLES_PERMISSIONS', {})
 for name, v in p.items():
     perm = Perm.get(Perm.c.name==name)
     if not perm:
-        raise Exception, 'Permission [%s] not found.' % name
+        raise Exception('Permission [%s] not found.' % name)
         
     process_permission_roles(perm, v)
 

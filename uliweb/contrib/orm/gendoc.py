@@ -1,13 +1,14 @@
+import six
 
 def get_model_tables(tables, appname):
     t = []
-    for tablename, m in tables.iteritems():
+    for tablename, m in six.iteritems(tables):
         if hasattr(m, '__appname__') and m.__appname__ == appname:
             t.append(tablename)
     return t
 
 def safe_str(s, encoding='utf-8'):
-    if isinstance(s, unicode):
+    if isinstance(s, six.text_type):
         return s.encode(encoding)
     else:
         return str(s)
@@ -45,7 +46,7 @@ def generate_html(tables, apps, **kwargs):
     
     
     all_tables = []
-    for name, t in sorted(tables.iteritems()):
+    for name, t in sorted(six.iteritems(tables)):
         model = {
             'name': name,
             'fields': [],
@@ -87,7 +88,7 @@ def generate_html(tables, apps, **kwargs):
                 
                 if getattr(ppp, 'choices', None):
                     choices_list = getattr(ppp, 'choices', None)
-                    if callable(choices_list) :
+                    if six.callable(choices_list) :
                         choices_list = choices_list()
                     if choices_list :
                         star_index = star_index + 1

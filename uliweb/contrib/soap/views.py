@@ -2,6 +2,7 @@
 from uliweb import expose, functions
 import logging
 from pysimplesoap.simplexml import TYPE_MAP
+import six
 
 log = logging.getLogger('uliweb.app')
 
@@ -21,7 +22,7 @@ def _fix_soap_datatype(data):
                 if type(v) in TYPE_MAP.keys():
                     s[i] = {TYPE_MAP[type(v)]:v}
                 else:
-                    raise Exception, "Unsupport type %r" % v
+                    raise Exception("Unsupport type %r" % v)
         return s
     
     if isinstance(data, (tuple, list)):
@@ -69,7 +70,7 @@ class SoapView(object):
                 exception_handler = partial(exception_handler, response=response),
                 ns = True)
             for name, (func, returns, args, doc) in soap.__soap_functions__.get(self.config, {}).items():
-                if isinstance(func, (str, unicode)):
+                if isinstance(func, six.string_types):
                     func = import_attr(func)
                 dispatcher.register_function(name, func, returns, args, doc)
         else:

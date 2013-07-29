@@ -1,6 +1,7 @@
 from uliweb.orm import get_model
 from uliweb.utils.common import import_attr, wraps
 from uliweb.i18n import ugettext_lazy as _
+import six
 
 __all__ = ['add_role_func', 'register_role_method',
     'superuser', 'trusted', 'anonymous', 'has_role', 'has_permission',
@@ -14,7 +15,7 @@ def call_func(func, kwargs):
         try:
             args[x] = kwargs[x]
         except KeyError:
-            raise Exception, "Missing args %s" % x
+            raise Exception("Missing args %s" % x)
     return func(**args)
 
 def superuser(user):
@@ -45,12 +46,12 @@ def has_role(user, *roles, **kwargs):
     if not then return False. kwargs will be passed to role_func.
     """
     Role = get_model('role')
-    if isinstance(user, (unicode, str)):
+    if isinstance(user, six.text_type):
         User = get_model('user')
         user = User.get(User.c.username==user)
         
     for role in roles:
-        if isinstance(role, (str, unicode)):
+        if isinstance(role, six.string_types):
             role = Role.get(Role.c.name==role)
             if not role:
                 return False
@@ -58,10 +59,10 @@ def has_role(user, *roles, **kwargs):
         
         func = __role_funcs__.get(name, None)
         if func:
-            if isinstance(func, (unicode, str)):
+            if isinstance(func, six.text_type):
                 func = import_attr(func)
                 
-            assert callable(func)
+            assert six.callable(func)
             
             para = kwargs.copy()
             para['user'] = user
@@ -81,7 +82,7 @@ def has_permission(user, *permissions, **role_kwargs):
     """
     Role = get_model('role')
     Perm = get_model('permission')
-    if isinstance(user, (unicode, str)):
+    if isinstance(user, six.text_type):
         User = get_model('user')
         user = User.get(User.c.username==user)
         

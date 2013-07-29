@@ -2,6 +2,7 @@ from uliweb.orm import get_model
 import logging
 from uliweb.i18n import ugettext_lazy as _
 from uliweb import functions
+import six
 
 log = logging.getLogger('uliweb.app')
 
@@ -35,13 +36,13 @@ def create_user(username, password, **kwargs):
         user.set_password(password)
         user.save()
         return True, user
-    except Exception, e:
+    except Exception as e:
         log.exception(e)
         return False, {'_': "Creating user failed!"}
     
 def authenticate(username, password):
     User = get_model('user')
-    if isinstance(username, (str, unicode)):
+    if isinstance(username, six.string_types):
         user = User.get(User.c.username==username)
     else:
         user = username
@@ -62,7 +63,7 @@ def login(username):
     
     User = get_model('user')
     
-    if isinstance(username, (str, unicode)):
+    if isinstance(username, six.string_types):
         user = User.get(User.c.username==username)
     else:
         user = username

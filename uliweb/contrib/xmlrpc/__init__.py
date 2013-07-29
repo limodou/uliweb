@@ -1,5 +1,6 @@
 import inspect
 from functools import partial
+import six
 
 __xmlrpc_functions__ = {}
 
@@ -39,24 +40,24 @@ def xmlrpc(func, name=None):
                 else:
                     __xmlrpc_functions__[f_name] = rule
     else:
-        raise Exception, "Can't support this type [%r]" % func
+        raise Exception("Can't support this type [%r]" % func)
     return func
     
 if __name__ == '__main__':
     @xmlrpc
     def f(name):
-        print name
+        six.print_(name)
         
-    print __xmlrpc_functions__
+    six.print_(__xmlrpc_functions__)
     
     @xmlrpc('B')
     class A(object):
         def p(self):
-            print 'ppp'
+            six.print_('ppp')
             
         @xmlrpc('test')
         def t(self):
-            print 'ttt'
+            six.print_('ttt')
             
-    print __xmlrpc_functions__
+    six.print_(__xmlrpc_functions__)
     

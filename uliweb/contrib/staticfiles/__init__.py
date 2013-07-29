@@ -1,4 +1,5 @@
 from uliweb.core.SimpleFrame import expose
+from six.moves.urllib.parse import urlencode
 
 def startup_installed(sender):
     url = sender.settings.GLOBAL.STATIC_URL.rstrip('/')
@@ -10,8 +11,8 @@ def prepare_default_env(sender, env):
 def url_for_static(filename=None, **kwargs):
     from uliweb import settings, application
     from uliweb.core.SimpleFrame import get_url_adapter
-    from urlparse import urlparse, urlunparse, urljoin
-    import urllib
+    from six.moves.urllib.parse import urlparse, urlunparse, urljoin
+
     
     domain = application.domains.get('static', {})
 
@@ -30,7 +31,7 @@ def url_for_static(filename=None, **kwargs):
         if filename.endswith('/'):
             filename = filename[:-1]
         if kwargs:
-            filename += '?' + urllib.urlencode(kwargs)
+            filename += '?' + urlencode(kwargs)
         if external:
             return urljoin(domain.get('domain', ''), filename)
         return filename
@@ -40,7 +41,7 @@ def url_for_static(filename=None, **kwargs):
     if r.scheme or r.netloc:
         x = list(r)
         if kwargs:
-            x[4] = urllib.urlencode(kwargs)
+            x[4] = urlencode(kwargs)
             return urlunparse(x)
         else:
             return filename

@@ -1,4 +1,5 @@
 from uliweb import settings
+import six
 
 def after_init_apps(sender):
     from uliweb import orm
@@ -40,12 +41,12 @@ def after_init_apps(sender):
 
     if 'MODELS' in settings:
         for name, model_path in settings.MODELS.items():
-            if isinstance(model_path, (str, unicode)):
+            if isinstance(model_path, six.string_types):
                 path = model_path
                 engine_name = 'default'
             else:
                 path, engine_name = model_path
-            for k, v in __app_alias__.iteritems():
+            for k, v in six.iteritems(__app_alias__):
                 if path.startswith(k):
                     path = v + path[len(k):]
                     break

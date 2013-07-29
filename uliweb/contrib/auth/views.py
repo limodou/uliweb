@@ -1,6 +1,7 @@
 from uliweb.core.SimpleFrame import functions
 from uliweb.i18n import ugettext_lazy as _
-import urllib
+from six.moves.urllib.parse import unquote
+
 
 def login():
     from uliweb.contrib.auth import login
@@ -22,7 +23,7 @@ def login():
             if f:
                 request.session.remember = form.rememberme.data
                 login(form.username.data)
-                next = urllib.unquote(request.POST.get('next', '/'))
+                next = unquote(request.POST.get('next', '/'))
                 return redirect(next)
             else:
                 form.errors.update(d)
@@ -44,7 +45,7 @@ def register():
             if f:
                 #add auto login support 2012/03/23
                 login(d)
-                next = urllib.unquote(request.POST.get('next', '/'))
+                next = unquote(request.POST.get('next', '/'))
                 return redirect(next)
             else:
                 form.errors.update(d)
@@ -55,5 +56,5 @@ def register():
 def logout():
     from uliweb.contrib.auth import logout as out
     out()
-    next = urllib.unquote(request.POST.get('next', '/'))
+    next = unquote(request.POST.get('next', '/'))
     return redirect(next)

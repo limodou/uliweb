@@ -47,7 +47,7 @@ class DBFileServing(FileServing):
         from uliweb.utils.common import safe_str
         from uliweb.utils.filedown import filedown
         from uliweb import request
-        from StringIO import StringIO
+        from six import StringIO
         
         action = request.GET.get('action', action)
         

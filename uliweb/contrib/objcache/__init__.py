@@ -1,5 +1,6 @@
 from uliweb import functions
 from uliweb.utils.common import log, flat_list
+from six.moves import filter
 
 def get_fields(tablename):
     from uliweb import settings
@@ -16,7 +17,7 @@ def get_id(engine, tablename, id):
 def get_redis():
     try:
         redis = functions.get_redis()
-    except Exception, e:
+    except Exception as e:
         log.exception(e)
         redis = None
     return redis
@@ -50,7 +51,7 @@ def get_object(model, tablename, id):
             o = model.load(v)
             log.debug("objcache:get:id="+_id)
             return o
-    except Exception, e:
+    except Exception as e:
         log.exception(e)
         
 def set_object(model, tablename, instance, fields=None):
@@ -75,7 +76,7 @@ def set_object(model, tablename, instance, fields=None):
             pipe = redis.pipeline()
             r = pipe.delete(_id).hmset(_id, v).expire(_id, settings.get_var('OBJCACHE/timeout')).execute()
             log.debug("objcache:set:id="+_id)
-        except Exception, e:
+        except Exception as e:
             log.exception(e)
         
     else:
@@ -125,7 +126,7 @@ def post_delete(model, instance):
             try:
                 redis.delete(_id)
                 log.debug("objcache:post_delete:id="+_id)
-            except Exception, e:
+            except Exception as e:
                 log.exception(e)
             
         if response:

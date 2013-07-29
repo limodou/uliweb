@@ -9,6 +9,8 @@ from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
 from uliweb.orm import get_connection, set_auto_set_model, do_
 import inspect
+import six
+from six import StringIO
 
 def get_engine(options, global_options):
     from uliweb.manage import make_simple_application
@@ -35,7 +37,6 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
     settings_file='settings.ini', local_settings_file='local_settings.ini'):
     from uliweb.core.SimpleFrame import get_apps, get_app_dir
     from uliweb import orm
-    from StringIO import StringIO
     
     engine = orm.engine_manager[engine_name]
     e = engine.options['connection_string']
@@ -45,7 +46,7 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
         for tablename, m in engine.models.items():
             orm.get_model(tablename, engine_name)
     except:
-        print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
+        six.print_("Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys())))
         raise
     
     if apps:
@@ -63,7 +64,7 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
                 table.__appname__ = engine.metadata.tables[tablename].__appname__
                 t[tablename] = table
             else:
-                print "Table [%s] can't be found, it'll be skipped." % tablename
+                six.print_("Table [%s] can't be found, it'll be skipped." % tablename)
     else:
         t = {}
         for tablename, m in engine.metadata.tables.items():
@@ -81,11 +82,10 @@ def get_sorted_tables(tables):
     
 def dump_table(table, filename, con, std=None, delimiter=',', format=None, encoding='utf-8', inspector=None):
     from uliweb.utils.common import str_value
-    from StringIO import StringIO
     import csv
     
     if not std:
-        if isinstance(filename, (str, unicode)):
+        if isinstance(filename, six.string_types):
             std = open(filename, 'w')
         else:
             std = filename
@@ -100,19 +100,19 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
     result = do_(table.select())
     fields = [x.name for x in table.c]
     if not format:
-        print >>std, '#' + ' '.join(fields)
+        six.print_('#' + ' '.join(fields), file=std)
     elif format == 'txt':
-        print >>std, '#' + ','.join(fields)
+        six.print_('#' + ','.join(fields), file=std)
     for r in result:
         if not format:
-            print >>std, r
+            six.print_(r, file=std)
         elif format == 'txt':
             buf = StringIO()
             fw = csv.writer(buf, delimiter=delimiter)
             fw.writerow([str_value(x, encoding=encoding) for x in r])
-            print >>std, buf.getvalue().rstrip()
+            six.print_(buf.getvalue().rstrip(), file=std)
         else:
-            raise Exception, "Can't support the text format %s" % format
+            raise Exception("Can't support the text format %s" % format)
   
 def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8', delete=True):
     import csv
@@ -151,7 +151,7 @@ def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8
                                 params[c.name] = None
                             else:
                                 if isinstance(c.type, String):
-                                    params[c.name] = unicode(record[c.name], encoding)
+                                    params[c.name] = six.text_type(record[c.name], encoding)
                                 elif isinstance(c.type, Date):
                                     params[c.name] = to_date(to_datetime(record[c.name]))
                                 elif isinstance(c.type, DateTime):
@@ -207,7 +207,7 @@ class SyncdbCommand(SQLCommandMixin, Command):
                 else:
                     msg = 'EXISTED'
             if created or global_options.verbose:
-                print '[%s] Creating %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+                six.print_('[%s] Creating %s...%s' % (options.engine, show_table(name, t, i, _len), msg))
 
 class ResetCommand(SQLCommandMixin, Command):
     name = 'reset'
@@ -237,7 +237,7 @@ class ResetCommand(SQLCommandMixin, Command):
                 t.create(engine)
                 msg = 'SUCCESS'
             if global_options.verbose:
-                print '[%s] Resetting %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+                six.print_('[%s] Resetting %s...%s' % (options.engine, show_table(name, t, i, _len), msg))
 
 class ResetTableCommand(SQLCommandMixin, Command):
     name = 'resettable'
@@ -247,7 +247,7 @@ class ResetTableCommand(SQLCommandMixin, Command):
     def handle(self, options, global_options, *args):
 
         if not args:
-            print "Failed! You should pass one or more tables name."
+            six.print_("Failed! You should pass one or more tables name.")
             sys.exit(1)
 
         message = """This command will drop all tables [%s], are you sure to reset""" % ','.join(args)
@@ -268,7 +268,7 @@ class ResetTableCommand(SQLCommandMixin, Command):
                 t.create(engine)
                 msg = 'SUCCESS'
             if global_options.verbose:
-                print '[%s] Resetting %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+                six.print_('[%s] Resetting %s...%s' % (options.engine, show_table(name, t, i, _len), msg))
 
 class DropTableCommand(SQLCommandMixin, Command):
     name = 'droptable'
@@ -278,7 +278,7 @@ class DropTableCommand(SQLCommandMixin, Command):
     def handle(self, options, global_options, *args):
 
         if not args:
-            print "Failed! You should pass one or more tables name."
+            six.print_("Failed! You should pass one or more tables name.")
             sys.exit(1)
 
         message = """This command will drop all tables [%s], are you sure to drop""" % ','.join(args)
@@ -298,7 +298,7 @@ class DropTableCommand(SQLCommandMixin, Command):
                 t.drop(engine, checkfirst=True)
                 msg = 'SUCCESS'
             if global_options.verbose:
-                print '[%s] Dropping %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+                six.print_('[%s] Dropping %s...%s' % (options.engine, show_table(name, t, i, _len), msg))
 
 class SQLCommand(SQLCommandMixin, Command):
     name = 'sql'
@@ -310,7 +310,7 @@ class SQLCommand(SQLCommandMixin, Command):
         from sqlalchemy.schema import CreateTable, CreateIndex
         
         if not args:
-            print "Failed! You should pass one or more tables name."
+            six.print_("Failed! You should pass one or more tables name.")
             sys.exit(1)
 
         engine = get_engine(options, global_options)
@@ -322,9 +322,9 @@ class SQLCommand(SQLCommandMixin, Command):
             if t.__mapping_only__:
                 continue
             
-            print "%s;" % str(CreateTable(t)).rstrip()
+            six.print_("%s;" % str(CreateTable(t)).rstrip())
             for x in t.indexes:
-                print "%s;" % CreateIndex(x)
+                six.print_("%s;" % CreateIndex(x))
             
 class SQLTableCommand(SQLCommandMixin, Command):
     name = 'sqltable'
@@ -343,9 +343,9 @@ class SQLTableCommand(SQLCommandMixin, Command):
         for name, t in tables:
             if t.__mapping_only__:
                 continue
-            print "%s;" % str(CreateTable(t)).rstrip()
+            six.print_("%s;" % str(CreateTable(t)).rstrip())
             for x in t.indexes:
-                print "%s;" % CreateIndex(x)
+                six.print_("%s;" % CreateIndex(x))
 
 class DumpCommand(SQLCommandMixin, Command):
     name = 'dump'
@@ -368,7 +368,6 @@ class DumpCommand(SQLCommandMixin, Command):
     
     def handle(self, options, global_options, *args):
         from zipfile import ZipFile, ZIP_DEFLATED
-        from StringIO import StringIO
 
         output_dir = os.path.join(options.output_dir, options.engine)
         if not os.path.exists(output_dir):
@@ -389,7 +388,7 @@ class DumpCommand(SQLCommandMixin, Command):
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print 'Dumpping %s...' % show_table(name, t, i, _len)
+                six.print_('Dumpping %s...' % show_table(name, t, i, _len))
             filename = os.path.join(output_dir, name+'.txt')
             if options.text:
                 format = 'txt'
@@ -429,7 +428,6 @@ class DumpTableCommand(SQLCommandMixin, Command):
     
     def handle(self, options, global_options, *args):
         from zipfile import ZipFile, ZIP_DEFLATED
-        from StringIO import StringIO
         
         output_dir = os.path.join(options.output_dir, options.engine)
         if not os.path.exists(output_dir):
@@ -438,7 +436,7 @@ class DumpTableCommand(SQLCommandMixin, Command):
         engine = get_engine(options, global_options)
 
         if not args:
-            print "Failed! You should pass one or more tables name."
+            six.print_("Failed! You should pass one or more tables name.")
             sys.exit(1)
             
         zipfile = None
@@ -454,7 +452,7 @@ class DumpTableCommand(SQLCommandMixin, Command):
 
         for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print '[%s] Dumpping %s...' % (options.engine, show_table(name, t, i, _len))
+                six.print_('[%s] Dumpping %s...' % (options.engine, show_table(name, t, i, _len)))
             filename = os.path.join(output_dir, name+'.txt')
             if options.text:
                 format = 'txt'
@@ -495,7 +493,7 @@ class DumpTableFileCommand(SQLCommandMixin, Command):
         engine = get_engine(options, global_options)
 
         if len(args) != 2:
-            print self.print_help(self.prog_name, 'dumptablefile')
+            six.print_(self.print_help(self.prog_name, 'dumptablefile'))
             sys.exit(1)
             
         inspector = Inspector.from_engine(engine)
@@ -506,7 +504,7 @@ class DumpTableFileCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings)
         t = tables[name]
         if global_options.verbose:
-            print '[%s] Dumpping %s...' % (options.engine, show_table(name, t, 0, 1))
+            six.print_('[%s] Dumpping %s...' % (options.engine, show_table(name, t, 0, 1)))
         if options.text:
             format = 'txt'
         else:
@@ -558,10 +556,10 @@ are you sure to load data""" % options.engine
             if t.__mapping_only__:
                 if global_options.verbose:
                     msg = 'SKIPPED(Mapping Table)'
-                    print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+                    six.print_('[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg))
                 continue
             if global_options.verbose:
-                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
+                six.print_('[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len)))
             try:
                 orm.Begin()
                 filename = os.path.join(path, name+'.txt')
@@ -599,7 +597,7 @@ class LoadTableCommand(SQLCommandMixin, Command):
             message = """This command will delete all data of [%s]-[%s] before loading, 
 are you sure to load data""" % (options.engine, ','.join(args))
         else:
-            print "Failed! You should pass one or more tables name."
+            six.print_("Failed! You should pass one or more tables name.")
             sys.exit(1)
 
         ans = get_answer(message, answers='Yn', quit='q')
@@ -620,10 +618,10 @@ are you sure to load data""" % (options.engine, ','.join(args))
             if t.__mapping_only__:
                 if global_options.verbose:
                     msg = 'SKIPPED(Mapping Table)'
-                    print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+                    six.print_('[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg))
                 continue
             if global_options.verbose:
-                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
+                six.print_('[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len)))
             try:
                 orm.Begin()
                 filename = os.path.join(path, name+'.txt')
@@ -656,13 +654,13 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
         from uliweb import orm
         
         if len(args) != 2:
-            print self.print_help(self.prog_name, 'loadtablefile')
+            six.print_(self.print_help(self.prog_name, 'loadtablefile'))
             sys.exit(1)
             
         if args:
             message = """Do you want to delete all data of [%s]-[%s] before loading, if you choose N, the data will not be deleted""" % (options.engine, args[0])
         else:
-            print "Failed! You should pass one or more tables name."
+            six.print_("Failed! You should pass one or more tables name.")
             sys.exit(1)
 
         ans = get_answer(message, answers='Yn', quit='q')
@@ -677,11 +675,11 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
         if t.__mapping_only__:
             if global_options.verbose:
                 msg = 'SKIPPED(Mapping Table)'
-                print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
+                six.print_('[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg))
             return
         
         if global_options.verbose:
-            print '[%s] Loading %s...' % (options.engine, show_table(name, t, 0, 1))
+            six.print_('[%s] Loading %s...' % (options.engine, show_table(name, t, 0, 1)))
         try:
             orm.Begin()
             if options.text:
@@ -718,7 +716,7 @@ class DbinitCommand(SQLCommandMixin, Command):
             m = '%s.dbinit' % p
             try:
                 if global_options.verbose:
-                    print "[%s] Processing %s..." % (options.engine, m)
+                    six.print_("[%s] Processing %s..." % (options.engine, m))
                 orm.Begin()
                 mod = __import__(m, fromlist=['*'])
                 orm.Commit()
@@ -733,7 +731,7 @@ class SqldotCommand(SQLCommandMixin, Command):
     check_apps = True
     
     def handle(self, options, global_options, *args):
-        from graph import generate_dot
+        from .graph import generate_dot
 
         engine = get_engine(options, global_options)
 
@@ -745,7 +743,7 @@ class SqldotCommand(SQLCommandMixin, Command):
         tables = get_tables(global_options.apps_dir, apps, engine_name=options.engine, 
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings)
-        print generate_dot(tables, apps)
+        six.print_(generate_dot(tables, apps))
         
 class SqlHtmlCommand(SQLCommandMixin, Command):
     name = 'sqlhtml'
@@ -754,7 +752,7 @@ class SqlHtmlCommand(SQLCommandMixin, Command):
     check_apps = True
     
     def handle(self, options, global_options, *args):
-        from gendoc import generate_html
+        from .gendoc import generate_html
     
         engine = get_engine(options, global_options)
         
@@ -766,7 +764,7 @@ class SqlHtmlCommand(SQLCommandMixin, Command):
         tables = get_tables(global_options.apps_dir, args, engine_name=options.engine, 
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings)
-        print generate_html(tables, apps)
+        six.print_(generate_html(tables, apps))
     
 class ValidatedbCommand(SQLCommandMixin, Command):
     name = 'validatedb'
@@ -809,7 +807,7 @@ class ValidatedbCommand(SQLCommandMixin, Command):
                     flag = 'FAILED'
                 
             if global_options.verbose or flag!='OK':
-                print 'Validating [%s] %s...%s' % (options.engine, show_table(name, t, i, _len), flag)
+                six.print_('Validating [%s] %s...%s' % (options.engine, show_table(name, t, i, _len), flag))
 
 def get_commands(mod):
     import types
@@ -833,7 +831,7 @@ class AlembicCommand(SQLCommandMixin, CommandManager):
     check_apps_dirs = True
 
     def get_commands(self, global_options):
-        import subcommands
+        from . import subcommands
         cmds = get_commands(subcommands)
         return cmds
     

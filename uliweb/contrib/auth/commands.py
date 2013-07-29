@@ -1,5 +1,7 @@
 from uliweb.core.commands import Command
 from uliweb.contrib.orm.commands import SQLCommandMixin
+import six
+from six.moves import input
 
 class CreateSuperUserCommand(SQLCommandMixin, Command):
     name = 'createsuperuser'
@@ -16,10 +18,10 @@ class CreateSuperUserCommand(SQLCommandMixin, Command):
         
         username = ''
         while not username:
-            username = raw_input("Please enter the super user's name: ")
+            username = input("Please enter the super user's name: ")
         email = ''
         while not email:
-            email = raw_input("Please enter the email of [%s]: " % username)
+            email = input("Please enter the email of [%s]: " % username)
             
         password = ''
         while not password:
@@ -29,7 +31,7 @@ class CreateSuperUserCommand(SQLCommandMixin, Command):
             repassword = getpass("Please enter the password again: ")
         
         if password != repassword:
-            print "The password is not matched, can't create super user!"
+            six.print_("The password is not matched, can't create super user!")
             return
         
         orm.set_dispatch_send(False)
@@ -58,6 +60,6 @@ class EncryptPasswordCommand(Command):
             return
         password1 = getpass.getpass('Enter your password twice:')
         if password != password1:
-            print "Your password is not matched, please run the command again"
+            six.print_("Your password is not matched, please run the command again")
         else:
-            print functions.encrypt_password(password)
+            six.print_(functions.encrypt_password(password))

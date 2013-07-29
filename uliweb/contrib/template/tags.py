@@ -112,7 +112,7 @@ class UseNode(LinkNode):
                     module = '.'.join([p, 'template_plugins', plugin])
                     try:
                         mod = __import__(module, {}, {}, [''])
-                    except ImportError, e:
+                    except ImportError as e:
                         log.exception(e)
                         mod = None
             if mod:
@@ -163,7 +163,7 @@ class HtmlMerge(object):
         
     def init(self):
         global __static_combine__, __static_mapping__
-        from __init__ import init_static_combine
+        from .__init__ import init_static_combine
         
         if __static_combine__ is None:
             __static_combine__ = init_static_combine()
@@ -219,7 +219,7 @@ class HtmlMerge(object):
                 
                 if top and bottom:
                     if bottom_start < top_start:
-                        raise TemplateDefineError, "Template <!-- bottomlinks --> shouldn't be defined before <!-- toplinks -->"
+                        raise TemplateDefineError("Template <!-- bottomlinks --> shouldn't be defined before <!-- toplinks -->")
                     return self.text[:top_start] + top + self.text[top_start:bottom_start] + bottom + self.text[bottom_start:]
                 elif top:
                     return self.text[:top_start] + top + self.text[top_start:]

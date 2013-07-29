@@ -2,6 +2,7 @@ import os
 from werkzeug.wsgi import SharedDataMiddleware
 from uliweb import settings
 from uliweb.utils.filedown import filedown
+import six
 
 class StaticFilesMiddleware(SharedDataMiddleware):
     """
@@ -71,7 +72,7 @@ class StaticFilesMiddleware(SharedDataMiddleware):
                                 if x and x != '..'])
         file_loader = None
         flag = False
-        for search_path, loader in self.exports.iteritems():
+        for search_path, loader in six.iteritems(self.exports):
             if search_path == path:
                 flag = True
                 real_filename, file_loader = loader(None)

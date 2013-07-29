@@ -1,3 +1,4 @@
+import six
 head_template = """
 digraph name {
   fontname = "Helvetica"
@@ -77,7 +78,7 @@ tail_template = """
 """
 def get_model_tables(tables, appname):
     t = []
-    for tablename, m in tables.iteritems():
+    for tablename, m in six.iteritems(tables):
         if hasattr(m, '__appname__') and m.__appname__ == appname:
             t.append(tablename)
     return t
@@ -151,7 +152,7 @@ def generate_dot(tables, apps, **kwargs):
                 add_attributes(field)
 
             if M._manytomany:
-                for k, field in M._manytomany.iteritems():
+                for k, field in six.iteritems(M._manytomany):
                     add_attributes(field)
 
             # relations
@@ -177,7 +178,7 @@ def generate_dot(tables, apps, **kwargs):
                     add_relation(field, rel='n:1')
 
             if M._manytomany:
-                for k, field in M._manytomany.iteritems():
+                for k, field in six.iteritems(M._manytomany):
                     if field.__class__ is ManyToMany:
                         add_relation(field, '[dir=both arrowhead=normal arrowtail=normal]', rel='m:n')
             graph['models'].append(model)

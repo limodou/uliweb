@@ -2,13 +2,14 @@ from uliweb.orm import *
 import datetime
 from uliweb.i18n import ugettext_lazy as _
 from uliweb import functions
+import six
 
 def get_hexdigest(algorithm, salt, raw_password):
     """
     Returns a string of the hexdigest of the given plaintext password and salt
     using the given algorithm ('md5', 'sha1' or 'crypt').
     """
-    if isinstance(salt, unicode):
+    if isinstance(salt, six.text_type):
         salt = salt.encode('utf8')
     if algorithm == 'crypt':
         try:

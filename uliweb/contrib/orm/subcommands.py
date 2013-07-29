@@ -1,7 +1,7 @@
 import os
 from optparse import make_option
 from uliweb.core.commands import Command
-from commands import SQLCommand
+from .commands import SQLCommand
 
 class InitCommand(SQLCommand, Command):
     name = 'init'
@@ -78,7 +78,7 @@ class RevisionCommand(SQLCommand, Command):
         from alembic import command, util
         try:
             getattr(command, cmd)(config, *args, **kwargs)
-        except util.CommandError, e:
+        except util.CommandError as e:
             util.err(str(e))
         
 class DiffCommand(RevisionCommand):

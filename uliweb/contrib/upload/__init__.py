@@ -4,6 +4,8 @@ from uliweb.utils import files
 from uliweb.utils.common import import_attr, application_path, log
 import random
 import time
+import six
+from six.moves.urllib.parse import unquote
 
 __all__ = ['save_file', 'get_filename', 'get_url', 'save_file_field', 'save_image_field', 
     'delete_filename', 'norm_filename']
@@ -66,8 +68,8 @@ class FileServing(object):
             elif self.x_sendfile == 'apache':
                 self.x_header_name = 'X-Sendfile'
             else:
-                raise Exception, "X_HEADER can't be None, or X_SENDFILE is not supprted"
-        if isinstance(self._filename_converter, (str, unicode)):
+                raise Exception("X_HEADER can't be None, or X_SENDFILE is not supprted")
+        if isinstance(self._filename_converter, six.string_types):
             self._filename_converter_cls = import_attr(self._filename_converter)
         else:
             self._filename_converter_cls = self._filename_converter or default_filename_converter_cls
@@ -162,7 +164,7 @@ class FileServing(object):
         if os.path.exists(f):
             try:
                 os.unlink(f)
-            except Exception, e:
+            except Exception as e:
                 log.exception(e)
     
     def get_href(self, filename, **kwargs):
@@ -201,13 +203,13 @@ def get_backend():
 
 def file_serving(filename):
     from uliweb import request
-    import urllib2
+
     
     alt_filename = request.GET.get('alt')
     if not alt_filename:
         alt_filename = filename
     else:
-        alt_filename = urllib2.unquote(alt_filename)
+        alt_filename = unquote(alt_filename)
     _filename = get_filename(filename, False, convert=False)
     x_filename = filename
     return get_backend().download(alt_filename, real_filename=_filename, x_filename=x_filename)

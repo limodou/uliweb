@@ -2,6 +2,7 @@ import inspect
 from functools import partial
 from pysimplesoap.simplexml import (Date, DateTime, Decimal, byte, short, 
     double, integer, Time, TYPE_MAP)
+import six
 
 __soap_functions__ = {'SOAP':{}}
 
@@ -14,7 +15,7 @@ def _fix_soap_kwargs(kwargs):
                 if v in TYPE_MAP.keys():
                     s[i] = {TYPE_MAP[v]:v}
                 else:
-                    raise Exception, "Unsupport type %r" % v
+                    raise Exception("Unsupport type %r" % v)
         return s
     
     if kwargs is None:
@@ -64,32 +65,32 @@ def soap(func=None, name=None, returns=None, args=None, doc=None, target='SOAP')
                 else:
                     target_functions[f_name] = endpoint
     else:
-        raise Exception, "Can't support this type [%r]" % func
+        raise Exception("Can't support this type [%r]" % func)
     return func
     
 if __name__ == '__main__':
     @soap
     def f(name):
-        print name
+        six.print_(name)
         
     @soap('GetName', returns={'Int':int}, args={'a':int})
     def p(a):
-        print a
+        six.print_(a)
         
     @soap(returns={'Int':int}, args={'a':int})
     def d(a):
-        print a
+        six.print_(a)
     
-    print __soap_functions__
+    six.print_(__soap_functions__)
     
     @soap('B')
     class A(object):
         def p(self):
-            print 'ppp'
+            six.print_('ppp')
             
         @soap('test')
         def t(self):
-            print 'ttt'
+            six.print_('ttt')
             
-    print __soap_functions__
+    six.print_(__soap_functions__)
     
