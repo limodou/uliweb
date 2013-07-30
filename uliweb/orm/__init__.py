@@ -1802,7 +1802,11 @@ class ManyResult(Result):
                 else:
                     v = o
                 d = {self.fielda:self.valuea, self.fieldb:v}
-                self.do_(self.table.insert().values(**d))
+                if self.through_model:
+                    obj = self.through_model(**d)
+                    obj.save()
+                else:
+                    self.do_(self.table.insert().values(**d))
                 modified = modified or True
         
         #cache [] to _STORED_attr_name
@@ -1840,7 +1844,11 @@ class ManyResult(Result):
                 ids.remove(v)
             else:
                 d = {self.fielda:self.valuea, self.fieldb:v}
-                self.do_(self.table.insert().values(**d))
+                if self.through_model:
+                    obj = self.through_model(**d)
+                    obj.save()
+                else:
+                    self.do_(self.table.insert().values(**d))
                 modified = True
                 
         if ids: #if there are still ids, so delete them
