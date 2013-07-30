@@ -14,6 +14,7 @@ from os.path import dirname, join
 #from werkzeug.templates import Template
 from uliweb.core.template import template_file
 from werkzeug.debug.util import Namespace
+import six
 
 
 def get_template(name):
@@ -23,7 +24,7 @@ def get_template(name):
 
 def load_resource(res):
     try:
-        f = file(join(dirname(__file__), 'shared', res))
+        f = open(join(dirname(__file__), 'shared', res), 'rb')
     except IOError:
         return ''
     try:
@@ -78,7 +79,7 @@ def var_table(var):
             typ = 'empty'
         else:
             typ = 'dict'
-            value.sort()
+            sorted(value)
             value = [(repr(key), safe_pformat(val)) for key, val in value]
 
     # lists

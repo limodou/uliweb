@@ -17,11 +17,9 @@ import keyword
 import tokenize
 import traceback
 from cgi import escape
-from random import random
 from werkzeug.local import Local
-from six import StringIO
+from six import BytesIO, StringIO
 import six
-
 
 local = Local()
 inspect.getsourcefile = inspect.getfile
@@ -128,7 +126,11 @@ class ThreadedStream(object):
 
 def get_uid():
     """Return a random unique ID."""
-    return str(random()).encode('base64')[3:11]
+    import uuid
+    
+    return uuid.uuid4().hex[:8]
+#    
+#    return str(random()).encode('base64')[3:11]
 
 
 def highlight_python(source):
@@ -165,24 +167,30 @@ class PythonParser(object):
 
     def __init__(self, raw):
         self.raw = raw.expandtabs(8)
-        if isinstance(self.raw, six.text_type):
-            self.raw = self.raw.encode('utf-8', 'ignore')
+#        if isinstance(self.raw, six.text_type):
+#            self.raw = self.raw.encode('utf-8', 'ignore')
         self.out = StringIO()
+        self.encoding = 'utf8'
 
     def parse(self):
         self.lines = [0, 0]
         pos = 0
         while 1:
-            pos = self.raw.find('\n', pos) + 1
+            pos = self.raw.find(b'\n', pos) + 1
             if not pos:
                 break
             self.lines.append(pos)
         self.lines.append(len(self.raw))
 
         self.pos = 0
-        text = StringIO(self.raw)
+        text = BytesIO(self.raw)
         try:
-            tokenize.tokenize(text.readline, self)
+            for v in tokenize.generate_tokens(text.readline):
+                if six.PY3:
+                    if v[0] is tokenize.ENCODING:
+                        self.encoding = v[1]
+                        continue
+                self(*v)
         except (SyntaxError, tokenize.TokenError):
             self.error = True
         else:
@@ -216,20 +224,21 @@ class PythonParser(object):
             return escape(self.raw).splitlines()
         return list(html_splitlines(self.out.getvalue().splitlines()))
 
-    def __call__(self, toktype, toktext, xxx_todo_changeme, xxx_todo_changeme1, line):
-        (srow,scol) = xxx_todo_changeme
-        (erow,ecol) = xxx_todo_changeme1
+    def __call__(self, toktype, toktext, s_row_col, e_row_col, line):
+        (srow,scol) = s_row_col
+        (erow,ecol) = e_row_col
         oldpos = self.pos
-        newpos = self.lines[srow] + scol
-        self.pos = newpos + len(toktext)
+        newpos = scol
+        self.pos = ecol
 
         if toktype in [token.NEWLINE, tokenize.NL]:
             self.out.write('\n')
+            self.pos = 0
             return
 
         if newpos > oldpos:
-            self.out.write(self.raw[oldpos:newpos])
-
+            self.out.write(line[oldpos:newpos])
+        
         if toktype in [token.INDENT, token.DEDENT]:
             self.pos = newpos
             return
@@ -293,12 +302,13 @@ def get_frame_info(tb, context_lines=7, simple=False):
             if hasattr(loader, 'get_source'):
                 fn, lineno, source = loader.get_source(exc_type, exc_value, exc_info, tb)
         else:
-            source = file(fn).read()
+            source = open(fn, 'rb').read()
+            
     except:
         pass
     else:
         try:
-            raw_context_line = source.splitlines()[lineno - 1].strip()
+            raw_context_line = source.splitlines()[lineno - 1].strip().decode('utf8')
         except IndexError:
             pass
         if not simple:

@@ -3,7 +3,7 @@
 
 import re
 import os
-from six.moves import StringIO
+from six import StringIO
 import cgi
 import six
 
@@ -366,13 +366,13 @@ class Out(object):
     encoding = 'utf-8'
     
     def __init__(self):
-        self.buf = StringIO.StringIO()
+        self.buf = StringIO()
         
     def _str(self, text):
         if not isinstance(text, six.string_types):
-            text = str(text)
-        if isinstance(text, six.text_type):
-            return text.encode(self.encoding)
+            text = six.text_type(text)
+        if not isinstance(text, six.text_type):
+            return text.decode(self.encoding)
         else:
             return text
 
@@ -663,7 +663,7 @@ class Template(object):
                     return True, f, text
         
         if self.filename and not self.text:
-            self.text, self.begin_tag, self.end_tag = self.get_text(file(self.filename, 'rb').read())
+            self.text, self.begin_tag, self.end_tag = self.get_text(open(self.filename, 'rb').read())
         return False, self.filename, self.parse()
         
     def get_text(self, text, inherit_tags=True):
@@ -672,6 +672,9 @@ class Template(object):
         If inherit_tags is True, then use current begin and end tag string, 
         or use default tag string
         """
+        if six.PY3:
+            text = text.decode(self.encoding)
+            
         b = r_tag.search(text)
         if b:
             begin_tag, end_tag = b.group(1), b.group(2)

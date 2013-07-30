@@ -63,7 +63,10 @@ class DebuggedApplication(object):
                 return
             # pastebin
             elif parameters.get('pastetb'):
-                from xmlrpc.client import ServerProxy
+                try:
+                    from xmlrpc.client import ServerProxy
+                except:
+                    from xmlrpclib import ServerProxy
                 try:
                     length = int(environ['CONTENT_LENGTH'])
                 except (KeyError, ValueError):
@@ -110,7 +113,7 @@ class DebuggedApplication(object):
             except:
                 pass
             debug_context = self.create_debug_context(environ, exc_info)
-            yield debug_page(debug_context)
+            yield debug_page(debug_context).encode('utf8')
 
         if hasattr(appiter, 'close'):
             appiter.close()
