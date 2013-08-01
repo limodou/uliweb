@@ -391,7 +391,7 @@ def rawsql(query, ec=None):
     return (comp.string.encode(enc).replace('?', '%s') % tuple(params))
     
     
-def do_(query, ec=None):
+def do_(query, ec=None, args=None):
     """
     Execute a query
     if auto_transaction is True, then if there is no connection existed,
@@ -402,7 +402,7 @@ def do_(query, ec=None):
     
     conn = local_conection(ec)
     b = time()
-    result = conn.execute(query)
+    result = conn.execute(query, *(args or ()))
     t = time() - b
     dispatch.call(ec, 'post_do', query, conn, t)
     

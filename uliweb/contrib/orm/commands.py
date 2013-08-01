@@ -9,6 +9,7 @@ from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
 from uliweb.orm import get_connection, set_auto_set_model, do_
 import inspect
+from time import time
 
 def get_engine(options, global_options):
     from uliweb.manage import make_simple_application
@@ -84,6 +85,7 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
     from StringIO import StringIO
     import csv
     
+    b = time()
     if not std:
         if isinstance(filename, (str, unicode)):
             std = open(filename, 'w')
@@ -103,7 +105,9 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
         print >>std, '#' + ' '.join(fields)
     elif format == 'txt':
         print >>std, '#' + ','.join(fields)
+    n = 0
     for r in result:
+        n += 1
         if not format:
             print >>std, r
         elif format == 'txt':
@@ -114,7 +118,10 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
         else:
             raise Exception, "Can't support the text format %s" % format
   
-def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8', delete=True):
+    return 'OK (%d/%lfs)' % (n, time()-b)
+
+def load_table(table, filename, con, delimiter=',', format=None, 
+    encoding='utf-8', delete=True, bulk=100):
     import csv
     from uliweb.utils.date import to_date, to_datetime
     
@@ -124,20 +131,24 @@ def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8
         do_(table.delete())
     
     if not os.path.exists(filename):
-        log.info("The table [%s] data is not existed." % table.name)
-        return 
+        return "Skipped (data not found)"
     
+    b = time()
+    bulk = max(1, bulk)
     f = fin = open(filename, 'rb')
     try:
         first_line = f.readline()
         fields = first_line[1:].strip().split()
         n = 1
+        c = 0
         if format:
             fin = csv.reader(f, delimiter=delimiter)
             
+        buf = []
         for line in fin:
             try:
                 n += 1
+                c += 1
                 if not format:
                     line = eval(line.strip())
                 record = dict(zip(fields, line))
@@ -158,11 +169,20 @@ def load_table(table, filename, con, delimiter=',', format=None, encoding='utf-8
                                     params[c.name] = to_datetime(record[c.name])
                                 else:
                                     params[c.name] = record[c.name]
-                ins = table.insert().values(**params)
-                do_(ins)
+                if c < bulk:
+                    buf.append(params)
+                else:
+                    do_(table.insert(), args=buf)
+                    c = 0
+                    buf = []
             except:
                 log.error('Error: Line %d' % n)
                 raise
+        
+        if buf:
+            do_(table.insert(), args=buf)
+            
+        return 'OK (%d/%lfs)' % (n, time()-b)
     finally:
         f.close()
   
@@ -389,7 +409,7 @@ class DumpCommand(SQLCommandMixin, Command):
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print 'Dumpping %s...' % show_table(name, t, i, _len)
+                print 'Dumpping %s...' % show_table(name, t, i, _len),
             filename = os.path.join(output_dir, name+'.txt')
             if options.text:
                 format = 'txt'
@@ -401,11 +421,14 @@ class DumpCommand(SQLCommandMixin, Command):
                 filename = os.path.basename(filename)
             else:
                 fileobj = filename
-            dump_table(t, fileobj, engine, delimiter=options.delimiter, 
+            t = dump_table(t, fileobj, engine, delimiter=options.delimiter, 
                 format=format, encoding=options.encoding, inspector=inspector)
             #write zip content
             if options.zipfile and zipfile:
                 zipfile.writestr(filename, fileobj.getvalue())
+            if global_options.verbose:
+                print t
+            
         if zipfile:
             zipfile.close()
             
@@ -454,7 +477,7 @@ class DumpTableCommand(SQLCommandMixin, Command):
 
         for i, (name, t) in enumerate(tables):
             if global_options.verbose:
-                print '[%s] Dumpping %s...' % (options.engine, show_table(name, t, i, _len))
+                print '[%s] Dumpping %s...' % (options.engine, show_table(name, t, i, _len)),
             filename = os.path.join(output_dir, name+'.txt')
             if options.text:
                 format = 'txt'
@@ -467,12 +490,15 @@ class DumpTableCommand(SQLCommandMixin, Command):
             else:
                 fileobj = filename
                 
-            dump_table(t, fileobj, engine, delimiter=options.delimiter, 
+            t = dump_table(t, fileobj, engine, delimiter=options.delimiter, 
                 format=format, encoding=options.encoding, inspector=inspector)
 
             #write zip content
             if options.zipfile and zipfile:
                 zipfile.writestr(filename, fileobj.getvalue())
+            if global_options.verbose:
+                print t
+            
         if zipfile:
             zipfile.close()
             
@@ -506,14 +532,16 @@ class DumpTableFileCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings)
         t = tables[name]
         if global_options.verbose:
-            print '[%s] Dumpping %s...' % (options.engine, show_table(name, t, 0, 1))
+            print '[%s] Dumpping %s...' % (options.engine, show_table(name, t, 0, 1)),
         if options.text:
             format = 'txt'
         else:
             format = None
-        dump_table(t, args[1], engine, delimiter=options.delimiter, 
+        t = dump_table(t, args[1], engine, delimiter=options.delimiter, 
             format=format, encoding=options.encoding, inspector=inspector)
-
+        if global_options.verbose:
+            print t
+        
 class LoadCommand(SQLCommandMixin, Command):
     name = 'load'
     args = '<appname, appname, ...>'
@@ -521,6 +549,8 @@ class LoadCommand(SQLCommandMixin, Command):
     option_list = (
         make_option('-d', dest='dir', default='./data',
             help='Directory of data files.'),
+        make_option('-b', dest='bulk', default='100',
+            help='Bulk number of insert.'),
         make_option('-t', '--text', dest='text', action='store_true', default=False,
             help='Load files in text format.'),
         make_option('--delimiter', dest='delimiter', default=',',
@@ -561,7 +591,7 @@ are you sure to load data""" % options.engine
                     print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
                 continue
             if global_options.verbose:
-                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
+                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len)),
             try:
                 orm.Begin()
                 filename = os.path.join(path, name+'.txt')
@@ -569,9 +599,12 @@ are you sure to load data""" % options.engine
                     format = 'txt'
                 else:
                     format = None
-                load_table(t, filename, engine, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding)
+                t = load_table(t, filename, engine, delimiter=options.delimiter, 
+                    format=format, encoding=options.encoding, bulk=int(options.bulk))
                 orm.Commit()
+                if global_options.verbose:
+                    print t
+                
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
                 orm.Rollback()
@@ -583,6 +616,8 @@ class LoadTableCommand(SQLCommandMixin, Command):
     option_list = (
         make_option('-d', dest='dir', default='./data',
             help='Directory of data files.'),
+        make_option('-b', dest='bulk', default='100',
+            help='Bulk number of insert.'),
         make_option('-t', '--text', dest='text', action='store_true', default=False,
             help='Load files in text format.'),
         make_option('--delimiter', dest='delimiter', default=',',
@@ -623,7 +658,7 @@ are you sure to load data""" % (options.engine, ','.join(args))
                     print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
                 continue
             if global_options.verbose:
-                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
+                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len)),
             try:
                 orm.Begin()
                 filename = os.path.join(path, name+'.txt')
@@ -631,9 +666,11 @@ are you sure to load data""" % (options.engine, ','.join(args))
                     format = 'txt'
                 else:
                     format = None
-                load_table(t, filename, engine, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding, delete=ans=='Y')
+                t = load_table(t, filename, engine, delimiter=options.delimiter, 
+                    format=format, encoding=options.encoding, delete=ans=='Y', bulk=int(options.bulk))
                 orm.Commit()
+                if global_options.verbose:
+                    print t
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
                 orm.Rollback()
@@ -643,6 +680,8 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
     args = 'tablename text_filename'
     help = 'Load table data from text file. If no tables, then will do nothing.'
     option_list = (
+        make_option('-b', dest='bulk', default='100',
+            help='Bulk number of insert.'),
         make_option('-t', '--text', dest='text', action='store_true', default=False,
             help='Load files in text format.'),
         make_option('--delimiter', dest='delimiter', default=',',
@@ -681,16 +720,18 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
             return
         
         if global_options.verbose:
-            print '[%s] Loading %s...' % (options.engine, show_table(name, t, 0, 1))
+            print '[%s] Loading %s...' % (options.engine, show_table(name, t, 0, 1)), 
         try:
             orm.Begin()
             if options.text:
                 format = 'txt'
             else:
                 format = None
-            load_table(t, args[1], engine, delimiter=options.delimiter, 
-                format=format, encoding=options.encoding, delete=ans=='Y')
+            t = load_table(t, args[1], engine, delimiter=options.delimiter, 
+                format=format, encoding=options.encoding, delete=ans=='Y', bulk=int(options.bulk))
             orm.Commit()
+            if global_options.verbose:
+                print t
         except:
             log.exception("There are something wrong when loading table [%s]" % name)
             orm.Rollback()
