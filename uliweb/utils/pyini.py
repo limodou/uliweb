@@ -474,7 +474,7 @@ class Ini(SortedDict):
                                 v = value
                         else:
                             try:
-                                v = eval_value(value, self, self[sec_name], self._encoding)
+                                v = eval_value(value, self.env(), self[sec_name], self._encoding)
                             except Exception as e:
                                 print_exc()
                                 print dict(self)
@@ -591,7 +591,13 @@ class Ini(SortedDict):
             flag = False
         
         return flag
-
+    
+    def items(self):
+        return ((k, self[k]) for k in self.keys() if not k in self._env)
+    
+    def env(self):
+        return self
+    
     def freeze(self):
         """
         Process all EvalValue to real value
