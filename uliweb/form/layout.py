@@ -352,7 +352,7 @@ class QueryLayout(Layout):
                             with buf.td:
                                 buf << self.form.get_buttons()
                                 if more:
-                                    buf << '<a href="javascript:void(0)" id="more_query">%s</a>' % _('more')
+                                    buf << self.get_more_button()
                             
             else:
                 f = getattr(self.form, line)
@@ -371,7 +371,7 @@ class QueryLayout(Layout):
                                 with buf.td:
                                     buf << self.form.get_buttons()
                                     if more:
-                                        buf << '<a href="#" id="more_query">%s</a>' % _('more')
+                                        buf << self.get_more_button()
                                     
         if not self.layout:
             self.layout = [[name for name, obj in self.form.fields_list]]
@@ -385,6 +385,13 @@ class QueryLayout(Layout):
                 with buf.Div(id='query_div'):
                     for line in layout:
                         output(buf, line)
+                buf << self.post_layout()
+                
+    def get_more_button(self):
+        return '<a href="#" id="more_query">%s</a>' % _('more')
+    
+    def post_layout(self):
+        return ''
 
 from widgets import RadioSelect, Radio
 

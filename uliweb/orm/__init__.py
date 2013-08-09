@@ -1825,6 +1825,8 @@ class ManyResult(Result):
         key = self.store_key
         ids = getattr(self.instance, key, None)
         if not cache or ids is None or ids is Lazy:
+            if self.valuea is None:
+                return []
             query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
             ids = [x[0] for x in self.do_(query)]
         if cache:
