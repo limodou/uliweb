@@ -14,7 +14,8 @@ def get_redis(**options):
     from uliweb.utils.common import log
     import redis
         
-    options = (options or {}).update(settings.REDIS)
+    options = (options or {})
+    options.update(settings.REDIS)
     if 'unix_socket_path' in options:
         client = redis.Redis(unix_socket_path=options['unix_socket_path'])
     else:
