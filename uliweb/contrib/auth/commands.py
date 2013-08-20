@@ -48,7 +48,6 @@ class EncryptPasswordCommand(Command):
     def handle(self, options, global_options, *args):
         from uliweb import functions
         from uliweb.manage import make_simple_application
-#        from uliweb.core.SimpleFrame import get_settings, __global__
         import getpass
         
         app = make_simple_application(apps_dir=global_options.apps_dir, 
