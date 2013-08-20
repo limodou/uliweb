@@ -2,52 +2,7 @@ from uliweb.orm import *
 import datetime
 from uliweb.i18n import ugettext_lazy as _
 from uliweb import functions
-
-def get_hexdigest(algorithm, salt, raw_password):
-    """
-    Returns a string of the hexdigest of the given plaintext password and salt
-    using the given algorithm ('md5', 'sha1' or 'crypt').
-    """
-    if isinstance(salt, unicode):
-        salt = salt.encode('utf8')
-    if algorithm == 'crypt':
-        try:
-            import crypt
-        except ImportError:
-            raise ValueError('"crypt" password algorithm not supported in this environment')
-        return crypt.crypt(raw_password, salt)
-    # The rest of the supported algorithms are supported by hashlib, but
-    # hashlib is only available in Python 2.5.
-    try:
-        import hashlib
-    except ImportError:
-        if algorithm == 'md5':
-            import md5
-            return md5.new(salt + raw_password).hexdigest()
-        elif algorithm == 'sha1':
-            import sha
-            return sha.new(salt + raw_password).hexdigest()
-    else:
-        if algorithm == 'md5':
-            return hashlib.md5(salt + raw_password).hexdigest()
-        elif algorithm == 'sha1':
-            return hashlib.sha1(salt + raw_password).hexdigest()
-    raise ValueError("Got unknown password algorithm type in password.")
-
-def check_password(raw_password, enc_password):
-    """
-    Returns a boolean of whether the raw_password was correct. Handles
-    encryption formats behind the scenes.
-    """
-    algo, salt, hsh = enc_password.split('$')
-    return hsh == get_hexdigest(algo, salt, raw_password)
-
-def encrypt_password(raw_password):
-    import random
-    algo = 'sha1'
-    salt = get_hexdigest(algo, str(random.random()), str(random.random()))[:5]
-    hsh = get_hexdigest(algo, salt, raw_password)
-    return '%s$%s$%s' % (algo, salt, hsh)
+from __init__ import encrypt_password, check_password
 
 class User(Model):
     username = Field(str, verbose_name=_('Username'), max_length=30, unique=True, index=True, nullable=False)
