@@ -18,6 +18,7 @@ Uliweb Change Log
 * Improve pyini, support cross section variable referer and lazy process support
 * Improve load command, add total records and used time display, and also use bulk
   insert
+* add `test_image` function in `uliweb/utils/image.py`
 
 0.1.7 Version
 -----------------
