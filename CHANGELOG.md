@@ -19,6 +19,10 @@ Uliweb Change Log
 * Improve load command, add total records and used time display, and also use bulk
   insert
 * add `test_image` function in `uliweb/utils/image.py`
+* add xhr_redirect_json support. When you start uliweb application, you can pass
+  xhr_redirect_json(boolean) to it, and default value is True. It means if the request
+  is ajax, so the redirect will be returned as a json result with 500 status code.
+  So the frontend can use it to redirect as what it wants.
 
 0.1.7 Version
 -----------------

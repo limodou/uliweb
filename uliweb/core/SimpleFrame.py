@@ -40,6 +40,7 @@ use_urls = False
 url_adapters = {}
 __app_dirs__ = {}
 __app_alias__ = {}
+_xhr_redirect_json = True
 
 r_callback = re.compile(r'^[\w_]+$')
 #Initialize pyini env
@@ -94,14 +95,19 @@ class HTTPError(Exception):
         return repr(self.errors)
    
 def redirect(location, code=302):
-    response = Response(
-        '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">\n'
-        '<title>Redirecting...</title>\n'
-        '<h1>Redirecting...</h1>\n'
-        '<p>You should be redirected automatically to target URL: '
-        '<a href="%s">%s</a>.  If not click the link.' %
-        (cgi.escape(location), cgi.escape(location)), status=code, content_type='text/html')
-    response.headers['Location'] = location
+    global _xhr_redirect_json, request
+    
+    if _xhr_redirect_json and request.is_xhr:
+        response = json({'success':False, 'redirect':location}, status=500)
+    else:
+        response = Response(
+            '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">\n'
+            '<title>Redirecting...</title>\n'
+            '<h1>Redirecting...</h1>\n'
+            '<p>You should be redirected automatically to target URL: '
+            '<a href="%s">%s</a>.  If not click the link.' %
+            (cgi.escape(location), cgi.escape(location)), status=code, content_type='text/html')
+        response.headers['Location'] = location
     return response
 
 class RedirectException(Exception):
@@ -381,8 +387,11 @@ class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, 
         start=True, default_settings=None, settings_file='settings.ini', 
-        local_settings_file='local_settings.ini'):
+        local_settings_file='local_settings.ini', xhr_redirect_json=True):
             
+        global _xhr_redirect_json
+        
+        _xhr_redirect_json = xhr_redirect_json
         __global__.application = self
         self.debug = False
         self.include_apps = include_apps or []
