@@ -49,7 +49,7 @@ class LazyString(object):
         return self.getvalue() + obj
         
     def __radd__(self, obj):
-        return self.getvalue() + obj
+        return obj + self.getvalue()
         
     def encode(self, encoding):
         return self.getvalue().encode(encoding)
