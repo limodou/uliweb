@@ -139,8 +139,8 @@ def load_table(table, filename, con, delimiter=',', format=None,
     try:
         first_line = f.readline()
         fields = first_line[1:].strip().split()
-        n = 1
-        c = 0
+        n = 0
+        count = 0
         if format:
             fin = csv.reader(f, delimiter=delimiter)
             
@@ -148,7 +148,7 @@ def load_table(table, filename, con, delimiter=',', format=None,
         for line in fin:
             try:
                 n += 1
-                c += 1
+                count += 1
                 if not format:
                     line = eval(line.strip())
                 record = dict(zip(fields, line))
@@ -169,11 +169,10 @@ def load_table(table, filename, con, delimiter=',', format=None,
                                     params[c.name] = to_datetime(record[c.name])
                                 else:
                                     params[c.name] = record[c.name]
-                if c < bulk:
-                    buf.append(params)
-                else:
+                buf.append(params)
+                if count >= bulk:
                     do_(table.insert(), args=buf)
-                    c = 0
+                    count = 0
                     buf = []
             except:
                 log.error('Error: Line %d' % n)
