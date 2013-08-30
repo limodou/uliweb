@@ -538,7 +538,7 @@ def get_caller(skip=None):
             if not found:
                 return filename, lineno, funcname
 
-class classonlymethod(object):
+class classonlymethod(classmethod):
     """
     Use to limit the class method can only be called via class object, but not instance
     object
@@ -554,19 +554,12 @@ class classonlymethod(object):
     ...     a.p()        
     ... except Exception as e:
     ...     print e
-    Method p can only be called with class object
+    This method can only be called with class object.
     """
-    def __init__(self, func):
-        self._func = func
-        
-    def __get__(self, model_instance, model_class):
-        from functools import partial, wraps
-        
-        if model_instance:
-            raise Exception("Method %s can only be called with class object" % self._func.__name__)
-        else:
-            f = partial(self._func, model_class)
-            return wraps(self._func)(f)
+    def __get__(self, instance, owner):
+        if instance is not None:
+            raise AttributeError("This method can only be called with class object.")
+        return super(classonlymethod, self).__get__(instance, owner)
 
 #if __name__ == '__main__':
 #    log.info('Info: info')
