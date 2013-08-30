@@ -41,7 +41,7 @@ import decimal
 import threading
 import datetime
 from uliweb.utils import date
-from uliweb.utils.common import flat_list
+from uliweb.utils.common import flat_list, classonlymethod
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement
 from sqlalchemy.pool import NullPool
@@ -2965,7 +2965,7 @@ class Model(object):
     def filter(cls, condition=None, **kwargs):
         return Result(cls, condition, **kwargs)
             
-    @classmethod
+    @classonlymethod
     def remove(cls, condition=None, connection=None, **kwargs):
         if isinstance(condition, (int, long)):
             condition = cls.c.id==condition

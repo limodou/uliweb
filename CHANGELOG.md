@@ -24,6 +24,8 @@ Uliweb Change Log
   is ajax, so the redirect will be returned as a json result with 500 status code.
   So the frontend can use it to redirect as what it wants.
 * ORM remove/clear empty condition will delete all records 
+* Add `classonlymethod()` to uliweb.utils.common, it just likes classmethod, but
+  it'll limit only class object can invoke the method rather than instance object.
 
 0.1.7 Version
 -----------------
