@@ -23,6 +23,7 @@ Uliweb Change Log
   xhr_redirect_json(boolean) to it, and default value is True. It means if the request
   is ajax, so the redirect will be returned as a json result with 500 status code.
   So the frontend can use it to redirect as what it wants.
+* ORM remove/clear empty condition will delete all records 
 
 0.1.7 Version
 -----------------

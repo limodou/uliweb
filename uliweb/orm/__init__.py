@@ -1684,8 +1684,6 @@ class Result(object):
             return self.load(result)
     
     def clear(self):
-        if self.condition is None:
-            return
         return self.model.remove(self.condition)
     
     remove = clear
