@@ -80,7 +80,8 @@ def get_sorted_tables(tables):
     
     return sorted(tables.items(), cmp=_cmp)
     
-def dump_table(table, filename, con, std=None, delimiter=',', format=None, encoding='utf-8', inspector=None):
+def dump_table(table, filename, con, std=None, delimiter=',', format=None, 
+    encoding='utf-8', inspector=None):
     from uliweb.utils.common import str_value
     from StringIO import StringIO
     import csv
@@ -102,19 +103,18 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None, encod
     result = do_(table.select())
     fields = [x.name for x in table.c]
     if not format:
-        print >>std, '#' + ' '.join(fields)
+        print >>std, ' '.join(fields)
     elif format == 'txt':
-        print >>std, '#' + ','.join(fields)
+        print >>std, ','.join(fields)
     n = 0
+    if format == 'txt':
+        fw = csv.writer(std, delimiter=delimiter)
     for r in result:
         n += 1
         if not format:
             print >>std, r
         elif format == 'txt':
-            buf = StringIO()
-            fw = csv.writer(buf, delimiter=delimiter)
-            fw.writerow([str_value(x, encoding=encoding) for x in r])
-            print >>std, buf.getvalue().rstrip()
+            fw.writerow([str_value(x, encoding=encoding, newline_escape=True) for x in r])
         else:
             raise Exception, "Can't support the text format %s" % format
   
@@ -125,20 +125,22 @@ def load_table(table, filename, con, delimiter=',', format=None,
     import csv
     from uliweb.utils.date import to_date, to_datetime
     
+    if not os.path.exists(filename):
+        return "Skipped (data not found)"
+
     table = reflect_table(con, table.name)
     
     if delete:
         do_(table.delete())
-    
-    if not os.path.exists(filename):
-        return "Skipped (data not found)"
     
     b = time()
     bulk = max(1, bulk)
     f = fin = open(filename, 'rb')
     try:
         first_line = f.readline()
-        fields = first_line[1:].strip().split()
+        if first_line.startswith('#'):
+            first_line = first_line[1:]
+        fields = first_line.strip().split()
         n = 0
         count = 0
         if format:
@@ -171,7 +173,7 @@ def load_table(table, filename, con, delimiter=',', format=None,
                                     params[c.name] = record[c.name]
                 buf.append(params)
                 if count >= bulk:
-                    do_(table.insert(), args=buf)
+                    do_(table.insert(), args=(buf, ))
                     count = 0
                     buf = []
             except:
@@ -179,7 +181,7 @@ def load_table(table, filename, con, delimiter=',', format=None,
                 raise
         
         if buf:
-            do_(table.insert(), args=buf)
+            do_(table.insert(), args=(buf, ))
             
         return 'OK (%d/%lfs)' % (n, time()-b)
     finally:

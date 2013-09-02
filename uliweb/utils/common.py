@@ -305,7 +305,8 @@ def simple_value(v, encoding='utf-8', none=False):
     else:
         return v
     
-def str_value(v, encoding='utf-8', bool_int=True, none='NULL'):
+re_newline = re.compile(r'\r\n|\r|\n')
+def str_value(v, encoding='utf-8', bool_int=True, none='NULL', newline_escape=False):
     import datetime
     import decimal
     
@@ -319,8 +320,12 @@ def str_value(v, encoding='utf-8', bool_int=True, none='NULL'):
         return v.strftime('%H:%M:%S')
     elif isinstance(v, decimal.Decimal):
         return str(v)
-    elif isinstance(v, unicode):
-        return v.encode(encoding)
+    elif isinstance(v, (str, unicode)):
+        if isinstance(v, unicode):
+            v = v.encode(encoding)
+        if newline_escape:
+            v = re_newline.sub(r'\\n', v)
+        return v
     elif v is None:
         return none
     elif isinstance(v, bool):
