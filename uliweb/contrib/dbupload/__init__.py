@@ -48,6 +48,7 @@ class DBFileServing(FileServing):
         from uliweb.utils.filedown import filedown
         from uliweb import request
         from StringIO import StringIO
+        from uliweb.utils import files
         
         action = request.GET.get('action', action)
         
@@ -72,12 +73,10 @@ class DBFileServing(FileServing):
             x_sendfile=bool(self.x_sendfile), x_header_name=self.x_header_name, 
             x_filename=x_filename, real_filename=real_filename, fileobj=fileobj)
      
-    def save_file(self, filename, fobj, replace=False):
-        from uliweb.utils import files
-        
+    def save_file(self, filename, fobj, replace=False, convert=True):
         path, _f = os.path.split(filename)
         #get full path and converted filename
-        fname = self.get_filename(_f, True, convert=True)
+        fname = self.get_filename(_f, True, convert=convert)
         #save file to database
         text = fobj.read()
         obj = self.model(filename=_f, content=text, size=len(text), slug=fname, path=path)
@@ -104,18 +103,7 @@ class DBFileServing(FileServing):
         obj = self.get_file_record(filename)
         obj.delete()
     
-#    def get_href(self, filename):
-#        if not filename:
-#            return ''
-#        
-#        #make sure the filename is utf-8 encoded
-#        s = settings.GLOBAL
-#        fname = norm_filename(files.unicode_filename(filename, s.FILESYSTEM_ENCODING))
-#        f = url_for('file_serving', filename=fname)
-#        return f
-#    
-
-    def get_url(self, filename, **url_args):
+    def get_url(self, filename, query_para=None, **url_args):
         """
         Return <a href="filename" title="filename"> tag
         You should pass title and text to url_args, if not pass, then using filename
@@ -125,5 +113,6 @@ class DBFileServing(FileServing):
         obj = self.get_file_record(filename)
         title = url_args.pop('title', obj.filename)
         text = url_args.pop('text', title)
-        return str(Tag('a', title, href=self.get_href(filename), **url_args))
+        query_para = query_para or {}
+        return str(Tag('a', title, href=self.get_href(filename, **query_para), **url_args))
         

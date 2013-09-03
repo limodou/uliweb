@@ -1055,10 +1055,12 @@ class StringProperty(CharProperty):
     field_class = VARCHAR
     
 class FileProperty(StringProperty):
-    def __init__(self, verbose_name=None, max_length=None, **kwds):
+    def __init__(self, verbose_name=None, max_length=None, upload_to=None, upload_to_sub=None, **kwds):
         max_length = max_length or 255
         super(FileProperty, self).__init__(verbose_name, max_length=max_length, **kwds)
-
+        self.upload_to = upload_to
+        self.upload_to_sub = upload_to_sub
+        
 class UnicodeProperty(CharProperty):
     field_class = Unicode
     

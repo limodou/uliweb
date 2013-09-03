@@ -441,6 +441,8 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
             field_type = ReferenceSelectField
         elif cls is orm.FileProperty:
             field_type = form.FileField
+            kwargs['upload_to'] = prop.upload_to
+            kwargs['upload_to_sub'] = prop.upload_to_sub
         else:
             raise Exception, "Can't support the Property [%s=%s]" % (field['name'], prop.__class__.__name__)
        
@@ -614,7 +616,7 @@ class AddView(object):
         post_created_form=None, layout=None, file_replace=True, template_data=None, 
         success_data=None, fail_data=None, meta='AddForm', get_form_field=None, post_fail=None,
         types_convert_map=None, fields_convert_map=None, json_func=None,
-        file_convert=True):
+        file_convert=True, upload_to=None, upload_to_sub=None, fileserving_config='UPLOAD'):
 
         self.model = get_model(model)
         self.meta = meta
@@ -648,6 +650,9 @@ class AddView(object):
         self.fields_convert_map = fields_convert_map or {}
         self.json_func = json_func or json
         self.file_convert = file_convert
+        self.upload_to = upload_to
+        self.upload_to_sub = upload_to_sub
+        self.fileserving = functions.get_fileserving(fileserving_config)
         self.form = self.make_form(form)
         
     def get_fields(self):
@@ -714,19 +719,77 @@ class AddView(object):
             
         return DummyForm(data=self.data, **self.form_args)
     
-    def process_files(self, data):
+    def process_files(self, data, process=True, obj=None):
+        from uliweb.form import FileField
+        
+        file_fields = {}
+        
         flag = False
-    
         fields_list = self.get_fields()
-        for f in fields_list:
-            if isinstance(f['prop'], orm.FileProperty):
-                if f['name'] in data and data[f['name']]:
-                    fobj = data[f['name']]
-                    data[f['name']] = functions.save_file(fobj['filename'], 
-                        fobj['file'], replace=self.file_replace, 
-                        convert=self.file_convert)
-                    flag = True
-                    
+        for name, f in self.form.fields_list:
+            if isinstance(f, FileField):
+                if name in data and data[name]:
+                    if process:
+                        if not obj:
+                            raise UliwebError("obj can't be empty")
+                        
+                        #if obj has the filename, then delete it first
+                        filename = getattr(obj, name)
+                        if filename:
+                            self.fileserving.delete_filename(filename) 
+                        data[name] = self._process_file(obj, data[name], f)
+                        flag = True
+                    else:
+                        file_fields[name] = (f, data.pop(name))
+                else:
+                    data.pop(name)
+        if process:
+            return flag
+        else:
+            return file_fields
+    
+    def _get_upload_path(self, f, name, obj):
+        func = getattr(f, name)
+        path = ''
+        if func:
+            if callable(func):
+                path = func(obj)
+            else:
+                path = func
+        return path
+    
+    def _process_file(self, obj, fobj, field):
+        """
+        obj is record object
+        fobj is data
+        field is FileField instance
+        """
+        from uliweb import settings
+        
+        paths = []
+        upload_to = self.upload_to or self._get_upload_path(field, 'upload_to', obj)
+        if upload_to:
+            self.fileserving.to_path = upload_to
+        upload_to_sub = self.upload_to_sub or self._get_upload_path(field, 'upload_to_sub', obj)
+        if upload_to_sub:
+            paths.append(upload_to_sub)
+        paths.append(fobj['filename'])
+        
+        return self.fileserving.save_file(os.path.join(*paths), 
+            fobj['file'], replace=self.file_replace, 
+            convert=self.file_convert)
+        
+    def save_files(self, obj, files):
+        d = {}
+        flag = False
+        for name, (f, data) in files.items():
+            d[name] = self._process_file(obj, data, f)
+
+        if d:
+            obj.update(**d)
+            obj.save()
+            flag = True
+            
         return flag
     
     def on_success_data(self, obj, data):
@@ -749,8 +812,9 @@ class AddView(object):
         if self.pre_save:
             self.pre_save(d)
             
-        r = self.process_files(d)
+        files = self.process_files(d, process=False)
         obj = self.save(d)
+        self.save_files(obj, files)
         
         if self.post_save:
             self.post_save(obj, d)
@@ -830,13 +894,13 @@ class AddView(object):
 #        self.save_manytomany(obj, data)
         return obj
         
-    def save_manytomany(self, obj, data):
-        #process manytomany property
-        for k, v in obj._manytomany.iteritems():
-            if k in data:
-                value = data[k]
-                if value:
-                    getattr(obj, k).add(*value)
+#    def save_manytomany(self, obj, data):
+#        #process manytomany property
+#        for k, v in obj._manytomany.iteritems():
+#            if k in data:
+#                value = data[k]
+#                if value:
+#                    getattr(obj, k).add(*value)
 
 class EditView(AddView):
     success_msg = _('The information has been saved successfully!')
@@ -881,7 +945,7 @@ class EditView(AddView):
         if self.pre_save:
             self.pre_save(self.obj, d)
         #process file field
-        r = self.process_files(d)
+        r = self.process_files(d, process=True, obj=self.obj)
         r = self.save(self.obj, d) or r
         if self.post_save:
             r = self.post_save(self.obj, d) or r
@@ -1315,12 +1379,13 @@ class DeleteView(object):
             getattr(obj, k).clear()
   
 class GenericFileServing(FileServing):
+    default_config = 'GENERIC'
     options = {
-        'x_sendfile' : ('GENERIC/X_SENDFILE', None),
-        'x_header_name': ('GENERIC/X_HEADER_NAME', None),
-        'x_file_prefix': ('GENERIC/X_FILE_PREFIX', '/gdownload'),
-        'to_path': ('GENERIC/TO_PATH', './files'),
-        'buffer_size': ('GENERIC/BUFFER_SIZE', 4096),
+        'x_sendfile' : ('X_SENDFILE', None),
+        'x_header_name': ('X_HEADER_NAME', None),
+        'x_file_prefix': ('X_FILE_PREFIX', '/gdownload'),
+        'to_path': ('TO_PATH', './files'),
+        'buffer_size': ('BUFFER_SIZE', 4096),
         '_filename_converter': ('UPLOAD/FILENAME_CONVERTER',  FilenameConverter),
     }
 

@@ -26,6 +26,7 @@ Uliweb Change Log
 * ORM remove/clear empty condition will delete all records 
 * Add `classonlymethod()` to uliweb.utils.common, it just likes classmethod, but
   it'll limit only class object can invoke the method rather than instance object.
+* Refactor upload app, add `download` to functions
 
 0.1.7 Version
 -----------------

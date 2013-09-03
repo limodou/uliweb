@@ -501,6 +501,11 @@ class CheckboxSelectField(SelectField):
 class FileField(BaseField):
     default_build = File
     
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, upload_to=None, upload_to_sub=None, **kwargs):
+        BaseField.__init__(self, label=label, **kwargs)
+        self.upload_to = upload_to
+        self.upload_to_sub = upload_to_sub
+    
     def to_python(self, data):
         d = D({})
         d['filename'] = os.path.basename(data.filename)
@@ -519,8 +524,8 @@ class FileField(BaseField):
     
 class ImageField(FileField):
     
-    def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, size=None, **kwargs):
-        BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
+    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, size=None, **kwargs):
+        FileField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.size = size
         self.validators.append(IS_IMAGE(self.size))
     

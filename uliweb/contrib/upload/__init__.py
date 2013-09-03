@@ -42,22 +42,25 @@ class MD5FilenameConverter(object):
         return f + ext
     
 class FileServing(object):
+    default_config = 'UPLOAD'
     options = {
-        'x_sendfile' : ('UPLOAD/X_SENDFILE', None),
-        'x_header_name': ('UPLOAD/X_HEADER_NAME', ''),
-        'x_file_prefix': ('UPLOAD/X_FILE_PREFIX', '/files'),
-        'to_path': ('UPLOAD/TO_PATH', './uploads'),
-        'buffer_size': ('UPLOAD/BUFFER_SIZE', 4096),
-        '_filename_converter': ('UPLOAD/FILENAME_CONVERTER', None),
+        'x_sendfile' : ('X_SENDFILE', None),
+        'x_header_name': ('X_HEADER_NAME', ''),
+        'x_file_prefix': ('X_FILE_PREFIX', '/files'),
+        'to_path': ('TO_PATH', './uploads'),
+        'buffer_size': ('BUFFER_SIZE', 4096),
+        '_filename_converter': ('FILENAME_CONVERTER', None),
     }
     
-    def __init__(self, default_filename_converter_cls=UUIDFilenameConverter):
+    def __init__(self, default_filename_converter_cls=UUIDFilenameConverter, config=None):
+        self.config = config or self.default_config
         for k, v in self.options.items():
             item, default = v
-            if k == 'to_path':
-                value = application_path(settings.get_var(item, default))
-            else:
-                value = settings.get_var(item, default)
+            #if there is no '/' in option, then combine config with option
+            #else assume the option is just like 'SECTION/OPTION', then skip it
+            if '/' not in item:
+                item = self.config + '/' + item
+            value = settings.get_var(item, default)
             setattr(self, k, value)
             
         if self.x_sendfile and not self.x_header_name:
@@ -96,7 +99,7 @@ class FileServing(object):
             _filename = filename
         nfile = safe_unicode(_filename, s.HTMLPAGE_ENCODING)
         
-        f = os.path.normpath(os.path.join(self.to_path, nfile)).replace('\\', '/')
+        f = os.path.normpath(os.path.join(application_path(self.to_path), nfile)).replace('\\', '/')
     
         if filesystem:
             return files.encode_filename(f, to_encoding=s.FILESYSTEM_ENCODING)
@@ -134,7 +137,7 @@ class FileServing(object):
         #get full path and converted filename
         fname = self.get_filename(filename, True, convert=convert)
         #save file and get the changed filename, because the filename maybe change when
-        #there is duplicate filename(replace=False, if replace=True, then the filename
+        #there is duplicate filename, if replace=True, then the filename
         #will not changed
         fname2 = files.save_file(fname, fobj, replace, self.buffer_size)
         
@@ -186,18 +189,21 @@ class FileServing(object):
         query_para = query_para or {}
         return str(Tag('a', title, href=self.get_href(filename, **query_para), **url_args))
 
-def get_backend():
+def get_backend(config=None):
     global default_fileserving
     
-    if default_fileserving:
+    if default_fileserving and not config:
         return default_fileserving
     else:
-        cls = settings.get_var('UPLOAD/BACKEND')
+        config = config or 'UPLOAD'
+        cls = settings.get_var('%s/BACKEND' % config)
         if cls:
-            default_fileserving = import_attr(cls)()
+            fileserving = import_attr(cls)(config=config)
         else:
-            default_fileserving = FileServing()
-        return default_fileserving
+            fileserving = FileServing(config=config)
+        if config == 'UPLOAD':
+            default_fileserving = fileserving
+        return fileserving
 
 def file_serving(filename):
     from uliweb import request
@@ -233,5 +239,8 @@ def delete_filename(filename):
 def get_url(filename, query_para=None, **url_args):
     return get_backend().get_url(filename, query_para, **url_args)
 
-def get_href(filename, **kwargs):
-    return get_backend().get_href(filename, **kwargs)
+def get_href(filename, *args, **kwargs):
+    return get_backend().get_href(filename, *args, **kwargs)
+
+def download(filename, *args, **kwargs):
+    return get_backend().download(filename, *args, **kwargs)
