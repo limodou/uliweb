@@ -27,6 +27,7 @@ Uliweb Change Log
 * Add `classonlymethod()` to uliweb.utils.common, it just likes classmethod, but
   it'll limit only class object can invoke the method rather than instance object.
 * Refactor upload app, add `download` to functions
+* Improve secretkey app, add `-o` to specify output file. Add `keyfile` to most functions.
 
 0.1.7 Version
 -----------------

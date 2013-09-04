@@ -205,6 +205,8 @@ def get_backend(config=None):
             default_fileserving = fileserving
         return fileserving
 
+get_fileserving = get_backend
+
 def file_serving(filename):
     from uliweb import request
     import urllib2
