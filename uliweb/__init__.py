@@ -15,12 +15,12 @@ sys.path.insert(0, os.path.join(workpath, 'lib'))
 
 class UliwebError(Exception): pass
 
-from uliweb.core.SimpleFrame import (Request, Response, redirect, Redirect, error, json, jsonp,
+from .core.SimpleFrame import (Request, Response, redirect, Redirect, error, json, jsonp,
         POST, GET, url_for, expose, get_app_dir, get_apps, function, Finder, decorators,
         functions, response, request, settings, application, NotFound, HTTPException,
     )
-from uliweb.core.js import json_dumps
-from uliweb.core.storage import Storage
+from .core.js import json_dumps
+from .core.storage import Storage
 
 class Middleware(object):
     ORDER = 500
