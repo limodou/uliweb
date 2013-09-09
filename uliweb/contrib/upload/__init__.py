@@ -246,3 +246,12 @@ def get_href(filename, *args, **kwargs):
 
 def download(filename, *args, **kwargs):
     return get_backend().download(filename, *args, **kwargs)
+
+def after_init_apps(sender):
+    import mimetypes
+    from uliweb import settings
+    
+    for k, v in settings.get('MIME_TYPES').items():
+        if not k.startswith('.'):
+            k = '.' + k
+        mimetypes.add_type(v, k)

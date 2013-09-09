@@ -104,6 +104,5 @@ I also constructed a few new "wheels" myself. For example:
 ## Links
 
 * Plugs is a Uliweb apps collection project, you can visit it at https://github.com/limodou/plugs
-* uliweb-doc is a documentation project of Uliweb, you can visit it at https://github.com/limodou/uliweb-doc, 
-  and you can also read the compiled documentation at http://uliweb.rtfd.org
+* uliweb-doc is a documentation project of Uliweb, you can visit it at https://github.com/limodou/uliweb-doc
 * uliwebzone is a community project of Uliweb, you can visit it at https://github.com/limodou/uliwebzone.
