@@ -492,7 +492,7 @@ class CallCommand(Command):
             try:
                 mod = __import__(m, fromlist=['*'])
                 if global_options.verbose:
-                    print "Importing... %s.%s" % (f, command)
+                    print "Importing... %s" % m
                 if hasattr(mod, 'call'):
                     getattr(mod, 'call')(args, options, global_options)
                 elif hasattr(mod, 'main'):
