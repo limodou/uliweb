@@ -409,6 +409,7 @@ class Dispatcher(object):
     def init(self, project_dir, apps_dir):
         if not project_dir:
             project_dir = norm_path(os.path.join(apps_dir, '..'))
+        
         Dispatcher.project_dir = project_dir
         Dispatcher.apps_dir = norm_path(os.path.join(project_dir, 'apps'))
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps, self.settings_file, self.local_settings_file)

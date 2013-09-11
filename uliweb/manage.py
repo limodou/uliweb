@@ -81,7 +81,12 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     
     if project_dir:
         apps_dir = os.path.normpath(os.path.join(project_dir, 'apps'))
+    if not project_dir:
+        project_dir = norm_path(os.path.join(apps_dir, '..'))
         
+    if project_dir not in sys.path:
+        sys.path.insert(0, project_dir)
+
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
         
@@ -455,6 +460,8 @@ class CallCommand(Command):
     option_list = (
         make_option('-a', dest='appname',
             help='Appname. If not provide, then will search exefile in whole project.'),
+        make_option('--without-application', action='store_false', default=True, dest='application',
+            help='If create application first, default is False.'),
     )
     has_options = True
     
@@ -464,23 +471,39 @@ class CallCommand(Command):
             return
         else:
             command = args[0]
+        
+        if options.application:
+            self.get_application(global_options)
             
         if not options.appname:
             apps = self.get_apps(global_options)
         else:
             apps = [options.appname]
         exe_flag = False
-        for f in apps:
-            m = '%s.%s' % (f, command)
+        
+        def get_module(command, apps):
+            if '.' in command:
+                yield command
+            else:
+                for f in apps:
+                    yield '%s.%s' % (f, command)
+                
+        for m in get_module(command, apps):
             try:
                 mod = __import__(m, fromlist=['*'])
                 if global_options.verbose:
                     print "Importing... %s.%s" % (f, command)
                 if hasattr(mod, 'call'):
                     getattr(mod, 'call')(args, options, global_options)
+                elif hasattr(mod, 'main'):
+                    getattr(mod, 'main')(args, options, global_options)
+                else:
+                    raise Exception("Can't find call or main function in module %s" % m)
                 exe_flag = True
             except ImportError:
-                continue
+#                import traceback
+#                traceback.print_exc()
+                raise
             
         if not exe_flag:
             print "Error: Can't import the [%s], please check the file and try again." % command

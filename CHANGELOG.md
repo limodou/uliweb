@@ -29,6 +29,7 @@ Uliweb Change Log
 * Refactor upload app, add `download` to functions
 * Improve secretkey app, add `-o` to specify output file. Add `keyfile` to most functions.
 * Add `MIME_TYPES` section to upload app, but it'll only effect with uliweb application, but not web server
+* Improve call command, enable call modules ouside apps directory, and add project path to sys.path
 
 0.1.7 Version
 -----------------
