@@ -28,8 +28,9 @@ def get_commands(global_options):
     def collect_commands():
         from uliweb import get_apps
         
-        for f in get_apps(global_options.apps_dir, settings_file=global_options.settings,
-                        local_settings_file=global_options.local_settings):
+        apps = get_apps(global_options.apps_dir, settings_file=global_options.settings,
+                local_settings_file=global_options.local_settings)
+        for f in apps:
             m = '%s.commands' % f
             try:
                 mod = __import__(m, fromlist=['*'])
@@ -705,6 +706,8 @@ class FindCommand(Command):
             help='Find static file path according static filename.'),
         make_option('-m', '--model', dest='model', 
             help='Find model definition according model name.'),
+        make_option('-o', '--option', dest='option', 
+            help='Find ini option defined in which settings.ini.'),
         make_option('--tree', dest='tree', action='store_true', 
             help='Find template invoke tree, should be used with -t option together.'),
     )
@@ -719,6 +722,8 @@ class FindCommand(Command):
             self._find_static(global_options, options.static)
         elif options.model:
             self._find_model(global_options, options.model)
+        elif options.option:
+            self._find_option(global_options, options.option)
         
     def _find_url(self, url):
         from uliweb.core.SimpleFrame import url_map
@@ -825,6 +830,32 @@ class FindCommand(Command):
         
         model_path = settings.MODELS.get(model, 'Not Found')
         print model_path
+        
+    def _find_option(self, global_options, option):
+        from uliweb import settings
+        from uliweb.core.SimpleFrame import collect_settings
+        from uliweb.utils.pyini import Ini
+        
+        print '------ Combined value of [%s] ------' % option
+        print settings.get_var(option)
+
+        print '------ Detail   value of [%s] ------' % option
+        sec_flag = '/' not in option
+        if not sec_flag:
+            section, key = option.split('/')
+            
+        for f in collect_settings(global_options.project, settings_file=global_options.settings,
+            local_settings_file=global_options.local_settings):
+            x = Ini(f, raw=True)
+            if sec_flag:
+                if option in x:
+                    print x[option]
+            else:
+                if section in x:
+                    if key in x[section]:
+                        v = x[section][key]
+                        print "%s %s%s" % (str(v), key, v.value())
+                
 register_command(FindCommand)
 
 def collect_files(options, apps_dir, apps):

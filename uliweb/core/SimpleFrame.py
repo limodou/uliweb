@@ -323,10 +323,13 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
 
     return apps
 
-def get_settings(project_dir, include_apps=None, settings_file='settings.ini', 
+def collect_settings(project_dir, include_apps=None, settings_file='settings.ini', 
     local_settings_file='local_settings.ini', default_settings=None):
+    
     apps_dir = os.path.join(project_dir, 'apps')
-    apps = get_apps(apps_dir, settings_file=settings_file, local_settings_file=local_settings_file)
+    apps = get_apps(apps_dir, None, settings_file=settings_file, local_settings_file=local_settings_file)
+    settings_file = os.path.join(apps_dir, settings_file)
+    local_settings_file = os.path.join(apps_dir, local_settings_file)
     settings = []
     inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
     settings.insert(0, inifile)
@@ -337,13 +340,18 @@ def get_settings(project_dir, include_apps=None, settings_file='settings.ini',
         if os.path.exists(inifile):
             settings.append(inifile)
     
-    set_ini = os.path.join(apps_dir, settings_file)
-    if os.path.exists(set_ini):
-        settings.append(set_ini)
+    if os.path.exists(settings_file):
+        settings.append(settings_file)
     
-    local_set_ini = os.path.join(apps_dir, local_settings_file)
-    if os.path.exists(local_set_ini):
-        settings.append(local_set_ini)
+    if os.path.exists(local_settings_file):
+        settings.append(local_settings_file)
+    return settings
+
+def get_settings(project_dir, include_apps=None, settings_file='settings.ini', 
+    local_settings_file='local_settings.ini', default_settings=None):
+        
+    settings = collect_settings(project_dir, include_apps, settings_file,
+        local_settings_file, default_settings)
 
     x = pyini.Ini(lazy=True)
     for v in settings:

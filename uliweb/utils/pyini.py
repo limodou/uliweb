@@ -246,8 +246,30 @@ class Lazy(object):
             
         return self.cached_value
     
+class RawValue(object):
+    def __init__(self, filename, lineno, text, replace_flag=''):
+        self.filename = filename
+        self.lineno = lineno
+        self.text = text
+        self.replace_flag = replace_flag
+        
+    def __str__(self):
+        _length = 30
+        if len(self.filename) > _length:
+            filename = '...' + self.filename[(len(self.filename)-_length+3):]
+        else:
+            filename = self.filename
+        return '%-30s:%04d' % (filename, self.lineno)
+    
+    def value(self):
+        if self.replace_flag:
+            op = ' <= '
+        else:
+            op = ' = '
+        return "%s%s" % (op, self.text)
+    
 class Section(SortedDict):
-    def __init__(self, name, comments=None, encoding=None, root=None):
+    def __init__(self, name, comments=None, encoding=None, root=None, info=None):
         super(Section, self).__init__()
         self._root = root
         self._name = name
@@ -255,6 +277,7 @@ class Section(SortedDict):
         self._field_comments = {}
         self._field_flag = {}
         self._encoding = encoding
+        self._info = info
         
         #sync
         if self._root and self._lazy:
@@ -307,19 +330,25 @@ class Section(SortedDict):
     def dumps(self, out, convertors=None):
         if self._comments:
             print >> out, '\n'.join(self._comments)
-        print >> out, '[%s]' % self._name
+        if self._root and self._root._raw:
+            print >> out, '%s [%s]' % (self._info, self._name)
+        else:
+            print >> out, '[%s]' % self._name
         for f in self.keys():
             comments = self.comment(f)
             if comments:
                 print >> out, '\n'.join(comments)
-            if self._field_flag.get(f, False):
-                op = ' <= '
+            if self._root and self._root._raw:
+                print >> out, "%s %s%s" % (str(self[f]), f, self[f].value())
             else:
-                op = ' = '
-            buf = f + op + uni_prt(self[f], self._encoding, convertors=convertors)
-            if len(buf) > 79:
-                buf = f + op + uni_prt(self[f], self._encoding, True, convertors=convertors)
-            print >> out, buf
+                if self._field_flag.get(f, False):
+                    op = ' <= '
+                else:
+                    op = ' = '
+                buf = f + op + uni_prt(self[f], self._encoding, convertors=convertors)
+                if len(buf) > 79:
+                    buf = f + op + uni_prt(self[f], self._encoding, True, convertors=convertors)
+                print >> out, buf
             
     def __delitem__(self, key):
         super(Section, self).__delitem__(key)
@@ -338,7 +367,7 @@ class Section(SortedDict):
     
 class Ini(SortedDict):
     def __init__(self, inifile='', commentchar=None, encoding=None, 
-        env=None, convertors=None, lazy=False, writable=False):
+        env=None, convertors=None, lazy=False, writable=False, raw=False):
         """
         lazy is used to parse first but not deal at time, and only when 
         the user invoke finish() function, it'll parse the data.
@@ -356,6 +385,7 @@ class Ini(SortedDict):
         self._convertors.update(convertors or {})
         self._lazy = lazy
         self._writable = writable
+        self._raw = raw
         
         if lazy:
             self._globals = self._env.copy()
@@ -434,7 +464,8 @@ class Ini(SortedDict):
                             import warnings
                             warnings.warn(Warning("Can't find the file [%s], so just skip it" % _filename), stacklevel=2)
                         continue
-                    section = self.add(sec_name, comments)
+                    info = RawValue(self._inifile, lineno, sec_name)
+                    section = self.add(sec_name, comments, info=info)
                     comments = []
                 elif '=' in line:
                     if section is None:
@@ -473,12 +504,15 @@ class Ini(SortedDict):
                             else:
                                 v = value
                         else:
-                            try:
-                                v = eval_value(value, self.env(), self[sec_name], self._encoding)
-                            except Exception as e:
-                                print_exc()
-                                print dict(self)
-                                raise Exception("Converting value (%s) error in %s:%d:%s" % (value, filename or self._inifile, lineno, line))
+                            if self._raw:
+                                v = RawValue(self._inifile, lineno, value, replace_flag)
+                            else:
+                                try:
+                                    v = eval_value(value, self.env(), self[sec_name], self._encoding)
+                                except Exception as e:
+                                    print_exc()
+                                    print dict(self)
+                                    raise Exception("Converting value (%s) error in %s:%d:%s" % (value, filename or self._inifile, lineno, line))
                     section.add(keyname, v, comments, replace=replace_flag)
                     comments = []
             else:
@@ -543,11 +577,11 @@ class Ini(SortedDict):
         for k, v in value.items():
             self.set_var(k, v)
 
-    def add(self, sec_name, comments=None):
+    def add(self, sec_name, comments=None, info=None):
         if sec_name in self:
             section = self[sec_name]
         else:
-            section = Section(sec_name, comments, self._encoding, root=self)
+            section = Section(sec_name, comments, self._encoding, root=self, info=info)
             self[sec_name] = section
         return section
     

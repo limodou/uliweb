@@ -429,3 +429,23 @@ def test_set():
     >>> print x.default.set1
     set([1, 2, 3, 5])
     """
+
+def test_triple_string():
+    """
+    >>> from StringIO import StringIO
+    >>> buf = StringIO(\"\"\"
+    ... #coding=utf8
+    ... [DEFAULT]
+    ... a = 'b'
+    ... \"\"\")
+    >>> x = Ini(raw=True)
+    >>> x.set_filename('test.ini')
+    >>> x.read(buf)
+    >>> print x.DEFAULT
+    <BLANKLINE>
+    #coding=utf8
+    test.ini                      :0003 [DEFAULT]
+    test.ini                      :0004 a = 'b'
+    <BLANKLINE>
+    """
+
