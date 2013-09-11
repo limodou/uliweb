@@ -82,7 +82,7 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     if project_dir:
         apps_dir = os.path.normpath(os.path.join(project_dir, 'apps'))
     if not project_dir:
-        project_dir = norm_path(os.path.join(apps_dir, '..'))
+        project_dir = os.path.normpath(os.path.abspath(os.path.join(apps_dir, '..')))
         
     if project_dir not in sys.path:
         sys.path.insert(0, project_dir)
