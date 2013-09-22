@@ -40,6 +40,7 @@ import sys
 import decimal
 import threading
 import datetime
+import copy
 from uliweb.utils import date
 from uliweb.utils.common import flat_list, classonlymethod
 from sqlalchemy import *
@@ -643,7 +644,7 @@ def get_model(model, engine_name=None):
                 return model_inst
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
-def get_object(table, id, cache=False):
+def get_object(table, id, cache=False, fields=None):
     """
     Get obj in Local.object_caches first and also use get_cached function if 
     not found in object_caches
@@ -655,9 +656,9 @@ def get_object(table, id, cache=False):
         model = table
       
     if cache:
-        obj = model.get_cached(id)
+        obj = model.get_cached(id, fields=fields)
     else:
-        obj = model.get(id)
+        obj = model.get(id, fields=fields)
     
     return obj
         
@@ -2442,7 +2443,7 @@ class Model(object):
         else:
             if strict:
                 return str(v)
-            return v
+            return copy.deepcopy(v)
            
     def _get_data(self):
         """

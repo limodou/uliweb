@@ -30,6 +30,7 @@ Uliweb Change Log
 * Improve secretkey app, add `-o` to specify output file. Add `keyfile` to most functions.
 * Add `MIME_TYPES` section to upload app, but it'll only effect with uliweb application, but not web server
 * Improve call command, enable call modules ouside apps directory, and add project path to sys.path
+* Fix orm PICKLE update bug, use deepcopy to save old_value.
 
 0.1.7 Version
 -----------------
