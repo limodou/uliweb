@@ -15,12 +15,18 @@ class Permission(Model):
             for u in role.users.ids():
                 yield u
     
+    def __unicode__(self):
+        return self.name
+    
 class Role(Model):
     name = Field(str, max_length=80, required=True)
     description = Field(str, max_length=255)
     reserve = Field(bool)
     users = ManyToMany('user', collection_name='user_roles')
     permissions = ManyToMany('permission', through='role_perm_rel', collection_name='perm_roles')
+    
+    def __unicode__(self):
+        return self.name
     
 class Role_Perm_Rel(Model):
     role = Reference('role')
