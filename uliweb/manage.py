@@ -553,6 +553,8 @@ class RunserverCommand(Command):
             help='The SSL private key filename.'),
         make_option('--ssl-cert', dest='ssl_cert', default='ssl.cert',
             help='The SSL certificate filename.'),
+        make_option('--tornado', dest='tornado', action='store_true', default=False,
+            help='Start uliweb server with tornado.'),
     )
     develop = False
     
@@ -586,8 +588,39 @@ class RunserverCommand(Command):
                 ctx = (options.ssl_key, options.ssl_cert)
         else:
             ctx = None
-        run_simple(options.hostname, options.port, app, options.reload, False, True,
-                   extra_files, 1, options.thread, options.processes, ssl_context=ctx)
+        
+        if options.tornado:
+            try:
+                import tornado
+                import tornado.wsgi
+                import tornado.httpserver
+                import tornado.ioloop
+                import tornado.autoreload
+            except:
+                print 'Error: Please install tornado first'
+                sys.exit(1)
+               
+            if options.ssl:
+                ctx = {
+                    "certfile": options.ssl_cert,
+                    "keyfile": options.ssl_key,
+                }
+            else:
+                ctx = None
+
+            container = tornado.wsgi.WSGIContainer(app)
+            http_server = tornado.httpserver.HTTPServer(container, 
+                ssl_options=ctx)
+            http_server.listen(options.port, address=options.hostname)
+            loop=tornado.ioloop.IOLoop.instance()
+            if options.reload:
+                for f in extra_files:
+                    tornado.autoreload.watch(f)
+                tornado.autoreload.start(loop)
+            loop.start()
+        else:
+            run_simple(options.hostname, options.port, app, options.reload, False, True,
+                extra_files, 1, options.thread, options.processes, ssl_context=ctx)
 register_command(RunserverCommand)
 
 class DevelopCommand(RunserverCommand):
