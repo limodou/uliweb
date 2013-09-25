@@ -502,9 +502,7 @@ class CallCommand(Command):
                     raise Exception("Can't find call or main function in module %s" % m)
                 exe_flag = True
             except ImportError:
-#                import traceback
-#                traceback.print_exc()
-                raise
+                pass
             
         if not exe_flag:
             print "Error: Can't import the [%s], please check the file and try again." % command
