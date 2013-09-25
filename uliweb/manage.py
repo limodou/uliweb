@@ -589,7 +589,6 @@ class RunserverCommand(Command):
         
         if options.tornado:
             try:
-                import tornado
                 import tornado.wsgi
                 import tornado.httpserver
                 import tornado.ioloop
