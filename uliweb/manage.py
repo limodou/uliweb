@@ -553,8 +553,6 @@ class RunserverCommand(Command):
             help='The SSL certificate filename.'),
         make_option('--tornado', dest='tornado', action='store_true', default=False,
             help='Start uliweb server with tornado.'),
-        make_option('--gevent-socketio', dest='gsocketio', action='store_true', default=False,
-            help='Start uliweb server with gevent-socketio.'),
     )
     develop = False
     
@@ -604,12 +602,9 @@ class RunserverCommand(Command):
                     "certfile": options.ssl_cert,
                     "keyfile": options.ssl_key,
                 }
-                
-                log.info(' * Running on https://%s:%d/ with tornado' % (options.hostname, options.port))
             else:
                 ctx = None
-                log.info(' * Running on http://%s:%d/ with tornado' % (options.hostname, options.port))
-                
+
             container = tornado.wsgi.WSGIContainer(app)
             http_server = tornado.httpserver.HTTPServer(container, 
                 ssl_options=ctx)
@@ -620,23 +615,6 @@ class RunserverCommand(Command):
                     tornado.autoreload.watch(f)
                 tornado.autoreload.start(loop)
             loop.start()
-        elif options.gsocketio:
-            try:
-                from gevent import monkey
-            except:
-                print 'Error: Please install gevent first'
-                sys.exit(1)
-                
-            try:
-                from socketio.server import SocketIOServer
-            except:
-                print 'Error: Please install gevent-socketio first'
-                sys.exit(1)
-            
-            monkey.patch_all()
-            
-            log.info(' * Running on http://%s:%d/  with gevent-socketio' % (options.hostname, options.port))
-            SocketIOServer((options.hostname, options.port), app, resource="socket.io").serve_forever()
         else:
             run_simple(options.hostname, options.port, app, options.reload, False, True,
                 extra_files, 1, options.thread, options.processes, ssl_context=ctx)
