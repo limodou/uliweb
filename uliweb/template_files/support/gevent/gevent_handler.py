@@ -1,8 +1,9 @@
 import sys, os
 import getopt
-import tornado.wsgi
-import tornado.httpserver
-import tornado.ioloop
+from gevent.wsgi import WSGIServer
+from gevent import monkey
+
+monkey.patch_all()
 
 hostname = '127.0.0.1'
 port = 80
@@ -21,8 +22,6 @@ if path not in sys.path:
 from uliweb.manage import make_simple_application
 application = make_simple_application(project_dir=path)
 
-container = tornado.wsgi.WSGIContainer(application)
-http_server = tornado.httpserver.HTTPServer(container, xheaders=True)
-http_server.listen(port, address=hostname)
-tornado.ioloop.IOLoop.instance().start()
+http_server = WSGIServer((hostname, port), application)
+http_server.serve_forever()
 

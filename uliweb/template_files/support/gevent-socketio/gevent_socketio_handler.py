@@ -1,8 +1,9 @@
 import sys, os
 import getopt
-import tornado.wsgi
-import tornado.httpserver
-import tornado.ioloop
+from gevent import monkey
+from socketio.server import SocketIOServer
+
+monkey.patch_all()
 
 hostname = '127.0.0.1'
 port = 80
@@ -21,8 +22,4 @@ if path not in sys.path:
 from uliweb.manage import make_simple_application
 application = make_simple_application(project_dir=path)
 
-container = tornado.wsgi.WSGIContainer(application)
-http_server = tornado.httpserver.HTTPServer(container, xheaders=True)
-http_server.listen(port, address=hostname)
-tornado.ioloop.IOLoop.instance().start()
-
+SocketIOServer((hostname, port), application, resource="socket.io").serve_forever()

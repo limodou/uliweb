@@ -32,6 +32,7 @@ Uliweb Change Log
 * Improve call command, enable call modules ouside apps directory, and add project path to sys.path
 * Fix orm PICKLE update bug, use deepcopy to save old_value.
 * Add tornado server support.
+* Add gevent and gevent-socketio server support.
 
 0.1.7 Version
 -----------------

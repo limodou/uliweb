@@ -71,11 +71,12 @@ def install_config(apps_dir):
 def make_application(debug=None, apps_dir='apps', project_dir=None, 
     include_apps=None, debug_console=True, settings_file='settings.ini', 
     local_settings_file='local_settings.ini', start=True, default_settings=None, 
-    dispatcher_cls=None, dispatcher_kwargs=None):
+    dispatcher_cls=None, dispatcher_kwargs=None, debug_cls=None, debug_kwargs=None):
     """
     Make an application object
     """
     from uliweb.utils.common import import_attr
+    from werkzeug.debug import DebuggedApplication
     
     dispatcher_cls = dispatcher_cls or SimpleFrame.Dispatcher
     dispatcher_kwargs = dispatcher_kwargs or {}
@@ -136,10 +137,13 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
                 
     debug_flag = uliweb.settings.GLOBAL.DEBUG
     if debug or (debug is None and debug_flag):
+        if not debug_cls:
+            debug_cls = DebuggedApplication
+            
         log.setLevel(logging.DEBUG)
         log.info(' * Loading DebuggedApplication...')
-        from werkzeug.debug import DebuggedApplication
-        app = DebuggedApplication(app, uliweb.settings.GLOBAL.get('DEBUG_CONSOLE', False))
+        app.debug = True
+        app = debug_cls(app, uliweb.settings.GLOBAL.get('DEBUG_CONSOLE', False))
     return app
 
 def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
@@ -253,22 +257,23 @@ register_command(MakeProjectCommand)
 
 class SupportCommand(Command):
     name = 'support'
-    help = 'Add special support to existed project, such as: gae, dotcloud'
+    help = 'Add special support to existed project, such as: gae, dotcloud, sae, bae, fcgi, heroku, tornado, gevent, gevent-socketio'
     args = 'supported_type'
     check_apps_dirs = False
 
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import extract_dirs
         
-        _types = ['gae', 'dotcloud', 'sae', 'bae', 'heroku']
-        if not args:
-            support_type = ''
-            while not support_type in _types:
-                support_type = raw_input('Please enter support type[%s]:' % '/'.join(_types))
-        else:
-            support_type = args[0]
+        _types = ['gae', 'dotcloud', 'sae', 'bae', 'fcgi', 'heroku', 'tornado', 'gevent', 'gevent-socketio']
+        support_type = args[0] if args else ''
+        while not support_type in _types and support_type != 'quit':
+            print 'Supported types:\n'
+            print '    ' + '\n    '.join(_types)
+            print
+            support_type = raw_input('Please enter support type[quit to exit]:')
         
-        extract_dirs('uliweb', 'template_files/support/%s' % support_type, '.', verbose=global_options.verbose)
+        if support_type != 'quit':
+            extract_dirs('uliweb', 'template_files/support/%s' % support_type, '.', verbose=global_options.verbose)
 register_command(SupportCommand)
 
 class ExportStaticCommand(Command):
@@ -553,6 +558,10 @@ class RunserverCommand(Command):
             help='The SSL certificate filename.'),
         make_option('--tornado', dest='tornado', action='store_true', default=False,
             help='Start uliweb server with tornado.'),
+        make_option('--gevent', dest='gevent', action='store_true', default=False,
+            help='Start uliweb server with gevent.'),
+        make_option('--gevent-socketio', dest='gsocketio', action='store_true', default=False,
+            help='Start uliweb server with gevent-socketio.'),
     )
     develop = False
     
@@ -561,15 +570,15 @@ class RunserverCommand(Command):
 
         if self.develop:
             include_apps = ['plugs.develop']
-            app = make_application(options.debug, project_dir=global_options.project, 
-                        include_apps=include_apps, settings_file=global_options.settings,
-                        local_settings_file=global_options.local_settings)
         else:
-            app = make_application(options.debug, project_dir=global_options.project,
-                settings_file=global_options.settings,
-                local_settings_file=global_options.local_settings)
             include_apps = []
+        
         extra_files = collect_files(global_options, global_options.apps_dir, self.get_apps(global_options, include_apps))
+        
+        def get_app(debug_cls=None):
+            return make_application(options.debug, project_dir=global_options.project, 
+                        include_apps=include_apps, settings_file=global_options.settings,
+                        local_settings_file=global_options.local_settings, debug_cls=debug_cls)
         
         if options.ssl:
             ctx = 'adhoc'
@@ -602,10 +611,12 @@ class RunserverCommand(Command):
                     "certfile": options.ssl_cert,
                     "keyfile": options.ssl_key,
                 }
+                log.info(' * Running on https://%s:%d/' % (options.hostname, options.port))
             else:
                 ctx = None
-
-            container = tornado.wsgi.WSGIContainer(app)
+                log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
+                
+            container = tornado.wsgi.WSGIContainer(get_app())
             http_server = tornado.httpserver.HTTPServer(container, 
                 ssl_options=ctx)
             http_server.listen(options.port, address=options.hostname)
@@ -615,8 +626,64 @@ class RunserverCommand(Command):
                     tornado.autoreload.watch(f)
                 tornado.autoreload.start(loop)
             loop.start()
+        elif options.gevent:
+            try:
+                from gevent.wsgi import WSGIServer
+                from gevent import monkey
+            except:
+                print 'Error: Please install gevent first'
+                sys.exit(1)
+            from werkzeug.serving import run_with_reloader
+            from functools import partial
+            
+            monkey.patch_all()
+            
+            run_with_reloader = partial(run_with_reloader, extra_files=extra_files)
+            
+            @run_with_reloader
+            def run_server():
+                log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
+                http_server = WSGIServer((options.hostname, options.port), get_app())
+                http_server.serve_forever()
+            
+            run_server()
+            
+        elif options.gsocketio:
+            try:
+                from gevent import monkey
+            except:
+                print 'Error: Please install gevent first'
+                sys.exit(1)
+            try:
+                from socketio.server import SocketIOServer
+            except:
+                print 'Error: Please install gevent-socketio first'
+                sys.exit(1)
+            from werkzeug.serving import run_with_reloader
+            from functools import partial
+            
+            monkey.patch_all()
+            
+            from werkzeug.debug import DebuggedApplication
+            class MyDebuggedApplication(DebuggedApplication):
+                def __call__(self, environ, start_response):
+                    # check if websocket call
+                    if "wsgi.websocket" in environ and not environ["wsgi.websocket"] is None:
+                        # a websocket call, no debugger ;)
+                        return self.application(environ, start_response)
+                    # else go on with debugger
+                    return DebuggedApplication.__call__(self, environ, start_response)
+            
+            run_with_reloader = partial(run_with_reloader, extra_files=extra_files)
+
+            @run_with_reloader
+            def run_server():
+                log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
+                SocketIOServer((options.hostname, options.port), get_app(MyDebuggedApplication), resource="socket.io").serve_forever()
+            
+            run_server()
         else:
-            run_simple(options.hostname, options.port, app, options.reload, False, True,
+            run_simple(options.hostname, options.port, get_app(), options.reload, False, True,
                 extra_files, 1, options.thread, options.processes, ssl_context=ctx)
 register_command(RunserverCommand)
 
