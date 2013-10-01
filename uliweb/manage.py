@@ -640,10 +640,17 @@ class RunserverCommand(Command):
             
             run_with_reloader = partial(run_with_reloader, extra_files=extra_files)
             
+            if options.ssl:
+                ctx = {
+                    "certfile": options.ssl_cert,
+                    "keyfile": options.ssl_key,
+                }
+            else:
+                ctx = {}
             @run_with_reloader
             def run_server():
                 log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
-                http_server = WSGIServer((options.hostname, options.port), get_app())
+                http_server = WSGIServer((options.hostname, options.port), get_app(), **ctx)
                 http_server.serve_forever()
             
             run_server()
@@ -674,12 +681,20 @@ class RunserverCommand(Command):
                     # else go on with debugger
                     return DebuggedApplication.__call__(self, environ, start_response)
             
+            if options.ssl:
+                ctx = {
+                    "certfile": options.ssl_cert,
+                    "keyfile": options.ssl_key,
+                }
+            else:
+                ctx = {}
+
             run_with_reloader = partial(run_with_reloader, extra_files=extra_files)
 
             @run_with_reloader
             def run_server():
                 log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
-                SocketIOServer((options.hostname, options.port), get_app(MyDebuggedApplication), resource="socket.io").serve_forever()
+                SocketIOServer((options.hostname, options.port), get_app(MyDebuggedApplication), resource="socket.io", **ctx).serve_forever()
             
             run_server()
         else:
@@ -764,6 +779,10 @@ class ShellCommand(Command):
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings, 
             start=False)
+        
+        if global_options.project not in sys.path:
+            sys.path.insert(0, global_options.project)
+        
         env = {'application':application, 'settings':application.settings, 'functions':functions}
         return env
     
