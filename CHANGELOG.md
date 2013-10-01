@@ -33,6 +33,7 @@ Uliweb Change Log
 * Fix orm PICKLE update bug, use deepcopy to save old_value.
 * Add tornado server support.
 * Add gevent and gevent-socketio server support.
+* Add install command support, you can write requirements.txt in project directory or app directory.
 
 0.1.7 Version
 -----------------

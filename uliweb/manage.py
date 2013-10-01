@@ -513,6 +513,40 @@ class CallCommand(Command):
             print "Error: Can't import the [%s], please check the file and try again." % command
 register_command(CallCommand)
  
+class InstallCommand(Command):
+    name = 'install'
+    help = 'install [appname,...] extra modules listed in requirements.txt'
+    args = '[appname]'
+    
+    def handle(self, options, global_options, *args):
+        from uliweb.core.SimpleFrame import get_app_dir
+        
+        #check pip or setuptools
+        try:
+            import pip
+        except:
+            print "Error: can't import pip module, please install it first"
+            sys.exit(1)
+            
+        apps = self.get_apps(global_options)
+            
+        def get_requirements():
+            for app in apps:
+                path = get_app_dir(app)
+                r_file = os.path.join(path, 'requirements.txt')
+                if os.path.exists(r_file):
+                    yield r_file
+            r_file = os.path.join(global_options.project, 'requirements.txt')
+            if os.path.exists(r_file):
+                yield r_file
+                
+        for r_file in get_requirements():
+            if global_options.verbose:
+                print "Processing... %s" % r_file
+            os.system('pip install -r %s' % r_file)
+            
+register_command(InstallCommand)
+
 class MakeCmdCommand(Command):
     name = 'makecmd'
     help = 'Created a commands.py to the apps or current directory.'
