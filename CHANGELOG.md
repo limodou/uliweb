@@ -34,6 +34,7 @@ Uliweb Change Log
 * Add tornado server support.
 * Add gevent and gevent-socketio server support.
 * Add install command support, you can write requirements.txt in project directory or app directory.
+* Add create setup.py while makeproject
 
 0.1.7 Version
 -----------------

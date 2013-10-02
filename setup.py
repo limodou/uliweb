@@ -123,34 +123,33 @@ Links
 """
 
 setup(name='Uliweb',
-      version=uliweb.__version__,
-      description="Easy python web framework",
-      long_description=__doc__,
-      classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Environment :: Console",
-        "Environment :: Web Environment",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: BSD License",
-        "Topic :: Internet :: WWW/HTTP :: WSGI",
-        "Programming Language :: Python",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2.6",
-        "Programming Language :: Python :: 2.7",
+    version=uliweb.__version__,
+    description="Easy python web framework",
+    long_description=__doc__,
+    classifiers=[
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Topic :: Internet :: WWW/HTTP :: WSGI",
+    "Programming Language :: Python",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 2.6",
+    "Programming Language :: Python :: 2.7",
+    ],
+    packages = ['uliweb'],
+    platforms = 'any',
+    keywords='wsgi web framework',
+    author=uliweb.__author__,
+    author_email=uliweb.__author_email__,
+    url=uliweb.__url__,
+    license=uliweb.__license__,
+    include_package_data=True,
+    zip_safe=False,
+    entry_points = {
+      'console_scripts': [
+          'uliweb = uliweb.manage:main',
       ],
-      packages = ['uliweb'],
-      platforms = 'any',
-      keywords='wsgi web framework',
-      author=uliweb.__author__,
-      author_email=uliweb.__author_email__,
-      url=uliweb.__url__,
-      license=uliweb.__license__,
-      include_package_data=True,
-      zip_safe=False,
-      entry_points = {
-          'console_scripts': [
-              'uliweb = uliweb.manage:main',
-          ],
-      },
-      
-      )
+    },
+)

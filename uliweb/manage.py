@@ -231,6 +231,7 @@ class MakeProjectCommand(Command):
 
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import extract_dirs
+        from uliweb.core.template import template_file
         
         if not args:
             project_name = ''
@@ -251,6 +252,11 @@ class MakeProjectCommand(Command):
             ans = 'y'
         if ans == 'y':
             extract_dirs('uliweb', 'template_files/project', project_name, verbose=global_options.verbose)
+            #template setup.py
+            setup_file = os.path.join(project_name, 'setup.py')
+            text = template_file(setup_file, {'project_name':project_name})
+            with open(setup_file, 'w') as f:
+                f.write(text)
             #rename .gitignore.template to .gitignore
             os.rename(os.path.join(project_name, '.gitignore.template'), os.path.join(project_name, '.gitignore'))
 register_command(MakeProjectCommand)
@@ -528,7 +534,7 @@ class InstallCommand(Command):
             print "Error: can't import pip module, please install it first"
             sys.exit(1)
             
-        apps = self.get_apps(global_options)
+        apps = args or self.get_apps(global_options)
             
         def get_requirements():
             for app in apps:
