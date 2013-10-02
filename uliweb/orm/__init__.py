@@ -2072,6 +2072,8 @@ class ManyToMany(ReferenceProperty):
             index_name = '%s_mindx' % self.tablename
             if index_name not in [x.name for x in self.table.indexes]:
                 Index(index_name, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
+                #add field_b index
+                Index('%s_rmindx' % self.tablename, self.table.c[self.fieldb])
 
             #process __mapping_only__ property, if the modela or modelb is mapping only
             #then manytomany table will be mapping only
