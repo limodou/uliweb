@@ -4,6 +4,7 @@ sys.path.insert(0, '../uliweb/lib')
 from uliweb.orm import *
 import uliweb.orm
 uliweb.orm.__auto_create__ = True
+uliweb.orm.__nullable__ = True
 
 #basic testing
 def test_1():
@@ -1430,7 +1431,7 @@ def test_manytomany_filter():
     >>> b.groups.add(g1, g2)
     True
     >>> print list(User.filter(User.groups.join_in(1,2)))
-    [<User {'username':u'user1','id':1}>, <User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>, <User {'username':u'user2','id':2}>]
+    [<User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>, <User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>]
     >>> print list(User.filter(User.groups.join_in(1,2)).distinct())
     [<User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>]
     >>> print list(User.filter(User.groups.join_filter(Group.c.name=='group3')))
@@ -1969,10 +1970,37 @@ def test_changed_and_saved():
     [2, 3]
     """
     
+def test_createtable():
+    """
+    >>> from sqlalchemy.schema import CreateTable, CreateIndex
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> set_server_default(True)
+    >>> class Test(Model):
+    ...     username = Field(str, index=True)
+    ...     year = Field(int)
+    ...     datetime_type = Field(datetime.datetime)
+    ...     date_type = Field(datetime.date)
+    ...     time_type = Field(datetime.time)
+    ...     float = Field(float)
+    ...     decimal = Field(DECIMAL)
+    ...     text = Field(TEXT)
+    ...     blob = Field(BLOB)
+    ...     pickle = Field(PICKLE)
+    >>> a1 = Test(username='limodou1')
+    >>> a1.save()
+    True
+    """
+    
 #if __name__ == '__main__':
+#    from sqlalchemy.schema import CreateTable, CreateIndex
+#    
 #    db = get_connection('sqlite://')
-#    db.echo = True
 #    db.metadata.drop_all()
+#    db.echo = True
+#    set_server_default(True)
+#    set_nullable(False)
+#    
 #    class Test(Model):
 #        username = Field(CHAR, max_length=20)
 #        year = Field(int)
@@ -1982,58 +2010,24 @@ def test_changed_and_saved():
 #        name = Field(CHAR, max_length=20)
 #    a1 = Test(username='limodou1', year=20)
 #    a1.save()
-#
-#    b1 = Test1(name='user', year=5, test=a1)
-#    b1.save()
-#
-#    b2 = Test1(name='aaaa', year=10, test=a1)
-#    b2.save()
-#
-#    b3 = Test1.get(Test1.c.name=='aaaa', fields=['name'])
-#    print b3
-#    print b3._test_
-
-
 
 #if __name__ == '__main__':
-#    #set_debug_query(True)
+#    from sqlalchemy.schema import CreateTable, CreateIndex
 #    db = get_connection('sqlite://')
 #    db.metadata.drop_all()
-#    class User(Model):
-#        username = Field(unicode)
-#    class Group(Model):
-#        name = Field(str)
-#    Group.ManyToMany('users', User)
-#    a = User(username='limodou')
-#    a.save()
-#    
-#    b = User(username='user')
-#    b.save()
-#    
-#    c = User(username='abc')
-#    c.save()
-#    
-#    g1 = Group(name='python')
-#    g1.save()
-#    
-#    g1.users.add(a)
-#    
-#    g1.users.add(b, 3) #add can support multiple object, and object can also int
-#    
-#    g1.users.add(a, b)  #can has duplicated records
-#    g2 = Group.get(2)
-#    g1.users.count()
-#    g1.users.add(a, b, c)
-#    g1.users.add([a, b, c])
-##    set_echo(True)
-#    g1.to_dict()
-#    print g1._users_
-#    print g1.to_dict(manytomany=True)
-#    g1.users.add(b)
-#    print g1._users_
-#    
-#    g1.users.clear()
-#    print g1._users_
-#    
-#    g1.users.update([b,c])
-#    print g1._users_
+#    set_server_default(True)
+#    class Test(Model):
+#        username = Field(str, index=True)
+#        year = Field(int)
+#        datetime_type = Field(datetime.datetime)
+#        date_type = Field(datetime.date)
+#        time_type = Field(datetime.time)
+#        float = Field(float)
+#        decimal = Field(DECIMAL)
+#        text = Field(TEXT)
+#        blob = Field(BLOB)
+#        pickle = Field(PICKLE)
+#    a1 = Test(username='limodou1')
+#    a1.save()
+#    print CreateTable(Test.table).compile(dialect=db.engine.dialect)
+#

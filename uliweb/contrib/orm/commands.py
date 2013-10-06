@@ -330,10 +330,6 @@ class SQLCommand(SQLCommandMixin, Command):
     def handle(self, options, global_options, *args):
         from sqlalchemy.schema import CreateTable, CreateIndex
         
-        if not args:
-            print "Failed! You should pass one or more tables name."
-            sys.exit(1)
-
         engine = get_engine(options, global_options)
         
         tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
@@ -343,7 +339,7 @@ class SQLCommand(SQLCommandMixin, Command):
             if t.__mapping_only__:
                 continue
             
-            print "%s;" % str(CreateTable(t)).rstrip()
+            print "%s;" % str(CreateTable(t).compile(dialect=engine.dialect)).rstrip()
             for x in t.indexes:
                 print "%s;" % CreateIndex(x)
             
@@ -364,7 +360,7 @@ class SQLTableCommand(SQLCommandMixin, Command):
         for name, t in tables:
             if t.__mapping_only__:
                 continue
-            print "%s;" % str(CreateTable(t)).rstrip()
+            print "%s;" % str(CreateTable(t).compile(dialect=engine.dialect)).rstrip()
             for x in t.indexes:
                 print "%s;" % CreateIndex(x)
 

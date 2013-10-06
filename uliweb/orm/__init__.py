@@ -21,7 +21,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
     'CommitAll', 'RollbackAll',
     'begin_sql_monitor', 'close_sql_monitor',
-    'get_object']
+    'get_object', 'set_server_default', 'set_nullable']
 
 __auto_create__ = False
 __auto_set_model__ = True
@@ -35,16 +35,18 @@ __pk_type__ = 'int'
 __default_tablename_converter__ = None
 __check_max_length__ = False #used to check max_length parameter
 __default_post_do__ = None #used to process post_do topic
+__nullable__ = False    #not enabled null by default
+__server_default__ = False    #not enabled null by default
 
 import sys
 import decimal
 import threading
 import datetime
 import copy
-from uliweb.utils import date
+from uliweb.utils import date as _date
 from uliweb.utils.common import flat_list, classonlymethod
 from sqlalchemy import *
-from sqlalchemy.sql import select, ColumnElement
+from sqlalchemy.sql import select, ColumnElement, text
 from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
@@ -78,6 +80,7 @@ class ConfigurationError(Error):pass
 
 _SELF_REFERENCE = object()
 class Lazy(object): pass
+class Empty(object): pass
 
 class SQLStorage(dict):
     """
@@ -114,6 +117,14 @@ def set_post_do(func):
     global __default_post_do__
     __default_post_do__ = func
     
+def set_nullable(flag):
+    global __nullable__
+    __nullable__ = flag
+
+def set_server_default(flag):
+    global __server_default__
+    __server_default__ = flag
+
 def set_encoding(encoding):
     global __default_encoding__
     __default_encoding__ = encoding
@@ -753,7 +764,7 @@ class ModelMetaclass(type):
         without_id = getattr(cls, '__without_id__', False)
         if 'id' not in cls.properties and not without_id:
             cls.properties['id'] = f = Field(PKTYPE(), autoincrement=True, 
-                primary_key=not has_primary_key, default=None, nullable=False)
+                primary_key=not has_primary_key, default=None, nullable=False, server_default=None)
             f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)
 
@@ -787,12 +798,13 @@ class Property(object):
     field_class = String
     creation_counter = 0
     property_type = 'column'   #Property type: 'column', 'compound', 'relation'
-
+    server_default = None
+    
     def __init__(self, verbose_name=None, name=None, default=None,
         required=False, validators=None, choices=None, max_length=None, 
         hint='', auto=None, auto_add=None, type_class=None, type_attrs=None, 
         placeholder='', extra=None,
-        sequence=False, **kwargs):
+        sequence=False, server_default=Empty, **kwargs):
         self.verbose_name = verbose_name
         self.property_name = None
         self.name = name
@@ -807,6 +819,10 @@ class Property(object):
         self.choices = choices
         self.max_length = max_length
         self.kwargs = kwargs
+        if __server_default__:
+            kwargs['server_default' ] = server_default if server_default is not Empty else self.server_default
+        else:
+            kwargs['server_default' ] = server_default if server_default is not Empty else None
         self.sequence = sequence
         self.creation_counter = Property.creation_counter
         self.value = None
@@ -827,6 +843,8 @@ class Property(object):
         return d
         
     def create(self, cls):
+        global __nullable__
+        
         kwargs = self.kwargs.copy()
         kwargs['key'] = self.name
 #        if callable(self.default):
@@ -836,11 +854,13 @@ class Property(object):
         kwargs['autoincrement'] = self.kwargs.get('autoincrement', False)
         kwargs['index'] = self.kwargs.get('index', False)
         kwargs['unique'] = self.kwargs.get('unique', False)
-        kwargs['nullable'] = self.kwargs.get('nullable', True)
+        #nullable default change to False
+        kwargs['nullable'] = self.kwargs.get('nullable', __nullable__)
         f_type = self._create_type()
         args = ()
         if self.sequence:
             args = (self.sequence, )
+
         return Column(self.property_name, f_type, *args, **kwargs)
 
     def _create_type(self):
@@ -1029,6 +1049,7 @@ class Property(object):
 class CharProperty(Property):
     data_type = unicode
     field_class = CHAR
+    server_default=''
     
     def __init__(self, verbose_name=None, default=u'', max_length=None, **kwds):
         if __check_max_length__ and not max_length:
@@ -1098,6 +1119,7 @@ class PickleProperty(BlobProperty):
 class DateTimeProperty(Property):
     data_type = datetime.datetime
     field_class = DateTime
+    server_default = '0000-00-00 00:00:00'
     
     def __init__(self, verbose_name=None, auto_now=False, auto_now_add=False,
             format=None, **kwds):
@@ -1114,7 +1136,7 @@ class DateTimeProperty(Property):
     
     @staticmethod
     def now():
-        return date.now()
+        return _date.now()
 
     def make_value_from_datastore(self, value):
         if value is not None:
@@ -1123,7 +1145,7 @@ class DateTimeProperty(Property):
 
     @staticmethod
     def _convert_func(*args, **kwargs):
-        return date.to_datetime(*args, **kwargs)
+        return _date.to_datetime(*args, **kwargs)
     
     def convert(self, value):
         if not value:
@@ -1135,7 +1157,7 @@ class DateTimeProperty(Property):
     
     def to_str(self, v):
         if isinstance(v, self.data_type):
-            return date.to_string(v, timezone=False)
+            return _date.to_string(v, timezone=False)
         else:
             if not v:
                 return ''
@@ -1143,7 +1165,7 @@ class DateTimeProperty(Property):
     
     def to_unicode(self, v):
         if isinstance(v, self.data_type):
-            return unicode(date.to_string(v, timezone=False))
+            return unicode(_date.to_string(v, timezone=False))
         else:
             if not v:
                 return u''
@@ -1152,32 +1174,35 @@ class DateTimeProperty(Property):
 class DateProperty(DateTimeProperty):
     data_type = datetime.date
     field_class = Date
+    server_default = '0000-00-00'
     
     @staticmethod
     def _convert_func(*args, **kwargs):
-        return date.to_date(*args, **kwargs)
+        return _date.to_date(*args, **kwargs)
     
     @staticmethod
     def now():
-        return date.to_date(date.now())
+        return _date.to_date(_date.now())
     
 class TimeProperty(DateTimeProperty):
     data_type = datetime.time
     field_class = Time
+    server_default = '00:00:00'
     
     @staticmethod
     def _convert_func(*args, **kwargs):
-        return date.to_time(*args, **kwargs)
+        return _date.to_time(*args, **kwargs)
     
     @staticmethod
     def now():
-        return date.to_time(date.now())
+        return _date.to_time(_date.now())
     
 class IntegerProperty(Property):
     """An integer property."""
 
     data_type = int
     field_class = Integer
+    server_default=text('0')
     
     def __init__(self, verbose_name=None, default=0, **kwds):
         super(IntegerProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1196,6 +1221,7 @@ class FloatProperty(Property):
 
     data_type = float
     field_class = Float
+    server_default=text('0')
     
     def __init__(self, verbose_name=None, default=0.0, precision=None, **kwds):
         super(FloatProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1218,6 +1244,7 @@ class DecimalProperty(Property):
 
     data_type = decimal.Decimal
     field_class = Numeric
+    server_default=text('0.00')
     
     def __init__(self, verbose_name=None, default='0.0', precision=10, scale=2, **kwds):
         super(DecimalProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1250,6 +1277,7 @@ class BooleanProperty(Property):
 
     data_type = bool
     field_class = Boolean
+    server_default=text('0')
     
     def __init__(self, verbose_name=None, default=False, **kwds):
         super(BooleanProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1306,6 +1334,8 @@ class ReferenceProperty(Property):
         self.reference_class = get_model(reference_class, self.engine_name)
         
     def create(self, cls):
+        global __nullable__
+        
         args = self.kwargs.copy()
         args['key'] = self.name
 #        if not callable(self.default):
@@ -1314,9 +1344,14 @@ class ReferenceProperty(Property):
         args['autoincrement'] = self.kwargs.get('autoincrement', False)
         args['index'] = self.kwargs.get('index', False)
         args['unique'] = self.kwargs.get('unique', False)
-        args['nullable'] = self.kwargs.get('nullable', True)
+        args['nullable'] = self.kwargs.get('nullable', __nullable__)
         f_type = self._create_type()
 #        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
+        if __server_default__:
+            if self.data_type is int or self.data_type is long :
+                args['server_default'] = text('0')
+            else:
+                args['server_default'] = self.reference_field.kwargs.get('server_default')
         return Column(self.property_name, f_type, **args)
     
     def _create_type(self):
@@ -1362,7 +1397,7 @@ class ReferenceProperty(Property):
             reference_id = self.get_lazy(model_instance, self._attr_name(), None)
         else:
             reference_id = None
-        if reference_id is not None:
+        if reference_id:
             #this will cache the reference object
             resolved = getattr(model_instance, self._resolved_attr_name())
             if resolved is not None:
@@ -1411,6 +1446,9 @@ class ReferenceProperty(Property):
                 - Value is not saved.
                 - Object not of correct model type for reference.
         """
+        if value is None:
+            value = 0
+
         if not isinstance(value, Model):
             return super(ReferenceProperty, self).validate(value)
 
@@ -1445,6 +1483,8 @@ Reference = ReferenceProperty
 
 class OneToOne(ReferenceProperty):
     def create(self, cls):
+        global __nullable__
+        
         args = self.kwargs.copy()
         args['key'] = self.name
 #        if not callable(self.default):
@@ -1453,9 +1493,14 @@ class OneToOne(ReferenceProperty):
         args['autoincrement'] = self.kwargs.get('autoincrement', False)
         args['index'] = self.kwargs.get('index', True)
         args['unique'] = self.kwargs.get('unique', True)
-        args['nullable'] = self.kwargs.get('nullable', True)
+        args['nullable'] = self.kwargs.get('nullable', __nullable__)
         f_type = self._create_type()
 #        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
+        if __server_default__:
+            if self.data_type is int or self.data_type is long :
+                args['server_default'] = text('0')
+            else:
+                args['server_default'] = self.reference_field.kwargs.get('server_default')
         return Column(self.property_name, f_type, **args)
 
     def __property_config__(self, model_class, property_name):

@@ -10,6 +10,8 @@ def after_init_apps(sender):
     orm.set_pk_type(settings.get_var('ORM/PK_TYPE'))
     orm.set_auto_set_model(False)
     orm.set_check_max_length(settings.get_var('ORM/CHECK_MAX_LENGTH'))
+    orm.set_nullable(settings.get_var('ORM/NULLABLE'))
+    orm.set_server_default(settings.get_var('ORM/SERVER_DEFAULT'))
     convert_path = settings.get_var('ORM/TABLENAME_CONVERTER')
     convert = import_attr(convert_path) if convert_path else None
     orm.set_tablename_converter(convert)

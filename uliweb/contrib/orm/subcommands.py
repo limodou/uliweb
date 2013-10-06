@@ -31,7 +31,7 @@ class InitCommand(SQLCommand, Command):
             'engine_name':options.engine,
             'script_location':alembic_path})
         
-        with open(ini_file, 'w') as f:
+        with open(ini_file, 'wb') as f:
             f.write(text)
             
         #drop old alembic_version table
@@ -90,6 +90,15 @@ class DiffCommand(RevisionCommand):
     def do(self, config, args, options, global_options):
         self.run('revision', config, message=options.message, autogenerate=True, skip=options.force)
     
+class CurrentCommand(RevisionCommand):
+    name = 'current'
+    help = 'Display the current revision for each database.'
+    check_apps = True
+    has_options = True
+    
+    def do(self, config, args, options, global_options):
+        self.run('current', config)
+
 class UpgradeCommand(RevisionCommand):
     name = 'upgrade'
     help = 'Upgrade to a later version.'
