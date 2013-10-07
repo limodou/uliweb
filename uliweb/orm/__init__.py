@@ -20,7 +20,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'ModelInstanceError', 'KindError', 'ConfigurationError',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
     'CommitAll', 'RollbackAll',
-    'begin_sql_monitor', 'close_sql_monitor',
+    'begin_sql_monitor', 'close_sql_monitor', 'set_model_config',
     'get_object', 'set_server_default', 'set_nullable', 'set_manytomany_index_reverse']
 
 __auto_create__ = False
@@ -588,6 +588,19 @@ def set_model(model, tablename=None, created=None, engine_name=None):
     
     __model_paths__[model_path] = engine_name
     
+def set_model_config(model_name, config):
+    """
+    This function should be only used in initialization phrase
+    :param model_name: model name it's should be string
+    :param config: config should be dict. e.g. {'__mapping_only__':xxx}
+    """
+    assert isinstance(model_name, str)
+    assert isinstance(config, dict)
+    
+    if model_name not in __models__:
+        raise ConfigurationError("Can't find mode %s" % model_name)
+    __models__[model_name]['config'] = config
+    
 def valid_model(model, engine_name=None):
     if isinstance(model, type) and issubclass(model, Model):
         return True
@@ -652,6 +665,10 @@ def get_model(model, engine_name=None):
                 m, name = item['model_path'].rsplit('.', 1)
                 mod = __import__(m, fromlist=['*'])
                 model_inst = getattr(mod, name)
+                config = __models__[model].get('config', {})
+                if config:
+                    for k, v in config.items():
+                        setattr(model_inst, k, v)
                 item['model'] = model_inst
                 model_inst.__alias__ = model
                 model_inst.connect(engine_name)

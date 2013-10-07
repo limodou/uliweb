@@ -53,3 +53,7 @@ def after_init_apps(sender):
                     path = v + path[len(k):]
                     break
             orm.set_model(path, name, engine_name=engine_name)
+
+    if 'MODELS_CONFIG' in settings:
+        for name, v in settings.MODELS_CONFIG.items():
+            orm.set_model_config(name, v)
