@@ -21,7 +21,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
     'CommitAll', 'RollbackAll',
     'begin_sql_monitor', 'close_sql_monitor',
-    'get_object', 'set_server_default', 'set_nullable']
+    'get_object', 'set_server_default', 'set_nullable', 'set_manytomany_index_reverse']
 
 __auto_create__ = False
 __auto_set_model__ = True
@@ -37,6 +37,7 @@ __check_max_length__ = False #used to check max_length parameter
 __default_post_do__ = None #used to process post_do topic
 __nullable__ = False    #not enabled null by default
 __server_default__ = False    #not enabled null by default
+__manytomany_index_reverse__ = False
 
 import sys
 import decimal
@@ -124,6 +125,10 @@ def set_nullable(flag):
 def set_server_default(flag):
     global __server_default__
     __server_default__ = flag
+
+def set_manytomany_index_reverse(flag):
+    global __manytomany_index_reverse__
+    __manytomany_index_reverse__ = flag
 
 def set_encoding(encoding):
     global __default_encoding__
@@ -2064,12 +2069,13 @@ class ManyToMany(ReferenceProperty):
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
         reference_fieldname=None, reversed_fieldname=None, required=False, through=None, 
         through_reference_fieldname=None, through_reversed_fieldname=None, 
-        reversed_manytomany_fieldname=None, **attrs):
+        reversed_manytomany_fieldname=None, index_reverse=Empty, **attrs):
         """
         Definition of ManyToMany property
         
         :param through_field_from: relative to field of A 
         :param through_field_to: relative to field of B 
+        :param index_reverse: create index reversed
         """
             
         super(ManyToMany, self).__init__(reference_class=reference_class,
@@ -2080,6 +2086,7 @@ class ManyToMany(ReferenceProperty):
         self.through = through
         self.through_reference_fieldname = through_reference_fieldname
         self.through_reversed_fieldname = through_reversed_fieldname
+        self.index_reverse = index_reverse if index_reverse is not Empty else __manytomany_index_reverse__
 
     def create(self, cls):
 #        if self.through:
@@ -2118,7 +2125,8 @@ class ManyToMany(ReferenceProperty):
             if index_name not in [x.name for x in self.table.indexes]:
                 Index(index_name, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
                 #add field_b index
-                Index('%s_rmindx' % self.tablename, self.table.c[self.fieldb])
+                if self.index_reverse:
+                    Index('%s_rmindx' % self.tablename, self.table.c[self.fieldb])
 
             #process __mapping_only__ property, if the modela or modelb is mapping only
             #then manytomany table will be mapping only
