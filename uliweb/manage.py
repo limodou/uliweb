@@ -71,12 +71,16 @@ def install_config(apps_dir):
 def make_application(debug=None, apps_dir='apps', project_dir=None, 
     include_apps=None, debug_console=True, settings_file='settings.ini', 
     local_settings_file='local_settings.ini', start=True, default_settings=None, 
-    dispatcher_cls=None, dispatcher_kwargs=None, debug_cls=None, debug_kwargs=None):
+    dispatcher_cls=None, dispatcher_kwargs=None, debug_cls=None, debug_kwargs=None, reuse=True):
     """
     Make an application object
     """
     from uliweb.utils.common import import_attr
     from werkzeug.debug import DebuggedApplication
+    
+    #is reuse, then create application only one
+    if reuse and SimpleFrame.__global__.application:
+        return SimpleFrame.__global__.application
     
     dispatcher_cls = dispatcher_cls or SimpleFrame.Dispatcher
     dispatcher_kwargs = dispatcher_kwargs or {}
@@ -148,14 +152,14 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
 
 def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
     settings_file='settings.ini', local_settings_file='local_settings.ini', 
-    default_settings=None, dispatcher_cls=None, dispatcher_kwargs=None):
+    default_settings=None, dispatcher_cls=None, dispatcher_kwargs=None, reuse=True):
     settings = {'ORM/AUTO_DOTRANSACTION':False}
     settings.update(default_settings or {})
     return make_application(apps_dir=apps_dir, project_dir=project_dir,
         include_apps=include_apps, debug_console=False, debug=False,
         settings_file=settings_file, local_settings_file=local_settings_file,
         start=False, default_settings=settings, dispatcher_cls=dispatcher_cls, 
-        dispatcher_kwargs=dispatcher_kwargs)
+        dispatcher_kwargs=dispatcher_kwargs, reuse=reuse)
 
 class MakeAppCommand(Command):
     name = 'makeapp'
