@@ -81,7 +81,6 @@ class ConfigurationError(Error):pass
 
 _SELF_REFERENCE = object()
 class Lazy(object): pass
-class Empty(object): pass
 
 class SQLStorage(dict):
     """
@@ -826,7 +825,7 @@ class Property(object):
         required=False, validators=None, choices=None, max_length=None, 
         hint='', auto=None, auto_add=None, type_class=None, type_attrs=None, 
         placeholder='', extra=None,
-        sequence=False, server_default=Empty, **kwargs):
+        sequence=False, **kwargs):
         self.verbose_name = verbose_name
         self.property_name = None
         self.name = name
@@ -841,10 +840,6 @@ class Property(object):
         self.choices = choices
         self.max_length = max_length
         self.kwargs = kwargs
-        if __server_default__:
-            kwargs['server_default' ] = server_default if server_default is not Empty else self.server_default
-        else:
-            kwargs['server_default' ] = server_default if server_default is not Empty else None
         self.sequence = sequence
         self.creation_counter = Property.creation_counter
         self.value = None
@@ -878,6 +873,11 @@ class Property(object):
         kwargs['unique'] = self.kwargs.get('unique', False)
         #nullable default change to False
         kwargs['nullable'] = self.kwargs.get('nullable', __nullable__)
+        if __server_default__:
+            kwargs['server_default' ] = self.kwargs.get('server_default', self.server_default)
+        else:
+            kwargs['server_default' ] = self.kwargs.get('server_default', None)
+        
         f_type = self._create_type()
         args = ()
         if self.sequence:
@@ -2086,7 +2086,7 @@ class ManyToMany(ReferenceProperty):
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
         reference_fieldname=None, reversed_fieldname=None, required=False, through=None, 
         through_reference_fieldname=None, through_reversed_fieldname=None, 
-        reversed_manytomany_fieldname=None, index_reverse=Empty, **attrs):
+        reversed_manytomany_fieldname=None, **attrs):
         """
         Definition of ManyToMany property
         
@@ -2103,7 +2103,7 @@ class ManyToMany(ReferenceProperty):
         self.through = through
         self.through_reference_fieldname = through_reference_fieldname
         self.through_reversed_fieldname = through_reversed_fieldname
-        self.index_reverse = index_reverse if index_reverse is not Empty else __manytomany_index_reverse__
+        self.index_reverse = attrs['index_reverse'] if 'index_reverse' in attrs else __manytomany_index_reverse__
 
     def create(self, cls):
 #        if self.through:

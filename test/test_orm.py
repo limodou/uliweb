@@ -5,6 +5,7 @@ from uliweb.orm import *
 import uliweb.orm
 uliweb.orm.__auto_create__ = True
 uliweb.orm.__nullable__ = True
+uliweb.orm.__server_default__ = False
 
 #basic testing
 def test_1():
@@ -1431,7 +1432,7 @@ def test_manytomany_filter():
     >>> b.groups.add(g1, g2)
     True
     >>> print list(User.filter(User.groups.join_in(1,2)))
-    [<User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>, <User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>]
+    [<User {'username':u'user1','id':1}>, <User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>, <User {'username':u'user2','id':2}>]
     >>> print list(User.filter(User.groups.join_in(1,2)).distinct())
     [<User {'username':u'user1','id':1}>, <User {'username':u'user2','id':2}>]
     >>> print list(User.filter(User.groups.join_filter(Group.c.name=='group3')))
