@@ -35,6 +35,8 @@ Uliweb Change Log
 * Add gevent and gevent-socketio server support.
 * Add install command support, you can write requirements.txt in project directory or app directory.
 * Add create setup.py while makeproject
+* `make_application()` can reenter
+* Add `ORM/MODELS_CONFIG` support
 
 0.1.7 Version
 -----------------
