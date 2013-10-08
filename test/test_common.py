@@ -23,3 +23,23 @@ def test_query_string():
     >>> query_string(a, b=4, replace=False)
     'http://localhost:8000/index?a=1&b=4'
     """
+    
+def test_serial():
+    """
+    >>> from uliweb.utils import date
+    >>> import datetime
+    >>> a = {'a':'hello', 'b':12, 'c':date.now()}
+    >>> s = Serial.dump(a)
+    >>> b = Serial.load(s)
+    >>> a == b
+    True
+    """
+    
+def test_serial_json():
+    """
+    >>> a = {'a':'hello', 'b':12}
+    >>> s = Serial.dump(a, 'json')
+    >>> b = Serial.load(s, 'json')
+    >>> a == b
+    True
+    """

@@ -375,13 +375,31 @@ def date_in(d, dates):
     return dates[0] <= d <= dates[1]
 
 class Serial(object):
+    """
+    For json protocal, datetime will convert to string, and convert reversed be 
+    be not datetime
+    """
     @classmethod
-    def load(cls, s):
-        return cPickle.loads(s)
+    def load(cls, s, protocal=None):
+        import json
+        
+        if not protocal:
+            return cPickle.loads(s)
+        elif protocal == 'json':
+            return json.loads(s)
+        else:
+            raise Exception("Can't support this protocal %s" % protocal)
     
     @classmethod
-    def dump(cls, v):
-        return cPickle.dumps(v, cPickle.HIGHEST_PROTOCOL)
+    def dump(cls, v, protocal=None):
+        from uliweb import json_dumps
+        
+        if not protocal:
+            return cPickle.dumps(v, cPickle.HIGHEST_PROTOCOL)
+        elif protocal == 'json':
+            return json_dumps(v)
+        else:
+            raise Exception("Can't support this protocal %s" % protocal)
 
 import urlparse
 class QueryString(object):
