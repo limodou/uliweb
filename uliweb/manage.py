@@ -79,7 +79,7 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     from werkzeug.debug import DebuggedApplication
     
     #is reuse, then create application only one
-    if reuse and SimpleFrame.__global__.application:
+    if reuse and hasattr(SimpleFrame.__global__, 'application') and SimpleFrame.__global__.application:
         return SimpleFrame.__global__.application
     
     dispatcher_cls = dispatcher_cls or SimpleFrame.Dispatcher
