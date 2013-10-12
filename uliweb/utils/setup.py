@@ -102,7 +102,7 @@ def pre_run(func):
     def _f(self):
         global unlink
         
-        if sys.platform == 'win32':
+        if self.distribution.package_dir and sys.platform == 'win32':
             try:
                 import ntfslink
             except:
@@ -123,6 +123,9 @@ def post_install_for_development(func):
         packages = self.distribution.packages
         package_dir = self.distribution.package_dir
         libpath = sysconfig.get_python_lib()
+        
+        if not package_dir: return
+    
         for p in sorted(packages):
             #if the package is something like 'x.y.z'
             #then create site-packages/x/y
@@ -157,6 +160,10 @@ def post_uninstall_link(func):
     def _f(self):
         func(self)
         packages = self.distribution.packages
+        package_dir = self.distribution.package_dir
+        
+        if not package_dir: return
+    
         libpath = sysconfig.get_python_lib()
         for p in sorted(packages, reverse=True):
             print 'Unlink... %s' % p
