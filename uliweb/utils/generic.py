@@ -558,12 +558,12 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                     else:
                         v = getattr(obj, prop.property_name)
                 except orm.Error:
-                    display = obj.get_datastore_value(prop.property_name)
+                    display = obj.get_datastore_value(prop.property_name) or ''
                     v = None
                 if isinstance(v, Model):
                     display = get_obj_url(v)
                 else:
-                    display = str(v)
+                    display = str(v if v is not None else '')
             elif isinstance(prop, orm.FileProperty):
                 url = functions.get_href(value)
                 if url:
