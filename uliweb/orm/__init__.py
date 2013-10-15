@@ -1468,9 +1468,6 @@ class ReferenceProperty(Property):
                 - Value is not saved.
                 - Object not of correct model type for reference.
         """
-        if value is None:
-            value = 0
-
         if not isinstance(value, Model):
             return super(ReferenceProperty, self).validate(value)
 
