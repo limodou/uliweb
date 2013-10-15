@@ -7,6 +7,7 @@ Uliweb Change Log
 * Add `uliweb.utils.timeit` module, use can use @timeit(prompt) to calcalate the
   time used about a code block
 * change default file_serving action parameter value to `None`
+* Fix Reference validate bug
 
 0.2 Version
 -----------------

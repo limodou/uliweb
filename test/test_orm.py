@@ -1993,6 +1993,34 @@ def test_createtable():
     True
     """
     
+def test_reference_server_default():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> set_server_default(True)
+    >>> class Test(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Test1(Model):
+    ...     test = Reference(Test)
+    ...     year = Field(int)
+    ...     name = Field(CHAR, max_length=20)
+    >>> a1 = Test(username='limodou1', year=20)
+    >>> a1.save()
+    True
+    >>> b1 = Test1(name='user', year=5, test=a1)
+    >>> b1.save()
+    True
+    >>> b2 = Test1(name='aaaa', year=10)
+    >>> b2.save()
+    True
+    >>> c = Test1.get(Test1.c.name=='aaaa')
+    >>> print c._test_
+    0
+    >>> set_server_default(False)
+    """
+    
 #if __name__ == '__main__':
 #    from sqlalchemy.schema import CreateTable, CreateIndex
 #    
@@ -2013,22 +2041,27 @@ def test_createtable():
 #    a1.save()
 
 #if __name__ == '__main__':
-#    from sqlalchemy.schema import CreateTable, CreateIndex
 #    db = get_connection('sqlite://')
+#    db.echo = True
 #    db.metadata.drop_all()
-#    set_server_default(True)
+#    #set_server_default(True)
 #    class Test(Model):
-#        username = Field(str, index=True)
+#        username = Field(CHAR, max_length=20)
 #        year = Field(int)
-#        datetime_type = Field(datetime.datetime)
-#        date_type = Field(datetime.date)
-#        time_type = Field(datetime.time)
-#        float = Field(float)
-#        decimal = Field(DECIMAL)
-#        text = Field(TEXT)
-#        blob = Field(BLOB)
-#        pickle = Field(PICKLE)
-#    a1 = Test(username='limodou1')
+#    class Test1(Model):
+#        test = Reference(Test)
+#        year = Field(int)
+#        name = Field(CHAR, max_length=20)
+#    a1 = Test(username='limodou1', year=20)
 #    a1.save()
-#    print CreateTable(Test.table).compile(dialect=db.engine.dialect)
-#
+#    
+#    b1 = Test1(name='user', year=5, test=a1)
+#    b1.save()
+#    
+#    b2 = Test1(name='aaaa', year=10)
+#    b2.save()
+#    
+#    c = Test1.get(Test1.c.name=='aaaa')
+#    print repr(c), c._test_
+#    set_server_default(False)
+#    
