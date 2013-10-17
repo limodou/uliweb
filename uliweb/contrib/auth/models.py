@@ -10,7 +10,7 @@ class User(Model):
     email = Field(str, verbose_name=_('Email'), max_length=40)
     password = Field(str, verbose_name=_('Password'), max_length=128)
     is_superuser = Field(bool, verbose_name=_('Is Superuser'))
-    last_login = Field(datetime.datetime, verbose_name=_('Last Login'))
+    last_login = Field(datetime.datetime, verbose_name=_('Last Login'), nullable=True)
     date_join = Field(datetime.datetime, verbose_name=_('Joined Date'), auto_now_add=True)
     image = Field(FILE, verbose_name=_('Portrait'), max_length=256)
     active = Field(bool, verbose_name=_('Active Status'))
