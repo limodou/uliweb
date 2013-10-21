@@ -63,4 +63,14 @@ class User(Model):
             {'name':'last_login'},
         ]
     
+class UserGroup(Model):
+    #use in grouptype
+    GROUP_TYPE_NORMAL = 0
+    GROUP_TYPE_LDAP = 1
     
+    groupname = Field(str, verbose_name=_('Group name'), max_length=80, unique=True, index=True, nullable=False)
+    grouptype = Field(int, verbose_name=_('Group type'), default=GROUP_TYPE_NORMAL)
+    users = ManyToMany('user', collection_name='user_groups', nullable=True)
+    
+    def __unicode__(self):
+        return self.groupname
