@@ -95,3 +95,7 @@ class SortedDict(object):
             self._dict[key] = value
             self._fields.append(key)
             return value
+        
+    def clear(self):
+        self._dict.clear()
+        self._fields = []

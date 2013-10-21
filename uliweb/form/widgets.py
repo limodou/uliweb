@@ -61,7 +61,7 @@ class File(Text): type = 'file'
 class Radio(Text): type = 'radio'
 class Select(Build):
     def __init__(self, choices, value=None, multiple=False, size=10, **kwargs):
-        self.choices = choices
+        self.choices = choices or []
         self.value = value
         self.multiple = multiple
         self.size = size

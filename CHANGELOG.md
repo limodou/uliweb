@@ -1,6 +1,11 @@
 Uliweb Change Log
 =====================
 
+0.2.2 Version
+-----------------
+
+* Add `clear()` to SortedDict
+
 0.2.1 Version
 -----------------
 
