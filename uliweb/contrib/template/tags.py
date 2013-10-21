@@ -163,7 +163,7 @@ class HtmlMerge(object):
         
     def init(self):
         global __static_combine__, __static_mapping__
-        from __init__ import init_static_combine
+        from . import init_static_combine
         
         if __static_combine__ is None:
             __static_combine__ = init_static_combine()

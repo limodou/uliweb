@@ -2,7 +2,7 @@ from uliweb.orm import *
 import datetime
 from uliweb.i18n import ugettext_lazy as _
 from uliweb import functions
-from __init__ import encrypt_password, check_password
+from . import encrypt_password, check_password
 
 class User(Model):
     username = Field(str, verbose_name=_('Username'), max_length=30, unique=True, index=True, nullable=False)
