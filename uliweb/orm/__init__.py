@@ -2901,9 +2901,17 @@ class Model(object):
                     if c is not None:
                         cols.append(c)
                         
-                #if there is already a same name table, then remove the old one
-                #replace with new one
+                #check the model_path
+                model_path = cls.__module__ + '.' + cls.__name__
+                _path = __models__.get(cls.tablename, {}).get('model_path', '')
+                if _path and model_path != _path:
+                    return
+                
+                #check if the table is already existed
                 t = cls.metadata.tables.get(cls.tablename, None)
+                if t is not None and not __auto_set_model__:
+                    return 
+                
                 if t is not None:
                     cls.metadata.remove(t)
                 args = getattr(cls, '__table_args__', {})

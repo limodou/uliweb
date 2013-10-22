@@ -20,7 +20,7 @@ def get_engine(options, global_options):
         default_settings=settings)
     #because set_auto_set_model will be invoked in orm initicalization, so
     #below setting will be executed after Dispatcher started
-    set_auto_set_model(True)
+    #set_auto_set_model(True)
     engine_name = options.engine
     engine = get_connection(engine_name=engine_name)
     return engine
@@ -44,7 +44,7 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
     old_models = orm.__models__.keys()
     try:
         for tablename, m in engine.models.items():
-            orm.get_model(tablename, engine_name)
+            x = orm.get_model(tablename, engine_name)
     except:
         print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
         raise
