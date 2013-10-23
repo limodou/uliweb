@@ -759,7 +759,7 @@ class Form(object):
         result = FormBuild()
         result.pre_html = self.pre_html() if hasattr(self, 'pre_html') else ''
         result.begin = layout.begin()
-        result.body = layout.body()
+        result.body = layout.hiddens() + layout.body()
         result.buttons = layout.buttons()
         result.buttons_line = layout.buttons_line()
         result.end = layout.end()

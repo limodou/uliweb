@@ -44,6 +44,14 @@ class Layout(object):
             self.form.html_attrs['class'] = self.form_class
         return self.form.form_begin
     
+    def hiddens(self):
+        s = []
+        for name, obj in self.form.fields_list:
+            f = getattr(self.form, name)
+            if self.is_hidden(obj):
+                s.append(str(f))
+        return ''.join(s)
+    
     def body(self):
         return ''
     
@@ -109,7 +117,7 @@ class TableLayout(Layout):
                 
                 #process hidden field
                 if self.is_hidden(obj):
-                    tr << f
+                    #tr << f
                     continue
                 
                 _class = self.get_class(obj)
@@ -225,7 +233,8 @@ class BootstrapTableLayout(TableLayout):
                 _x += _f.get('colspan', 1)
             else:
                 raise Exception, 'Colume definition is not right, only support string or dict'
-
+            print 'xxxxxxxxxxxxxxxxxxxxxx', _f
+            
         tr = Tag('tr', newline=True)
         with tr:
             for x in fields:
@@ -241,7 +250,7 @@ class BootstrapTableLayout(TableLayout):
                 
                 #process hidden field
                 if self.is_hidden(obj):
-                    tr << f
+                    #tr << f
                     continue
                 
                 _class = "control-group"
@@ -301,7 +310,8 @@ class CSSLayout(Layout):
         for name, obj in self.form.fields_list:
             f = getattr(self.form, name)
             if self.is_hidden(obj):
-                form << f
+                #form << f
+                pass
             else:
                 form << self.line(obj, f.label, f, f.help_string, f.error)
         
@@ -342,7 +352,8 @@ class QueryLayout(Layout):
                             if f:
                                 obj = self.form.fields[x]
                                 if self.is_hidden(obj):
-                                    buf << f
+                                    #buf << f
+                                    pass
                                 else:
                                     buf << self.line(obj, f.label, f, f.help_string, f.error)
                             elif x:
@@ -358,7 +369,8 @@ class QueryLayout(Layout):
                 f = getattr(self.form, line)
                 obj = self.form.fields.get(line)
                 if obj and self.is_hidden(obj):
-                    buf << f
+                    #buf << f
+                    pass
                 else:
                     with buf.table(_class='query'):
                         with buf.tr:
@@ -476,14 +488,16 @@ class YamlLayout(Layout):
                         f = getattr(self.form, x)
                         obj = self.form.fields[x]
                         if self.is_hidden(obj):
-                            buf << f
+                            #buf << f
+                            pass
                         else:
                             buf << self.line(obj, f.label, f, f.help_string, f.error)
             else:
                 f = getattr(self.form, line)
                 obj = self.form.fields[line]
                 if self.is_hidden(obj):
-                    buf << f
+                    #buf << f
+                    pass
                 else:
                     buf << self.line(obj, f.label, f, f.help_string, f.error)
                     
@@ -540,14 +554,16 @@ class BootstrapLayout(Layout):
                         f = getattr(self.form, x)
                         obj = self.form.fields[x]
                         if self.is_hidden(obj):
-                            buf << f
+                            #buf << f
+                            pass
                         else:
                             buf << self.line(obj, f.label, f, f.help_string, f.error)
             else:
                 f = getattr(self.form, line)
                 obj = self.form.fields[line]
                 if self.is_hidden(obj):
-                    buf << f
+                    #buf << f
+                    pass
                 else:
                     buf << self.line(obj, f.label, f, f.help_string, f.error)
         if self.form.form_title:

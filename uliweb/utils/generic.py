@@ -88,7 +88,7 @@ class ReferenceSelectField(SelectField):
             else:
                 self.group_field = None
            
-        if self.query:
+        if self.query is not None:
             query = self.query
         else:
             query = model.all()
@@ -608,6 +608,7 @@ class AddView(object):
     success_msg = _('The information has been saved successfully!')
     fail_msg = _('There are somethings wrong.')
     builds_args_map = {}
+    protect_field_name = '__protect_field__'
     
     def __init__(self, model, ok_url=None, ok_template=None, form=None, success_msg=None, 
         fail_msg=None, use_flash=True,
@@ -616,7 +617,8 @@ class AddView(object):
         post_created_form=None, layout=None, file_replace=True, template_data=None, 
         success_data=None, fail_data=None, meta='AddForm', get_form_field=None, post_fail=None,
         types_convert_map=None, fields_convert_map=None, json_func=None,
-        file_convert=True, upload_to=None, upload_to_sub=None, fileserving_config='UPLOAD'):
+        file_convert=True, upload_to=None, upload_to_sub=None, 
+        fileserving_config='UPLOAD', protect=True, protect_field_name=None):
 
         self.model = get_model(model)
         self.meta = meta
@@ -653,6 +655,8 @@ class AddView(object):
         self.upload_to = upload_to
         self.upload_to_sub = upload_to_sub
         self.fileserving = functions.get_fileserving(fileserving_config)
+        self.protect = protect
+        self.protect_field_name = protect_field_name or self.protect_field_name
         self.form = self.make_form(form)
         
     def get_fields(self):
@@ -836,16 +840,12 @@ class AddView(object):
         log = logging.getLogger('uliweb.app')
         log.debug(self.form.errors)
         if json_result:
-            return to_json_result(False, self.fail_msg, self.on_fail_data(None, self.form.errors, d), json_func=self.json_func)
+            return to_json_result(False, self.form.errors.get('_') or self.fail_msg, self.on_fail_data(None, self.form.errors, d), json_func=self.json_func)
         else:
             if self.use_flash:
-                functions.flash(self.fail_msg, 'error')
+                functions.flash(self.form.errors.get('_') or self.fail_msg, 'error')
             return d
     
-    def init_form(self):
-        if not self.form:
-            self.form = self.make_form()
-            
     def display(self, json_result=False):
         d = self.template_data.copy()
         d.update({'form':self.form})
@@ -863,7 +863,10 @@ class AddView(object):
         return data
     
     def execute(self, json_result=False):
-        flag = self.form.validate(*self._get_data())
+        flag = self._post_protect()
+        if flag:
+            flag = self.form.validate(*self._get_data())
+            
         if flag:
             d = self.default_data.copy()
             d.update(self.form.data)
@@ -871,12 +874,49 @@ class AddView(object):
         else:
             d = self.template_data.copy()
             data = self.prepare_static_data(self.form.data)
+            self._pre_protect(data)
             self.form.bind(data)
             d.update({'form':self.form})
             if self.post_fail:
                 self.post_fail(d)
             return self.on_fail(d, json_result)
+    
+    def _get_protect_key(self, token):
+        return '_#pf#_:'+token
+    
+    def _pre_protect(self, data):
+        from uliweb.utils.common import get_uuid
+        from uliweb.form import HiddenField
+        from uliweb import request
         
+        if self.protect:
+            if self.protect_field_name not in self.form.fields:
+                self.form.add_field(self.protect_field_name, HiddenField(), True)
+            cache = functions.get_cache()
+            if request.method == "GET":
+                token = get_uuid()
+                data[self.protect_field_name] = token
+            else:
+                token = request.values.get(self.protect_field_name)
+            cache.set(self._get_protect_key(token), 1, expire=3600)
+            
+    def _post_protect(self):
+        from uliweb import request
+
+        flag = True
+        if self.protect:
+            v = request.values.get(self.protect_field_name)
+            if not v:
+                flag = False
+            if flag:
+                cache = functions.get_cache()
+                t = cache.dec(self._get_protect_key(v))
+                if t < 0:
+                    flag = False
+            if not flag:
+                self.form.errors = {'_': _("You can't submit multiple times.")}
+        return flag
+            
     def run(self, json_result=False):
         from uliweb import request
         
@@ -884,6 +924,8 @@ class AddView(object):
             return self.execute(json_result)
         else:
             data = self.prepare_static_data(self.form.data)
+            #add protect process
+            self._pre_protect(data)
             self.form.bind(data)
             return self.display(json_result)
         
