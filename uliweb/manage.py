@@ -870,6 +870,10 @@ class FindCommand(Command):
             help='Find ini option defined in which settings.ini.'),
         make_option('--tree', dest='tree', action='store_true', 
             help='Find template invoke tree, should be used with -t option together.'),
+        make_option('--blocks', dest='blocks', action='store_true', 
+            help='Display blocks defined in a template, only available when searching template.'),
+        make_option('--with-filename', dest='with_filename', action='store_true', 
+            help='Display blocks defined in a template with template filename.'),
     )
     
     def handle(self, options, global_options, *args):
@@ -877,7 +881,7 @@ class FindCommand(Command):
         if options.url:
             self._find_url(options.url)
         elif options.template:
-            self._find_template(options.template, options.tree)
+            self._find_template(options.template, options.tree, options.blocks, options.with_filename)
         elif options.static:
             self._find_static(global_options, options.static)
         elif options.model:
@@ -900,30 +904,32 @@ class FindCommand(Command):
         except NotFound:
             print 'Not Found'
 
-    def _find_template(self, template, tree):
+    def _find_template(self, template, tree, blocks, with_filename):
         """
         If tree is true, then will display the track of template extend or include
         """
         from uliweb import application
-        from uliweb.core.template import Template
+        from uliweb.core.template import Template, BaseBlockNode
+        
+        def get_rel_filename(filename, path):
+            f1 = os.path.splitdrive(filename)[1]
+            f2 = os.path.splitdrive(path)[1]
+            f = os.path.relpath(f1, f2).replace('\\', '/')
+            if f.startswith('..'):
+                return filename.replace('\\', '/')
+            else:
+                return f
         
         filename = None
+        template_file = None
         if not tree:
             for dir in application.template_dirs:
                 filename = os.path.join(dir, template)
                 if os.path.exists(filename):
+                    if not template_file:
+                        template_file = filename
                     print filename.replace('\\', '/')
         else:
-            
-            def get_rel_filename(filename, path):
-                f1 = os.path.splitdrive(filename)[1]
-                f2 = os.path.splitdrive(path)[1]
-                f = os.path.relpath(f1, f2).replace('\\', '/')
-                if f.startswith('..'):
-                    return filename.replace('\\', '/')
-                else:
-                    return f
-                
             tree_ids = {}
             nodes = {}
                     
@@ -955,6 +961,9 @@ class FindCommand(Command):
             for dir in application.template_dirs:
                 filename = os.path.join(dir, template)
                 if os.path.exists(filename):
+                    if not template_file:
+                        template_file = filename
+                    
                     print get_rel_filename(filename, path)
                     print
                     print '-------------- Tree --------------'
@@ -973,6 +982,31 @@ class FindCommand(Command):
 
                 print_tree(make_tree(templates), get_rel_filename(filename, path))
                 
+        if template_file:
+            print
+            print '-------------- Blocks --------------'
+            t = Template(open(template_file, 'rb').read(), vars={}, dirs=application.template_dirs)
+            t.set_filename(template)
+            t.get_parsed_code()
+            
+            path = os.getcwd()
+            
+            def p(node, tab=4):
+                for x in node.nodes:
+                    if isinstance(x, BaseBlockNode):
+                        if x.name in t.content.root.block_vars:
+                            _file = t.content.root.block_vars[x.name][-1].template_file
+                        else:
+                            _file = x.template_file
+                        
+                        f = get_rel_filename(_file, path)
+                        if with_filename:
+                            print ' '*tab + x.name, '  ('+f+')'
+                        else:
+                            print ' '*tab + x.name
+                        p(x, tab+4)
+            p(t.content)
+            
     def _find_static(self, global_options, static):
         from uliweb import get_app_dir
         

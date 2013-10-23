@@ -157,10 +157,9 @@ r_tag = re.compile('^#uliweb-template-tag:(.+?),(.+?)(:\r|\n|\r\n)')
 class Node(object):
     block = 0
     var = False
-    def __init__(self, value=None, content=None, template=None):
+    def __init__(self, value=None, content=None):
         self.value = value
         self.content = content
-        self.template = template
         
     def __str__(self):
         if self.value:
@@ -439,7 +438,7 @@ class Template(object):
             raise TemplateException, "Can't find the template %s" % filename
         self.filename = fname
         self.original_filename = filename
-    
+        
     def _get_parameters(self, value):
         def _f(*args, **kwargs):
             return args, kwargs
@@ -485,6 +484,7 @@ class Template(object):
                         #this will pass top template instance and top content instance to node_cls
                         node = node_cls(value.strip(), self.content)
                         if node.block:
+                            node.template_file = self.filename
                             top.add(node)
                             self.stack.append(node)
                         else:

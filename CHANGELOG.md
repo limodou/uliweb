@@ -5,6 +5,11 @@ Uliweb Change Log
 -----------------
 
 * Add `clear()` to SortedDict
+* Add protect for form to generic AddView and EditView, default is enabled, so 
+  user can't submit a form multiple times.
+* Add `--blocks` parameter to `uliweb find -t templatefile --blocks`, it'll display
+  all blocks defined in template. With `--with-filename` will display template filename
+  also.
 
 0.2.1 Version
 -----------------
