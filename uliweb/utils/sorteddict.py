@@ -12,9 +12,20 @@ class SortedDict(object):
         except KeyError, k: 
             return None
         
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value, append=False):
+        """
+        If append == True, then force existed key append to the end
+        """
         self._dict[key] = value
-        if key not in self._fields:
+        try:
+            index = self._fields.index(key)
+        except ValueError:
+            index = -1
+        if index > -1:
+            if append:
+                del self._fields[index]
+                self._fields.append(key)
+        else:
             self._fields.append(key)
         
     def __setattr__(self, key, value):
@@ -95,7 +106,3 @@ class SortedDict(object):
             self._dict[key] = value
             self._fields.append(key)
             return value
-        
-    def clear(self):
-        self._dict.clear()
-        self._fields = []

@@ -307,7 +307,7 @@ class Section(SortedDict):
             if not replace:
                 v = merge_data([value], self.get(key))
                 
-        super(Section, self).__setitem__(key, v)
+        super(Section, self).__setitem__(key, v, append=replace)
     
     def add_comment(self, key=None, comments=None):
         comments = comments or []

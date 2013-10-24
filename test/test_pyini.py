@@ -449,3 +449,30 @@ def test_triple_string():
     <BLANKLINE>
     """
 
+def test_var_in_section():
+    """
+    >>> from StringIO import StringIO
+    >>> buf = StringIO(\"\"\"
+    ... #coding=utf8
+    ... [DEFAULT]
+    ... MENUS2012 = [
+    ...     ('about', _('关于大会'), '/2012/about'),
+    ...     ('schedulebj', _('北京日程'), '/2012/schedulebj'),
+    ...     ('schedulesh', _('上海日程'), '/2012/schedulesh'),
+    ...     ('Hackathon', _('编程马拉松'), 'http://www.douban.com/event/17299206/'),
+    ...     ('registration', _('报名'), '/2012/registration'),
+    ...     ('volunteer', _('志愿'), '/2012/volunteer'),
+    ...     ('sponsors', _('赞助'), '/2012/sponsors'),
+    ...     ('Weibo', _('微博'), 'http://weibo.com/pyconcn'),
+    ...     ('2011', _('2011'), '/2011'),
+    ... ]
+    ... a = [1,2,3]
+    ... b <= MENUS2012
+    ... \"\"\")
+    >>> x = Ini()
+    >>> x.set_filename('test.ini')
+    >>> x.read(buf)
+    >>> print x.DEFAULT.b
+    [1, 2, 3]
+    """
+

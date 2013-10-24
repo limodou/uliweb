@@ -10,6 +10,7 @@ Uliweb Change Log
 * Add `--blocks` parameter to `uliweb find -t templatefile --blocks`, it'll display
   all blocks defined in template. With `--with-filename` will display template filename
   also.
+* ini replace variable will be moved to the end of section
 
 0.2.1 Version
 -----------------
