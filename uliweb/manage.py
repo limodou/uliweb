@@ -982,7 +982,7 @@ class FindCommand(Command):
 
                 print_tree(make_tree(templates), get_rel_filename(filename, path))
                 
-        if template_file:
+        if template_file and blocks:
             print
             print '-------------- Blocks --------------'
             t = Template(open(template_file, 'rb').read(), vars={}, dirs=application.template_dirs)
