@@ -23,10 +23,17 @@ class Role(Model):
     description = Field(str, max_length=255)
     reserve = Field(bool)
     users = ManyToMany('user', collection_name='user_roles')
+    groups = ManyToMany('usergroup', collection_name='group_roles')
     permissions = ManyToMany('permission', through='role_perm_rel', collection_name='perm_roles')
     
     def __unicode__(self):
         return self.name
+    
+    def groups_has_user(self,user):
+        for group in list(self.groups.all()):
+            if group.users.has(user):
+                return group
+        return False
     
 class Role_Perm_Rel(Model):
     role = Reference('role')
