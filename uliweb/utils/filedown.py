@@ -98,6 +98,8 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
     apache
         ('X-Sendfile', '/path/to/local_url')
     """
+    from werkzeug.http import parse_range_header
+    
     guessed_type = mimetypes.guess_type(filename)
     mime_type = guessed_type[0] or default_mimetype
     real_filename = real_filename or filename
@@ -117,7 +119,7 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
         return Response('', status=200, headers=headers,
             direct_passthrough=True)
     else:
-        range = environ["werkzeug.request"].range
+        range = parse_range_header(environ.get('HTTP_RANGE'))
         #when request range,only recognize "bytes" as range units
         if range!=None and range.units=="bytes":
             rbegin,rend = range.ranges[0]
