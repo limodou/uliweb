@@ -119,7 +119,11 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
         return Response('', status=200, headers=headers,
             direct_passthrough=True)
     else:
-        range = parse_range_header(environ.get('HTTP_RANGE'))
+        request = environ.get('werkzeug.request')
+        if request:
+            range = request.range
+        else:
+            range = parse_range_header(environ.get('HTTP_RANGE'))
         #when request range,only recognize "bytes" as range units
         if range!=None and range.units=="bytes":
             rbegin,rend = range.ranges[0]
