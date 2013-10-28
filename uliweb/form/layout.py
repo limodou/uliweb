@@ -28,7 +28,7 @@ class Layout(object):
         self.kwargs = kwargs
         
     def html(self):
-        return '\n'.join([x for x in [self.begin(), self.body(), self.buttons_line(), self.end()] if x])
+        return '\n'.join([x for x in [self.begin(), self.hiddens(), self.body(), self.buttons_line(), self.end()] if x])
     
     def __str__(self):
         return self.html()
