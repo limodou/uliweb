@@ -618,7 +618,7 @@ class AddView(object):
         success_data=None, fail_data=None, meta='AddForm', get_form_field=None, post_fail=None,
         types_convert_map=None, fields_convert_map=None, json_func=None,
         file_convert=True, upload_to=None, upload_to_sub=None, 
-        fileserving_config='UPLOAD', protect=True, protect_field_name=None):
+        fileserving_config='UPLOAD', protect=False, protect_field_name=None):
 
         self.model = get_model(model)
         self.meta = meta
