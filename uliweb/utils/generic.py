@@ -897,8 +897,9 @@ class AddView(object):
                 token = get_uuid()
                 data[self.protect_field_name] = token
             else:
-                token = request.values.get(self.protect_field_name)
-            cache.set(self._get_protect_key(token), 1, expire=3600)
+                token = request.values.get(self.protect_field_name, '')
+            if token:
+                cache.set(self._get_protect_key(token), 1, expire=3600)
             
     def _post_protect(self):
         from uliweb import request
