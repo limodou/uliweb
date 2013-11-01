@@ -43,3 +43,10 @@ def test_serial_json():
     >>> a == b
     True
     """
+
+def test_import_attr():
+    """
+    >>> f = import_attr('datetime:datetime.ctime')
+    >>> f.__name__
+    ctime
+    """

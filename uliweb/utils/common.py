@@ -25,9 +25,15 @@ def import_mod_attr(path):
     return module object and object
     """
     if isinstance(path, (str, unicode)):
-        module, func = path.rsplit('.', 1)
+        v = path.split(':')
+        if len(v) == 1:
+            module, func = path.rsplit('.', 1)
+        else:
+            module, func = v
         mod = __import__(module, fromlist=['*'])
-        f = getattr(mod, func)
+        f = mod
+        for x in func.split('.'):
+            f = getattr(f, x)
     else:
         f = path
         mod = inspect.getmodule(path)

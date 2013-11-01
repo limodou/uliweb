@@ -12,6 +12,7 @@ Uliweb Change Log
   also.
 * ini replace variable will be moved to the end of section
 * Add content-range support for filedown thanks to zhangchunlin
+* Improve `import_attr()`, support pkg_resource entry point string format, 'module:object.attr'
 
 0.2.1 Version
 -----------------
