@@ -1483,6 +1483,8 @@ class SimpleListView(object):
             self.pageno = int(request.values.get('page')) - 1
         if 'rows' in request.values:
             self.rows_per_page = int(request.values.get('rows'))
+        elif 'limit' in request.values:
+            self.rows_per_page = int(request.values.get('limit'))
         
         #create table header
         self.table_info = self.get_table_info()
@@ -1850,6 +1852,7 @@ class SimpleListView(object):
             'pageno':self.pageno+1,
             'page':self.pageno+1,
             'page_rows':self.rows_per_page,
+            'limit':self.rows_per_page,
             }
         if not json_result:
             s = Builder('begin', 'colgroup', 'head', 'body', 'end')

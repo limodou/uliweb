@@ -24,7 +24,7 @@ $(function(){
     var el = $('#edit_form');
     
     $(el).submit(function(){
-        var result_process = create_ajax_callback(function success(){
+        var result_process = create_ajax_callback(el, function success(){
             window.location.href = '[[=url]]';
         });
     	
