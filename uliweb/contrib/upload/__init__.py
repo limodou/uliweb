@@ -207,7 +207,7 @@ def get_backend(config=None):
 
 get_fileserving = get_backend
 
-def file_serving(filename):
+def file_serving(filename, real_filename=None, x_filename=None):
     from uliweb import request
     import urllib2
     
@@ -216,8 +216,12 @@ def file_serving(filename):
         alt_filename = filename
     else:
         alt_filename = urllib2.unquote(alt_filename)
-    _filename = get_filename(filename, False, convert=False)
-    x_filename = filename
+    if not real_filename:
+        _filename = get_filename(filename, False, convert=False)
+    else:
+        _filename = real_filename
+    if not x_filename:
+        x_filename = filename
     return get_backend().download(alt_filename, real_filename=_filename, x_filename=x_filename, action=None)
 
 def filename_convert(filename, convert_cls=None):
