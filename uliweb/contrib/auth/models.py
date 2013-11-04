@@ -15,6 +15,7 @@ class User(Model):
     image = Field(FILE, verbose_name=_('Portrait'), max_length=256)
     active = Field(bool, verbose_name=_('Active Status'))
     locked = Field(bool, verbose_name=_('Lock Status'))
+    deleted = Field(bool, verbose_name=_('Deleted'))
     
     def set_password(self, raw_password):
         self.password = encrypt_password(raw_password)
@@ -37,13 +38,13 @@ class User(Model):
         return functions.url_for_static('images/user%dx%d.jpg' % (size, size))
         
     def __unicode__(self):
-        return self.username
+        return (self.nickname or self.username) + _('(Deleted)') if self.deleted else ''
     
     class Meta:
         display_field = 'username'
         
     class AddForm:
-        fields = ['username', 'email', 'is_superuser']
+        fields = ['username', 'nickname', 'email', 'is_superuser']
         
     class EditForm:
         fields = ['email']
@@ -52,15 +53,32 @@ class User(Model):
         fields = ['email', 'is_superuser']
         
     class DetailView:
-        fields = ['username', 'email', 'is_superuser', 'date_join', 'last_login']
+        fields = ['username', 'nickname', 'email', 'is_superuser', 'date_join', 'last_login']
         
     class Table:
         fields = [
             {'name':'username'},
+            {'name':'nickname'},
             {'name':'email'},
             {'name':'is_superuser'},
             {'name':'date_join'},
             {'name':'last_login'},
+            {'name':'deleted'},
         ]
     
+class UserGroup(Model):
+    name = Field(str, max_length=30, verbose_name=_('Name'), index=True, nullable=True)
+    parent = SelfReference(verbose_name=_('Parent Group'), collection_name='children', nullable=True, default=0)
+    users = ManyToMany('user', verbose_name=_('Users'), collection_name='groups')
+    deleted = Field(bool, verbose_name=_('Deleted'))
+    created_time = Field(datetime.datetime, verbose_name=_('Created Datetime'), auto_now_add=True)
+    number_of_children = Field(int, verbose_name=_('Number of Children'))
+    number_of_people = Field(int, verbose_name=_('Number of People'))
+    order = Field(int, verbose_name=_('Order'), default=9999)
     
+    def __unicode__(self):
+        return self.name
+    
+    @classmethod
+    def OnInit(cls):
+        Index('usergroup_idx', cls.c.parent, cls.c.name, unique=True)

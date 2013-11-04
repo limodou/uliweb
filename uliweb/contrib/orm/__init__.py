@@ -43,6 +43,7 @@ def after_init_apps(sender):
 
     if 'MODELS' in settings:
         for name, model_path in settings.MODELS.items():
+            if not model_path: continue
             if isinstance(model_path, (str, unicode)):
                 path = model_path
                 engine_name = 'default'

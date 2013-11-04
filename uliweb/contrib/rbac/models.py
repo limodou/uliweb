@@ -1,5 +1,17 @@
 from uliweb.orm import *
 
+class RoleCategory(Model):
+    name = Field(str, max_length=30)
+    parent = SelfReference(collection_name='children', nullable=True, default=0)
+    number_of_roles = Field(int)
+    
+    def __unicode__(self):
+        return self.name
+    
+    @classmethod
+    def OnInit(cls):
+        Index('rolecategory_idx', cls.c.parent, cls.c.name, unique=True)
+    
 class Permission(Model):
     name = Field(str, max_length=80, required=True)
     description = Field(str, max_length=255)
@@ -21,9 +33,12 @@ class Permission(Model):
 class Role(Model):
     name = Field(str, max_length=80, required=True)
     description = Field(str, max_length=255)
+    category = Reference('rolecategory')
     reserve = Field(bool)
     users = ManyToMany('user', collection_name='user_roles')
     permissions = ManyToMany('permission', through='role_perm_rel', collection_name='perm_roles')
+    usergroups = ManyToMany('usergroup', collection_name='usergroup_roles')
+    relative_usergroup = Reference('usergroup')
     
     def __unicode__(self):
         return self.name
