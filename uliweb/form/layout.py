@@ -233,7 +233,6 @@ class BootstrapTableLayout(TableLayout):
                 _x += _f.get('colspan', 1)
             else:
                 raise Exception, 'Colume definition is not right, only support string or dict'
-            print 'xxxxxxxxxxxxxxxxxxxxxx', _f
             
         tr = Tag('tr', newline=True)
         with tr:
