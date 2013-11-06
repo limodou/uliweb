@@ -105,7 +105,7 @@ class FileServing(object):
             return files.encode_filename(f, to_encoding=s.FILESYSTEM_ENCODING)
         return f
 
-    def download(self, filename, action='download', x_filename='', real_filename=''):
+    def download(self, filename, action=None, x_filename='', x_sendfile=None, real_filename=''):
         """
         action will be "download", "inline"
         and if the request.GET has 'action', then the action will be replaced by it.
@@ -127,8 +127,9 @@ class FileServing(object):
         if self.x_file_prefix:
             x_filename = os.path.normpath(os.path.join(self.x_file_prefix, x_filename)).replace('\\', '/')
         
+        xsend_flag = bool(self.x_sendfile) if x_sendfile is not None else x_sendfile
         return filedown(request.environ, filename, action=action, 
-            x_sendfile=bool(self.x_sendfile), x_header_name=self.x_header_name, 
+            x_sendfile=xsend_flag, x_header_name=self.x_header_name, 
             x_filename=x_filename, real_filename=real_filename)
      
     def save_file(self, filename, fobj, replace=False, convert=True):
@@ -207,7 +208,7 @@ def get_backend(config=None):
 
 get_fileserving = get_backend
 
-def file_serving(filename, real_filename=None, x_filename=None):
+def file_serving(filename, action=None, real_filename=None, x_sendfile=None, x_filename=None):
     from uliweb import request
     import urllib2
     
@@ -222,7 +223,7 @@ def file_serving(filename, real_filename=None, x_filename=None):
         _filename = real_filename
     if not x_filename:
         x_filename = filename
-    return get_backend().download(alt_filename, real_filename=_filename, x_filename=x_filename, action=None)
+    return get_backend().download(alt_filename, action=action, real_filename=_filename, x_sendfile=x_sendfile, x_filename=x_filename)
 
 def filename_convert(filename, convert_cls=None):
     return get_backend().filename_convert(filename, convert_cls=convert_cls)
