@@ -127,7 +127,7 @@ class FileServing(object):
         if self.x_file_prefix:
             x_filename = os.path.normpath(os.path.join(self.x_file_prefix, x_filename)).replace('\\', '/')
         
-        xsend_flag = bool(self.x_sendfile) if x_sendfile is not None else x_sendfile
+        xsend_flag = bool(self.x_sendfile) if x_sendfile is None else x_sendfile
         return filedown(request.environ, filename, action=action, 
             x_sendfile=xsend_flag, x_header_name=self.x_header_name, 
             x_filename=x_filename, real_filename=real_filename)
