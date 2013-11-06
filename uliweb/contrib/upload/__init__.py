@@ -105,7 +105,7 @@ class FileServing(object):
             return files.encode_filename(f, to_encoding=s.FILESYSTEM_ENCODING)
         return f
 
-    def download(self, filename, action=None, x_filename='', x_sendfile=None, real_filename=''):
+    def download(self, filename, action='download', x_filename='', x_sendfile=None, real_filename=''):
         """
         action will be "download", "inline"
         and if the request.GET has 'action', then the action will be replaced by it.
@@ -208,7 +208,7 @@ def get_backend(config=None):
 
 get_fileserving = get_backend
 
-def file_serving(filename, action=None, real_filename=None, x_sendfile=None, x_filename=None):
+def file_serving(filename, action='download', real_filename=None, x_sendfile=None, x_filename=None):
     from uliweb import request
     import urllib2
     
