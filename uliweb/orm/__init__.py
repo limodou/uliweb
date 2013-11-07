@@ -609,18 +609,25 @@ def valid_model(model, engine_name=None):
     else:
         return True
     
-def check_model(model):
-    """
-    :param model: Model instance
-    Model.__engine_name__ could be a list, so if there are multiple then use
-    the first one
-    """
-    tablename = model.__alias__ or model.tablename
-    name = model.__name__
-    appname = model.__module__
-    model_path = appname + '.' + name
-    return (tablename not in __models__) or (model_path in __model_paths__)
-
+def check_model_class(model_cls):
+#    """
+#    :param model: Model instance
+#    Model.__engine_name__ could be a list, so if there are multiple then use
+#    the first one
+#    """
+#    tablename = model.__alias__ or model.tablename
+#    name = model.__name__
+#    appname = model.__module__
+#    model_path = appname + '.' + name
+#    return (tablename not in __models__) or (model_path in __model_paths__)
+#
+    #check the model_path
+    model_path = model_cls.__module__ + '.' + model_cls.__name__
+    _path = __models__.get(model_cls.tablename, {}).get('model_path', '')
+    if _path and model_path != _path:
+        return False
+    return True
+    
 def find_metadata(model):
     """
     :param model: Model instance
@@ -753,6 +760,10 @@ class ModelMetaclass(type):
         if name == 'Model':
             return
         cls._set_tablename()
+        
+        #check if cls is matched with __models__ module_path
+        if not check_model_class(cls):
+            return
         
         cls.properties = {}
         cls._fields_list = []
@@ -2882,10 +2893,6 @@ class Model(object):
     def bind(cls, metadata=None, auto_create=False):
         cls._lock.acquire()
         try:
-            #if the module if not available then skip process
-#            if not check_model(cls):
-#                return
-            
             cls.metadata = metadata or find_metadata(cls)
             if cls.metadata:
                 cols = []
