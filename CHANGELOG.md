@@ -13,6 +13,7 @@ Uliweb Change Log
 * ini replace variable will be moved to the end of section
 * Add content-range support for filedown thanks to zhangchunlin
 * Improve `import_attr()`, support pkg_resource entry point string format, 'module:object.attr'
+* Add requirements.txt to uliweb.contrib.orm, install: SQLAlchemy, MySQL-python, alembic first
 
 0.2.1 Version
 -----------------

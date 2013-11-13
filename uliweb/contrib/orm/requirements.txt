@@ -1,0 +1,3 @@
+SQLAlchemy > 0.7
+MySQL-python
+git+git://github.com/limodou/alembic#egg=alebmic
