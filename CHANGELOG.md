@@ -5,7 +5,7 @@ Uliweb Change Log
 -----------------
 
 * Add `clear()` to SortedDict
-* Add protect for form to generic AddView and EditView, default is enabled, so 
+* Add protect for form to generic AddView and EditView, default is enabled, so
   user can't submit a form multiple times.
 * Add `--blocks` parameter to `uliweb find -t templatefile --blocks`, it'll display
   all blocks defined in template. With `--with-filename` will display template filename
@@ -14,6 +14,7 @@ Uliweb Change Log
 * Add content-range support for filedown thanks to zhangchunlin
 * Improve `import_attr()`, support pkg_resource entry point string format, 'module:object.attr'
 * Add requirements.txt to uliweb.contrib.orm, install: SQLAlchemy, MySQL-python, alembic first
+* Add logo files
 
 0.2.1 Version
 -----------------
@@ -27,15 +28,15 @@ Uliweb Change Log
 -----------------
 
 * Fix auth.models `get_href` bug
-* Change ORM `save()` process, it'll keep the manytomany data, before will 
+* Change ORM `save()` process, it'll keep the manytomany data, before will
   remove them from data
-* Add changed, saved and send_disptach to save() function. 
+* Add changed, saved and send_disptach to save() function.
 * Improve `set_echo()`, add time, explain, caller parameters.
 * Add `get_caller()` to utils.common module.
 * Add `CheckboxSelectField` to form.
 * Add `jsonp` function, just like json.
 * Fix rule merge bug
-* Improve `get_redis(**options)` enable pass parameters to it. 
+* Improve `get_redis(**options)` enable pass parameters to it.
 * Improve `jsonp()` only alphabetic and number available in `callback` parameter
 * Improve pyini, support cross section variable referer and lazy process support
 * Improve load command, add total records and used time display, and also use bulk
@@ -45,7 +46,7 @@ Uliweb Change Log
   xhr_redirect_json(boolean) to it, and default value is True. It means if the request
   is ajax, so the redirect will be returned as a json result with 500 status code.
   So the frontend can use it to redirect as what it wants.
-* ORM remove/clear empty condition will delete all records 
+* ORM remove/clear empty condition will delete all records
 * Add `classonlymethod()` to uliweb.utils.common, it just likes classmethod, but
   it'll limit only class object can invoke the method rather than instance object.
 * Refactor upload app, add `download` to functions
@@ -71,7 +72,7 @@ Uliweb Change Log
 * Add `encrypt` and `decrypt` function to functions
 * Fix pyini list value process bug for set can't process un-hashed object
 * Change find tempalte result, also will list the parent template file with the same name
-* Improve find template with `--tree` parameter, and it'll show a tree view of 
+* Improve find template with `--tree` parameter, and it'll show a tree view of
   tmplate extend or include.
 * Improve alembic init, it will remove alembic path first.
 * Remove orm derived duplication check, so that user can overwrite the property of parent
@@ -127,7 +128,7 @@ Uliweb Change Log
 * Add CSRF support thanks for Damon
 * Add multiple lines comment tag `{{## ##}}` support to template
 * Improve makeproject project template, add .gitignore and local_settings.ini
-* Refactor `call_view()` so that fix the soap view function will invoke 
+* Refactor `call_view()` so that fix the soap view function will invoke
   `__begin__` or `__end__` twice bug.
 * Refactor Functions, and Decorators, add parent class Finder. Also you can import
   from `uliweb`
@@ -135,19 +136,19 @@ Uliweb Change Log
 * Fix `--version` command argument process bug.
 * Improve `import_mod_attr`, and make it can receive object parameter
 * Add `handler()` function to Dispatcher, and it'll return an instance of `DispatcherHandler`
-  and it provide `get`, `post`, `delete`, .etc, restful api, and you can invoke 
+  and it provide `get`, `post`, `delete`, .etc, restful api, and you can invoke
   them to execute an url, for example:
 
     ```
     from uliweb import application
-    
+
     handler = application.handler()
     r = handler.get('/index')
     #r is response object
     ```
 * Add `client_from_application()` to uliweb/utils/test.py
-* Add `dispatcher_cls` and `dispatcher_kwargs` to `make_application` and 
-  `make_simple_applicatin`, so you can pass difference Disptacher class 
+* Add `dispatcher_cls` and `dispatcher_kwargs` to `make_application` and
+  `make_simple_applicatin`, so you can pass difference Disptacher class
   which provided by `uliweb/core/SimpleFrame.py`.
 * Add `PUT` and `PATCH` judgement to csrf middleware.
 * Fix template.py for multiple times extending the same template file bug
@@ -177,7 +178,7 @@ Uliweb Change Log
     Model.get(Model.c.id==id, for_update=True)
     Model.filter(condition).for_update().filter(condition)
     ```
-    
+
 * generic ListView and SimpleListView can get value of page and rows from request,
   so if you pass these variables in the GET or POST, you don't need to parse them
   and then pass them to ListView or SimpleListView, you can just skip them, ListView
@@ -189,7 +190,7 @@ Uliweb Change Log
     ```
     uliweb makekey
     ```
-    
+
   to create a secretkey file, which will be locate in current directory by default. Then:
 
     ```
@@ -198,7 +199,7 @@ Uliweb Change Log
     d = des.encrypt('hello')
     des.descrypt(d)
     ```
-    
+
 * Remove pagecache app
 * Add `safe_unicode` and `safe_str` support i18n LazyString class
 * Refactor generic.ListView and generic.SimpleListView output, the table will be
@@ -214,12 +215,12 @@ Uliweb Change Log
 
 * Add `get_input()` to command.py, you can use it to get a value from command line
   if an option is not given
-* Remove APP_LAYOUT functionality, and it can be replaced with 
+* Remove APP_LAYOUT functionality, and it can be replaced with
 
     ```
     settings.APP_LAYOUTS.get('messages', 'layout.html')
     ```
-    
+
   so you can still config app's layout template in settings.ini. Another way is
   to replace app's layout template in a new app with the same filename, and then
   install it after the original app in `INSTALLED_APPS`.
@@ -241,12 +242,12 @@ Uliweb Change Log
     [ORM]
     TABLENAME_CONVERTER = 'uliweb.utils.common.camel_to_'
     ```
-    
+
   Then if the Model name is CamelCase then it'll be converted to `camel_case`.
 * Add Reference, OneToOne, ManyToMany relation definition in Model level
 * If collection_name is None, and if there is already `tablename_set` existed,
   then it'll create new collection_name automatically, so that the collection_name
-  will not be duplication at all. But if the user pass the collection_name, and 
+  will not be duplication at all. But if the user pass the collection_name, and
   if there is `tablename_set` already, then raise the Exception always. Please note
   the difference about it.
 * Change default max_length of CHAR, str, unicode as 255. The original default value
@@ -261,7 +262,7 @@ Uliweb Change Log
     >>> print Tag('p', 'Hello', attrs={'data-link':'ok'}, newline=False)
     <p data-link="ok">Hello</p>
     ```
-    
+
   so you can pass `data-link` to `attrs`. For `newline=False` will not create `\n`.
 * Remove `Script` of core/html.py.
 * Add AUTHORS.md doc.
@@ -273,7 +274,7 @@ Uliweb Change Log
     @expose('!/hello')
     ```
 * Improve url expose for '!' process, and make class view also support it. Add test_url.py.
-* Change form validate_xxx in the front of the original validator functions, move BaseField 
+* Change form validate_xxx in the front of the original validator functions, move BaseField
   validate error mssage to module level, e.g. ERR_REQUIRED
 * Fix i18n bug for LazyString
 * Add chmod after mkdirs in extract_dir function
@@ -297,15 +298,15 @@ Uliweb Change Log
 * Add default parameter to uliweb/utils/common.py get_choice()
 * Improve template extend and include process, if you extend the same filename
    with current filename, then it'll find the parent same named filename. This
-   way can make new same named filename but extended from parent. Also support 
+   way can make new same named filename but extended from parent. Also support
    include tag.
 * Add APP_LAYOUT support in uliweb.contrib.template, so in your template you can
    use: `{{use layout_template}}` in your tmplate, and config the app layout template
-   as: 
-    
+   as:
+
         [APP_LAYOUTS]
         appname = 'layout.html'
-        
+
    so when render the template, the `layout_template` will be replaced with `layout.html`
 * Add QueryString and query_string support in common.py
 * Fix dispatch signal process bug
@@ -335,30 +336,30 @@ Uliweb Change Log
        `template_file()` or `template()`
     * Add `[TEMPLATE_PROCESSOR]` section to `default_settings.ini`, so that user
        can setup his own template processor, the option will look like:
-    
-            angularjs_template = {'file_exts':['.ahtml'], 
-                'processor':'uliweb.core.template.template_file', 
+
+            angularjs_template = {'file_exts':['.ahtml'],
+                'processor':'uliweb.core.template.template_file',
                 'args':{}}
-                
+
        * the key is not very important, but you should keep it unique
-       * `file_exts` will be the file extensions, it's a list, so the 
+       * `file_exts` will be the file extensions, it's a list, so the
          processor can match multiple filenames
        * `processor` will be the path of template function, uliweb will
          import it when needed
        * `args` will be a dict, and it will be passed to template function
     * Add `BEGIN_TAG` and `END_TAG` to settings.ini, so user can change
-       default tag name from `{{` and `}}` to other strings. But this 
+       default tag name from `{{` and `}}` to other strings. But this
        appoach will effect globally, so if you are using other apps with
        templates which using old tag strings, will cause errors. So using
        `#uliweb-template-tag` or `TEMPLATE_PROCESSOR` maybe the good way,
        but you still need to set it in template file or set `response.template`
        with other template extension, because the defult template file extension
        is `.html`. For example:
-    
+
             def index():
                 response.template = 'index.ahtml'
                 return {}
-       
+
        Above code will override the default template filename from `index.html`
        to `index.ahtml`.
 * Add Redirect support. Redirect is an exception, and also add Redirect support
@@ -376,7 +377,7 @@ Uliweb Change Log
 0.1.2 Version
 -----------------
 
-* Fix permission tag, and change PERMISSION definitions in settings.ini, now the 
+* Fix permission tag, and change PERMISSION definitions in settings.ini, now the
    PERMISSION definition can use dict datatype, just like:
 
     ```
@@ -385,8 +386,8 @@ Uliweb Change Log
     ```
 
    and with this method, you don't need to define ROLES_PERMISSIONS section
-* Add TransactionMiddle as default settings in ORM settings.ini. By default, if 
-   you add 'uliweb.contrib.orm', the transaction middleware will automatically 
+* Add TransactionMiddle as default settings in ORM settings.ini. By default, if
+   you add 'uliweb.contrib.orm', the transaction middleware will automatically
    enabled. In the previous version, you should add this middleware yourself.
 * Add app arguments to exportstatic command
 * Remove --with-static option of export command, so default behavior is export
@@ -398,9 +399,9 @@ Uliweb Change Log
     ```
     uliweb find -m model_name
     ```
-    
+
    to find the model is defined in which model
-* Add manytomany parameter to Model.delete() function, so it'll automatically 
+* Add manytomany parameter to Model.delete() function, so it'll automatically
    delete manytomany relationships.
 * Add tables app to uliweb.
 * Add GenericReference and GenericRalation support
@@ -408,10 +409,10 @@ Uliweb Change Log
 * Add `__pk_type__` variable, current is 'int', others will be 'biginteger',
    you can use set_pk_type(name) to switch it, also add PKTYPE() function, you
    can use Field(PKTYPE()) to create ForeignKey Property according the option,
-   in web project, you can swith it via ORM/PK_TYPE 
+   in web project, you can swith it via ORM/PK_TYPE
 * Add delete_fieldname parameter to Model.delete(), so if you pass True, it'll
    assume the delete_fieldname is 'deleted', and if you pass real field_name it'll
-   use it directly. This way will not delete the record at all, just change the 
+   use it directly. This way will not delete the record at all, just change the
    delete_fieldname value from False to True.
 * Fix RemoteField default datatype as int and default value is None.
 * Refactor the ReferenceProperty datatype process.
