@@ -9,6 +9,7 @@ from uliweb.orm import get_model, Model, Result, do_, Lazy
 import uliweb.orm as orm
 from uliweb import redirect, json, functions, UliwebError, Storage
 from sqlalchemy.sql import select, Select, func
+from sqlalchemy.engine import RowProxy
 from uliweb.contrib.upload import FileServing, FilenameConverter
 from uliweb.utils.common import safe_unicode, safe_str
 from uliweb.core.html import Builder
@@ -1721,6 +1722,25 @@ class SimpleListView(object):
             d = {'name':name, 'verbose_name':field.verbose_name or field.name}
             return d
     
+    def _get_record(self, record):
+        if isinstance(record, RowProxy):
+            r = {}
+            labels = self.table_info['fields_label']
+            keys = self.table_info['fields']
+            _keys = []
+            for k, v in record.items():
+                key = labels.get(k)
+                if key:
+                    r[key] = v
+                    _keys.append(key)
+            for k in list(set(keys)-set(_keys)):
+                r[k] = None
+        elif not isinstance(record, (orm.Model, dict)):
+            if not isinstance(record, (tuple, list)):
+                record = list(record)
+            r = dict(zip(self.table_info['fields'], record))
+        return r
+    
     def get_data(self, query, fields_convert_map, encoding='utf-8', auto_convert=True, include_hidden=False):
         """
         If convert=True, will convert field value
@@ -1741,10 +1761,7 @@ class SimpleListView(object):
         for record in query:
             self._cal_sum(record)
             row = []
-            if not isinstance(record, (orm.Model, dict)):
-                if not isinstance(record, (tuple, list)):
-                    record = list(record)
-                record = dict(zip(self.table_info['fields'], record))
+            record = self._get_record(record)
             if isinstance(record, orm.Model):
                 model = record.__class__
             else:
@@ -1906,8 +1923,7 @@ class SimpleListView(object):
             
     def object(self, record, json_result=False):
         r = SortedDict()
-        if not isinstance(record, dict):
-            record = dict(zip(self.table_info['fields'], record))
+        record = self._get_record(record)
         if self.record_render:
             r = self.record_render(record)
         else:
@@ -2116,12 +2132,14 @@ class SimpleListView(object):
         return columns
 
     def get_table_info(self):
-        t = {'fields_name':[], 'fields':[]}
+        #fields_label used to save field_name and label relation
+        t = {'fields_name':[], 'fields':[], 'fields_label':{}}
         t['fields_list'] = self.fields
         
         for x in self.fields:
             t['fields_name'].append(x['verbose_name'])
             t['fields'].append(x['name'])
+            t['fields_label'][x['name'].replace('.', '_')] = x['name']
             
             w = x.get('width')
             if w:
@@ -2181,6 +2199,7 @@ class ListView(SimpleListView):
         
         #create table header
         self.table_info = self.get_table_info()
+        print 'xxxxxxxxxxxxxxxx', self.table_info.keys()
         
     def query(self):
         if self._query is None or isinstance(self._query, (orm.Result, Select)): #query result
@@ -2260,7 +2279,7 @@ class ListView(SimpleListView):
         return query
         
     def get_table_info(self):
-        t = {'fields_name':[], 'fields_list':[], 'fields':[]}
+        t = {'fields_name':[], 'fields_list':[], 'fields':[], 'fields_label':{}}
     
         if self.fields:
             fields = self.fields
@@ -2304,7 +2323,8 @@ class ListView(SimpleListView):
             t['fields_list'].append(d)
             t['fields_name'].append(d['verbose_name'])
             t['fields'].append(name)
-          
+            t['fields_label'][name.replace('.', '_')] = name
+            
         return t
     
 class SelectListView(ListView):
