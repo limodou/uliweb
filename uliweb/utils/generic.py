@@ -1723,6 +1723,7 @@ class SimpleListView(object):
             return d
     
     def _get_record(self, record):
+        r = record
         if isinstance(record, RowProxy):
             r = {}
             labels = self.table_info['fields_label']
