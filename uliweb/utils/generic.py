@@ -2199,7 +2199,6 @@ class ListView(SimpleListView):
         
         #create table header
         self.table_info = self.get_table_info()
-        print 'xxxxxxxxxxxxxxxx', self.table_info.keys()
         
     def query(self):
         if self._query is None or isinstance(self._query, (orm.Result, Select)): #query result
