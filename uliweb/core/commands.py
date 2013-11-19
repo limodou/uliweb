@@ -59,7 +59,7 @@ def get_input(prompt, default=None, choices=None, option_value=None):
         return option_value
     
     choices = choices or []
-    r = raw_input(prompt+' ') or default
+    r = ''
     while 1:
         if not r:
             r = raw_input(prompt)
@@ -69,6 +69,7 @@ def get_input(prompt, default=None, choices=None, option_value=None):
             else:
                 break
         else:
+            r = r or default
             break
     return r
 

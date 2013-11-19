@@ -27,6 +27,12 @@ Uliweb Change Log
   But this output may breaks template output, so make sure you just use it in debug mode.
 * Add `--color` option to runserver, default is False. The log output will be colored by default.
   And you can change it in `[LOG.COLORS]`. Color supported is: BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE.
+* Add `config` command support. It'll create config file to console. You can also
+  define your own config file structure to support this command in apps. Just set `template_files/config`, 
+  and write `xxxxx.conf` and even `xxxxx.ini`, in `xxxxx.ini` you can set variables
+  and default values which used in `xxxxx.conf`. So `xxxxx.conf` can have template
+  variables.
+* Improve `support` command, also support file structure defined under apps.
 
 0.2.1 Version
 -----------------

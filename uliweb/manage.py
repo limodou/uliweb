@@ -269,22 +269,96 @@ class SupportCommand(Command):
     name = 'support'
     help = 'Add special support to existed project, such as: gae, dotcloud, sae, bae, fcgi, heroku, tornado, gevent, gevent-socketio'
     args = 'supported_type'
-    check_apps_dirs = False
+    check_apps_dirs = True
 
     def handle(self, options, global_options, *args):
-        from uliweb.utils.common import extract_dirs
+        from uliweb.utils.common import copy_dir
+        from uliweb.utils.common import pkg
         
-        _types = ['gae', 'dotcloud', 'sae', 'bae', 'fcgi', 'heroku', 'tornado', 'gevent', 'gevent-socketio']
+        _types = []
+        support_dirs = {}
+        app_dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'template_files/support') for appname in self.get_apps(global_options)]
+        for path in [pkg.resource_filename('uliweb', 'template_files/support/')] + app_dirs:
+            if os.path.exists(path):
+                for f in os.listdir(path):
+                    _path = os.path.join(path, f)
+                    if os.path.isdir(_path) and not f.startswith('.'):
+                        _name = f
+                        _types.append(_name)
+                        support_dirs[_name] = _path
+
         support_type = args[0] if args else ''
         while not support_type in _types and support_type != 'quit':
             print 'Supported types:\n'
-            print '    ' + '\n    '.join(_types)
+            print '    ' + '\n    '.join(sorted(_types))
             print
             support_type = raw_input('Please enter support type[quit to exit]:')
         
         if support_type != 'quit':
-            extract_dirs('uliweb', 'template_files/support/%s' % support_type, '.', verbose=global_options.verbose)
+            src_dir = support_dirs[support_type]
+            copy_dir(src_dir, '.', verbose=global_options.verbose)
 register_command(SupportCommand)
+
+class ConfigCommand(Command):
+    name = 'config'
+    help = 'Output config info for different support, such as: nginx, uwsgi, etc.'
+    args = 'supported_type'
+    check_apps_dirs = True
+
+    def handle(self, options, global_options, *args):
+        from uliweb.utils.common import pkg
+        from uliweb.utils.pyini import Ini
+        from uliweb.core.commands import get_input
+        from uliweb.core.template import template_file
+        import glob
+        
+        _types = []
+        config_files = {}
+        app_dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'template_files/config') for appname in self.get_apps(global_options)]
+        for path in [pkg.resource_filename('uliweb', 'template_files/config/')] + app_dirs:
+            if os.path.exists(path):
+                files = glob.glob(os.path.join(path, '*.conf'))
+                if files:
+                    for f in files:
+                        _name = os.path.splitext(os.path.basename(f))[0]
+                        _types.append(_name)
+                        config_files[_name] = f
+        
+        support_type = args[0] if args else ''
+        while not support_type in _types and support_type != 'quit':
+            print 'Supported types:\n'
+            print '    ' + '\n    '.join(sorted(_types))
+            print
+            support_type = raw_input('Please enter support type[quit to exit]:')
+        
+        if support_type != 'quit':
+            conf_file = config_files[support_type]
+            conf_ini = conf_file[:-5] + '.ini'
+            
+            if not os.path.exists(conf_file):
+                log.error("%s config can't be found" % support_type)
+                sys.exit(1)
+                
+            data = {}
+            data['project_dir'] = os.path.abspath(os.getcwd())
+            data['project'] = os.path.basename(data['project_dir'])
+            if os.path.exists(conf_ini):
+                x = Ini(conf_ini)
+                for k, v in x.INPUT.items():
+                    if isinstance(v, (tuple, list)):
+                        prompt, default = v
+                    else:
+                        prompt, default = v or '', ''
+                    if not prompt.strip():
+                        prompt = 'Please input %s[%s]:' % (k, default)
+                    r = get_input(prompt, default=default)
+                    data[k] = r
+                data.update(x.get('DEFAULT', {}))
+                
+            print
+            print template_file(conf_file, data)
+            
+register_command(ConfigCommand)
 
 class ExportStaticCommand(Command):
     """
