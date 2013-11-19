@@ -33,12 +33,12 @@ class Permission(Model):
 class Role(Model):
     name = Field(str, max_length=80, required=True)
     description = Field(str, max_length=255)
-    category = Reference('rolecategory')
+    category = Reference('rolecategory', nullable=True)
     reserve = Field(bool)
     users = ManyToMany('user', collection_name='user_roles')
     permissions = ManyToMany('permission', through='role_perm_rel', collection_name='perm_roles')
     usergroups = ManyToMany('usergroup', collection_name='usergroup_roles')
-    relative_usergroup = Reference('usergroup')
+    relative_usergroup = Reference('usergroup', nullable=True)
     
     def __unicode__(self):
         return self.name
