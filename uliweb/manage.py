@@ -995,7 +995,8 @@ class FindCommand(Command):
                 for x in node.nodes:
                     if isinstance(x, BaseBlockNode):
                         if x.name in t.content.root.block_vars:
-                            _file = t.content.root.block_vars[x.name][-1].template_file
+                            x = t.content.root.block_vars[x.name][-1]
+                            _file = x.template_file
                         else:
                             _file = x.template_file
                         

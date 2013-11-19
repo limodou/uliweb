@@ -15,6 +15,7 @@ Uliweb Change Log
 * Improve `import_attr()`, support pkg_resource entry point string format, 'module:object.attr'
 * Add requirements.txt to uliweb.contrib.orm, install: SQLAlchemy, MySQL-python, alembic first
 * Add logo files
+* Fix find -t --blocks bug
 
 0.2.1 Version
 -----------------
