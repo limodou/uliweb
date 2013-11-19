@@ -590,6 +590,8 @@ class RunserverCommand(Command):
             help='If auto reload the development server. Default is True.'),
         make_option('--no-debug', dest='debug', action='store_false', default=True,
             help='If auto enable debug mode. Default is True.'),
+        make_option('--color', dest='color', action='store_true', default=False,
+            help='Output colored log info. Default is False.'),
         make_option('--thread', dest='thread', action='store_true', default=False,
             help='If use thread server mode. Default is False.'),
         make_option('--processes', dest='processes', type='int', default=1,
@@ -611,7 +613,10 @@ class RunserverCommand(Command):
     
     def handle(self, options, global_options, *args):
         from werkzeug.serving import run_simple
-
+        import logging
+        from logging import StreamHandler
+        from uliweb.utils.coloredlog import ColoredFormatter
+        
         if self.develop:
             include_apps = ['plugs.develop']
         else:
@@ -619,6 +624,19 @@ class RunserverCommand(Command):
         
         extra_files = collect_files(global_options, global_options.apps_dir, self.get_apps(global_options, include_apps))
         
+        if options.color:
+            def format(self, record):
+                if not hasattr(self, 'new_formatter'):
+                    if self.formatter:
+                        fmt = ColoredFormatter(format=self.formatter._fmt, datefmt=self.formatter.datefmt, log_colors=uliweb.settings.get('LOG.COLORS', {}))
+                    else:
+                        fmt = ColoredFormatter()
+                    self.new_formatter = fmt
+                else:
+                    fmt = self.new_formatter
+                return fmt.format(record)
+            setattr(StreamHandler, 'format', format)
+            
         def get_app(debug_cls=None):
             return make_application(options.debug, project_dir=global_options.project, 
                         include_apps=include_apps, settings_file=global_options.settings,

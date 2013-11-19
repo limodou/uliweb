@@ -25,6 +25,8 @@ Uliweb Change Log
     ```
     
   But this output may breaks template output, so make sure you just use it in debug mode.
+* Add `--color` option to runserver, default is False. The log output will be colored by default.
+  And you can change it in `[LOG.COLORS]`. Color supported is: BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE.
 
 0.2.1 Version
 -----------------
