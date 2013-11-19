@@ -16,6 +16,15 @@ Uliweb Change Log
 * Add requirements.txt to uliweb.contrib.orm, install: SQLAlchemy, MySQL-python, alembic first
 * Add logo files
 * Fix find -t --blocks bug
+* Add `DEBUG_TEMPLATE` option to settings/GLOBAL, if it's `True`, then all blocks in a template
+  will be surrounded by comment code just like:
+
+    ```
+    <!-- BLOCK title (apps/theme/templates/theme/skeleton.html) -->
+    <!-- END title -->
+    ```
+    
+  But this output may breaks template output, so make sure you just use it in debug mode.
 
 0.2.1 Version
 -----------------

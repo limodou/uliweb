@@ -12,6 +12,7 @@ __nodes__ = {}   #user defined nodes
 
 BEGIN_TAG = '{{'
 END_TAG = '}}'
+DEBUG = False
 
 class TemplateException(Exception): pass
 class ContextPopException(TemplateException):
@@ -225,6 +226,9 @@ class BlockNode(BaseBlockNode):
                     s.append(str(x))
             else:
                 s.append(str(x))
+        if DEBUG:
+            s.insert(0, 'out.write("<!-- BLOCK %s (%s) -->\\n", escape=False)\n' % (self.name, self.template_file.replace('\\', '/')))
+            s.append('out.write("<!-- END %s -->\\n", escape=False)\n' % self.name)
         return ''.join(s)
         
 class SuperNode(Node):

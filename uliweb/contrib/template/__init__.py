@@ -5,6 +5,7 @@ def startup_installed(sender):
     if sender.settings.TEMPLATE.USE_TEMPLATE_TEMP_DIR:
         template.use_tempdir(sender.settings.TEMPLATE.TEMPLATE_TEMP_DIR)
         
+    template.DEBUG = sender.settings.GLOBAL.get('DEBUG_TEMPLATE', False)
     template.register_node('link', LinkNode)
     template.register_node('use', UseNode)
     
