@@ -33,6 +33,7 @@ Uliweb Change Log
   and default values which used in `xxxxx.conf`. So `xxxxx.conf` can have template
   variables.
 * Improve `support` command, also support file structure defined under apps.
+* Fix template normcase bug, changed to normpath.
 
 0.2.1 Version
 -----------------

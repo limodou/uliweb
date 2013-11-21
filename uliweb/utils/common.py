@@ -346,7 +346,7 @@ def str_value(v, encoding='utf-8', bool_int=True, none='NULL', newline_escape=Fa
         return str(v)
 
 def norm_path(path):
-    return os.path.normcase(os.path.abspath(path))
+    return os.path.normpath(os.path.abspath(path))
 
 r_expand_path = re.compile('\$\{(\w+)\}')
 def expand_path(path):

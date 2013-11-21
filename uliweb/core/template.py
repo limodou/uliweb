@@ -41,7 +41,7 @@ def get_temp_template(filename):
         filename = filename.replace('/', '_')
         f, ext = os.path.splitext(filename)
         filename = f + '.py'
-        return os.path.normcase(os.path.join(__templates_temp_dir__, filename))
+        return os.path.normpath(os.path.join(__templates_temp_dir__, filename))
     return filename
 
 def register_node(name, node):
@@ -84,14 +84,14 @@ def get_templatefile(filename, dirs, default_template=None, skip='', skip_origin
     """
     def _file(filename, dirs):
         for d in dirs:
-            _f = os.path.normcase(os.path.join(d, filename))
+            _f = os.path.normpath(os.path.join(d, filename))
             if os.path.exists(_f):
                 yield _f
         raise StopIteration
     
-    filename = os.path.normcase(filename)
-    skip = os.path.normcase(skip)
-    skip_original = os.path.normcase(skip_original)
+    filename = os.path.normpath(filename)
+    skip = os.path.normpath(skip)
+    skip_original = os.path.normpath(skip_original)
     
     if os.path.exists(filename):
         return filename

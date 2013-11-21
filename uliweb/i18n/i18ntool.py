@@ -6,7 +6,7 @@ from uliweb.core.commands import Command
 
 #def getfiles(path):
 #    files_list = []
-#    if os.path.exists(os.path.abspath(os.path.normcase(path))):
+#    if os.path.exists(os.path.abspath(os.path.normpath(path))):
 #        if os.path.isfile(path):
 #            files_list.append(path)
 #        else:
