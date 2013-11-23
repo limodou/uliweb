@@ -19,9 +19,10 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
-    'CommitAll', 'RollbackAll',
+    'CommitAll', 'RollbackAll', 'set_lazy_model_init',
     'begin_sql_monitor', 'close_sql_monitor', 'set_model_config',
-    'get_object', 'set_server_default', 'set_nullable', 'set_manytomany_index_reverse']
+    'get_object', 'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
+    ]
 
 __auto_create__ = False
 __auto_set_model__ = True
@@ -38,6 +39,7 @@ __default_post_do__ = None #used to process post_do topic
 __nullable__ = False    #not enabled null by default
 __server_default__ = False    #not enabled null by default
 __manytomany_index_reverse__ = False
+__lazy_model_init__ = False  
 
 import sys
 import decimal
@@ -140,6 +142,10 @@ def set_dispatch_send(flag):
 def set_tablename_converter(converter=None):
     global __default_tablename_converter__
     __default_tablename_converter__ = converter
+    
+def set_lazy_model_init(flag):
+    global __lazy_model_init__
+    __lazy_model_init__ = flag
     
 def get_tablename(tablename):
     global __default_tablename_converter__
@@ -678,6 +684,10 @@ def get_model(model, engine_name=None):
                 item['model'] = model_inst
                 model_inst.__alias__ = model
                 model_inst.connect(engine_name)
+                
+                #todo add property init process
+                for k, v in model_inst.properties.items():
+                    v.__property_config__(model_inst, k)
                 #add bind process
                 model_inst.bind(engine.metadata)
                 return model_inst
@@ -783,7 +793,7 @@ class ModelMetaclass(type):
         for attr_name in dct.keys():
             attr = dct[attr_name]
             if isinstance(attr, Property):
-                cls.add_property(attr_name, attr, set_property=False)
+                cls.add_property(attr_name, attr, set_property=False, config=not __lazy_model_init__)
                 
                 if isinstance(attr, ManyToMany):
                     cls._manytomany[attr_name] = attr
@@ -797,7 +807,8 @@ class ModelMetaclass(type):
         if 'id' not in cls.properties and not without_id:
             cls.properties['id'] = f = Field(PKTYPE(), autoincrement=True, 
                 primary_key=not has_primary_key, default=None, nullable=False, server_default=None)
-            f.__property_config__(cls, 'id')
+            if not __lazy_model_init__:
+                f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)
 
 #        fields_list = [(k, v) for k, v in cls.properties.items() if not isinstance(v, ManyToMany)]
@@ -805,7 +816,7 @@ class ModelMetaclass(type):
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls._fields_list = fields_list
         
-        if cls.__bind__:
+        if cls.__bind__ and not __lazy_model_init__:
             cls.bind(auto_create=__auto_create__)
         
 class LazyValue(object):
@@ -1358,13 +1369,7 @@ class ReferenceProperty(Property):
         if reference_class is None:
             reference_class = Model
             
-        if not (
-                (isinstance(reference_class, type) and issubclass(reference_class, Model)) or
-                reference_class is _SELF_REFERENCE or
-                valid_model(reference_class, self.engine_name)):
-            raise KindError('reference_class %r must be Model or _SELF_REFERENCE or available table name' % reference_class)
-        
-        self.reference_class = get_model(reference_class, self.engine_name)
+        self.reference_class = reference_class
         
     def create(self, cls):
         global __nullable__
@@ -1407,9 +1412,17 @@ class ReferenceProperty(Property):
         """
         super(ReferenceProperty, self).__property_config__(model_class, property_name)
 
+        if not (
+                (isinstance(self.reference_class, type) and issubclass(self.reference_class, Model)) or
+                self.reference_class is _SELF_REFERENCE or
+                valid_model(self.reference_class, self.engine_name)):
+            raise KindError('reference_class %r must be Model or _SELF_REFERENCE or available table name' % self.reference_class)
+        
         if self.reference_class is _SELF_REFERENCE:
             self.reference_class = model_class
-
+        else:
+            self.reference_class = get_model(self.reference_class, self.engine_name)
+            
         self.collection_name = self.reference_class.get_collection_name(self.collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
             _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
@@ -1542,9 +1555,17 @@ class OneToOne(ReferenceProperty):
         #parent function
         super(ReferenceProperty, self).__property_config__(model_class, property_name)
     
+        if not (
+                (isinstance(self.reference_class, type) and issubclass(self.reference_class, Model)) or
+                self.reference_class is _SELF_REFERENCE or
+                valid_model(self.reference_class, self.engine_name)):
+            raise KindError('reference_class %r must be Model or _SELF_REFERENCE or available table name' % self.reference_class)
+        
         if self.reference_class is _SELF_REFERENCE:
             self.reference_class = self.data_type = model_class
-    
+        else:
+            self.reference_class = get_model(self.reference_class, self.engine_name)
+
         if self.collection_name is None:
             self.collection_name = '%s' % (model_class.tablename)
         if hasattr(self.reference_class, self.collection_name):
@@ -2229,8 +2250,17 @@ class ManyToMany(ReferenceProperty):
         #parent function
         super(ReferenceProperty, self).__property_config__(model_class, property_name)
     
+        if not (
+                (isinstance(self.reference_class, type) and issubclass(self.reference_class, Model)) or
+                self.reference_class is _SELF_REFERENCE or
+                valid_model(self.reference_class, self.engine_name)):
+            raise KindError('reference_class %r must be Model or _SELF_REFERENCE or available table name' % self.reference_class)
+        
         if self.reference_class is _SELF_REFERENCE:
             self.reference_class = self.data_type = model_class
+        else:
+            self.reference_class = get_model(self.reference_class, self.engine_name)
+
         self.tablename = '%s_%s_%s' % (model_class.tablename, self.reference_class.tablename, property_name)
         self.collection_name = self.reference_class.get_collection_name(self.collection_name, model_class.tablename)
 #        if self.collection_name is None:

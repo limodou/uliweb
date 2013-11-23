@@ -9,6 +9,7 @@ def after_init_apps(sender):
     orm.set_auto_create(settings.get_var('ORM/AUTO_CREATE'))
     orm.set_pk_type(settings.get_var('ORM/PK_TYPE'))
     orm.set_auto_set_model(False)
+    orm.set_lazy_model_init(True)
     orm.set_check_max_length(settings.get_var('ORM/CHECK_MAX_LENGTH'))
     orm.set_nullable(settings.get_var('ORM/NULLABLE'))
     orm.set_server_default(settings.get_var('ORM/SERVER_DEFAULT'))

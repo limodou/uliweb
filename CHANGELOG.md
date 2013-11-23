@@ -34,6 +34,11 @@ Uliweb Change Log
   variables.
 * Improve `support` command, also support file structure defined under apps.
 * Fix template normcase bug, changed to normpath.
+* Refactor ORM Reference, OneToOne, ManyToMany init process, it'll be lazy initialized, and
+  you should use get_model to get the Model. Because of lazy process, when two
+  Models are in same models.py, and they have relationship with them, the reversed
+  properties will not assigned to reference class like before, you should use
+  get_model to get those models.
 
 0.2.1 Version
 -----------------
