@@ -1361,7 +1361,7 @@ class ReferenceProperty(Property):
         """
         super(ReferenceProperty, self).__init__(verbose_name, **attrs)
 
-        self.collection_name = collection_name
+        self._collection_name = collection_name
         self.reference_fieldname = reference_fieldname or 'id'
         self.required = required
         self.engine_name = engine_name
@@ -1423,7 +1423,7 @@ class ReferenceProperty(Property):
         else:
             self.reference_class = get_model(self.reference_class, self.engine_name)
             
-        self.collection_name = self.reference_class.get_collection_name(self.collection_name, model_class.tablename)
+        self.collection_name = self.reference_class.get_collection_name(self._collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
             _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
         
@@ -1566,6 +1566,7 @@ class OneToOne(ReferenceProperty):
         else:
             self.reference_class = get_model(self.reference_class, self.engine_name)
 
+        self.collection_name = self._collection_name
         if self.collection_name is None:
             self.collection_name = '%s' % (model_class.tablename)
         if hasattr(self.reference_class, self.collection_name):
@@ -2262,12 +2263,7 @@ class ManyToMany(ReferenceProperty):
             self.reference_class = get_model(self.reference_class, self.engine_name)
 
         self.tablename = '%s_%s_%s' % (model_class.tablename, self.reference_class.tablename, property_name)
-        self.collection_name = self.reference_class.get_collection_name(self.collection_name, model_class.tablename)
-#        if self.collection_name is None:
-#            self.collection_name = '%s_set' % (model_class.tablename)
-#        if hasattr(self.reference_class, self.collection_name):
-#            raise DuplicatePropertyError('Class %s already has property %s'
-#                 % (self.reference_class.__name__, self.collection_name))
+        self.collection_name = self.reference_class.get_collection_name(self._collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
             _ManyToManyReverseReferenceProperty(self, self.collection_name))
     
@@ -2444,7 +2440,7 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
     
         """
         self.reference_property = reference_property
-        self.collection_name = collection_name
+        self._collection_name = collection_name
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
@@ -2453,7 +2449,7 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
         if model_instance:
             reference_id = getattr(model_instance, self._reversed_id, None)
             x = ManyResult(self.reference_property.reference_class, model_instance,
-                self.collection_name,
+                self._collection_name,
                 self.reference_property.model_class, self.reference_property.table,
                 self.reference_property.fieldb, self.reference_property.fielda, 
                 self.reference_property.reference_fieldname,
