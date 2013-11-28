@@ -561,6 +561,7 @@ def set_model(model, tablename=None, created=None, engine_name=None):
     if isinstance(model, type) and issubclass(model, Model):
         #use alias first
         tablename = model.__alias__ or model.tablename
+    tablename = tablename.lower()
     item = {}
     if created is not None:
         item['created'] = created
@@ -663,6 +664,8 @@ def get_model(model, engine_name=None):
     if not isinstance(model, (str, unicode)):
         raise Error("Model %r should be string or unicode type" % model)
     
+    #make model name is lower case
+    model = model.lower()
     if model in __models__:
         engine_name = __models__[model]['engine_name']
         engine = engine_manager[engine_name]
@@ -1663,13 +1666,20 @@ class Result(object):
             sql = select([func.count(func.distinct(self.model.c.id))], self.condition)
             return self.do_(sql).scalar()
 
-    def filter(self, condition):
-        if condition is None:
+    def filter(self, *condition):
+        """
+        If there are multple condition, then treats them *and* relastion.
+        """
+        if not condition:
             return self
+        cond = None
+        for c in condition:
+            if c is not None:
+                cond = c & cond
         if self.condition is not None:
-            self.condition = condition & self.condition
+            self.condition = cond & self.condition
         else:
-            self.condition = condition
+            self.condition = cond
         return self
     
     def order_by(self, *args, **kwargs):
@@ -2351,13 +2361,21 @@ class ManyToMany(ReferenceProperty):
             ids = get_objs_columns(objs, self.reference_fieldname)
             return (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fielda].in_(ids))
     
-    def filter(self, condition=None):
-        sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & condition)
+    def filter(self, *condition):
+        cond = None
+        for c in condition:
+            if c is not None:
+                cond = c & cond
+        sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & cond)
         condition = self.model_class.c[self.reversed_fieldname].in_(sub_query)
         return condition
 
-    def join_filter(self, condition=None):
-        return (self.table.c[self.fielda] == self.model_class.c[self.reversed_fieldname]) & (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & condition
+    def join_filter(self, *condition):
+        cond = None
+        for c in condition:
+            if c is not None:
+                cond = c & cond
+        return (self.table.c[self.fielda] == self.model_class.c[self.reversed_fieldname]) & (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & cond
         
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
@@ -3075,8 +3093,8 @@ class Model(object):
         return Result(cls, **kwargs)
         
     @classmethod
-    def filter(cls, condition=None, **kwargs):
-        return Result(cls, condition, **kwargs)
+    def filter(cls, *condition, **kwargs):
+        return Result(cls, **kwargs).filter(*condition)
             
     @classonlymethod
     def remove(cls, condition=None, connection=None, **kwargs):

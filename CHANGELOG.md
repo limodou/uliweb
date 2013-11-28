@@ -39,6 +39,7 @@ Uliweb Change Log
   Models are in same models.py, and they have relationship with them, the reversed
   properties will not assigned to reference class like before, you should use
   get_model to get those models.
+* Make get_model() set_model() don't distinquish case
 
 0.2.1 Version
 -----------------
