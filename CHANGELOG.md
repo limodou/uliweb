@@ -40,6 +40,7 @@ Uliweb Change Log
   properties will not assigned to reference class like before, you should use
   get_model to get those models.
 * Make get_model() set_model() don't distinquish case
+* Fix expose for two different view functions but with the same URL does not keep the last one bug
 
 0.2.1 Version
 -----------------

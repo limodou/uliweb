@@ -2,6 +2,7 @@ import os
 import inspect
 from uliweb.utils.common import log
 from uliweb.utils.sorteddict import SortedDict
+from uliweb.utils.date import now
 
 class ReservedKeyError(Exception):pass
 
@@ -25,20 +26,21 @@ def add_rule(map, url, endpoint=None, **kwargs):
         raise
             
 def merge_rules():
+    from itertools import chain
+    
     s = []
     index = {}
-    for v in __exposes__.values():
-        for x in v:
-            appname, endpoint, url, kw = x
-            methods = [y.upper() for y in kw.get('methods', [])]
-            methods.sort()
-            i = index.get((url, tuple(methods)), None)
-            if i is not None:
-                s[i] = x
-            else:
-                s.append(x)
-                index[(url, tuple(methods))] = len(s)-1
-    return __no_need_exposed__ + s
+    for v in sorted(__no_need_exposed__ + list(chain(*__exposes__.values())), key=lambda x:x[4]):
+        appname, endpoint, url, kw, timestamp = v
+        methods = [y.upper() for y in kw.get('methods', [])]
+        methods.sort()
+        i = index.get((url, tuple(methods)), None)
+        if i is not None:
+            s[i] = v
+        else:
+            s.append(v)
+            index[(url, tuple(methods))] = len(s)-1
+    return s
 
 def clear_rules():
     global __exposes__, __no_need_exposed__
@@ -131,14 +133,14 @@ class Expose(object):
                                 #maybe it's root url, e.g. /register
                                 if not keep and rule.startswith(prefix):
                                     rule = self._fix_url(appname, rule)
-                            __no_need_exposed__.append((v[0], new_endpoint, rule, v[3]))
+                            __no_need_exposed__.append((v[0], new_endpoint, rule, v[3], now()))
                             for k in __url_names__.iterkeys():
                                 if __url_names__[k] == v[1]:
                                     __url_names__[k] = new_endpoint
                 else:
                     rule = self._get_url(appname, prefix, func)
                     endpoint = '.'.join([f.__module__, clsname, func.__name__])
-                    yield appname, endpoint, rule, {}
+                    yield appname, endpoint, rule, {}, now()
     
     def _get_url(self, appname, prefix, f):
         args = inspect.getargspec(f)[0]
@@ -184,7 +186,7 @@ class Expose(object):
         if 'name' in self.kwargs:
             url_name = self.kwargs.pop('name')
             __url_names__[url_name] = endpoint
-        return f, (appname, endpoint, rule, self.kwargs.copy())
+        return f, (appname, endpoint, rule, self.kwargs.copy(), now())
     
     def __call__(self, f):
         from uliweb.utils.common import safe_import

@@ -627,9 +627,9 @@ class Dispatcher(object):
     <p>%s</p>
     <h3>Current URL Mapping is</h3>
     <table border="1">
-    <tr><th>URL</th><th>View Functions</th></tr>
-    {{for url, methods, endpoint in urls:}}
-    <tr><td>{{=url}} {{=methods}}</td><td>{{=endpoint}}</td></tr>
+    <tr><th>#</th><th>URL</th><th>View Functions</th></tr>
+    {{for i, (url, methods, endpoint) in enumerate(urls):}}
+    <tr><td>{{=i+1}}</td><td>{{=url}} {{=methods}}</td><td>{{=endpoint}}</td></tr>
     {{pass}}
     </table>
     """ % description
@@ -926,7 +926,7 @@ class Dispatcher(object):
     def init_urls(self):
         #initialize urls
         for v in rules.merge_rules():
-            appname, endpoint, url, kw = v
+            appname, endpoint, url, kw, timestamp = v
             static = kw.pop('static', None)
             if static:
                 static_views.append(endpoint)
