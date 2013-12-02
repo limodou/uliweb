@@ -47,7 +47,7 @@ def get_answer(message, answers='Yn', default='Y', quit='n'):
         ans = raw_input(message).strip().upper()
     if quit and ans == quit.upper():
         print "Command be cancelled!"
-        sys.exit(1)
+        sys.exit(0)
     return ans
 
 def get_input(prompt, default=None, choices=None, option_value=None):
@@ -291,12 +291,12 @@ class CommandManager(Command):
         def print_help(global_options):
             parser.print_help()
             sys.stderr.write(self.print_help_info(global_options) + '\n')
-            sys.exit(1)
+            sys.exit(0)
             
         if len(args) == 0:
             if global_options.version:
                 print self.get_version()
-                sys.exit(1)
+                sys.exit(0)
             else:
                 print_help(global_options)
                 sys.ext(1)
@@ -314,7 +314,7 @@ class CommandManager(Command):
                     cmd.execute()
                 else:
                     command().print_help(self.prog_name, args[1])
-                sys.exit(1)
+                sys.exit(0)
             else:
                 print_help(global_options)
         if global_options.help:

@@ -1,9 +1,10 @@
 from rbac import *
 
 def prepare_default_env(sender, env):
-    from rbac import has_permission, has_role
-    env['has_permission'] = has_permission
-    env['has_role'] = has_role
+    from uliweb import functions
+    
+    env['has_permission'] = functions.has_permission
+    env['has_role'] = functions.has_role
     
 def after_init_apps(sender):
     from uliweb import settings
