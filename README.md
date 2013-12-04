@@ -111,5 +111,6 @@ You can see the DOC at https://github.com/limodou/uliweb-doc
 
 * Plugs is a Uliweb apps collection project, you can visit it at https://github.com/limodou/plugs
 * uliwebzone is a community project of Uliweb, you can visit it at https://github.com/limodou/uliwebzone.
+* Discuss forum http://uliweb.clkg.org or http://www.uliweb.org
 
 ![LOGO](https://raw.github.com/limodou/uliweb/master/logos/uliweb_logo_small.png)
