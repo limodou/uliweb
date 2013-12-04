@@ -42,6 +42,7 @@ Uliweb Change Log
 * Make get_model() set_model() don't distinquish case
 * Fix expose for two different view functions but with the same URL does not keep the last one bug
 * Fix rabc init not using functions.has_role and functions.has_permission.
+* Fix rules.py bug
 
 0.2.1 Version
 -----------------

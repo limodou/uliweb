@@ -97,8 +97,7 @@ class Expose(object):
             a = __exposes__.setdefault(func, [])
             a.append(result)
         else:
-            result = list(self.parse_class(f))
-            __no_need_exposed__.extend(result)
+            self.parse_class(f)
             
     def parse_class(self, f):
         appname, path = self._get_path(f)
@@ -112,7 +111,7 @@ class Expose(object):
             func = getattr(f, name)
             if (inspect.ismethod(func) or inspect.isfunction(func)) and not name.startswith('_'):
                 if hasattr(func, '__exposed__') and func.__exposed__:
-                    new_endpoint = '.'.join([func.__module__, f.__name__, name])
+                    new_endpoint = '.'.join([f.__module__, f.__name__, name])
                     if func.im_func in __exposes__:
                         for v in __exposes__.pop(func.im_func):
                             #__no_rule__ used to distinct if the view function has used
@@ -133,14 +132,27 @@ class Expose(object):
                                 #maybe it's root url, e.g. /register
                                 if not keep and rule.startswith(prefix):
                                     rule = self._fix_url(appname, rule)
+
+                                #save processed data
+                                x = list(v)
+                                x[2] = rule
+                                func.func_dict['__saved_rule__'] = x
                             __no_need_exposed__.append((v[0], new_endpoint, rule, v[3], now()))
                             for k in __url_names__.iterkeys():
                                 if __url_names__[k] == v[1]:
                                     __url_names__[k] = new_endpoint
+                    else:
+                        #maybe is subclass
+                        v = func.func_dict.get('__saved_rule__')
+                        if v and new_endpoint != v[1]:
+                            v[1] = new_endpoint
+                            v[4] = now()
+                            func.func_dict['__saved_rule__'] = v
+                            __no_need_exposed__.append(v) 
                 else:
                     rule = self._get_url(appname, prefix, func)
                     endpoint = '.'.join([f.__module__, clsname, func.__name__])
-                    yield appname, endpoint, rule, {}, now()
+                    __no_need_exposed__.append((appname, endpoint, rule, {}, now()))
     
     def _get_url(self, appname, prefix, f):
         args = inspect.getargspec(f)[0]

@@ -103,10 +103,13 @@ I also constructed a few new "wheels" myself. For example:
 * Reusability and configurable are the main ideas about Uliweb.
 * The web framework should be flexible and easy to extend.
 
+## Documentation
+
+You can see the DOC at https://github.com/limodou/uliweb-doc
+
 ## Links
 
 * Plugs is a Uliweb apps collection project, you can visit it at https://github.com/limodou/plugs
-* uliweb-doc is a documentation project of Uliweb, you can visit it at https://github.com/limodou/uliweb-doc
 * uliwebzone is a community project of Uliweb, you can visit it at https://github.com/limodou/uliwebzone.
 
 ![LOGO](https://raw.github.com/limodou/uliweb/master/logos/uliweb_logo_small.png)
