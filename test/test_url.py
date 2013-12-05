@@ -5,6 +5,7 @@ from uliweb.core import rules
 
 def test_1():
     """
+    >>> rules.clear_rules()
     >>> def view():pass
     >>> f = expose('!/')(view)
     >>> rules.merge_rules() # doctest:+ELLIPSIS
@@ -41,10 +42,12 @@ def test_1():
     ...         pass
     >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
     ...     print v[1], v[2]
-    __main__.TestView1.index /test
+    __main__.TestView.index /test
+    __main__.TestView.ttt /ttt
+    __main__.TestView1.index /test/index
     __main__.TestView1.pnt /print
     __main__.TestView1.test /test/test
-    __main__.TestView1.ttt /ttt
+    __main__.TestView1.ttt /test/ttt
     __main__.view /
     __main__.view /hello
     """
@@ -86,6 +89,7 @@ def test_endpoint():
 
 def test_template():
     """
+    >>> rules.clear_rules()
     >>> @expose('/view', template='test.html')
     ... def view():
     ...     pass
@@ -129,6 +133,7 @@ def test_template():
 
 def test_template1():
     """
+    >>> rules.clear_rules()
     >>> @expose('/view', template='test.html')
     ... def view():
     ...     pass
@@ -169,3 +174,37 @@ def test_template1():
     >>> print TestView1.test.__template__
     test.html
     """
+
+def test_not_replace():
+    """
+    >>> rules.clear_rules()
+    >>> @expose('/test')
+    ... class TestView(object):
+    ...     @expose('')
+    ...     def index(self):
+    ...         return {}
+    ... 
+    ...     @expose('!/ttt')
+    ...     def ttt(self):
+    ...         return {}
+    ... 
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    >>> @expose('/test1')
+    ... class TestView1(TestView):
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    ...     def test(self):
+    ...         pass
+    >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
+    ...     print v[1], v[2]
+    __main__.TestView.index /test
+    __main__.TestView.ttt /ttt
+    __main__.TestView1.index /test1/index
+    __main__.TestView1.pnt /print
+    __main__.TestView1.test /test1/test
+    __main__.TestView1.ttt /test1/ttt
+    """
+

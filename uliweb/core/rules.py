@@ -178,10 +178,13 @@ class Expose(object):
                     else:
                         #maybe is subclass
                         v = copy.deepcopy(func.func_dict.get('__saved_rule__'))
+                        rule = self._get_url(appname, prefix, func)
                         if v and new_endpoint != v[1]:
                             if self.replace:
                                 v[3]['name'] = v[3].get('name') or v[1]
                                 func.func_dict['__template__'] = {'function':func.__name__, 'view_class':func.__old_rule__['clsname'], 'appname':appname}
+                            else:
+                                v[2] = rule
                             v[1] = new_endpoint
                             v[4] = now()
                             func.func_dict['__saved_rule__'] = v

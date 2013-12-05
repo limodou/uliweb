@@ -376,7 +376,7 @@ class ExportStaticCommand(Command):
         make_option('--js', action='store_true', dest='js', default=False,
             help='Enable javascript compress process.'),
         make_option('--css', action='store_true', dest='css', default=False,
-            help='Enable javascript compress process.'),
+            help='Enable css compress process.'),
         make_option('--auto', action='store_true', dest='auto', default=False,
             help='Enable javascript and css both compress process.'),
     )
