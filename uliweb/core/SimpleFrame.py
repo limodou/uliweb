@@ -205,30 +205,23 @@ def get_url_adapter(_domain_name):
     return adapter
 
 def url_for(endpoint, **values):
-    if inspect.isfunction(endpoint):
-        point = endpoint.__module__ + '.' + endpoint.__name__
-    elif inspect.ismethod(endpoint):
-        if not endpoint.im_self:    #instance method
-            clsname = endpoint.im_class.__name__
-        else:                       #class method
-            clsname = endpoint.im_self.__name__
-        point = '.'.join([endpoint.__module__, clsname, endpoint.__name__])
-    else:
-        if isinstance(endpoint, (str, unicode)):
-            #if the endpoint is string format, then find and replace
-            #the module prefix with app alias which matched
-            for k, v in __app_alias__.items():
-                if endpoint.startswith(k):
-                    endpoint = v + endpoint[len(k):]
-                    break
-        point = endpoint
+    point = rules.get_endpoint(endpoint)
+    
+    #if the endpoint is string format, then find and replace
+    #the module prefix with app alias which matched
+    for k, v in __app_alias__.items():
+        if point.startswith(k):
+            point = v + point[len(k):]
+            break
+        
+    if point in rules.__url_names__:
+        point = rules.__url_names__[point]
+        
     _domain_name = values.pop('_domain_name', 'default')
     _external = values.pop('_external', False)
     domain = application.domains.get(_domain_name, {})
     if not _external:
         _external = domain.get('display', False)
-    if point in rules.__url_names__:
-        point = rules.__url_names__[point]
     adapter = get_url_adapter(_domain_name)
     return adapter.build(point, values, force_external=_external)
 
@@ -789,7 +782,7 @@ class Dispatcher(object):
 
         return result
         
-    def wrap_result(self, result, request, response, env):
+    def wrap_result(self, handler, result, request, response, env):
 #        #process ajax invoke, return a json response
 #        if request.is_xhr and isinstance(result, dict):
 #            result = json(result)
@@ -799,13 +792,19 @@ class Dispatcher(object):
             if hasattr(response, 'template'):
                 tmpfile = response.template
             else:
-                args = {'function':request.function, 'view_class':request.view_class, 'appname':request.appname}
-                #TEMPLATE_TEMPLATE should be two elements tuple or list, the first one will be used for view_class is not empty
-                #and the second one will be used for common functions
-                if request.view_class:
-                    tmpfile = settings.GLOBAL.TEMPLATE_TEMPLATE[0] % args + settings.GLOBAL.TEMPLATE_SUFFIX
+                args = handler.func_dict.get('__template__')
+                if not args:
+                    args = {'function':request.function, 'view_class':request.view_class, 'appname':request.appname}
+                    
+                if isinstance(args, dict):
+                    #TEMPLATE_TEMPLATE should be two elements tuple or list, the first one will be used for view_class is not empty
+                    #and the second one will be used for common functions
+                    if request.view_class:
+                        tmpfile = settings.GLOBAL.TEMPLATE_TEMPLATE[0] % args + settings.GLOBAL.TEMPLATE_SUFFIX
+                    else:
+                        tmpfile = settings.GLOBAL.TEMPLATE_TEMPLATE[1] % args + settings.GLOBAL.TEMPLATE_SUFFIX
                 else:
-                    tmpfile = settings.GLOBAL.TEMPLATE_TEMPLATE[1] % args + settings.GLOBAL.TEMPLATE_SUFFIX
+                    tmpfile = args
                 response.template = tmpfile
             content_type = response.content_type
             
@@ -862,7 +861,7 @@ class Dispatcher(object):
     def call_handler(self, handler, request, response, env, wrap_result=None, args=None, kwargs=None):
         wrap = wrap_result or self.wrap_result
         result = self._call_function(handler, request, response, env, args, kwargs)
-        return wrap(result, request, response, env)
+        return wrap(handler, result, request, response, env)
             
     def collect_modules(self, check_view=True):
         modules = {}
@@ -926,7 +925,7 @@ class Dispatcher(object):
     def init_urls(self):
         #initialize urls
         for v in rules.merge_rules():
-            appname, endpoint, url, kw, timestamp = v
+            appname, endpoint, url, kw = v
             static = kw.pop('static', None)
             if static:
                 static_views.append(endpoint)

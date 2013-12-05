@@ -21,6 +21,7 @@ from .core.SimpleFrame import (Request, Response, redirect, Redirect, error, jso
     )
 from .core.js import json_dumps
 from .core.storage import Storage
+from .core.rules import get_endpoint
 
 class Middleware(object):
     ORDER = 500

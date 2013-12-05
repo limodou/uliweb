@@ -3,6 +3,7 @@ import inspect
 from uliweb.utils.common import log
 from uliweb.utils.sorteddict import SortedDict
 from uliweb.utils.date import now
+import copy
 
 class ReservedKeyError(Exception):pass
 
@@ -32,14 +33,21 @@ def merge_rules():
     index = {}
     for v in sorted(__no_need_exposed__ + list(chain(*__exposes__.values())), key=lambda x:x[4]):
         appname, endpoint, url, kw, timestamp = v
+        if 'name' in kw:
+            url_name = kw.pop('name')
+        else:
+            url_name = endpoint
+        __url_names__[url_name] = endpoint
         methods = [y.upper() for y in kw.get('methods', [])]
         methods.sort()
+        
         i = index.get((url, tuple(methods)), None)
         if i is not None:
-            s[i] = v
+            s[i] = appname, endpoint, url, kw
         else:
-            s.append(v)
+            s.append((appname, endpoint, url, kw))
             index[(url, tuple(methods))] = len(s)-1
+            
     return s
 
 def clear_rules():
@@ -51,6 +59,31 @@ def set_app_rules(rules):
     global __app_rules__
     __app_rules__.update(rules)
     
+def get_endpoint(f):
+    if inspect.ismethod(f):
+        if not f.im_self:    #instance method
+            clsname = f.im_class.__name__
+        else:                       #class method
+            clsname = f.im_self.__name__
+        endpoint = '.'.join([f.im_class.__module__, clsname, f.__name__])
+    elif inspect.isfunction(f):
+        endpoint = '.'.join([f.__module__, f.__name__])
+    else:
+        endpoint = f
+    return endpoint
+
+def get_template_args(appname, f):
+    viewname, clsname = '', ''
+    if inspect.ismethod(f):
+        if not f.im_self:    #instance method
+            clsname = f.im_class.__name__
+        else:                       #class method
+            clsname = f.im_self.__name__
+        viewname = f.__name__
+    else:
+        viewname = f.__name__
+    return {'appname':appname, 'view_class':clsname, 'function':viewname} 
+
 def expose(rule=None, **kwargs):
     e = Expose(rule, **kwargs)
     if e.parse_level == 1:
@@ -59,8 +92,10 @@ def expose(rule=None, **kwargs):
         return e
     
 class Expose(object):
-    def __init__(self, rule=None, restful=False, **kwargs):
+    def __init__(self, rule=None, restful=False, replace=False, template=None, **kwargs):
         self.restful = restful
+        self.replace = replace
+        self.template = template
         if inspect.isfunction(rule) or inspect.isclass(rule):
             self.parse_level = 1
             self.rule = None
@@ -132,28 +167,35 @@ class Expose(object):
                                 #maybe it's root url, e.g. /register
                                 if not keep and rule.startswith(prefix):
                                     rule = self._fix_url(appname, rule)
-
+                                
+                                func.__old_rule__['clsname'] = clsname
                                 #save processed data
                                 x = list(v)
+                                x[1] = new_endpoint
                                 x[2] = rule
                                 func.func_dict['__saved_rule__'] = x
                             __no_need_exposed__.append((v[0], new_endpoint, rule, v[3], now()))
-                            for k in __url_names__.iterkeys():
-                                if __url_names__[k] == v[1]:
-                                    __url_names__[k] = new_endpoint
                     else:
                         #maybe is subclass
-                        v = func.func_dict.get('__saved_rule__')
+                        v = copy.deepcopy(func.func_dict.get('__saved_rule__'))
                         if v and new_endpoint != v[1]:
+                            if self.replace:
+                                v[3]['name'] = v[3].get('name') or v[1]
+                                func.func_dict['__template__'] = {'function':func.__name__, 'view_class':func.__old_rule__['clsname'], 'appname':appname}
                             v[1] = new_endpoint
                             v[4] = now()
                             func.func_dict['__saved_rule__'] = v
-                            __no_need_exposed__.append(v) 
+                            __no_need_exposed__.append(v)
                 else:
                     rule = self._get_url(appname, prefix, func)
                     endpoint = '.'.join([f.__module__, clsname, func.__name__])
-                    __no_need_exposed__.append((appname, endpoint, rule, {}, now()))
-    
+                    x = appname, endpoint, rule, {}, now()
+                    __no_need_exposed__.append(x)
+                    func.func_dict['__exposed__'] = True
+                    func.func_dict['__saved_rule__'] = list(x)
+                    func.func_dict['__old_rule__'] = {'rule':rule, 'clsname':clsname}
+                    func.func_dict['__template__'] = None
+                    
     def _get_url(self, appname, prefix, f):
         args = inspect.getargspec(f)[0]
         if args:
@@ -184,20 +226,28 @@ class Expose(object):
         else:
             rule = self.rule
         rule = self._fix_url(appname, rule)
+        
+        #get endpoint
+        clsname = ''
         if inspect.ismethod(f):
-            endpoint = '.'.join([f.im_class.__module__, f.im_class.__name__, f.__name__])
-        else:
+            if not f.im_self:    #instance method
+                clsname = f.im_class.__name__
+            else:                       #class method
+                clsname = f.im_self.__name__
+            endpoint = '.'.join([f.im_class.__module__, clsname, f.__name__])
+        elif inspect.isfunction(f):
             endpoint = '.'.join([f.__module__, f.__name__])
+        else:
+            endpoint = f
+
         f.func_dict['__exposed__'] = True
         f.func_dict['__no_rule__'] = (self.parse_level == 1) or (self.parse_level == 2 and (self.rule is None))
         if not hasattr(f, '__old_rule__'):
             f.func_dict['__old_rule__'] = {}
     
         f.func_dict['__old_rule__'][rule] = self.rule
-        #add name parameter process
-        if 'name' in self.kwargs:
-            url_name = self.kwargs.pop('name')
-            __url_names__[url_name] = endpoint
+        f.func_dict['__old_rule__']['clsname'] = clsname
+        f.func_dict['__template__'] = self.template
         return f, (appname, endpoint, rule, self.kwargs.copy(), now())
     
     def __call__(self, f):

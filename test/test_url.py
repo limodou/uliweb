@@ -8,10 +8,10 @@ def test_1():
     >>> def view():pass
     >>> f = expose('!/')(view)
     >>> rules.merge_rules() # doctest:+ELLIPSIS
-    [('__main__', '__main__.view', '/', {}, datetime.datetime...)]
+    [('__main__', '__main__.view', '/', {})]
     >>> f = expose('/hello')(view)
     >>> rules.merge_rules() # doctest:+ELLIPSIS
-    [('__main__', '__main__.view', '/', {}, datetime.datetime...), ('__main__', '__main__.view', '/hello', {}, datetime.datetime...)]
+    [('__main__', '__main__.view', '/', {}), ('__main__', '__main__.view', '/hello', {})]
     >>> @expose('/test')
     ... class TestView(object):
     ...     @expose('')
@@ -47,4 +47,125 @@ def test_1():
     __main__.TestView1.ttt /ttt
     __main__.view /
     __main__.view /hello
+    """
+    
+def test_endpoint():
+    """
+    >>> def view():pass
+    >>> f = expose('/hello')(view)
+    >>> rules.get_endpoint(f)
+    '__main__.view'
+    >>> rules.get_endpoint('views.index')
+    'views.index'
+    >>> rules.clear_rules()
+    >>> @expose('/test')
+    ... class TestView(object):
+    ...     @expose('')
+    ...     def index(self):
+    ...         return {}
+    ... 
+    ...     @expose('!/ttt')
+    ...     def ttt(self):
+    ...         return {}
+    ... 
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    >>> @expose('/test')
+    ... class TestView1(TestView):
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    ...     def test(self):
+    ...         pass
+    >>> rules.get_endpoint(TestView.pnt)
+    '__main__.TestView.pnt'
+    >>> rules.get_endpoint(TestView1.pnt)
+    '__main__.TestView1.pnt'
+    """
+
+def test_template():
+    """
+    >>> @expose('/view', template='test.html')
+    ... def view():
+    ...     pass
+    >>> print view.__template__
+    test.html
+    >>> @expose('/view')
+    ... def view():
+    ...     pass
+    >>> print view.__template__
+    None
+    >>> @expose('/test')
+    ... class TestView(object):
+    ...     @expose('')
+    ...     def index(self):
+    ...         return {}
+    ... 
+    ...     @expose('!/ttt')
+    ...     def ttt(self):
+    ...         return {}
+    ... 
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    >>> @expose('/test', replace=True)
+    ... class TestView1(TestView):
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    ...     @expose('/test', template='test.html')
+    ...     def test(self):
+    ...         pass
+    >>> print TestView.index.__template__
+    {'function': 'index', 'view_class': 'TestView', 'appname': '__main__'}
+    >>> print TestView1.index.__template__
+    {'function': 'index', 'view_class': 'TestView', 'appname': '__main__'}
+    >>> print TestView1.pnt.__template__
+    None
+    >>> print TestView1.test.__template__
+    test.html
+    """
+
+def test_template1():
+    """
+    >>> @expose('/view', template='test.html')
+    ... def view():
+    ...     pass
+    >>> print view.__template__
+    test.html
+    >>> @expose('/view')
+    ... def view():
+    ...     pass
+    >>> print view.__template__
+    None
+    >>> @expose('/test')
+    ... class TestView(object):
+    ...     @expose('')
+    ...     def index(self):
+    ...         return {}
+    ... 
+    ...     @expose('!/ttt')
+    ...     def ttt(self):
+    ...         return {}
+    ... 
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    >>> @expose('/test')
+    ... class TestView1(TestView):
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    ...     @expose('/test', template='test.html')
+    ...     def test(self):
+    ...         pass
+    >>> print TestView.index.__template__
+    None
+    >>> print TestView1.index.__template__
+    None
+    >>> print TestView1.pnt.__template__
+    None
+    >>> print TestView1.test.__template__
+    test.html
     """
