@@ -44,6 +44,7 @@ Uliweb Change Log
 * Fix rabc init not using functions.has_role and functions.has_permission.
 * Fix rules.py bug
 * Fix rule process, add expose(replace, template) support
+* Revert ORM.NULLABLE = True
 
 0.2.1 Version
 -----------------
