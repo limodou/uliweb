@@ -1,6 +1,11 @@
 Uliweb Change Log
 =====================
 
+0.2.3 Version
+-----------------
+
+* Update nginx.conf, add proxy_set_header
+
 0.2.2 Version
 -----------------
 
