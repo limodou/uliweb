@@ -454,6 +454,28 @@ def do_(query, ec=None, args=None):
             Local.echo_func('\n===<<<<< time used %fs\n\n' % t)
                 
     return result
+
+def save_file(result, filename, encoding='utf8', visitor=None):
+    """
+    save query result to a csv file
+    visitor can used to convert values, all value should be convert to string
+    visitor function should be defined as:
+        def visitor(keys, values, encoding):
+            #return new values []
+    """
+    import csv
+    from uliweb.utils.common import simple_value
+    
+    with open(filename, 'wb') as f:
+        w = csv.writer(f)
+        w.writerow(result.keys())
+        for row in result:
+            if visitor and callable(visitor):
+                _row = visitor(result.keys, row.values(), encoding)
+            else:
+                _row = row
+            r = [simple_value(x, encoding=encoding) for x in _row]
+            w.writerow(r)
     
 def Begin(ec=None):
     ec = ec or 'default'
@@ -1618,7 +1640,11 @@ class Result(object):
     def get_column(self, model, fieldname):
         if isinstance(fieldname, (str, unicode)):
             if issubclass(model, Model):
-                field = model.table.c[fieldname]
+                v = fieldname.split('.')
+                if len(v) > 1:
+                    field = get_model(v[0]).table.c(v[1])
+                else:
+                    field = model.table.c[fieldname]
             else:
                 field = model.c[fieldname]
         else:
@@ -1639,6 +1665,29 @@ class Result(object):
         
         return fields
     
+    def get_fields(self):
+        """
+        get property instance according self.columns
+        """
+        columns = self.columns
+        model = self.model
+        fields = []
+        for col in columns:
+            if isinstance(col, (str, unicode)):
+                v = col.split('.')
+                if len(v) > 1:
+                    field = get_model(v[0]).properties(v[1])
+                else:
+                    field = model.properties[col]
+            elif isinstance(col, Column):
+                field = get_model(col.table.name).properties[col.name]
+            else:
+                field = col
+            
+            fields.append(field)
+        
+        return fields
+        
     def connect(self, connection):
         if connection:
             self.connection = connection
@@ -1753,6 +1802,24 @@ class Result(object):
             query = getattr(query, 'limit')(limit)
         self.result = self.do_(query)
         return self.result
+    
+    def save_file(self, filename, encoding='utf8', display=True):
+        """
+        save result to a csv file.
+        display = True will convert value according choices value
+        """
+        global save_file
+        
+        if display:
+            fields = self.get_fields()
+            def visitor(keys, values, encoding):
+                r = []
+                for i, column in enumerate(fields):
+                    r.append(column.get_display_value(values[i]))
+                return r
+        else:
+            visitor = None
+        return save_file(self.run(), filename, encoding=encoding, visitor=visitor)
     
     def get_query(self):
         #user can define default_query, and default_query 

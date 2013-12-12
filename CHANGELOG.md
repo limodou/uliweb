@@ -5,6 +5,7 @@ Uliweb Change Log
 -----------------
 
 * Update nginx.conf, add proxy_set_header
+* Add `save_file()` function to orm, so you can save select reesult to a csv file
 
 0.2.2 Version
 -----------------
