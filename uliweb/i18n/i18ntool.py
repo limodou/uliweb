@@ -22,12 +22,13 @@ def _get_outputfile(path, locale='en'):
     output = os.path.normpath(os.path.join(path, 'locale', locale, 'LC_MESSAGES', 'uliweb.pot'))
     return output
 
-def _process(path, locale, options):
+def _process(path, locale, options, output_dir=None):
     from pygettext import extrace_files
     from po_merge import merge
     from uliweb.utils import pyini
 
-    output = _get_outputfile(path, locale=locale)
+    output_dir = output_dir or path
+    output = _get_outputfile(output_dir, locale=locale)
     try:
         if options['template']:
             x = pyini.Ini(options['template'])
@@ -72,11 +73,18 @@ class I18nCommand(Command):
     )
     
     def handle(self, options, global_options, *args):
+        from uliweb.utils.common import check_apps_dir
         opts = {'verbose':global_options.verbose, 'template':options.template,
             'exact':options.exact}
         if options.project:
-            _process(global_options.project, options.locale, opts)
+            check_apps_dir(global_options.apps_dir)
+            app = self.get_application(global_options)
+            
+            _process(global_options.apps_dir, options.locale, opts, output_dir=global_options.project)
         elif options.apps or args:
+            check_apps_dir(global_options.apps_dir)
+            
+            app = self.get_application(global_options)
             if options.apps:
                 _apps = SimpleFrame.get_apps(global_options.apps_dir)
             else:

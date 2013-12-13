@@ -8,6 +8,8 @@ Uliweb Change Log
 * Add `save_file()` function to orm, so you can save select reesult to a csv file
 * Add 'save_file()` method to Result.
 * Fix missing `clear()` function of SortedDict.
+* Fix i18n process, for project and apps extraction, it'll create application first, so that
+  user defined tag will be registered correctly. But user defined tag will be limited later. 
 
 0.2.2 Version
 -----------------
