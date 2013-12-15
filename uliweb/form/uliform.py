@@ -68,7 +68,7 @@ class FieldProxy(object):
     def label(self):
         return self.get_label()
     
-    def get_label(self, _class='field'):
+    def get_label(self, _class=None):
         if self.field.__class__ is BooleanField:
             delimeter = False
         else:
@@ -102,7 +102,7 @@ class FieldProxy(object):
     
 class BaseField(object):
     default_build = Text
-    field_css_class = 'field'
+    field_css_class = ''
     default_validators = []
     default_datatype = None
     creation_counter = 0
@@ -556,14 +556,14 @@ class _BaseDatetimeField(StringField):
             return ''
     
 class DateField(_BaseDatetimeField):
-    field_css_class = 'field field_date'
+    field_css_class = 'field_date'
 
 class TimeField(_BaseDatetimeField):
-    field_css_class = 'field field_time'
+    field_css_class = 'field_time'
     time_func = 'to_time'
     
 class DateTimeField(_BaseDatetimeField):
-    field_css_class = 'field field_datetime'
+    field_css_class = 'field_datetime'
     time_func = 'to_datetime'
     
 class FormMetaclass(type):

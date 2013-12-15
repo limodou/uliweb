@@ -38,7 +38,7 @@ class User(Model):
         return functions.url_for_static('images/user%dx%d.jpg' % (size, size))
         
     def __unicode__(self):
-        return (self.nickname or self.username) + _('(Deleted)') if self.deleted else ''
+        return (self.nickname or self.username) + (_('(Deleted)') if self.deleted else '')
     
     class Meta:
         display_field = 'username'

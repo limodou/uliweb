@@ -262,7 +262,7 @@ class BootstrapTableLayout(TableLayout):
                             tr << "&nbsp"
                         else:
                             if self.label_fix:
-                                tr << f.field.get_label(_class='field label_fix')
+                                tr << f.field.get_label(_class='label_fix')
                             else:
                                 tr << f.get_label(_class='control-label')                            
                             
@@ -291,7 +291,7 @@ class CSSLayout(Layout):
 
     def _buttons_line(self, buttons):
         div = Div()
-        div << Tag('label', '&nbsp;', _class='field')
+        div << Tag('label', '&nbsp;')
         div << buttons
         div << Tag('br/')
         return div

@@ -21,7 +21,7 @@ def str_u(v, encoding='utf-8'):
     else:
         return unicode(v, encoding)
 
-def to_attrs(args, nocreate_if_none=['id', 'for']):
+def to_attrs(args, nocreate_if_none=['id', 'for', 'class']):
     """
     Make python dict to k="v" format
     """

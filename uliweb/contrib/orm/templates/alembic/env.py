@@ -44,7 +44,7 @@ def run_migrations_offline():
 
 def uliweb_include_object(object, name, type_, reflected, compare_to):
     if type_ == 'table':
-        if object.__mapping_only__:
+        if hasattr(object, '__mapping_only__') and object.__mapping_only__:
             log.info("{{white|red:Skipped}} added table %r", name)
             return False
     return True
