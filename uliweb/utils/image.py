@@ -78,9 +78,19 @@ def test_image(filename, strong=False):
     If strong is true, it'll really open the file, but with strong is false,
     it'll only test the file suffix
     """
-    ext = os.path.splitext(filename)[1]
-    if ext.lower() in ['.jpg', '.bmp', '.png', '.ico', 'jpeg', 'gif']:
-        return True
+    if strong:
+        from PIL import Image
+        if not os.path.exists(filename):
+            return False
+        try:
+            image = Image.open(filename)
+            return True
+        except:
+            return False
+    else:
+        ext = os.path.splitext(filename)[1]
+        if ext.lower() in ['.jpg', '.bmp', '.png', '.ico', 'jpeg', 'gif']:
+            return True
     
 def crop_resize(fobj, outfile, x, y, w, h, size=(50, 50), quality=None):
     from PIL import Image

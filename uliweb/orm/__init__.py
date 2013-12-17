@@ -20,7 +20,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'ModelInstanceError', 'KindError', 'ConfigurationError',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
     'CommitAll', 'RollbackAll', 'set_lazy_model_init',
-    'begin_sql_monitor', 'close_sql_monitor', 'set_model_config',
+    'begin_sql_monitor', 'close_sql_monitor', 'set_model_config', 'text',
     'get_object', 'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
     ]
 
