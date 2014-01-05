@@ -5,7 +5,7 @@ Uliweb Change Log
 -----------------
 
 * Update nginx support output, add proxy_set_header
-* Add `save_file()` function to orm, so you can save select reesult to a csv file
+* Add `save_file()` function to orm, so you can save select result to a csv file
 * Add `save_file()` method to Result.
 * Fix missing `clear()` function of SortedDict.
 * Fix i18n process, for project and apps extraction, it'll create application first, so that

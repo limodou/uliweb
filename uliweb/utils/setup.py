@@ -1,6 +1,7 @@
 from setuptools import setup
 from setuptools.command import build_py as b
 import os,sys
+import glob
 
 #remove build and dist directory
 import shutil

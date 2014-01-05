@@ -1,8 +1,0 @@
-Programmer:	Limodou
-E-mail:		limodou@gmail.com
-
-Copyleft 2009 Limodou
-
-Uliweb is a free software and distributed under the terms of the BSD License.
-
-For third party packages will be distributed under the license of their own.
