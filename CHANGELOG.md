@@ -4,12 +4,14 @@ Uliweb Change Log
 0.2.3 Version
 -----------------
 
-* Update nginx.conf, add proxy_set_header
+* Update nginx support output, add proxy_set_header
 * Add `save_file()` function to orm, so you can save select reesult to a csv file
-* Add 'save_file()` method to Result.
+* Add `save_file()` method to Result.
 * Fix missing `clear()` function of SortedDict.
 * Fix i18n process, for project and apps extraction, it'll create application first, so that
   user defined tag will be registered correctly. But user defined tag will be limited later. 
+* Add `walk_dirs()` to utils/common.py. This function can ignore some files and file ext, 
+  and supports fnmatch pattern.
 
 0.2.2 Version
 -----------------

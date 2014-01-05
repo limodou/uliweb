@@ -31,7 +31,7 @@ class CommandError(Exception):
     """
     pass
 
-def get_answer(message, answers='Yn', default='Y', quit='n'):
+def get_answer(message, answers='Yn', default='Y', quit=''):
     """
     Get an answer from stdin, the answers should be 'Y/n' etc.
     If you don't want the user can quit in the loop, then quit should be None.
@@ -59,17 +59,16 @@ def get_input(prompt, default=None, choices=None, option_value=None):
         return option_value
     
     choices = choices or []
-    r = ''
     while 1:
-        if not r:
-            r = raw_input(prompt)
+        r = raw_input(prompt+' ').strip()
+        if not r and default is not None:
+            return default
         if choices:
             if r not in choices:
                 r = None
             else:
                 break
         else:
-            r = r or default
             break
     return r
 

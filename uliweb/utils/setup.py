@@ -4,10 +4,10 @@ import os,sys
 
 #remove build and dist directory
 import shutil
-if os.path.exists('build'):
-    shutil.rmtree('build')
-if os.path.exists('dist'):
-    shutil.rmtree('dist')
+#if os.path.exists('build'):
+#    shutil.rmtree('build')
+#if os.path.exists('dist'):
+#    shutil.rmtree('dist')
 
 def copy_dir(self, package, src, dst):
     self.mkpath(dst)

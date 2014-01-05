@@ -98,9 +98,9 @@ def extract_file(module, path, dist, verbose=False, replace=True):
         dfile = dist
     f = os.path.exists(dfile)
     if replace or not f:
-        shutil.copy2(inf, dist)
+        shutil.copy2(inf, dfile)
         if verbose:
-            print 'Copy %s to %s' % (inf, dist)
+            print 'Copy %s to %s' % (inf, dfile)
   
 def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, recursion=True, replace=True):
     """
@@ -131,6 +131,42 @@ def extract_dirs(mod, path, dst, verbose=False, exclude=None, exclude_ext=None, 
                 continue
             extract_file(mod, fpath, dst, verbose, replace)
 
+def match(f, patterns):
+    from fnmatch import fnmatch
+    
+    flag = False
+    for x in patterns:
+        if fnmatch(f, x):
+            return True
+        
+def walk_dirs(path, exclude=None, exclude_ext=None, recursion=True):
+    """
+    path directory path
+    resursion True will extract all sub module of mod
+    """
+    default_exclude = ['.svn', '_svn', '.git']
+    default_exclude_ext = ['.pyc', '.pyo', '.bak', '.tmp']
+    exclude = exclude or []
+    exclude_ext = exclude_ext or []
+
+    if not os.path.exists(path):
+        raise StopIteration
+    
+    for r in os.listdir(path):
+        if match(r, exclude) or r in default_exclude:
+            continue
+        fpath = os.path.join(path, r)
+        if os.path.isdir(fpath):
+            yield os.path.normpath(fpath).replace('\\', '/')
+            if recursion:
+                for f in walk_dirs(fpath, exclude, exclude_ext, recursion):
+                    yield os.path.normpath(f).replace('\\', '/')
+        else:
+            ext = os.path.splitext(fpath)[1]
+            if ext in exclude_ext or ext in default_exclude_ext:
+                continue
+            yield os.path.normpath(fpath).replace('\\', '/')
+
 def copy_dir(src, dst, verbose=False, check=False, processor=None):
     import shutil
 
@@ -157,8 +193,12 @@ def copy_dir(src, dst, verbose=False, check=False, processor=None):
         if r in ['.svn', '_svn', '.git']:
             continue
         fpath = os.path.join(src, r)
+        
         if os.path.isdir(fpath):
-            copy_dir(fpath, os.path.join(dst, r), verbose, check, processor)
+            if os.path.abspath(fpath) != os.path.abspath(dst):
+                copy_dir(fpath, os.path.join(dst, r), verbose, check, processor)
+            else:
+                continue
         else:
             ext = os.path.splitext(fpath)[1]
             if ext in ['.pyc', '.pyo', '.bak', '.tmp']:
