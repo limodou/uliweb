@@ -1721,7 +1721,7 @@ class Result(object):
         """
         if not condition:
             return self
-        cond = None
+        cond = ''
         for c in condition:
             if c is not None:
                 cond = c & cond
@@ -1941,7 +1941,7 @@ class ManyResult(Result):
         self.realfieldb = realfieldb
         self.valuea = valuea
         self.columns = list(self.modelb.table.c)
-        self.condition = None
+        self.condition = ''
         self.funcs = []
         self.result = None
         self.with_relation_name = None
@@ -2429,7 +2429,7 @@ class ManyToMany(ReferenceProperty):
             return (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fielda].in_(ids))
     
     def filter(self, *condition):
-        cond = None
+        cond = ''
         for c in condition:
             if c is not None:
                 cond = c & cond
@@ -2438,7 +2438,7 @@ class ManyToMany(ReferenceProperty):
         return condition
 
     def join_filter(self, *condition):
-        cond = None
+        cond = ''
         for c in condition:
             if c is not None:
                 cond = c & cond

@@ -1,6 +1,19 @@
 Uliweb Change Log
 =====================
 
+0.2.4 Version
+-----------------
+
+* Fix ORM is not compatible with SQLAlchemy 0.9.1. Old style:
+
+    ```
+    cond = None
+    cond = (Blog.c.id==5) & None
+    ```
+    
+    will not right in 0.9.1, because None will not be skipped, so you can change
+    above code `cond = None` to `cond = ''` .
+    
 0.2.3 Version
 -----------------
 
