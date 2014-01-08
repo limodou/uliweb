@@ -19,7 +19,9 @@ Uliweb Change Log
     ```
     'flash' in function
     ```
-    
+* Refact `functions.flash` and `functions.get_fileserving`, not need to config
+  relative Apps. 
+
 0.2.3 Version
 -----------------
 

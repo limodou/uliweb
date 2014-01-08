@@ -3,6 +3,7 @@ from __future__ import with_statement
 from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 import os, sys
+import logging
 import time
 import inspect
 from uliweb.orm import get_model, Model, Result, do_, Lazy
@@ -10,7 +11,7 @@ import uliweb.orm as orm
 from uliweb import redirect, json, functions, UliwebError, Storage
 from sqlalchemy.sql import select, Select, func
 from sqlalchemy.engine import RowProxy
-from uliweb.contrib.upload import FileServing, FilenameConverter
+from uliweb.contrib.upload import FileServing, FilenameConverter, get_fileserving
 from uliweb.utils.common import safe_unicode, safe_str
 from uliweb.core.html import Builder
 from uliweb.utils.sorteddict import SortedDict
@@ -655,7 +656,7 @@ class AddView(object):
         self.file_convert = file_convert
         self.upload_to = upload_to
         self.upload_to_sub = upload_to_sub
-        self.fileserving = functions.get_fileserving(fileserving_config)
+        self.fileserving = get_fileserving(fileserving_config)
         self.protect = protect
         self.protect_field_name = protect_field_name or self.protect_field_name
         self.form = self.make_form(form)
@@ -828,7 +829,12 @@ class AddView(object):
             return to_json_result(True, self.success_msg, self.on_success_data(obj, d), json_func=self.json_func)
         else:
             if self.use_flash:
-                functions.flash(self.success_msg)
+                if 'flash' in functions:
+                    functions.flash(self.success_msg)
+                else:
+                    log = logging.getLogger('uliweb.app')
+                    log.debug("Can't find flash function in functions")
+                    
             if self.ok_url:
                 return redirect(get_url(self.ok_url, id=obj.id))
             else:
@@ -836,8 +842,6 @@ class AddView(object):
                 return d
         
     def on_fail(self, d, json_result=False):
-        import logging
-        
         log = logging.getLogger('uliweb.app')
         log.debug(self.form.errors)
         if json_result:
