@@ -35,6 +35,18 @@ Uliweb Change Log
 * Refact `functions.flash` and `functions.get_fileserving`, not need to config
   relative Apps. 
 
+* Fix yield support in view function, you can also used in gevent environment, for example:
+
+    ```
+    @expose('/test')
+    def test():
+        yield "<ul>"
+        for i in range(10):
+            yield "<li>%d</li>" % (i + 1)
+            sleep(1)
+        yield "</ul>"
+    ```
+
 0.2.3 Version
 -----------------
 

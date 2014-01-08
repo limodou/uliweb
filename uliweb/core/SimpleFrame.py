@@ -7,6 +7,7 @@ import os, sys
 import cgi
 import inspect
 import re
+import types
 from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, BadRequest
@@ -719,8 +720,6 @@ class Dispatcher(object):
         return mod, _klass, handler
     
     def call_view(self, mod, cls, handler, request, response=None, wrap_result=None, args=None, kwargs=None):
-        import types
-        
         #get env
         wrap = wrap_result or self.wrap_result
         env = self.get_view_env()
@@ -826,6 +825,9 @@ class Dispatcher(object):
             response.write(result)
         elif isinstance(result, (Response, BaseResponse)):
             response = result
+        #add generator support 2014-1-8
+        elif isinstance(result, types.GeneratorType):
+            return Response(result, direct_passthrough=True, content_type='text/html')
         else:
             response = Response(str(result), content_type='text/html')
         return response
@@ -1196,8 +1198,7 @@ class Dispatcher(object):
 
     def __call__(self, environ, start_response):
         response = self._open(environ)
-        return ClosingIterator(response(environ, start_response),
-                               [local_manager.cleanup])
+        return response(environ, start_response)
             
 class DispatcherHandler(object):
     def __init__(self, application):
