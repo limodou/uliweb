@@ -12,7 +12,20 @@ Uliweb Change Log
     ```
     
     will not right in 0.9.1, because None will not be skipped, so you can change
-    above code `cond = None` to `cond = ''` .
+    above code `cond = None` to :
+    
+    ```
+    from sqlalchemy.sql import true
+    cond = true()
+    ``` 
+    
+    or
+    
+    ```
+    from uliweb.orm import true
+    cond = true()
+    ```
+    
 * add `__contains__` to functions, so you can test if an API is already defined, just
   use:
 

@@ -49,7 +49,7 @@ import copy
 from uliweb.utils import date as _date
 from uliweb.utils.common import flat_list, classonlymethod
 from sqlalchemy import *
-from sqlalchemy.sql import select, ColumnElement, text
+from sqlalchemy.sql import select, ColumnElement, text, true
 from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
@@ -1721,7 +1721,7 @@ class Result(object):
         """
         if not condition:
             return self
-        cond = ''
+        cond = true()
         for c in condition:
             if c is not None:
                 cond = c & cond
@@ -2429,7 +2429,7 @@ class ManyToMany(ReferenceProperty):
             return (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fielda].in_(ids))
     
     def filter(self, *condition):
-        cond = ''
+        cond = true()
         for c in condition:
             if c is not None:
                 cond = c & cond
@@ -2438,7 +2438,7 @@ class ManyToMany(ReferenceProperty):
         return condition
 
     def join_filter(self, *condition):
-        cond = ''
+        cond = true()
         for c in condition:
             if c is not None:
                 cond = c & cond
