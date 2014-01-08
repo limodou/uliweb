@@ -105,7 +105,7 @@ I also constructed a few new "wheels" myself. For example:
     * middleware extension. It's similar to Djangos. You can configure it in configuration
         files. Each middleware can process the request and response objets.
     * Special function calls in the views module initial process. If you write a special
-        function named __begin__, it'll be processed before any view function can be processed,
+        function named `__begin__`, it'll be processed before any view function can be processed,
         this allows developers to do some module level processing at that point, for example:
         check the user authentication, etc.
 

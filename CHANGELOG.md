@@ -13,6 +13,12 @@ Uliweb Change Log
     
     will not right in 0.9.1, because None will not be skipped, so you can change
     above code `cond = None` to `cond = ''` .
+* add `__contains__` to functions, so you can test if an API is already defined, just
+  use:
+
+    ```
+    'flash' in function
+    ```
     
 0.2.3 Version
 -----------------

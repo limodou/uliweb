@@ -59,6 +59,14 @@ class Finder(object):
         self.__objects = {}
         self.__section = section
     
+    def __contains__(self, name):
+        if name in self.__objects:
+            return True
+        if name not in settings[self.__section]:
+            return False
+        else:
+            return True
+        
     def __getattr__(self, name):
         if name in self.__objects:
             return self.__objects[name]
