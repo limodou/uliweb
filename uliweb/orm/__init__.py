@@ -46,6 +46,7 @@ import decimal
 import threading
 import datetime
 import copy
+import re
 from uliweb.utils import date as _date
 from uliweb.utils.common import flat_list, classonlymethod
 from sqlalchemy import *
@@ -393,24 +394,31 @@ def ResetAll():
 def default_post_do(sender, query, conn, usetime):
     if __default_post_do__:
         __default_post_do__(sender, query, conn, usetime)
-       
+      
+re_placeholder = re.compile(r'%\(\w+\)s')
 def rawsql(query, ec=None):
-    from MySQLdb.converters import conversions, escape
+#    from MySQLdb.converters import conversions, escape
     if isinstance(query, Result):
         query = query.get_query()
 
     ec = ec or 'default'
     engine = engine_manager[ec]
     dialect = engine.engine.dialect
-    enc = dialect.encoding
+#    enc = dialect.encoding
     comp = query.compile(dialect=dialect)
-    params = []
-    for k in comp.positiontup:
-        v = comp.params[k]
-        if isinstance(v, unicode):
-            v = v.encode(enc)
-        params.append( escape(v, conversions) )
-    return (comp.string.encode(enc).replace('?', '%s') % tuple(params))
+    b = re_placeholder.search(comp.string)
+    if b:
+        return comp.string % comp.params
+    else:
+        params = []
+        for k in comp.positiontup:
+            v = comp.params[k]
+#            if isinstance(v, unicode):
+#                v = v.encode(enc)
+#            params.append( escape(v, conversions) )
+#            return (comp.string.encode(enc).replace('?', '%s') % tuple(params))
+            params.append(v)
+        return comp.string.replace('?', '%s') % tuple(params)
     
     
 def do_(query, ec=None, args=None):

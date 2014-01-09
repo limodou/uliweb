@@ -47,6 +47,8 @@ Uliweb Change Log
         yield "</ul>"
     ```
 
+* Fix `rawsql()` bug for different database engine
+
 0.2.3 Version
 -----------------
 
