@@ -48,6 +48,7 @@ Uliweb Change Log
     ```
 
 * Fix `rawsql()` bug for different database engine
+* Fix `jsonp()` dumps Chinese characters bug
 
 0.2.3 Version
 -----------------

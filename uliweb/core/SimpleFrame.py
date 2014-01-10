@@ -172,7 +172,7 @@ def jsonp(data, **json_kwargs):
     else:
         cb = 'callback'
         
-    begin = request.GET.get(cb)
+    begin = str(request.GET.get(cb))
     if not begin:
         raise BadRequest("Can't found %s parameter in request's query_string" % cb)
     if not r_callback.match(begin):
