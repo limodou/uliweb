@@ -29,8 +29,8 @@ def get_engine(options, global_options):
     return engine
 
 def print_engine(engine):
-    url = re.sub(r':.*@', ':***@', str(engine.url))
-    print 'Connection : %s://%s' % (engine.name, url)
+    url = re.sub(r'(?<=//)(.*?):.*@', r'\1:***@', str(engine.url))
+    print 'Connection : %s' % url
     print
     
 def reflect_table(engine, tablename):
