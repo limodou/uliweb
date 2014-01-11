@@ -1,4 +1,5 @@
 import os, sys
+import re
 import datetime
 from decimal import Decimal
 from uliweb.core.commands import Command, get_answer, CommandManager
@@ -23,8 +24,15 @@ def get_engine(options, global_options):
     #set_auto_set_model(True)
     engine_name = options.engine
     engine = get_connection(engine_name=engine_name)
+    if global_options.verbose:
+        print_engine(engine)
     return engine
 
+def print_engine(engine):
+    url = re.sub(r':.*@', ':***@', str(engine.url))
+    print 'Connection : %s://%s' % (engine.name, url)
+    print
+    
 def reflect_table(engine, tablename):
     meta = MetaData()
     table = Table(tablename, meta)

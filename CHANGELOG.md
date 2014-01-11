@@ -49,7 +49,26 @@ Uliweb Change Log
 
 * Fix `rawsql()` bug for different database engine
 * Fix `jsonp()` dumps Chinese characters bug
+* Add `trim_path()` function to `utils/common.py`, it can trim a file path to 
+  limited length, for example:
 
+    ```
+    >>> a = '/project/apps/default/settings.ini'
+    >>> trim_path(a, 30)
+    '.../apps/default/settings.ini'
+    ```
+    
+    Default limited length is 30.
+* Add ORM connection information output when given -v option in command line. And
+  the password will be replace with '*'. For example:
+
+    ```
+    $>uliweb syncdb -v
+    Connection : mysql://mysql:***@localhost/blog?charset=utf8
+    
+    [default] Creating [1/1, blog] blog...EXISTED
+    ```
+    
 0.2.3 Version
 -----------------
 

@@ -630,6 +630,23 @@ class classonlymethod(classmethod):
             raise AttributeError("This method can only be called with class object.")
         return super(classonlymethod, self).__get__(instance, owner)
 
+def trim_path(path, length=30):
+    """
+    trim path to specified length, for example:
+    >>> a = '/project/apps/default/settings.ini'
+    >>> trim_path(a)
+    '.../apps/default/settings.ini'
+    
+    The real length will be length-4, it'll left '.../' for output.
+    """
+    s = path.replace('\\', '/').split('/')
+    t = -1
+    for i in range(len(s)-1, -1, -1):
+        t = len(s[i]) + t + 1
+        if t > length-4:
+            break
+    return '.../' + '/'.join(s[i+1:])
+    
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:

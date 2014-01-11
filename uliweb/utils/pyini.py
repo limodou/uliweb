@@ -254,11 +254,17 @@ class RawValue(object):
         self.replace_flag = replace_flag
         
     def __str__(self):
-        _length = 30
+        _length = 26
         if len(self.filename) > _length:
-            filename = '...' + self.filename[(len(self.filename)-_length+3):]
+            s = self.filename.replace('\\', '/').split('/')
+            t = -1
+            for i in range(len(s)-1, -1, -1):
+                t = len(s[i]) + t + 1
+                if t > _length:
+                    break
+            filename = '.../' + '/'.join(s[i+1:])
         else:
-            filename = self.filename
+            filename = self.filename.replace('\\', '/')
         return '%-30s:%04d' % (filename, self.lineno)
     
     def value(self):
