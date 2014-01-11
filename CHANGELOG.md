@@ -68,6 +68,13 @@ Uliweb Change Log
     
     [default] Creating [1/1, blog] blog...EXISTED
     ```
+* Add multiple apps support for `makeapp` command, so you can use :
+
+    ```
+    uliweb makeapp a b c
+    ```
+    
+    to create `a`, `b`, `c` apps at once time.
     
 0.2.3 Version
 -----------------

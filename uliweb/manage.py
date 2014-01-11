@@ -173,32 +173,35 @@ class MakeAppCommand(Command):
     check_apps_dirs = False
     
     def handle(self, options, global_options, *args):
+        from uliweb.utils.common import extract_dirs
+
         if not args:
             appname = ''
             while not appname:
                 appname = raw_input('Please enter app name:')
+            apps = [appname]
         else:
-            appname = args[0]
+            apps = args
         
-        ans = '-1'
-        app_path = appname.replace('.', '//')
-        if os.path.exists('apps'):
-            path = os.path.join('apps', app_path)
-        else:
-            path = app_path
-        
-        if os.path.exists(path):
-            if options.force:
+        for appname in apps:
+            ans = '-1'
+            app_path = appname.replace('.', '//')
+            if os.path.exists('apps'):
+                path = os.path.join('apps', app_path)
+            else:
+                path = app_path
+            
+            if os.path.exists(path):
+                if options.force:
+                    ans = 'y'
+                while ans not in ('y', 'n'):
+                    ans = raw_input('The app directory has been existed, do you want to overwrite it?(y/n)[n]')
+                    if not ans:
+                        ans = 'n'
+            else:
                 ans = 'y'
-            while ans not in ('y', 'n'):
-                ans = raw_input('The app directory has been existed, do you want to overwrite it?(y/n)[n]')
-                if not ans:
-                    ans = 'n'
-        else:
-            ans = 'y'
-        if ans == 'y':
-            from uliweb.utils.common import extract_dirs
-            extract_dirs('uliweb', 'template_files/app', path, verbose=global_options.verbose)
+            if ans == 'y':
+                extract_dirs('uliweb', 'template_files/app', path, verbose=global_options.verbose)
 register_command(MakeAppCommand)
 
 class MakePkgCommand(Command):
