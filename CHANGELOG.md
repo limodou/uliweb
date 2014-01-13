@@ -95,7 +95,8 @@ Uliweb Change Log
         return value + 'test'
     save_file(do_(select([User.c.name])), 'test.csv', convertors={'name':name})
     ```
-        
+* Fix `call_view()` invoke `wrap_result` bug. Missing pass `handler` parameter to wrap_result.
+    
 0.2.3 Version
 -----------------
 
