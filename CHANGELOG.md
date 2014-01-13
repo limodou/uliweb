@@ -30,12 +30,11 @@ Uliweb Change Log
   use:
 
     ```
-    'flash' in function
+    'flash' in functions
     ```
-* Refact `functions.flash` and `functions.get_fileserving`, not need to config
-  relative Apps. 
+* Refact generic.py, remove `functions.flash` and `functions.get_fileserving` dependencies by default. 
 
-* Fix yield support in view function, you can also used in gevent environment, for example:
+* Fix `yield` support in view function, you can also used in gevent environment, for example:
 
     ```
     @expose('/test')
@@ -59,12 +58,12 @@ Uliweb Change Log
     ```
     
     Default limited length is 30.
-* Add ORM connection information output when given -v option in command line. And
-  the password will be replace with '*'. For example:
+* Add ORM connection information output when given `-v` option in command line. And
+  the password will be replace with `'*'`. For example:
 
     ```
     $>uliweb syncdb -v
-    Connection : mysql://mysql:***@localhost/blog?charset=utf8
+    Connection : mysql://blog:***@localhost/blog?charset=utf8
     
     [default] Creating [1/1, blog] blog...EXISTED
     ```
