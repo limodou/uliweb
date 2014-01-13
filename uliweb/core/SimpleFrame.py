@@ -765,11 +765,11 @@ class Dispatcher(object):
             
         result = _process_begin(mod)
         if result is not None:
-            return wrap(result, request, response, env)
+            return wrap(handler, result, request, response, env)
         
         result = _process_begin(cls)
         if result is not None:
-            return wrap(result, request, response, env)
+            return wrap(handler, result, request, response, env)
         
         #preprocess __end__
         mod_end = _prepare_end(mod)
@@ -780,12 +780,12 @@ class Dispatcher(object):
         if mod_end:
             result1 = _process_end(mod)
             if result1 is not None:
-                return wrap(result1, request, response, env)
+                return wrap(handler, result1, request, response, env)
         
         if cls_end:
             result1 = _process_end(cls)
             if result1 is not None:
-                return wrap(result1, request, response, env)
+                return wrap(handler, result1, request, response, env)
 
         return result
         

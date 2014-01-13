@@ -75,7 +75,27 @@ Uliweb Change Log
     ```
     
     to create `a`, `b`, `c` apps at once time.
+* Refactor `save_file()` process, add `headers` and `convertors` parameter.
+
+    `headers` used to create csv header instead of using column name, but you can
+    create alias name like this:
     
+    ```
+    User.c.username.label(u"Name")
+    ```
+    
+    and `convertors` used to convert column value, for example:
+    
+    ```
+    def name(value, data):
+        """
+        value is the column value
+        data is the current record object
+        """
+        return value + 'test'
+    save_file(do_(select([User.c.name])), 'test.csv', convertors={'name':name})
+    ```
+        
 0.2.3 Version
 -----------------
 

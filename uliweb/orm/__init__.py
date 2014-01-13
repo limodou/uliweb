@@ -463,26 +463,56 @@ def do_(query, ec=None, args=None):
                 
     return result
 
-def save_file(result, filename, encoding='utf8', visitor=None):
+def save_file(result, filename, encoding='utf8', headers=None, convertors=None, visitor=None):
     """
     save query result to a csv file
     visitor can used to convert values, all value should be convert to string
     visitor function should be defined as:
         def visitor(keys, values, encoding):
             #return new values []
+    
+    convertors is used to convert single column value, for example:
+        
+        convertors = {'field1':convert_func1, 'fields2':convert_func2}
+        
+        def convert_func1(value, data):
+            value is value of field1
+            data is the record
+            
+    if visitor and convertors all provided, only visitor is available.
+    
+    headers used to convert column to a provided value
     """
     import csv
     from uliweb.utils.common import simple_value
     
+    convertors = convertors or {}
+    headers = headers or {}
+    
+    def convert(k, v, data):
+        f = convertors.get(k)
+        if f:
+            v = f(v, data)
+        return v
+    
+    def convert_header(k):
+        return headers.get(k, k)
+    
+    def _r(x):
+        if isinstance(x, (str, unicode)):
+            return re.sub('\r\n|\r|\n', ' ', x)
+        else:
+            return x
+    
     with open(filename, 'wb') as f:
         w = csv.writer(f)
-        w.writerow(result.keys())
+        w.writerow([simple_value(convert_header(x), encoding=encoding) for x in result.keys()])
         for row in result:
             if visitor and callable(visitor):
                 _row = visitor(result.keys, row.values(), encoding)
             else:
-                _row = row
-            r = [simple_value(x, encoding=encoding) for x in _row]
+                _row = [convert(k, v, row) for k, v in zip(result.keys(), row.values())]
+            r = [simple_value(_r(x), encoding=encoding) for x in _row]
             w.writerow(r)
     
 def Begin(ec=None):
@@ -1811,23 +1841,24 @@ class Result(object):
         self.result = self.do_(query)
         return self.result
     
-    def save_file(self, filename, encoding='utf8', display=True):
+    def save_file(self, filename, encoding='utf8', headers=None, convertors=None, display=True):
         """
         save result to a csv file.
         display = True will convert value according choices value
         """
         global save_file
         
+        convertors = convertors or {}
+        
         if display:
             fields = self.get_fields()
-            def visitor(keys, values, encoding):
-                r = []
-                for i, column in enumerate(fields):
-                    r.append(column.get_display_value(values[i]))
-                return r
-        else:
-            visitor = None
-        return save_file(self.run(), filename, encoding=encoding, visitor=visitor)
+            for i, column in enumerate(fields):
+                if column.name not in convertors:
+                    def f(value, data):
+                        return column.get_display_value(value)
+                    convertors[column.name] = f
+
+        return save_file(self.run(), filename, encoding=encoding, headers=headers, convertors=convertors)
     
     def get_query(self):
         #user can define default_query, and default_query 
