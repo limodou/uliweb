@@ -1,6 +1,11 @@
 Uliweb Change Log
 =====================
 
+0.2.5 Version
+-----------------
+
+* Fix config template and add `uwsgi` shell support
+
 0.2.4 Version
 -----------------
 
