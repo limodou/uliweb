@@ -45,7 +45,7 @@ except:
     defaultencoding = 'UTF-8'
 
 r_encoding = re.compile(r'\s*coding\s*[=:]\s*([-\w.]+)')
-r_var = re.compile(ur'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})', re.U)
+r_var = re.compile(ur'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})|(?:\$(\w[\d\w_]*)|\$\{(\w[\d\w_]*)\})', re.U)
 __default_env__ = {}
 
 def set_env(env=None):
@@ -158,12 +158,9 @@ def uni_prt(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
     return ''.join(s)
 
 def eval_value(value, globals, locals, encoding):
-    txt = '#coding=%s\n%s' % (encoding, value)
-    result = eval(txt, dict(globals), dict(locals))
-    
     #process {{format}}
     def sub_(m):
-        txt = m.group(1).strip()
+        txt = filter(None, m.groups())[0].strip()
         try:
             v = eval_value(str(txt), globals, locals, encoding)
             _type = type(txt)
@@ -179,8 +176,16 @@ def eval_value(value, globals, locals, encoding):
             v = m.group()
         return v
     
-    if isinstance(result, (str, unicode)):
-        result = r_var.sub(sub_, result)
+    if isinstance(value, (str, unicode)):
+        v = r_var.sub(sub_, value)
+    else:
+        v = value
+        
+    txt = '#coding=%s\n%s' % (encoding, v)
+    result = eval(txt, dict(globals), dict(locals))
+
+#    if isinstance(result, (str, unicode)):
+#        result = r_var.sub(sub_, result)
     return result
     
 class Empty(object): pass
@@ -232,7 +237,7 @@ class Lazy(object):
             result = []
             for v in self.values:
                 value = self.eval(v)
-                if not isinstance(value, (list, dict, set)):
+                if not isinstance(value, (list, dict, set)) and len(self.values)>1:
                     self.cached_value = self.eval(self.values[-1])
                     break
                 else:
@@ -373,10 +378,13 @@ class Section(SortedDict):
     
 class Ini(SortedDict):
     def __init__(self, inifile='', commentchar=None, encoding=None, 
-        env=None, convertors=None, lazy=False, writable=False, raw=False):
+        env=None, convertors=None, lazy=False, writable=False, raw=False,
+        import_env=True):
         """
         lazy is used to parse first but not deal at time, and only when 
         the user invoke finish() function, it'll parse the data.
+        
+        import_env will import all environment variables
         """
         super(Ini, self).__init__()
         self._inifile = inifile
@@ -387,6 +395,7 @@ class Ini(SortedDict):
         self._env['set'] = set
         self.update(self._env)
         self._globals = SortedDict()
+        self._import_env = import_env
         self._convertors = __default_env__.get('convertors', {}).copy()
         self._convertors.update(convertors or {})
         self._lazy = lazy
@@ -396,6 +405,9 @@ class Ini(SortedDict):
         if lazy:
             self._globals = self._env.copy()
             
+        if self._import_env:
+            self._globals.update(os.environ)
+        
         if self._inifile:
             self.read(self._inifile)
         
@@ -636,6 +648,11 @@ class Ini(SortedDict):
         return ((k, self[k]) for k in self.keys() if not k in self._env)
     
     def env(self):
+        if self._import_env:
+            d = {}
+            d.update(os.environ.copy())
+            d.update(dict(self))
+            return d
         return self
     
     def freeze(self):

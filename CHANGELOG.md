@@ -5,6 +5,17 @@ Uliweb Change Log
 -----------------
 
 * Fix config template and add `uwsgi` shell support
+* Add environment variables support in `settings.ini`. For example, there is a 
+  `MYSQL_PORT` defined in environment, so you can defined something in settings.ini:
+
+    ```
+    [DEFAULT]
+    port = $MYSQL_PORT
+    port_str = '${MYSQL_PORT}'
+    ```
+    
+    `$MYSQL_PORT` is the same as `${MYSQL_PORT}`. Just when the variable follows
+    identifier, so `${}` can easily separate between them.
 
 0.2.4 Version
 -----------------

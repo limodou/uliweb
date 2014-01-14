@@ -472,7 +472,48 @@ def test_var_in_section():
     >>> x = Ini()
     >>> x.set_filename('test.ini')
     >>> x.read(buf)
-    >>> print x.DEFAULT.b
-    [1, 2, 3]
+    >>> print x.DEFAULT.b[0][0]
+    about
     """
 
+def test_env_var():
+    """
+    >>> from uliweb.i18n import gettext_lazy as _, i18n_ini_convertor
+    >>> from StringIO import StringIO
+    >>> import os
+    >>> os.environ['TEST'] = 'test'
+    >>> os.environ['OK'] = '3'
+    >>> x = Ini(lazy=True)
+    >>> buf = StringIO(\"\"\"
+    ... [default]
+    ... a = '$TEST/ok'
+    ... c = '${TEST}ok'
+    ... b = $OK
+    ... \"\"\")
+    >>> x = Ini()
+    >>> x.set_filename('test.ini')
+    >>> x.read(buf)
+    >>> x.freeze()
+    >>> print repr(x.default.a)
+    'test/ok'
+    >>> print repr(x.default.b)
+    3
+    >>> print repr(x.default.c)
+    'testok'
+    >>> x = Ini()
+    >>> buf = StringIO(\"\"\"
+    ... [default]
+    ... a = '$TEST/ok'
+    ... c = '${TEST}ok'
+    ... b = $OK
+    ... \"\"\")
+    >>> x = Ini()
+    >>> x.set_filename('test.ini')
+    >>> x.read(buf)
+    >>> print repr(x.default.a)
+    'test/ok'
+    >>> print repr(x.default.b)
+    3
+    >>> print repr(x.default.c)
+    'testok'
+    """
