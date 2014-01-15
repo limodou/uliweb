@@ -396,6 +396,9 @@ class Ini(SortedDict):
         self.update(self._env)
         self._globals = SortedDict()
         self._import_env = import_env
+        if self._import_env:
+            self._globals.update(os.environ)
+        
         self._convertors = __default_env__.get('convertors', {}).copy()
         self._convertors.update(convertors or {})
         self._lazy = lazy
@@ -403,11 +406,8 @@ class Ini(SortedDict):
         self._raw = raw
         
         if lazy:
-            self._globals = self._env.copy()
+            self._globals.update(self._env.copy())
             
-        if self._import_env:
-            self._globals.update(os.environ)
-        
         if self._inifile:
             self.read(self._inifile)
         
