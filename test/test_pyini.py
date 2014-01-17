@@ -476,7 +476,7 @@ def test_var_in_section():
     about
     """
 
-def test_env_var():
+def test_env_var_1():
     """
     >>> from uliweb.i18n import gettext_lazy as _, i18n_ini_convertor
     >>> from StringIO import StringIO
@@ -516,4 +516,30 @@ def test_env_var():
     3
     >>> print repr(x.default.c)
     'testok'
+    """
+
+def test_env_var_2():
+    """
+    >>> from uliweb.i18n import gettext_lazy as _, i18n_ini_convertor
+    >>> from StringIO import StringIO
+    >>> import os
+    >>> os.environ['TEST'] = 'test'
+    >>> os.environ['OK'] = '3'
+    >>> x = Ini(lazy=True)
+    >>> buf = StringIO(\"\"\"
+    ... [default]
+    ... a = '$TEST/ok'
+    ... c = '${TEST}ok'
+    ... \"\"\")
+    >>> x = Ini(import_env=False)
+    >>> x.set_filename('test.ini')
+    >>> x.read(buf)
+    >>> x.freeze()
+    >>> print x
+    #coding=UTF-8
+    <BLANKLINE>
+    [default]
+    a = '$TEST/ok'
+    c = '${TEST}ok'
+    <BLANKLINE>
     """

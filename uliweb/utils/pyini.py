@@ -45,7 +45,8 @@ except:
     defaultencoding = 'UTF-8'
 
 r_encoding = re.compile(r'\s*coding\s*[=:]\s*([-\w.]+)')
-r_var = re.compile(ur'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})|(?:\$(\w[\d\w_]*)|\$\{(\w[\d\w_]*)\})', re.U)
+r_var = re.compile(ur'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})', re.U)
+r_var_env = re.compile(ur'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})|(?:\$(\w[\d\w_]*)|\$\{(\w[\d\w_]*)\})', re.U)
 __default_env__ = {}
 
 def set_env(env=None):
@@ -157,12 +158,12 @@ def uni_prt(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
             s.append(str(a))
     return ''.join(s)
 
-def eval_value(value, globals, locals, encoding):
+def eval_value(value, globals, locals, encoding, include_env):
     #process {{format}}
     def sub_(m):
         txt = filter(None, m.groups())[0].strip()
         try:
-            v = eval_value(str(txt), globals, locals, encoding)
+            v = eval_value(str(txt), globals, locals, encoding, include_env)
             _type = type(txt)
             if not isinstance(v, (str, unicode)):
                 v = _type(v)
@@ -177,7 +178,10 @@ def eval_value(value, globals, locals, encoding):
         return v
     
     if isinstance(value, (str, unicode)):
-        v = r_var.sub(sub_, value)
+        if include_env:
+            v = r_var_env.sub(sub_, value)
+        else:
+            v = r_var.sub(sub_, value)
     else:
         v = value
         
@@ -210,17 +214,18 @@ class Lazy(object):
         
         [EvalValue, int, str]
     """
-    def __init__(self, key, globals, sec_name, encoding):
+    def __init__(self, key, globals, sec_name, encoding, include_env):
         self.key = key
         self.values = []
         self.globals = globals
         self.sec_name = sec_name
         self.encoding = encoding
         self.cached_value = Empty
+        self.include_env = include_env
         
     def eval(self, value):
         try:
-            v = eval_value(value, self.globals, self.globals[self.sec_name], self.encoding)
+            v = eval_value(value, self.globals, self.globals[self.sec_name], self.encoding, self.include_env)
             return v
         except Exception as e:
             print_exc()
@@ -309,7 +314,7 @@ class Section(SortedDict):
     def __setitem__(self, key, value, replace=False):
         if self._lazy:
             if not key in self or replace:
-                v = Lazy(key, self._root._globals, self._name, self._encoding)
+                v = Lazy(key, self._root._globals, self._name, self._encoding, self._root._import_env)
             else:
                 v = self[key]
             v.add(value)
@@ -526,7 +531,7 @@ class Ini(SortedDict):
                                 v = RawValue(self._inifile, lineno, value, replace_flag)
                             else:
                                 try:
-                                    v = eval_value(value, self.env(), self[sec_name], self._encoding)
+                                    v = eval_value(value, self.env(), self[sec_name], self._encoding, self._import_env)
                                 except Exception as e:
                                     print_exc()
                                     print dict(self)

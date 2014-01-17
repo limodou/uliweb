@@ -388,15 +388,17 @@ def str_value(v, encoding='utf-8', bool_int=True, none='NULL', newline_escape=Fa
 def norm_path(path):
     return os.path.normpath(os.path.abspath(path))
 
-r_expand_path = re.compile('\$\{(\w+)\}')
+r_expand_path = re.compile('\$\[(\w+)\]')
 def expand_path(path):
     """
     Auto search some variables defined in path string, such as:
-        ${PROJECT}/files
-        ${app_name}/files
-    for ${PROJECT} will be replaced with uliweb application apps_dir directory
+        $[PROJECT]/files
+        $[app_name]/files
+    for $[PROJECT] will be replaced with uliweb application apps_dir directory
     and others will be treated as a normal python package, so uliweb will
     use pkg_resources to get the path of the package
+    
+    update: 0.2.5 changed from ${} to $[]
     """
     from uliweb import application
     

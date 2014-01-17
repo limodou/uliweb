@@ -16,6 +16,13 @@ Uliweb Change Log
     
     `$MYSQL_PORT` is the same as `${MYSQL_PORT}`. Just when the variable follows
     identifier, so `${}` can easily separate between them.
+* Add `STATIC_COMBINE_CONFIG` configuration, you can toggle static combination with it.
+  Default is False. The configuration is:
+
+    ```
+    [STATIC_COMBINE_CONFIG]
+    enabled = False
+    ```
 
 0.2.4 Version
 -----------------
