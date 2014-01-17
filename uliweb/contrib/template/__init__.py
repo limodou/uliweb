@@ -21,8 +21,9 @@ def init_static_combine():
     import os
     
     d = {}
-    for k, v in settings.get('STATIC_COMBINE', {}).items():
-        key = '_cmb_'+md5(''.join(v)).hexdigest()+os.path.splitext(v[0])[1]
-        d[key] = v
+    if settings.get_var('STATIC_COMBINE_CONFIG/enable', False):
+        for k, v in settings.get('STATIC_COMBINE', {}).items():
+            key = '_cmb_'+md5(''.join(v)).hexdigest()+os.path.splitext(v[0])[1]
+            d[key] = v
         
     return d
