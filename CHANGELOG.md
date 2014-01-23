@@ -23,6 +23,9 @@ Uliweb Change Log
     [STATIC_COMBINE_CONFIG]
     enabled = False
     ```
+* Fix objcache app bug, if not fields defined in settings, it'll use all columns of table
+* Add `get_table` function to `functions`, you can use it to get table object. Used
+  in `uliweb.contrib.tables` app.
 
 0.2.4 Version
 -----------------

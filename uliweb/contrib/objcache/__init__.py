@@ -1,5 +1,8 @@
 from uliweb import functions
-from uliweb.utils.common import log, flat_list
+from uliweb.utils.common import flat_list
+from logging import getLogger
+
+log = getLogger(__name__)
 
 def get_fields(tablename):
     from uliweb import settings
@@ -33,7 +36,6 @@ def get_object(model, tablename, id):
     
     if id is None then return None:
     """
-    from uliweb.utils.common import log
     
     if not id:
         return 
@@ -58,31 +60,26 @@ def set_object(model, tablename, instance, fields=None):
     Only support simple condition, for example: Model.c.id == n
     """
     from uliweb import settings
-    from uliweb.utils.common import log
     
     if not check_enable():
         return
     
     if not fields:
         fields = get_fields(tablename)
-    if fields:
-        redis = get_redis()
-        if not redis: return
-        
-        v = instance.dump(fields)
-        _id = get_id(model.get_engine_name(), tablename, instance.id)
-        try:
-            pipe = redis.pipeline()
-            r = pipe.delete(_id).hmset(_id, v).expire(_id, settings.get_var('OBJCACHE/timeout')).execute()
-            log.debug("objcache:set:id="+_id)
-        except Exception, e:
-            log.exception(e)
-        
-    else:
-        log.debug("There is no fields defined or not configured, so it'll not saved in cache, [%s:%d]" % (tablename, instance.id))
+
+    redis = get_redis()
+    if not redis: return
+    
+    v = instance.dump(fields)
+    _id = get_id(model.get_engine_name(), tablename, instance.id)
+    try:
+        pipe = redis.pipeline()
+        r = pipe.delete(_id).hmset(_id, v).expire(_id, settings.get_var('OBJCACHE/timeout')).execute()
+        log.debug("objcache:set:id="+_id)
+    except Exception, e:
+        log.exception(e)
         
 def post_save(model, instance, created, data, old_data):
-    from uliweb.utils.common import log
     from uliweb import response
 
     if not check_enable():
@@ -108,7 +105,6 @@ def post_save(model, instance, created, data, old_data):
             f()
         
 def post_delete(model, instance):
-    from uliweb.utils.common import log
     from uliweb import response
 
     if not check_enable():
