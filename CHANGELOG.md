@@ -26,6 +26,23 @@ Uliweb Change Log
 * Fix objcache app bug, if not fields defined in settings, it'll use all columns of table
 * Add `get_table` function to `functions`, you can use it to get table object. Used
   in `uliweb.contrib.tables` app.
+* Add `local_cache` to local in SimpleFrame, and it can be used to store require relative
+  cache values, and it'll be empty after each require process.
+* Improve `get_object()` function in ORM, add `use_local` parameter, so the cached
+  value will be checked in `local_cache` first, and also save it in local_cache when 
+  get a value from cache or database.
+* Improve objcache config format, you can also define table like this:
+
+    ```
+    user = {'fields':['username'], 'expire':expire_time}
+    #or
+    user = ['username', 'nickname']
+    #or
+    user = 
+    ```
+    
+    If no fields defined, it'll use all fields of Model. And if expire is 0 or
+    not defined, it'll not expired at all.
 
 0.2.4 Version
 -----------------

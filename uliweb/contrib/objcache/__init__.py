@@ -11,10 +11,17 @@ def get_fields(tablename):
     if not tablename in tables:
         return 
     
-    return tables[tablename]
+    fields = tables[tablename]
+    if not isinstance(fields, (tuple, list)):
+        fields = fields.get('fields', [])
+    return fields
 
 def get_id(engine, tablename, id):
-    return "objcache:%s:%s:%d" % (engine, tablename, id)
+    from uliweb import settings
+
+    d = {'engine':engine, 'tablename':str(tablename), 'id':str(id)}
+    format = settings.get_var('OBJCACHE/key_format', 'OC:%(engine)s:%(tablename)s:%(id)s')
+    return format % d
 
 def get_redis():
     try:
@@ -30,7 +37,7 @@ def check_enable():
     if settings.OBJCACHE.enable:
         return True
     
-def get_object(model, tablename, id):
+def get_object(model, tablename, id, engine_name):
     """
     Get cached object from redis
     
@@ -45,7 +52,7 @@ def get_object(model, tablename, id):
     
     redis = get_redis()
     if not redis: return
-    _id = get_id(model.get_engine_name(), tablename, id)
+    _id = get_id(engine_name or model.get_engine_name(), tablename, id)
     try:
         if redis.exists(_id):
             v = redis.hgetall(_id)
@@ -55,7 +62,7 @@ def get_object(model, tablename, id):
     except Exception, e:
         log.exception(e)
         
-def set_object(model, tablename, instance, fields=None):
+def set_object(model, tablename, instance, fields=None, engine_name=None):
     """
     Only support simple condition, for example: Model.c.id == n
     """
@@ -71,11 +78,21 @@ def set_object(model, tablename, instance, fields=None):
     if not redis: return
     
     v = instance.dump(fields)
-    _id = get_id(model.get_engine_name(), tablename, instance.id)
+    _id = get_id(engine_name or model.get_engine_name(), tablename, instance.id)
     try:
         pipe = redis.pipeline()
-        r = pipe.delete(_id).hmset(_id, v).expire(_id, settings.get_var('OBJCACHE/timeout')).execute()
-        log.debug("objcache:set:id="+_id)
+        #if expire >0 
+        expire = settings.get_var('OBJCACHE/timeout', 0)
+        info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
+        if info and isinstance(info, dict):
+            expire = info.get('expire', expire)
+        p = pipe.delete(_id).hmset(_id, v)
+        expire_msg = ''
+        if expire:
+            p = p.expire(_id, expire)
+            expire_msg = ':expire=%d' % expire
+        r = p.execute()
+        log.debug("objcache:set:id="+_id+expire_msg)
     except Exception, e:
         log.exception(e)
         

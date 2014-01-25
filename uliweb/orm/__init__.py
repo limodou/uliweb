@@ -756,11 +756,15 @@ def get_model(model, engine_name=None):
                 return model_inst
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
-def get_object(table, id, cache=False, fields=None):
+def get_object_id(engine_name, tablename, id):
+    return 'OC:%s:%s:%s' % (engine_name, tablename, str(id))
+
+def get_object(table, id, cache=False, fields=None, use_local=False, engine_name=None):
     """
     Get obj in Local.object_caches first and also use get_cached function if 
     not found in object_caches
     """
+    from uliweb import functions
     
     if isinstance(table, (str, unicode)):
         model = get_model(table)
@@ -768,7 +772,15 @@ def get_object(table, id, cache=False, fields=None):
         model = table
       
     if cache:
+        if use_local:
+            _name = engine_name or model.get_engine_name()
+            key = get_object_id(_name, model.tablename, id)
+            value = functions.get_local_cache(key)
+            if value:
+                return value
         obj = model.get_cached(id, fields=fields)
+        if use_local:
+            functions.get_local_cache(key, obj)
     else:
         obj = model.get(id, fields=fields)
     
@@ -3161,27 +3173,27 @@ class Model(object):
         return obj
     
     @classmethod
-    def get_cached(cls, id=None, connection=None, fields=None, **kwargs):
+    def get_cached(cls, id=None, connection=None, fields=None, engine_name=None, **kwargs):
         if id is None:
             return None
         
         _cond = cls.c.id==id
         #send 'get_object' topic to get cached object
-        obj = dispatch.get(cls, 'get_object', cls.tablename, id)
+        obj = dispatch.get(cls, 'get_object', cls.tablename, id, engine_name)
         if obj:
             return obj
         #if there is no cached object, then just fetch from database
         obj = cls.connect(connection).filter(_cond, **kwargs).one()
         #send 'set_object' topic to stored the object to cache
         if obj:
-            dispatch.call(cls, 'set_object', cls.tablename, instance=obj, fields=fields)
+            dispatch.call(cls, 'set_object', cls.tablename, instance=obj, fields=fields, engine_name=engine_name)
         return obj
 
-    def push_cached(self, fields=None):
+    def push_cached(self, fields=None, engine_name=None):
         """
         Save object to cache
         """
-        dispatch.call(self.__class__, 'set_object', self.tablename, instance=self, fields=fields)
+        dispatch.call(self.__class__, 'set_object', self.tablename, instance=self, fields=fields, engine_name=engine_name)
         
     @classmethod
     def _data_prepare(cls, record):

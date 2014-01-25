@@ -294,6 +294,18 @@ def get_var(key, default=None):
     from uliweb import settings
     
     return settings.get_var(key, default)
+
+def get_local_cache(key, creator=None):
+    value = local.local_cache.get(key)
+    if value:
+        return value
+    if callable(creator):
+        value = creator()
+    else:
+        value = creator
+    if value:
+        local.local_cache[key] = value
+    return value
     
 def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
     include_apps = include_apps or []
@@ -1119,6 +1131,8 @@ class Dispatcher(object):
             
         local.request = req = Request(environ)
         local.response = res = Response(content_type='text/html')
+        #add local cached
+        local.local_cache = {}
         
         url_adapter = get_url_adapter('default')
         try:
@@ -1191,6 +1205,8 @@ class Dispatcher(object):
             else:
 #                log.exception(e)
                 raise
+        finally:
+            local.local_cache = {}
         return response
     
     def handler(self):
