@@ -73,9 +73,11 @@ def get_object(model, id, engine_name=None, connection=None):
         fetch_obj = info.get('fetch_obj', fetch_obj)
         
     if fetch_obj:
+        log.debug("objcache:fetch_obj:id="+_id+','+fetch_obj)
         obj = import_attr(fetch_obj)(model, id)
     else:
         _cond = model.c[key] == id
+        log.debug("objcache:query:id="+_id+','+str(_cond))
         obj = model.filter(_cond).connect(connection or engine_name).one()
     if obj:
         set_object(model, instance=obj, engine_name=engine_name)
@@ -124,29 +126,34 @@ def set_object(model, instance, fields=None, engine_name=None):
         log.exception(e)
         
 def post_save(model, instance, created, data, old_data):
-    from uliweb import response
+    from uliweb import response, settings
 
     if not check_enable():
         return
     
     tablename = model.tablename
+    if tablename not in settings.get_var('OBJCACHE_TABLES'):
+        return
     
-    fields = get_fields(tablename)
-    if fields:
-        #if response is False, then it means you may in batch program
-        #so it can't use post_commit machenism
-        def f():
-            #check if the record has changed
-            flag = created
-            if not flag:
+    #if response is False, then it means you may in batch program
+    #so it can't use post_commit machenism
+    def f():
+        fields = get_fields(tablename)
+        flag = created
+        #if update then check if the record has changed
+        if not flag:
+            if not fields:
+                flag = True
+            else:
+                fields = model.properties.keys()
                 flag = bool(filter(lambda x:x in data, fields))
-            if flag:
-                set_object(model, instance)
-                log.debug("objcache:post_save:id=%d" % instance.id)
-        if response:
-            response.post_commit = f
-        else:
-            f()
+        if flag:
+            set_object(model, instance)
+            log.debug("objcache:post_save:id=%d" % instance.id)
+    if response:
+        response.post_commit = f
+    else:
+        f()
         
 def post_delete(model, instance):
     from uliweb import response, settings
@@ -155,31 +162,32 @@ def post_delete(model, instance):
         return
     
     tablename = model.tablename
+    if tablename not in settings.get_var('OBJCACHE_TABLES'):
+        return
     
-    if get_fields(tablename):
-        def f():
-            redis = get_redis()
-            if not redis: return
+    def f():
+        redis = get_redis()
+        if not redis: return
 
-            info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
-            key = 'id'
-            if info and isinstance(info, dict):
-                key = info.get('key', key)
-            if '.' in key or key not in model.properties:
-                _key = import_attr(key)(instance)
-            else:
-                _key = getattr(instance, key)
-            
-            _id = get_id(model.get_engine_name(), tablename, _key)
-            
-            try:
-                redis.delete(_id)
-                log.debug("objcache:post_delete:id="+_id)
-            except Exception, e:
-                log.exception(e)
-            
-        if response:
-            response.post_commit = f
+        info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
+        key = 'id'
+        if info and isinstance(info, dict):
+            key = info.get('key', key)
+        if '.' in key or key not in model.properties:
+            _key = import_attr(key)(instance)
         else:
-            f()
+            _key = getattr(instance, key)
+        
+        _id = get_id(model.get_engine_name(), tablename, _key)
+        
+        try:
+            redis.delete(_id)
+            log.debug("objcache:post_delete:id="+_id)
+        except Exception, e:
+            log.exception(e)
+    
+    if response:
+        response.post_commit = f
+    else:
+        f()
         
