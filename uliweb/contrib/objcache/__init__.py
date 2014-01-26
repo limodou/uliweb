@@ -1,5 +1,4 @@
 from uliweb import functions
-from uliweb.utils.common import flat_list
 from logging import getLogger
 
 log = getLogger(__name__)
@@ -65,6 +64,7 @@ def get_object(model, tablename, id, engine_name):
 def set_object(model, tablename, instance, fields=None, engine_name=None):
     """
     Only support simple condition, for example: Model.c.id == n
+    if not id provided, then use instance.id
     """
     from uliweb import settings
     
@@ -78,14 +78,20 @@ def set_object(model, tablename, instance, fields=None, engine_name=None):
     if not redis: return
     
     v = instance.dump(fields)
-    _id = get_id(engine_name or model.get_engine_name(), tablename, instance.id)
+    info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
+    expire = settings.get_var('OBJCACHE/timeout', 0)
+    key = 'id'
+    if info and isinstance(info, dict):
+        expire = info.get('expire', expire)
+        key = info.get('key', key)
+    
+    if callable(key):
+        _key = key(instance)
+    else:
+        _key = getattr(instance, key)
+    _id = get_id(engine_name or model.get_engine_name(), tablename, _key)
     try:
         pipe = redis.pipeline()
-        #if expire >0 
-        expire = settings.get_var('OBJCACHE/timeout', 0)
-        info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
-        if info and isinstance(info, dict):
-            expire = info.get('expire', expire)
         p = pipe.delete(_id).hmset(_id, v)
         expire_msg = ''
         if expire:
@@ -122,7 +128,7 @@ def post_save(model, instance, created, data, old_data):
             f()
         
 def post_delete(model, instance):
-    from uliweb import response
+    from uliweb import response, settings
 
     if not check_enable():
         return
@@ -131,7 +137,16 @@ def post_delete(model, instance):
     
     if get_fields(tablename):
         def f():
-            _id = get_id(model.get_engine_name(), tablename, instance.id)
+            info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
+            key = 'id'
+            if info and isinstance(info, dict):
+                key = info.get('key', key)
+            if callable(key):
+                _key = key(instance)
+            else:
+                _key = getattr(instance, key)
+            
+            _id = get_id(model.get_engine_name(), tablename, _key)
             redis = get_redis()
             if not redis: return
             

@@ -34,7 +34,7 @@ Uliweb Change Log
 * Improve objcache config format, you can also define table like this:
 
     ```
-    user = {'fields':['username'], 'expire':expire_time}
+    user = {'fields':['username'], 'expire':expire_time, 'key':callable(instance)|key_field}
     #or
     user = ['username', 'nickname']
     #or
@@ -43,6 +43,10 @@ Uliweb Change Log
     
     If no fields defined, it'll use all fields of Model. And if expire is 0 or
     not defined, it'll not expired at all.
+    
+    `key` will be used to replace `id`, if you want another key value, and it
+    can be also a callable object, it'll receive an instance of Model parameter,
+    so you can create any key value as you want.
 
 0.2.4 Version
 -----------------
