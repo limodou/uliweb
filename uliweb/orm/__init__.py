@@ -3177,17 +3177,8 @@ class Model(object):
         if id is None:
             return None
         
-        _cond = cls.c.id==id
         #send 'get_object' topic to get cached object
-        obj = dispatch.get(cls, 'get_object', cls.tablename, id, engine_name)
-        if obj:
-            return obj
-        #if there is no cached object, then just fetch from database
-        obj = cls.connect(connection).filter(_cond, **kwargs).one()
-        #send 'set_object' topic to stored the object to cache
-        if obj:
-            dispatch.call(cls, 'set_object', cls.tablename, instance=obj, fields=fields, engine_name=engine_name)
-        return obj
+        return dispatch.get(cls, 'get_object', id, engine_name, connection)
 
     def push_cached(self, fields=None, engine_name=None):
         """

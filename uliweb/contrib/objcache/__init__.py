@@ -1,5 +1,6 @@
 from uliweb import functions
 from logging import getLogger
+from uliweb.utils.common import import_attr
 
 log = getLogger(__name__)
 
@@ -36,12 +37,13 @@ def check_enable():
     if settings.OBJCACHE.enable:
         return True
     
-def get_object(model, tablename, id, engine_name):
+def get_object(model, id, engine_name=None, connection=None):
     """
     Get cached object from redis
     
     if id is None then return None:
     """
+    from uliweb import settings
     
     if not id:
         return 
@@ -51,6 +53,8 @@ def get_object(model, tablename, id, engine_name):
     
     redis = get_redis()
     if not redis: return
+
+    tablename = model.tablename
     _id = get_id(engine_name or model.get_engine_name(), tablename, id)
     try:
         if redis.exists(_id):
@@ -61,7 +65,23 @@ def get_object(model, tablename, id, engine_name):
     except Exception, e:
         log.exception(e)
         
-def set_object(model, tablename, instance, fields=None, engine_name=None):
+    info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
+    key = 'id'
+    fetch_obj = None
+    if info and isinstance(info, dict):
+        key = info.get('key', key)
+        fetch_obj = info.get('fetch_obj', fetch_obj)
+        
+    if fetch_obj:
+        obj = import_attr(fetch_obj)(model, id)
+    else:
+        _cond = model.c[key] == id
+        obj = model.filter(_cond).connect(connection or engine_name).one()
+    if obj:
+        set_object(model, instance=obj, engine_name=engine_name)
+    return obj
+    
+def set_object(model, instance, fields=None, engine_name=None):
     """
     Only support simple condition, for example: Model.c.id == n
     if not id provided, then use instance.id
@@ -71,11 +91,12 @@ def set_object(model, tablename, instance, fields=None, engine_name=None):
     if not check_enable():
         return
     
-    if not fields:
-        fields = get_fields(tablename)
-
     redis = get_redis()
     if not redis: return
+    
+    tablename = model.tablename
+    if not fields:
+        fields = get_fields(tablename)
     
     v = instance.dump(fields)
     info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
@@ -85,8 +106,8 @@ def set_object(model, tablename, instance, fields=None, engine_name=None):
         expire = info.get('expire', expire)
         key = info.get('key', key)
     
-    if callable(key):
-        _key = key(instance)
+    if '.' in key or key not in model.properties:
+        _key = import_attr(key)(instance)
     else:
         _key = getattr(instance, key)
     _id = get_id(engine_name or model.get_engine_name(), tablename, _key)
@@ -120,7 +141,7 @@ def post_save(model, instance, created, data, old_data):
             if not flag:
                 flag = bool(filter(lambda x:x in data, fields))
             if flag:
-                set_object(model, tablename, instance)
+                set_object(model, instance)
                 log.debug("objcache:post_save:id=%d" % instance.id)
         if response:
             response.post_commit = f
@@ -137,18 +158,19 @@ def post_delete(model, instance):
     
     if get_fields(tablename):
         def f():
+            redis = get_redis()
+            if not redis: return
+
             info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
             key = 'id'
             if info and isinstance(info, dict):
                 key = info.get('key', key)
-            if callable(key):
-                _key = key(instance)
+            if '.' in key or key not in model.properties:
+                _key = import_attr(key)(instance)
             else:
                 _key = getattr(instance, key)
             
             _id = get_id(model.get_engine_name(), tablename, _key)
-            redis = get_redis()
-            if not redis: return
             
             try:
                 redis.delete(_id)
