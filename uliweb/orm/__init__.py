@@ -2742,7 +2742,6 @@ class Model(object):
                 else:
                     setattr(self, k, v)
         return self
-#                    getattr(self, k).update(*v)
             
     def put(self, insert=False, connection=None, changed=None, saved=None, send_dispatch=True):
         """
@@ -3227,8 +3226,8 @@ class Model(object):
         else:
             raise BadValueError("Can't support the data type %r" % values)
         
-        if 'id' not in d or not d['id']:
-            raise BadValueError("ID property must be existed or could not be empty.")
+#        if 'id' not in d or not d['id']:
+#            raise BadValueError("ID property must be existed or could not be empty.")
         
         o = cls()
         o._load(d, use_delay=True)

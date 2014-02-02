@@ -11,7 +11,7 @@ def get_fields(tablename):
     if not tablename in tables:
         return 
     
-    fields = tables[tablename]
+    fields = tables[tablename] or []
     if not isinstance(fields, (tuple, list)):
         fields = fields.get('fields', [])
     return fields

@@ -296,6 +296,8 @@ def get_var(key, default=None):
     return settings.get_var(key, default)
 
 def get_local_cache(key, creator=None):
+    if not hasattr(local, 'local_cache'):
+        local = local_cache = {}
     value = local.local_cache.get(key)
     if value:
         return value
