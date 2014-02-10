@@ -225,7 +225,10 @@ class Lazy(object):
         
     def eval(self, value):
         try:
-            v = eval_value(value, self.globals, self.globals[self.sec_name], self.encoding, self.include_env)
+            _locals = self.globals[self.sec_name]
+            if not isinstance(_locals, SortedDict):
+                _locals = {}
+            v = eval_value(value, self.globals, _locals, self.encoding, self.include_env)
             return v
         except Exception as e:
             print_exc()
@@ -297,7 +300,8 @@ class Section(SortedDict):
         
         #sync
         if self._root and self._lazy:
-            self._root._globals.setdefault(name, SortedDict())
+#            self._root._globals.setdefault(name, SortedDict())
+            self._root._globals[name] = SortedDict()
          
     @property
     def _lazy(self):

@@ -543,3 +543,26 @@ def test_env_var_2():
     c = '${TEST}ok'
     <BLANKLINE>
     """
+    
+def test_email():
+    """
+    >>> from uliweb.i18n import gettext_lazy as _, i18n_ini_convertor
+    >>> from StringIO import StringIO
+    >>> import os
+    >>> os.environ['MAIL'] = 'test'
+    >>> x = Ini(import_env=True, lazy=True)
+    >>> buf = StringIO(\"\"\"
+    ... [MAIL]
+    ... host = '128.192.168.2'
+    ... \"\"\")
+    >>> x.set_filename('test.ini')
+    >>> x.read(buf)
+    >>> x.freeze()
+    >>> print x
+    #coding=UTF-8
+    <BLANKLINE>
+    [MAIL]
+    host = '128.192.168.2'
+    <BLANKLINE>
+    """
+
