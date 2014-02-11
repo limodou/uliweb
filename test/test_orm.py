@@ -2021,6 +2021,32 @@ def test_reference_server_default():
     >>> set_server_default(False)
     """
     
+def test_occ():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    ...     version = Field(int)
+    >>> a = Test(username='limodou1', year=20)
+    >>> a.save()
+    True
+    >>> b = Test.get(1)
+    >>> b1 = Test.get(1)
+    >>> b1.update(year=21)
+    <Test {'username':u'limodou1','year':21,'version':0,'id':1}>
+    >>> b1.save(occ=True)
+    True
+    >>> b.update(year=22)
+    <Test {'username':u'limodou1','year':22,'version':0,'id':1}>
+    >>> try:
+    ...     b.save(occ=True)
+    ... except SaveError:
+    ...     print 'saveerror'
+    saveerror
+    """
+    
 #if __name__ == '__main__':
 #    from sqlalchemy.schema import CreateTable, CreateIndex
 #    

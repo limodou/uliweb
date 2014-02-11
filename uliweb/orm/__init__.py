@@ -17,7 +17,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'PickleProperty', 'BigIntegerProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
-    'ModelInstanceError', 'KindError', 'ConfigurationError',
+    'ModelInstanceError', 'KindError', 'ConfigurationError', 'SaveError',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
     'CommitAll', 'RollbackAll', 'set_lazy_model_init',
     'begin_sql_monitor', 'close_sql_monitor', 'set_model_config', 'text',
@@ -81,6 +81,7 @@ class BadValueError(Error):pass
 class BadPropertyTypeError(Error):pass
 class KindError(Error):pass
 class ConfigurationError(Error):pass
+class SaveError(Error):pass
 
 _SELF_REFERENCE = object()
 class Lazy(object): pass
@@ -2743,7 +2744,8 @@ class Model(object):
                     setattr(self, k, v)
         return self
             
-    def put(self, insert=False, connection=None, changed=None, saved=None, send_dispatch=True):
+    def put(self, insert=False, connection=None, changed=None, saved=None, 
+            send_dispatch=True, occ=False, occ_fieldname=None, occ_exception=True):
         """
         If insert=True, then it'll use insert() indead of update()
         
@@ -2753,9 +2755,13 @@ class Model(object):
             def changed(created, old_data, new_data, obj=None):
                 if flag is true, then it means the record is changed
                 you can change new_data, and the new_data will be saved to database
+                
+        occ = Optimistic Concurrency Control
+        occ_fieldname default is 'version'
         """
         _saved = False
         created = False
+        occ_fieldname = occ_fieldname or 'version'
         d = self._get_data()
         #fix when d is empty, orm will not insert record bug 2013/04/07
         if d or not self.id or insert:
@@ -2814,11 +2820,26 @@ class Model(object):
                             if k in d:
                                 _manytomany[k] = d.pop(k)
                     if d:
+                        _cond = self.table.c.id == self.id
+                        if occ:
+                            occ_field = self.table.c.get(occ_fieldname)
+                            if occ_field is None:
+                                raise KindError("occ_fieldname %s is not existed in Model %s" % (occ_fieldname, self.__class__.__name__))
+                            _occ_value = getattr(self, occ_fieldname, 0)
+                            setattr(self, occ_fieldname, _occ_value+1)
+                            d[occ_fieldname] = _occ_value+1
+                            _cond = (occ_field == _occ_value) & _cond
+                            
                         if callable(changed):
                             changed(self, created, self._old_values, d)
                             old.update(d)
-                        do_(self.table.update(self.table.c.id == self.id).values(**d), connection or self.get_connection())
+                        result = do_(self.table.update(_cond).values(**d), connection or self.get_connection())
                         _saved = True
+                        if occ:
+                            if result.rowcount != 1:
+                                _saved = False
+                                if occ_exception:
+                                    raise SaveError("The record has been saved by others, current version is %d" % _occ_value)
                         
                     if _manytomany:
                         for k, v in _manytomany.items():

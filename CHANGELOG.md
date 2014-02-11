@@ -47,6 +47,19 @@ Uliweb Change Log
     `key` will be used to replace `id`, if you want another key value, and it
     can be also a callable object, it'll receive an instance of Model parameter,
     so you can create any key value as you want.
+* Add Optimistic Concurrency Control support for ORM, so you should defined `version`
+  Field first in Model, then when you save the object, you should use:
+
+    ```
+    obj.save(occ=True)
+    ```
+    
+    If there is already other operation saved the record, it'll raise an `SaveError`
+    Exception by default, because the version has been changed. You can also pass:
+    
+    * `occ_fieldname` used to defined the version fieldname, default is `version`
+    * `occ_exception` used to enabled Exception raised, default is `True`, if you 
+      set it `False` it'll return False, but not raise an Exception.
 
 0.2.4 Version
 -----------------
