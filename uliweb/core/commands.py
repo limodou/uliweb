@@ -159,6 +159,7 @@ class Command(object):
         if global_options.apps_dir not in sys.path:
             sys.path.insert(0, global_options.apps_dir)
         
+        import pdb;pdb.set_trace()
         if self.check_apps_dirs:
             check_apps_dir(global_options.apps_dir)
         if self.check_apps and args: #then args should be apps
@@ -255,7 +256,7 @@ class CommandManager(Command):
         try:
             klass = commands[subcommand]
         except KeyError:
-            sys.stderr.write("Unknown command: %r\nType '%s help' for usage.\n" % \
+            sys.stderr.write("Unknown command: %r\nType '%s help' for usage.\nMany commands will only run at project directory, maybe the directory is not right.\n" % \
                 (subcommand, self.prog_name))
             sys.exit(1)
         return klass
