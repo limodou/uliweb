@@ -1,6 +1,11 @@
 Uliweb Change Log
 =====================
 
+0.3 Version
+-----------------
+
+* Add warning output for Reference class parameter of relation properties definition.
+
 0.2.5 Version
 -----------------
 

@@ -1,4 +1,4 @@
-                        #coding=utf-8
+#coding=utf-8
 import time, sys
 sys.path.insert(0, '../uliweb/lib')
 from uliweb.orm import *

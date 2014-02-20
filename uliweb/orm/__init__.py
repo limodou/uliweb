@@ -55,6 +55,8 @@ from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
 import threading
+import warnings
+import inspect
 from uliweb.utils.sorteddict import SortedDict
 
 Local = threading.local()
@@ -1446,6 +1448,10 @@ class ReferenceProperty(Property):
             reference_class = Model
             
         self.reference_class = reference_class
+        
+        if __lazy_model_init__:
+            if inspect.isclass(self.reference_class) and issubclass(self.reference_class, Model):
+                warnings.warn("Reference Model should be a string type, but [%s] model class found." % self.reference_class.__name__)
         
     def create(self, cls):
         global __nullable__
