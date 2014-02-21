@@ -420,7 +420,7 @@ def rawsql(query, ec=None):
 #                v = v.encode(enc)
 #            params.append( escape(v, conversions) )
 #            return (comp.string.encode(enc).replace('?', '%s') % tuple(params))
-            params.append(v)
+            params.append(repr(v))
         return comp.string.replace('?', '%s') % tuple(params)
     
     
