@@ -1570,22 +1570,6 @@ class SimpleListView(object):
                 return ''.join(s)
         return ''
     
-    def get_total(self, func=None):
-        """
-        Get total number of records according total and manual parameters
-        """
-        if self.manual:
-            if callable(self.total):
-                total = self.total()
-            else:
-                total = self.total
-            return total
-        
-        if func:
-            return func()
-        else:
-            return self.count()
-        
     def query_all(self):
         return self.query_range(0, pagination=False)
     
@@ -2211,9 +2195,11 @@ class ListView(SimpleListView):
             limit = self.rows_per_page
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
             if isinstance(query, orm.Result):
-                self.total = query.count()
+                if not self.manual:
+                    self.total = query.count()
             else:
-                self.total = self.count(query)
+                if not self.manual:
+                    self.total = self.count(query)
         else:
             query = self.query_range(self.pageno, self.pagination)
         return query
@@ -2370,10 +2356,11 @@ class SelectListView(ListView):
         offset = self.pageno*self.rows_per_page
         limit = self.rows_per_page
         query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
-        if isinstance(query, orm.Result):
-            self.total = query.count()
-        else:
-            self.total = self.count(query)
+        if not self.manual:
+            if isinstance(query, orm.Result):
+                self.total = query.count()
+            else:
+                self.total = self.count(query)
         return query
 
     def query_model(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):

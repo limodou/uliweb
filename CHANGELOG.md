@@ -5,6 +5,7 @@ Uliweb Change Log
 -----------------
 
 * Add warning output for Reference class parameter of relation properties definition.
+* Fix manual and total process bug in ListView and SelectListView
 
 0.2.5 Version
 -----------------
