@@ -546,7 +546,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                     if prop.reference_fieldname == 'id':
                         query = []
                         for _id in old_value:
-                            _v = functions.get_object(prop.reference_class, _id, cache=True, use_local=True)
+                            _v = functions.get_object(prop.reference_class, _id, use_local=True)
                             query.append(_v)
                     else:
                         query = prop.reference_class.filter(prop.reference_class.c[prop.reversed_fieldname].in_(old_value))
@@ -555,7 +555,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                         query = []
                         _ids = prop.get_value_for_datastore(obj, cached=True)
                         for _id in _ids:
-                            _v = functions.get_object(prop.reference_class, _id, cache=True, use_local=True)
+                            _v = functions.get_object(prop.reference_class, _id, use_local=True)
                             query.append(_v)
                     else:
                         query = getattr(obj, prop.property_name).all()
@@ -568,18 +568,18 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                     if old_value is not __default_value__:
                         d = prop.reference_class.c[prop.reference_fieldname]
                         if prop.reference_fieldname == 'id':
-                            v = functions.get_object(prop.reference_class, old_value, cache=True, use_local=True)
+                            v = functions.get_object(prop.reference_class, old_value, use_local=True)
                         else:
                             v = prop.reference_class.get(d==old_value)
                     if not isinstance(obj, Model):
                         d = prop.reference_class.c[prop.reference_fieldname]
                         if prop.reference_fieldname == 'id':
-                            v = functions.get_object(prop.reference_class, value, cache=True, use_local=True)
+                            v = functions.get_object(prop.reference_class, value, use_local=True)
                         else:
                             v = prop.reference_class.get(d==value)
                     else:
                         if prop.reference_fieldname == 'id':
-                            v = functions.get_object(prop.reference_class, obj.get_datastore_value(prop.property_name), cache=True, use_local=True)
+                            v = functions.get_object(prop.reference_class, obj.get_datastore_value(prop.property_name), use_local=True)
                         else:
                             v = getattr(obj, prop.property_name)
                 except orm.Error:

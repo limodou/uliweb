@@ -55,6 +55,11 @@ def get_object(model, id, engine_name=None, connection=None):
     if not redis: return
 
     tablename = model.tablename
+    
+    info = settings.get_var('OBJCACHE_TABLES/%s' % tablename, {})
+    if info is None:
+        return
+    
     _id = get_id(engine_name or model.get_engine_name(), tablename, id)
     try:
         if redis.exists(_id):
@@ -65,7 +70,6 @@ def get_object(model, id, engine_name=None, connection=None):
     except Exception, e:
         log.exception(e)
         
-    info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
     key = 'id'
     fetch_obj = None
     if info and isinstance(info, dict):
@@ -101,7 +105,11 @@ def set_object(model, instance, fields=None, engine_name=None):
         fields = get_fields(tablename)
     
     v = instance.dump(fields)
-    info = settings.get_var('OBJCACHE_TABLES/%s' % tablename)
+    info = settings.get_var('OBJCACHE_TABLES/%s' % tablename, {})
+    
+    if info is None:
+        return
+    
     expire = settings.get_var('OBJCACHE/timeout', 0)
     key = 'id'
     if info and isinstance(info, dict):
