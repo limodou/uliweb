@@ -1102,7 +1102,6 @@ class Property(object):
             except TypeError, err:
                 raise BadValueError('Property %s must be convertible '
                     'to %s, but the value is (%s)' % (self.name, self.data_type, err))
-            
             if hasattr(self, 'custom_validate'):
                 value = self.custom_validate(value)
                 
@@ -1329,6 +1328,13 @@ class IntegerProperty(Property):
     def __init__(self, verbose_name=None, default=0, **kwds):
         super(IntegerProperty, self).__init__(verbose_name, default=default, **kwds)
     
+    def convert(self, value):
+        if value == '':
+            return 0
+        if value is None:
+            return value
+        return self.data_type(value)
+        
     def custom_validate(self, value):
         if value and not isinstance(value, (int, long, bool)):
             raise BadValueError('Property %s must be an int, long or bool, not a %s'
@@ -1574,6 +1580,12 @@ class ReferenceProperty(Property):
                 - Value is not saved.
                 - Object not of correct model type for reference.
         """
+        if value == '':
+            if self.kwargs.get('nullable', __nullable__):
+                value = None
+            else:
+                value = 0
+            
         if not isinstance(value, Model):
             return super(ReferenceProperty, self).validate(value)
 

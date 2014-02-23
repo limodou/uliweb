@@ -543,9 +543,23 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                 s = []
                 #support value parameter, the old value is already stored in "old_value" variable
                 if old_value is not __default_value__:
-                    query = prop.reference_class.filter(prop.reference_class.c[prop.reversed_fieldname].in_(old_value))
+                    if prop.reference_fieldname == 'id':
+                        query = []
+                        for _id in old_value:
+                            _v = functions.get_object(prop.reference_class, _id, cache=True, use_local=True)
+                            query.append(_v)
+                    else:
+                        query = prop.reference_class.filter(prop.reference_class.c[prop.reversed_fieldname].in_(old_value))
                 else:
-                    query = getattr(obj, prop.property_name).all()
+                    if prop.reference_fieldname == 'id':
+                        query = []
+                        _ids = prop.get_value_for_datastore(obj, cached=True)
+                        for _id in _ids:
+                            _v = functions.get_object(prop.reference_class, _id, cache=True, use_local=True)
+                            query.append(_v)
+                    else:
+                        query = getattr(obj, prop.property_name).all()
+                        
                 for x in query:
                     s.append(get_obj_url(x))
                 display = ' '.join(s)
@@ -553,14 +567,23 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                 try:
                     if old_value is not __default_value__:
                         d = prop.reference_class.c[prop.reference_fieldname]
-                        v = prop.reference_class.get(d==old_value)
+                        if prop.reference_fieldname == 'id':
+                            v = functions.get_object(prop.reference_class, old_value, cache=True, use_local=True)
+                        else:
+                            v = prop.reference_class.get(d==old_value)
                     if not isinstance(obj, Model):
                         d = prop.reference_class.c[prop.reference_fieldname]
-                        v = prop.reference_class.get(d==value)
+                        if prop.reference_fieldname == 'id':
+                            v = functions.get_object(prop.reference_class, value, cache=True, use_local=True)
+                        else:
+                            v = prop.reference_class.get(d==value)
                     else:
-                        v = getattr(obj, prop.property_name)
+                        if prop.reference_fieldname == 'id':
+                            v = functions.get_object(prop.reference_class, obj.get_datastore_value(prop.property_name), cache=True, use_local=True)
+                        else:
+                            v = getattr(obj, prop.property_name)
                 except orm.Error:
-                    display = obj.get_datastore_value(prop.property_name) or ''
+                    display = prop.get_datastore_value(obj) or ''
                     v = None
                 if isinstance(v, Model):
                     display = get_obj_url(v)
