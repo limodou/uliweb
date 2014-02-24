@@ -3180,6 +3180,8 @@ class Model(object):
             return None
         if isinstance(condition, (int, long)):
             _cond = cls.c.id==condition
+        elif isinstance(condition, (str, unicode)) and condition.isdigit():
+            _cond = cls.c.id==int(condition)
         else:
             _cond = condition
             
