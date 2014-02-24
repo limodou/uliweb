@@ -773,6 +773,10 @@ def get_object(table, id, cache=False, fields=None, use_local=False, engine_name
         model = get_model(table)
     else:
         model = table
+        
+    #if id is an object of Model, so get the real id value
+    if isinstance(id, Model):
+        id = id.id
       
     if cache:
         if use_local:
