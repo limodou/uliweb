@@ -769,10 +769,7 @@ def get_object(table, id, cache=False, fields=None, use_local=False, engine_name
     """
     from uliweb import functions
     
-    if isinstance(table, (str, unicode)):
-        model = get_model(table)
-    else:
-        model = table
+    model = get_model(table)
         
     #if id is an object of Model, so get the real id value
     if isinstance(id, Model):
@@ -3221,14 +3218,23 @@ class Model(object):
         if id is None:
             return None
         
+        _cond = cls.c.id==id
         #send 'get_object' topic to get cached object
-        return dispatch.get(cls, 'get_object', id, engine_name, connection)
+        obj = dispatch.get(cls, 'get_object', id, engine_name=engine_name, connection=connection)
+        if obj:
+            return obj
+        #if there is no cached object, then just fetch from database
+        obj = cls.connect(connection).filter(_cond, **kwargs).one()
+        #send 'set_object' topic to stored the object to cache
+        if obj:
+            dispatch.call(cls, 'set_object', instance=obj, fields=fields)
+        return obj
 
     def push_cached(self, fields=None, engine_name=None):
         """
         Save object to cache
         """
-        dispatch.call(self.__class__, 'set_object', self.tablename, instance=self, fields=fields, engine_name=engine_name)
+        dispatch.call(self.__class__, 'set_object', instance=self, fields=fields, engine_name=engine_name)
         
     @classmethod
     def _data_prepare(cls, record):
@@ -3354,23 +3360,23 @@ class Model(object):
 #            v = getattr(self, name, default)
 #        return v
 #    
-    def get_cached_reference(self, fieldname, connection=None):
-        prop = self.properties[fieldname]
-        if not isinstance(prop, ReferenceProperty):
-            raise BadPropertyTypeError("Property %s is not instance of RefernceProperty" % fieldname)
-        
-        reference_id = getattr(self, fieldname, None)
-        if reference_id is not None:
-            #this will cache the reference object
-            resolved = getattr(self, prop._resolved_attr_name())
-            if resolved is not None:
-                return resolved
-            else:
-                instance = prop.reference_class.get_cached(reference_id, connection=connection)
-                if instance is None:
-                    raise NotFound('ReferenceProperty %s failed to be resolved' % self.reference_fieldname, self.reference_class, reference_id)
-                setattr(model_instance, self._resolved_attr_name(), instance)
-                return instance
-        else:
-            return None
-
+#    def get_cached_reference(self, fieldname, connection=None):
+#        prop = self.properties[fieldname]
+#        if not isinstance(prop, ReferenceProperty):
+#            raise BadPropertyTypeError("Property %s is not instance of RefernceProperty" % fieldname)
+#        
+#        reference_id = getattr(self, fieldname, None)
+#        if reference_id is not None:
+#            #this will cache the reference object
+#            resolved = getattr(self, prop._resolved_attr_name())
+#            if resolved is not None:
+#                return resolved
+#            else:
+#                instance = prop.reference_class.get_cached(reference_id, connection=connection)
+#                if instance is None:
+#                    raise NotFound('ReferenceProperty %s failed to be resolved' % self.reference_fieldname, self.reference_class, reference_id)
+#                setattr(model_instance, self._resolved_attr_name(), instance)
+#                return instance
+#        else:
+#            return None
+#

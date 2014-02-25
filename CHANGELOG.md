@@ -1,13 +1,14 @@
 Uliweb Change Log
 =====================
 
-0.3 Version
+0.2.6 Version
 -----------------
 
 * Add warning output for Reference class parameter of relation properties definition.
 * Fix manual and total process bug in ListView and SelectListView
 * Fix rawsql bug
 * Add `get_object()` support in Generic ListView
+* Fix `get_cached()` bug
 
 0.2.5 Version
 -----------------
