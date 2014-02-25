@@ -748,7 +748,7 @@ class AddView(object):
             
         return DummyForm(data=self.data, **self.form_args)
     
-    def process_files(self, data, process=True, obj=None):
+    def process_files(self, data, edit=True, obj=None):
         from uliweb.form import FileField
         
         file_fields = {}
@@ -758,7 +758,7 @@ class AddView(object):
         for name, f in self.form.fields_list:
             if isinstance(f, FileField):
                 if name in data and data[name]:
-                    if process:
+                    if edit:
                         if not obj:
                             raise UliwebError("obj can't be empty")
                         
@@ -766,16 +766,13 @@ class AddView(object):
                         filename = getattr(obj, name)
                         if filename:
                             self.fileserving.delete_filename(filename) 
-                        data[name] = self._process_file(obj, data[name], f)
-                        flag = True
-                    else:
-                        file_fields[name] = (f, data.pop(name))
+                    data[name] = self._process_file(obj, data[name], f)
+                    flag = True
                 else:
-                    data.pop(name)
-        if process:
-            return flag
-        else:
-            return file_fields
+                    #if not data[name] and edit status, so just delete name
+                    if edit:
+                        data.pop(name, None)
+        return flag
     
     def _get_upload_path(self, f, name, obj):
         func = getattr(f, name)
@@ -808,18 +805,18 @@ class AddView(object):
             fobj['file'], replace=self.file_replace, 
             convert=self.file_convert)
         
-    def save_files(self, obj, files):
-        d = {}
-        flag = False
-        for name, (f, data) in files.items():
-            d[name] = self._process_file(obj, data, f)
-
-        if d:
-            obj.update(**d)
-            obj.save()
-            flag = True
-            
-        return flag
+#    def save_files(self, obj, files):
+#        d = {}
+#        flag = False
+#        for name, (f, data) in files.items():
+#            d[name] = self._process_file(obj, data, f)
+#
+#        if d:
+#            obj.update(**d)
+#            obj.save()
+#            flag = True
+#            
+#        return flag
     
     def on_success_data(self, obj, data):
         if self.success_data is True:
@@ -841,9 +838,8 @@ class AddView(object):
         if self.pre_save:
             self.pre_save(d)
             
-        files = self.process_files(d, process=False)
+        files = self.process_files(d, edit=False)
         obj = self.save(d)
-        self.save_files(obj, files)
         
         if self.post_save:
             self.post_save(obj, d)
@@ -1016,7 +1012,7 @@ class EditView(AddView):
         if self.pre_save:
             self.pre_save(self.obj, d)
         #process file field
-        r = self.process_files(d, process=True, obj=self.obj)
+        r = self.process_files(d, edit=True, obj=self.obj)
         r = self.save(self.obj, d) or r
         if self.post_save:
             r = self.post_save(self.obj, d) or r

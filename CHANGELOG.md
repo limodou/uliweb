@@ -9,6 +9,7 @@ Uliweb Change Log
 * Fix rawsql bug
 * Add `get_object()` support in Generic ListView
 * Fix `get_cached()` bug
+* Fix process_files in generic add and edit functions bug
 
 0.2.5 Version
 -----------------
