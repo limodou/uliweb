@@ -929,8 +929,12 @@ class ShellCommand(Command):
         namespace = self.make_shell_env(global_options)
         try:
             import readline
-        except:
+        except ImportError:
+            #print "Module readline not available."
             pass
+        else:
+            import rlcompleter
+            readline.parse_and_bind("tab: complete")
         
 #        if options.ipython:
 #            try:

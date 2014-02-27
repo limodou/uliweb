@@ -12,6 +12,7 @@ Uliweb Change Log
 * Fix process_files in generic add and edit functions bug
 * Add `import readline` before enter shell environment
 * change occ name to version
+* Improve autocomplete in shell command
 
 0.2.5 Version
 -----------------
