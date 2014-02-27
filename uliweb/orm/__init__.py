@@ -48,7 +48,7 @@ import datetime
 import copy
 import re
 from uliweb.utils import date as _date
-from uliweb.utils.common import flat_list, classonlymethod
+from uliweb.utils.common import flat_list, classonlymethod, safe_str
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement, text, true
 from sqlalchemy.pool import NullPool
@@ -420,7 +420,7 @@ def rawsql(query, ec=None):
 #                v = v.encode(enc)
 #            params.append( escape(v, conversions) )
 #            return (comp.string.encode(enc).replace('?', '%s') % tuple(params))
-            params.append(repr(v))
+            params.append(repr(safe_str(v)))
         return comp.string.replace('?', '%s') % tuple(params)
     
     
