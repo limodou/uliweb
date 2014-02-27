@@ -10,6 +10,7 @@ Uliweb Change Log
 * Add `get_object()` support in Generic ListView
 * Fix `get_cached()` bug
 * Fix process_files in generic add and edit functions bug
+* Add `import readline` before enter shell environment
 
 0.2.5 Version
 -----------------

@@ -927,6 +927,11 @@ class ShellCommand(Command):
     
     def handle(self, options, global_options, *args):
         namespace = self.make_shell_env(global_options)
+        try:
+            import readline
+        except:
+            pass
+        
 #        if options.ipython:
 #            try:
 #                import IPython

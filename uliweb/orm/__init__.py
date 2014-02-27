@@ -1070,7 +1070,7 @@ class Property(object):
     def validate(self, value):
         if self.empty(value):
             if self.required:
-                raise BadValueError('Property %s is required' % self.name)
+                raise BadValueError('Property "%s" of Model [%s] is required, but %r found' % (self.name, self.model_class.__name__, value))
 #        else:
 #            if self.choices:
 #                match = False
