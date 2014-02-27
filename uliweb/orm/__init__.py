@@ -2764,7 +2764,7 @@ class Model(object):
         return self
             
     def put(self, insert=False, connection=None, changed=None, saved=None, 
-            send_dispatch=True, occ=False, occ_fieldname=None, occ_exception=True):
+            send_dispatch=True, version=False, version_fieldname=None, version_exception=True):
         """
         If insert=True, then it'll use insert() indead of update()
         
@@ -2775,12 +2775,12 @@ class Model(object):
                 if flag is true, then it means the record is changed
                 you can change new_data, and the new_data will be saved to database
                 
-        occ = Optimistic Concurrency Control
-        occ_fieldname default is 'version'
+        version = Optimistic Concurrency Control
+        version_fieldname default is 'version'
         """
         _saved = False
         created = False
-        occ_fieldname = occ_fieldname or 'version'
+        version_fieldname = version_fieldname or 'version'
         d = self._get_data()
         #fix when d is empty, orm will not insert record bug 2013/04/07
         if d or not self.id or insert:
@@ -2840,25 +2840,25 @@ class Model(object):
                                 _manytomany[k] = d.pop(k)
                     if d:
                         _cond = self.table.c.id == self.id
-                        if occ:
-                            occ_field = self.table.c.get(occ_fieldname)
-                            if occ_field is None:
-                                raise KindError("occ_fieldname %s is not existed in Model %s" % (occ_fieldname, self.__class__.__name__))
-                            _occ_value = getattr(self, occ_fieldname, 0)
-                            setattr(self, occ_fieldname, _occ_value+1)
-                            d[occ_fieldname] = _occ_value+1
-                            _cond = (occ_field == _occ_value) & _cond
+                        if version:
+                            version_field = self.table.c.get(version_fieldname)
+                            if version_field is None:
+                                raise KindError("version_fieldname %s is not existed in Model %s" % (version_fieldname, self.__class__.__name__))
+                            _version_value = getattr(self, version_fieldname, 0)
+                            setattr(self, version_fieldname, _version_value+1)
+                            d[version_fieldname] = _version_value+1
+                            _cond = (version_field == _version_value) & _cond
                             
                         if callable(changed):
                             changed(self, created, self._old_values, d)
                             old.update(d)
                         result = do_(self.table.update(_cond).values(**d), connection or self.get_connection())
                         _saved = True
-                        if occ:
+                        if version:
                             if result.rowcount != 1:
                                 _saved = False
-                                if occ_exception:
-                                    raise SaveError("The record has been saved by others, current version is %d" % _occ_value)
+                                if version_exception:
+                                    raise SaveError("The record has been saved by others, current version is %d" % _version_value)
                         
                     if _manytomany:
                         for k, v in _manytomany.items():

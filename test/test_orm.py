@@ -2021,7 +2021,7 @@ def test_reference_server_default():
     >>> set_server_default(False)
     """
     
-def test_occ():
+def test_version():
     """
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
@@ -2036,12 +2036,12 @@ def test_occ():
     >>> b1 = Test.get(1)
     >>> b1.update(year=21)
     <Test {'username':u'limodou1','year':21,'version':0,'id':1}>
-    >>> b1.save(occ=True)
+    >>> b1.save(version=True)
     True
     >>> b.update(year=22)
     <Test {'username':u'limodou1','year':22,'version':0,'id':1}>
     >>> try:
-    ...     b.save(occ=True)
+    ...     b.save(version=True)
     ... except SaveError:
     ...     print 'saveerror'
     saveerror

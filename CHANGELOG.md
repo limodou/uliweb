@@ -11,6 +11,7 @@ Uliweb Change Log
 * Fix `get_cached()` bug
 * Fix process_files in generic add and edit functions bug
 * Add `import readline` before enter shell environment
+* change occ name to version
 
 0.2.5 Version
 -----------------
