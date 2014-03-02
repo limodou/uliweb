@@ -48,7 +48,7 @@ import datetime
 import copy
 import re
 from uliweb.utils import date as _date
-from uliweb.utils.common import flat_list, classonlymethod, safe_str
+from uliweb.utils.common import flat_list, classonlymethod, simple_value
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement, text, true
 from sqlalchemy.pool import NullPool
@@ -420,8 +420,9 @@ def rawsql(query, ec=None):
 #                v = v.encode(enc)
 #            params.append( escape(v, conversions) )
 #            return (comp.string.encode(enc).replace('?', '%s') % tuple(params))
-            params.append(repr(safe_str(v)))
-        return comp.string.replace('?', '%s') % tuple(params)
+            params.append(repr(simple_value(v)))
+        line = comp.string.replace('?', '%s') % tuple(params)
+        return line.replace('\n', '')+';'
     
     
 def do_(query, ec=None, args=None):
@@ -2424,6 +2425,11 @@ class ManyToMany(ReferenceProperty):
             result = getattr(model_instance, self.name)
             v = result.ids(True)
             setattr(model_instance, name, v)
+            
+            #2014/3/1 save value to Model_instance._old_values
+            #this will cause manytomany need not to check when saving
+            #or it'll compare the difference between old_value and database(use select)
+            model_instance._old_values[self.name] = v
         return v
 
     def __get__(self, model_instance, model_class):
@@ -2764,7 +2770,8 @@ class Model(object):
         return self
             
     def put(self, insert=False, connection=None, changed=None, saved=None, 
-            send_dispatch=True, version=False, version_fieldname=None, version_exception=True):
+            send_dispatch=True, version=False, version_fieldname=None, 
+            version_exception=True):
         """
         If insert=True, then it'll use insert() indead of update()
         
@@ -2777,6 +2784,8 @@ class Model(object):
                 
         version = Optimistic Concurrency Control
         version_fieldname default is 'version'
+        if check_many, it'll auto check if manytomany value need to save, 
+        only available in UPDATE
         """
         _saved = False
         created = False
@@ -2859,7 +2868,7 @@ class Model(object):
                                 _saved = False
                                 if version_exception:
                                     raise SaveError("The record has been saved by others, current version is %d" % _version_value)
-                        
+                      
                     if _manytomany:
                         for k, v in _manytomany.items():
                             if v is not None:

@@ -13,6 +13,8 @@ Uliweb Change Log
 * Add `import readline` before enter shell environment
 * change occ name to version
 * Improve autocomplete in shell command
+* Fix manytomany cached value is not used when do the save, because of not stored
+  in `_old_values`
 
 0.2.5 Version
 -----------------
