@@ -181,7 +181,7 @@ def load_table(table, filename, con, delimiter=',', format=None,
                                     params[c.name] = record[c.name]
                 buf.append(params)
                 if count >= bulk:
-                    do_(table.insert(), args=(buf, ))
+                    do_(table.insert(), args=buf)
                     count = 0
                     buf = []
             except:
@@ -189,7 +189,7 @@ def load_table(table, filename, con, delimiter=',', format=None,
                 raise
         
         if buf:
-            do_(table.insert(), args=(buf, ))
+            do_(table.insert(), args=buf)
             
         return 'OK (%d/%lfs)' % (n, time()-b)
     finally:
