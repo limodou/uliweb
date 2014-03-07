@@ -883,10 +883,12 @@ class ModelMetaclass(type):
         
         #add __without_id__ attribute to model, if set it, uliorm will not
         #create 'id' field for the model
+        #if there is already has primary key, then id will not created 
+        #change in 0.2.6 version
         without_id = getattr(cls, '__without_id__', False)
-        if 'id' not in cls.properties and not without_id:
+        if not has_primary_key and 'id' not in cls.properties and not without_id:
             cls.properties['id'] = f = Field(PKTYPE(), autoincrement=True, 
-                primary_key=not has_primary_key, default=None, nullable=False, server_default=None)
+                primary_key=True, default=None, nullable=False, server_default=None)
             if not __lazy_model_init__:
                 f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)

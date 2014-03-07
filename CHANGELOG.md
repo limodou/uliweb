@@ -15,6 +15,12 @@ Uliweb Change Log
 * Improve autocomplete in shell command
 * Fix manytomany cached value is not used when do the save, because of not stored
   in `_old_values`
+* If you've already define primary key in Model, then it'll not create id property
+  for you, just like:
+
+    ```
+    user_id = Field(int, primary_key=True, autoincrement=True)
+    ```
 
 0.2.5 Version
 -----------------

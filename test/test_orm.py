@@ -2047,6 +2047,19 @@ def test_version():
     saveerror
     """
     
+def test_primary_key():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     user_id = Field(int, primary_key=True, autoincrement=True)
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    ...     version = Field(int)
+    >>> Test.properties.keys()
+    ['username', 'version', 'user_id', 'year']
+    """
+
 #if __name__ == '__main__':
 #    from sqlalchemy.schema import CreateTable, CreateIndex
 #    
