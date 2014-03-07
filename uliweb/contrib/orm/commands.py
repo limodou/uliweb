@@ -50,9 +50,11 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
     e = engine.options['connection_string']
     
     old_models = orm.__models__.keys()
+    tables_map = {}
     try:
         for tablename, m in engine.models.items():
             x = orm.get_model(tablename, engine_name)
+            tables_map[x.tablename] = tablename
     except:
         print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
         raise
@@ -63,14 +65,14 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
             if hasattr(m, '__appname__') and m.__appname__ in apps:
                 table = engine.metadata.tables[tablename]
                 table.__appname__ = m.__appname__
-                t[tablename] = table
+                t[tables_map.get(tablename, tablename)] = table
     elif tables:
         t = {}
         for tablename in tables:
             if tablename in engine.metadata.tables:
                 table = engine.metadata.tables[tablename]
                 table.__appname__ = engine.metadata.tables[tablename].__appname__
-                t[tablename] = table
+                t[tables_map.get(tablename, tablename)] = table
             else:
                 print "Table [%s] can't be found, it'll be skipped." % tablename
     else:
@@ -78,7 +80,7 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
         for tablename, m in engine.metadata.tables.items():
             table = engine.metadata.tables[tablename]
             table.__appname__ = m.__appname__
-            t[tablename] = table
+            t[tables_map.get(tablename, tablename)] = table
      
     return t
 

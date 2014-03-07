@@ -18,6 +18,8 @@ def generate_html(tables, apps, **kwargs):
     from os.path import dirname, join    
     from uliweb.core.template import template_file
     from uliweb.orm import ReferenceProperty
+    from uliweb.utils.textconvert import text2html
+    from sqlalchemy.schema import CreateIndex
     
     menus = []
     for app in apps:
@@ -32,6 +34,7 @@ def generate_html(tables, apps, **kwargs):
             item = {
                 'app_name': app.replace('.', '_'),
                 'name': tablename,
+                'caption': tablename,
             }
             try:
                 M = orm.get_model(tablename)
@@ -39,6 +42,8 @@ def generate_html(tables, apps, **kwargs):
                 continue     
             
             item['label'] = getattr(M, '__verbose_name__', tablename)
+            if tablename != M.tablename:
+                item['caption'] += ' - ' + M.tablename
             
             section['items'].append(item)
         menus.append(section)
@@ -50,10 +55,11 @@ def generate_html(tables, apps, **kwargs):
             'name': name,
             'fields': [],
             'relations': [],
-            'choices': []
+            'choices': [],
+            'indexes': [],
         }
         if hasattr(t, '__appname__') :
-            model['appname'] = t.__appname__
+            model['appname'] = text2html(t.__appname__)
         else :
             model['appname'] = None
         
@@ -67,6 +73,18 @@ def generate_html(tables, apps, **kwargs):
             model['label'] = "%s(%s)" % (name, getattr(M, '__verbose_name__', None))
         else:
             model['label'] = name
+        if name != getattr(M, 'tablename', name):
+            model['label'] += ' - ' + M.tablename
+            
+        #Add docstring for Model
+        if M.__doc__:
+            model['desc'] = M.__doc__
+        else:
+            model['desc'] = ''
+        
+        #process indexes
+        for x in t.indexes:
+            model['indexes'].append(CreateIndex(x))
         
         star_index = 0
         for tablefield in sorted(t.c, key=lambda x:(x.name)):

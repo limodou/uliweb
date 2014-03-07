@@ -21,6 +21,7 @@ Uliweb Change Log
     ```
     user_id = Field(int, primary_key=True, autoincrement=True)
     ```
+* Fix sqldot bug and improve sqlhtml generation
 
 0.2.5 Version
 -----------------

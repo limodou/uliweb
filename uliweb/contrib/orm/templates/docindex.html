@@ -21,53 +21,53 @@
     dl, dt, dd, ol, ul, li,
     fieldset, form, label, legend,
     table, caption, tbody, tfoot, thead, tr, th, td {
-    	margin: 0;
-    	padding: 0;
-    	border: 0;
-    	outline: 0;
-    	font-size: 100%;
-    	vertical-align: baseline;
-    	background: transparent;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        font-size: 100%;
+        vertical-align: baseline;
+        background: transparent;
     }
     body {
-    	line-height: 1;
+        line-height: 1;
     }
     ol, ul {
-    	list-style: none;
+        list-style: none;
     }
     blockquote, q {
-    	quotes: none;
+        quotes: none;
     }
     blockquote:before, blockquote:after,
     q:before, q:after {
-    	content: '';
-    	content: none;
+        content: '';
+        content: none;
     }
     
     /* remember to define focus styles! */
     :focus {
-    	outline: 0;
+        outline: 0;
     }
     
     /* remember to highlight inserts somehow! */
     ins {
-    	text-decoration: none;
+        text-decoration: none;
     }
     del {
-    	text-decoration: line-through;
+        text-decoration: line-through;
     }
     
     /* tables still need 'cellspacing="0"' in the markup */
     table {
-    	border-collapse: collapse;
-    	border-spacing: 0;
+        border-collapse: collapse;
+        border-spacing: 0;
     }
     #footer {clear:both;width:100%;border-top:1px solid #ccc;padding-top:20px;padding-bottom:20px;background:#dfdfdf;}
        #footer p{text-align:center;font-size:12px;}
     
     
     </style>
-	<style>
+    <style>
 [class^="icon-"], [class*=" icon-"] {
   display: inline-block;
   width: 14px;
@@ -127,8 +127,11 @@ a.star:hover{color:#08C;text-decoration:none}
 
 tr.key{font-weight:bold}
 td.ref{cursor:pointer}
-.comment{font-size:12px;color:#666}
+.description{font-size:12px;color:#666;margin-bottom: 15px;}
+.comment{font-size:12px;color:#666;margin-top: 15px;}
 .comment li {margin-left:10px;padding:2px 2px;}
+.index{font-size:12px;color:#666;margin-top: 15px;}
+.index li {margin-left:10px;padding:2px 2px;}
 #tips{position:absolute;z-index:10001;display:none;}
 #tips_content{text-align:left;padding:3px;line-height:18px;color:#000;font-size:12px;border:1px solid #999;background:Khaki;}
 
@@ -167,78 +170,78 @@ td.ref{cursor:pointer}
             }
         };
         var getElementsByClassName = function (className, tag, elm){
-        	if (document.getElementsByClassName) {
-        		getElementsByClassName = function (className, tag, elm) {
-        			elm = elm || document;
-        			var elements = elm.getElementsByClassName(className),
-        				nodeName = (tag)? new RegExp("\\b" + tag + "\\b", "i") : null,
-        				returnElements = [],
-        				current;
-        			for(var i=0, il=elements.length; i<il; i+=1){
-        				current = elements[i];
-        				if(!nodeName || nodeName.test(current.nodeName)) {
-        					returnElements.push(current);
-        				}
-        			}
-        			return returnElements;
-        		};
-        	}
-        	else if (document.evaluate) {
-        		getElementsByClassName = function (className, tag, elm) {
-        			tag = tag || "*";
-        			elm = elm || document;
-        			var classes = className.split(" "),
-        				classesToCheck = "",
-        				xhtmlNamespace = "http://www.w3.org/1999/xhtml",
-        				namespaceResolver = (document.documentElement.namespaceURI === xhtmlNamespace)? xhtmlNamespace : null,
-        				returnElements = [],
-        				elements,
-        				node;
-        			for(var j=0, jl=classes.length; j<jl; j+=1){
-        				classesToCheck += "[contains(concat(' ', @class, ' '), ' " + classes[j] + " ')]";
-        			}
-        			try	{
-        				elements = document.evaluate(".//" + tag + classesToCheck, elm, namespaceResolver, 0, null);
-        			}
-        			catch (e) {
-        				elements = document.evaluate(".//" + tag + classesToCheck, elm, null, 0, null);
-        			}
-        			while ((node = elements.iterateNext())) {
-        				returnElements.push(node);
-        			}
-        			return returnElements;
-        		};
-        	}
-        	else {
-        		getElementsByClassName = function (className, tag, elm) {
-        			tag = tag || "*";
-        			elm = elm || document;
-        			var classes = className.split(" "),
-        				classesToCheck = [],
-        				elements = (tag === "*" && elm.all)? elm.all : elm.getElementsByTagName(tag),
-        				current,
-        				returnElements = [],
-        				match;
-        			for(var k=0, kl=classes.length; k<kl; k+=1){
-        				classesToCheck.push(new RegExp("(^|\\s)" + classes[k] + "(\\s|$)"));
-        			}
-        			for(var l=0, ll=elements.length; l<ll; l+=1){
-        				current = elements[l];
-        				match = false;
-        				for(var m=0, ml=classesToCheck.length; m<ml; m+=1){
-        					match = classesToCheck[m].test(current.className);
-        					if (!match) {
-        						break;
-        					}
-        				}
-        				if (match) {
-        					returnElements.push(current);
-        				}
-        			}
-        			return returnElements;
-        		};
-        	}
-        	return getElementsByClassName(className, tag, elm);
+            if (document.getElementsByClassName) {
+                getElementsByClassName = function (className, tag, elm) {
+                    elm = elm || document;
+                    var elements = elm.getElementsByClassName(className),
+                        nodeName = (tag)? new RegExp("\\b" + tag + "\\b", "i") : null,
+                        returnElements = [],
+                        current;
+                    for(var i=0, il=elements.length; i<il; i+=1){
+                        current = elements[i];
+                        if(!nodeName || nodeName.test(current.nodeName)) {
+                            returnElements.push(current);
+                        }
+                    }
+                    return returnElements;
+                };
+            }
+            else if (document.evaluate) {
+                getElementsByClassName = function (className, tag, elm) {
+                    tag = tag || "*";
+                    elm = elm || document;
+                    var classes = className.split(" "),
+                        classesToCheck = "",
+                        xhtmlNamespace = "http://www.w3.org/1999/xhtml",
+                        namespaceResolver = (document.documentElement.namespaceURI === xhtmlNamespace)? xhtmlNamespace : null,
+                        returnElements = [],
+                        elements,
+                        node;
+                    for(var j=0, jl=classes.length; j<jl; j+=1){
+                        classesToCheck += "[contains(concat(' ', @class, ' '), ' " + classes[j] + " ')]";
+                    }
+                    try {
+                        elements = document.evaluate(".//" + tag + classesToCheck, elm, namespaceResolver, 0, null);
+                    }
+                    catch (e) {
+                        elements = document.evaluate(".//" + tag + classesToCheck, elm, null, 0, null);
+                    }
+                    while ((node = elements.iterateNext())) {
+                        returnElements.push(node);
+                    }
+                    return returnElements;
+                };
+            }
+            else {
+                getElementsByClassName = function (className, tag, elm) {
+                    tag = tag || "*";
+                    elm = elm || document;
+                    var classes = className.split(" "),
+                        classesToCheck = [],
+                        elements = (tag === "*" && elm.all)? elm.all : elm.getElementsByTagName(tag),
+                        current,
+                        returnElements = [],
+                        match;
+                    for(var k=0, kl=classes.length; k<kl; k+=1){
+                        classesToCheck.push(new RegExp("(^|\\s)" + classes[k] + "(\\s|$)"));
+                    }
+                    for(var l=0, ll=elements.length; l<ll; l+=1){
+                        current = elements[l];
+                        match = false;
+                        for(var m=0, ml=classesToCheck.length; m<ml; m+=1){
+                            match = classesToCheck[m].test(current.className);
+                            if (!match) {
+                                break;
+                            }
+                        }
+                        if (match) {
+                            returnElements.push(current);
+                        }
+                    }
+                    return returnElements;
+                };
+            }
+            return getElementsByClassName(className, tag, elm);
         };
         function viewport()
         {
@@ -263,8 +266,8 @@ td.ref{cursor:pointer}
         <li class="sec">
         <span id="{{=menu['name']}}">{{=menu['name']}}</span>
         <ul class="items">
-        {{ for item in menu['items']:}}
-            <li class='item'><i class="icon-list-alt"></i>&nbsp;<a href="#tt-{{=item['name']}}" title="{{=item['label']}}">{{=item['name']}}</a></li>
+        {{ for item in sorted(menu['items'], key=lambda x:x['name']):}}
+            <li class='item'><i class="icon-list-alt"></i>&nbsp;<a href="#tt-{{=item['name']}}" title="{{=item['label']}}">{{=item['caption']}}</a></li>
             {{pass}}
         </ul>
         </li>
@@ -272,13 +275,18 @@ td.ref{cursor:pointer}
   </ul>
   <div id="content">
   
-  {{ for table in tables: }}
+  {{ for table in sorted(tables, key=lambda x:x['name']): }}
       <a name="tt-{{= table['name']}}"></a>
       <h2 id="h-{{= table['name']}}">{{= table['label'] }} 
         {{if table['appname']:}}
             <span class="inapp"> <a href="#app-{{= table['appname'] }}">{{= table['appname'] }}</a> </span> 
         {{else:}} &nbsp; {{pass}}
       </h2>
+      {{if table['desc']:}}
+        <div class="description">
+        <b>Description:</b> {{<< table['desc']}}
+        </div>
+      {{pass}}
       <div id="tb-{{= table['name']}}">
           <table cellpadding="0" cellspacing="0"> 
           <tr>
@@ -302,20 +310,32 @@ td.ref{cursor:pointer}
              </tr>
           {{ pass }}
         </table>
-		<div class="comment">
-		  <ul>
-		  {{ if table['choices'] : }} Description:<br/> {{pass}}
-          {{ for comment in table['choices']: }}
-			<li id="comment-{{= table['name']}}-{{=comment['fieldname']}}">{{=comment['index']}}.{{=comment['fieldlabel']}}:
-            <span>
-			{{ for i, value in comment['list']: }}
-			    ({{=repr(i)}},{{=value}}) 
-			{{ pass }}
-            </span>
-			</li>
-          {{ pass }}
-		  </ul>
-		</div>
+        {{ if table['indexes'] : }}
+          <div class="index">
+            <b>Indexes:</b>
+            <ul>
+              {{ for index in table['indexes']: }}
+                  <li>{{=index}}</li>
+              {{ pass }}
+            </ul>
+          </div>
+        {{pass}}
+        {{ if table['choices'] : }}
+          <div class="comment">
+            <b>Comments:</b>
+            <ul>
+            {{ for comment in table['choices']: }}
+              <li id="comment-{{= table['name']}}-{{=comment['fieldname']}}">{{=comment['index']}}.{{=comment['fieldlabel']}}:
+              <span>
+              {{ for i, value in comment['list']: }}
+                ({{=repr(i)}},{{=value}}) 
+              {{ pass }}
+              </span>
+              </li>
+            {{ pass }}
+            </ul>
+          </div>
+        {{pass}}
     </div>  
     {{ pass }}
   </div>  
