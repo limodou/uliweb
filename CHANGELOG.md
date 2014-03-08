@@ -22,6 +22,7 @@ Uliweb Change Log
     user_id = Field(int, primary_key=True, autoincrement=True)
     ```
 * Fix sqldot bug and improve sqlhtml generation
+* Eanble colored log output by default.
 
 0.2.5 Version
 -----------------

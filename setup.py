@@ -112,8 +112,8 @@ Links
 --------
 
 * **Uliweb** Project Homepage https://github.com/limodou/uliweb
-* **Uliweb-doc** Documentation Project [http://github.com/limodou/uliweb-doc](http://github.com/limodou/uliweb-doc)
-* **Uliweb-doc Online** Document [http://limodou.github.com/uliweb-doc/](http://limodou.github.com/uliweb-doc/)
+* **Uliweb-doc** Documentation Project http://github.com/limodou/uliweb-doc
+* **Uliweb-doc Online** Document http://limodou.github.com/uliweb-doc/
 * **plugs** Uliweb Apps Collection Project https://github.com/limodou/plugs
 """
 
