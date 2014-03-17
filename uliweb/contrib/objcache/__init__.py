@@ -9,18 +9,23 @@ def get_fields(tablename):
     
     tables = settings.get_var('OBJCACHE_TABLES')
     if not tablename in tables:
-        return 
+        return [], []
     
-    fields = tables[tablename] or []
-    if not isinstance(fields, (tuple, list)):
-        fields = fields.get('fields', [])
-    return fields
+    info = tables[tablename] or []
+    exclude = []
+    if not isinstance(info, (tuple, list)):
+        fields = info.get('fields', [])
+        exclude = info.get('exclude', [])
+    else:
+        fields = info
+    return fields, exclude
 
 def get_id(engine, tablename, id):
     from uliweb import settings
-
-    d = {'engine':engine, 'tablename':str(tablename), 'id':str(id)}
-    format = settings.get_var('OBJCACHE/key_format', 'OC:%(engine)s:%(tablename)s:%(id)s')
+    
+    table = functions.get_table(tablename)
+    d = {'engine':engine, 'table_id':table.id, 'id':str(id)}
+    format = settings.get_var('OBJCACHE/key_format', 'OC:%(engine)s:%(table_id)d:%(id)s')
     return format % d
 
 def get_redis():
@@ -37,7 +42,7 @@ def check_enable():
     if settings.OBJCACHE.enable:
         return True
     
-def get_object(model, id, engine_name=None, connection=None):
+def get_object(model, cid, engine_name=None, connection=None):
     """
     Get cached object from redis
     
@@ -60,33 +65,20 @@ def get_object(model, id, engine_name=None, connection=None):
     if info is None:
         return
     
-    _id = get_id(engine_name or model.get_engine_name(), tablename, id)
+    _id = get_id(engine_name or model.get_engine_name(), tablename, cid)
     try:
+        log.debug("Try to find objcache:get:table=%s:id=[%s]" % (tablename, _id))
         if redis.exists(_id):
             v = redis.hgetall(_id)
-            o = model.load(v)
-            log.debug("objcache:get:id="+_id)
+            o = model.load(v, convert_pickle=True)
+            log.debug("Found!")
             return o
+        else:
+            log.debug("Not Found!")
     except Exception, e:
         log.exception(e)
-        
-    key = 'id'
-    fetch_obj = None
-    if info and isinstance(info, dict):
-        key = info.get('key', key)
-        fetch_obj = info.get('fetch_obj', fetch_obj)
-        
-    if fetch_obj:
-        log.debug("objcache:fetch_obj:id="+_id+','+fetch_obj)
-        obj = import_attr(fetch_obj)(model, id)
-    else:
-        _cond = model.c[key] == id
-        log.debug("objcache:query:id="+_id+','+str(_cond))
-        obj = model.filter(_cond).connect(connection or engine_name).one()
-    if obj:
-        set_object(model, instance=obj, engine_name=engine_name)
-    return obj
-    
+       
+
 def set_object(model, instance, fields=None, engine_name=None):
     """
     Only support simple condition, for example: Model.c.id == n
@@ -101,10 +93,11 @@ def set_object(model, instance, fields=None, engine_name=None):
     if not redis: return
     
     tablename = model.tablename
+    exclude = []
     if not fields:
-        fields = get_fields(tablename)
+        fields, exclude = get_fields(tablename)
     
-    v = instance.dump(fields)
+    v = instance.dump(fields, exclude=exclude)
     info = settings.get_var('OBJCACHE_TABLES/%s' % tablename, {})
     
     if info is None:
@@ -129,7 +122,7 @@ def set_object(model, instance, fields=None, engine_name=None):
             p = p.expire(_id, expire)
             expire_msg = ':expire=%d' % expire
         r = p.execute()
-        log.debug("objcache:set:id="+_id+expire_msg)
+        log.debug("Saving to cache objcache:set:table=%s:id=[%s]:%s" % (tablename, _id, expire_msg))
     except Exception, e:
         log.exception(e)
         

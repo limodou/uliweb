@@ -1837,14 +1837,17 @@ def test_load_dump():
     ...     float = FloatProperty()
     ...     decimal = DecimalProperty()
     ...     pickle = PickleProperty()
-    >>> a = {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': '', 'id':1}
+    >>> a = {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a': 1,'b': 2}, 'id':1}
     >>> b = Test.load(a)
     >>> b.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': '', 'id': 1}
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a': 1, 'b': 2}, 'id': 1}
     >>> b.dump()
-    {'date1': u'2009-01-01 14:00:05', 'date3': u'14:00:00', 'date2': u'2009-01-01', 'string': u'limodou', 'decimal': u'10.2', 'float': u'200.02', 'boolean': u'True', 'integer': u'200', 'pickle': u'', 'id': u'1'}
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': '200.02', 'boolean': 'True', 'integer': '200', 'pickle': '\\x80\\x02}q\\x01(U\\x01aK\\x01U\\x01bK\\x02u.', 'id': '1'}
     >>> b.dump(fields=['boolean', 'decimal'])
-    {'decimal': u'10.2', 'boolean': u'True', 'id': u'1'}
+    {'decimal': '10.2', 'boolean': 'True', 'id': '1'}
+    >>> b.pickle = {'a':[1,2,3]}
+    >>> b.dump(fields=['pickle'])
+    {'pickle': '\\x80\\x02}q\\x01U\\x01a]q\\x02(K\\x01K\\x02K\\x03es.', 'id': '1'}
     >>> b.date1=Lazy
     >>> b.date2=Lazy
     >>> b.date3=Lazy
@@ -1855,6 +1858,80 @@ def test_load_dump():
     >>> b.decimal = Lazy
     """
 
+def test_manytomany_loaddump():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     users = ManyToMany(User)
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='user', year=10)
+    >>> b.save()
+    True
+    >>> c = User(username='abc', year=20)
+    >>> c.save()
+    True
+    >>> g1 = Group(name='python', users=[a.id, b.id])
+    >>> g1.save()
+    True
+    >>> g1.dump()
+    {'id': '1', 'name': 'python'}
+    >>> g1.dump(exclude=['users'])
+    {'id': '1', 'name': 'python'}
+    >>> g1.dump(fields=[], exclude=['users'])
+    {'id': '1', 'name': 'python'}
+    >>> g1.dump(fields=['name'], exclude=['users'])
+    {'id': '1', 'name': 'python'}
+    >>> d = g1.dump(['name', 'users'])
+    >>> print d
+    {'users': '1,2', 'id': '1', 'name': 'python'}
+    >>> g = Group.load(d)
+    >>> print g._users_
+    [1, 2]
+    >>> list(g.users)
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
+    >>> g.users.all(cache=True)
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
+    """
+    
+def test_manytomany_delete_fieldname():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    >>> class Group(Model):
+    ...     name = Field(str)
+    ...     deleted = Field(bool)
+    ...     users = ManyToMany(User)
+    >>> a = User(username='limodou')
+    >>> a.save()
+    True
+    >>> b = User(username='user')
+    >>> b.save()
+    True
+    >>> c = User(username='abc')
+    >>> c.save()
+    True
+    >>> g1 = Group(name='python')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='perl')
+    >>> g2.save()
+    True
+    >>> g3 = Group(name='java')
+    >>> g3.save()
+    True
+    """
+    
 def test_delay():
     """
     >>> db = get_connection('sqlite://')
@@ -1952,10 +2029,9 @@ def test_changed_and_saved():
     [2]
     >>> list(g2.users.all())
     [<User {'username':u'user','year':10,'id':2}>]
-    >>> g3 = Group.get(1, many_fields=['users'])
-    >>> g3._old_values
-    {'users': [2], 'id': 1, 'name': 'ddd'}
-    >>> g3 = Group.get(1, many_fields=[Group.users])
+    >>> g3 = Group.get(1)
+    >>> g3._users_
+    [2]
     >>> g3._old_values
     {'users': [2], 'id': 1, 'name': 'ddd'}
     >>> g2.users.add(c)
@@ -2060,6 +2136,31 @@ def test_primary_key():
     ['username', 'version', 'user_id', 'year']
     """
 
+def test_get_object():
+    """
+    >>> from uliweb.orm import Local
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> a = Test(username='limodou', year=0)
+    >>> a.save()
+    True
+    >>> get_object('Test', 1)
+    <Test {'username':u'limodou','year':0,'id':1}>
+    >>> get_object('Test', 1, cache=True)
+    <Test {'username':u'limodou','year':0,'id':1}>
+    >>> get_object('Test', 1, cache=True, use_local=True)
+    <Test {'username':u'limodou','year':0,'id':1}>
+    >>> get_object('Test', 1, cache=True, use_local=True)
+    <Test {'username':u'limodou','year':0,'id':1}>
+    >>> Test.get(Test.c.id == 1)
+    <Test {'username':u'limodou','year':0,'id':1}>
+    >>> Test.get(1, cache=True)
+    <Test {'username':u'limodou','year':0,'id':1}>
+    """
+
 #if __name__ == '__main__':
 #    from sqlalchemy.schema import CreateTable, CreateIndex
 #    
@@ -2104,3 +2205,27 @@ def test_primary_key():
 #    print repr(c), c._test_
 #    set_server_default(False)
 #    
+
+
+##set_debug_query(True)
+#db = get_connection('sqlite://')
+#db.metadata.drop_all()
+#import datetime
+#class Test(Model):
+#    string = StringProperty(max_length=40)
+#    boolean = BooleanProperty()
+#    integer = IntegerProperty()
+#    date1 = DateTimeProperty()
+#    date2 = DateProperty()
+#    date3 = TimeProperty()
+#    float = FloatProperty()
+#    decimal = DecimalProperty()
+#    pickle = PickleProperty()
+#a = {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a':1, 'b':2}, 'id':1}
+#b = Test(**a)
+#b.save()
+#d = b.dump()
+#print d
+#print b.dump(fields=['pickle'])
+#x = Test.load(d, convert_pickle=True)
+#print repr(x)
