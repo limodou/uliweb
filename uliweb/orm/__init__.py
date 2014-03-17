@@ -21,7 +21,8 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
     'CommitAll', 'RollbackAll', 'set_lazy_model_init',
     'begin_sql_monitor', 'close_sql_monitor', 'set_model_config', 'text',
-    'get_object', 'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
+    'get_object', 'get_cached_object',
+    'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
     ]
 
 __auto_create__ = False
@@ -818,7 +819,10 @@ def get_object(table, id, cache=False, fields=None, use_local=False, engine_name
         obj = model.get(id, fields=fields)
     
     return obj
-        
+
+def get_cached_object(table, id, cache=True, fields=None, use_local=True, engine_name=None):
+    return get_object(table, id, cache, fields, use_local, engine_name)
+
 class SQLMointor(object):
     def __init__(self, key_length=65, record_details=False):
         self.count = SortedDict()
