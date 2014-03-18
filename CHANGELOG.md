@@ -4,6 +4,14 @@ Uliweb Change Log
 0.3 Version
 -----------------
 
+* Change UserWarn to DeprecationWarning
+* Fix syncdb for different table name between `Model.__tablename__` and settings bug
+* Remove `get_cached()` and add `cache` parameter to `Model.get()`
+* Add `get_local_cache()` and `clear_local_cache()` in order to compatiable
+  with SimpleFrame implementation
+* ORM `Property.to_str()` will return string but not unicode for CHAR and VARCHAR.
+* Simplify server_default, if integer given, it'll be convert to `text(n)`
+* `ManyResult.all()` can receive a `cache` parameter
 * Improve `dump()` and `load()`, add PickleType , ManyToMany support
 * Refact objcache app implementation and add `exclude` config option
 
