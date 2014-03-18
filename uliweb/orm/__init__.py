@@ -3354,7 +3354,7 @@ class Model(object):
                     continue
                 value = data[prop.name]
                 if from_dump:
-                    value = prop.validate_dump(value)
+                    value = prop.convert_dump(value)
             else:
                 if prop.property_type == 'compound':
                     continue
