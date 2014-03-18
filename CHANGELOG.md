@@ -1,6 +1,12 @@
 Uliweb Change Log
 =====================
 
+0.3 Version
+-----------------
+
+* Change UserWarn to DeprecationWarning
+* Fix syncdb for different table name between `Model.__tablename__` and settings bug
+
 0.2.6 Version
 -----------------
 

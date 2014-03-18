@@ -226,7 +226,7 @@ class SyncdbCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
-            exist = engine.dialect.has_table(engine.connect(), name)
+            exist = engine.dialect.has_table(engine.connect(), t.name)
             created = False
             if t.__mapping_only__:
                 msg = 'SKIPPED(Mapping Table)'
@@ -843,7 +843,7 @@ class ValidatedbCommand(SQLCommandMixin, Command):
         _len = len(tables)
         
         for i, (name, t) in enumerate(tables):
-            exist = engine.dialect.has_table(engine.connect(), name)
+            exist = engine.dialect.has_table(engine.connect(), t.name)
             if not exist:
                 flag = 'NOT EXISTED'
             else:
