@@ -70,7 +70,7 @@ def get_object(model, cid, engine_name=None, connection=None):
         log.debug("Try to find objcache:get:table=%s:id=[%s]" % (tablename, _id))
         if redis.exists(_id):
             v = redis.hgetall(_id)
-            o = model.load(v, convert_pickle=True)
+            o = model.load(v, from_dump=True)
             log.debug("Found!")
             return o
         else:

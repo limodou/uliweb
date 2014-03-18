@@ -1105,39 +1105,20 @@ class Property(object):
             else:
                 return self.to_unicode(value)
 
-    def validate(self, value):
+    def _validate(self, value, from_dump=False):
         if self.empty(value):
             if self.required:
                 raise BadValueError('Property "%s" of Model [%s] is required, but %r found' % (self.name, self.model_class.__name__, value))
-#        else:
-#            if self.choices:
-#                match = False
-#                choices = self.get_choices()
-#                for choice in choices:
-#                    if isinstance(choice, tuple):
-#                        if choice[0] == value:
-#                            match = True
-#                    else:
-#                        if choice == value:
-#                            match = True
-#                    if match:
-#                        break
-#                if not match:
-#                    c = []
-#                    for choice in choices:
-#                        if isinstance(choice, tuple):
-#                            c.append(choice[0])
-#                        else:
-#                            c.append(choice)
-#                    raise BadValueError('Property %s is %r; must be one of %r' %
-#                        (self.name, value, c))
         #skip Lazy value
         if value is Lazy:
             return value
         
         if value is not None:
             try:
-                value = self.convert(value)
+                if from_dump:
+                    value = self.convert_dump(value)
+                else:
+                    value = self.convert(value)
             except TypeError, err:
                 raise BadValueError('Property %s must be convertible '
                     'to %s, but the value is (%s)' % (self.name, self.data_type, err))
@@ -1147,6 +1128,12 @@ class Property(object):
         for v in self.validators:
             v(value)
         return value
+
+    def validate(self, value):
+        return self._validate(value)
+    
+    def validate_dump(self, value):
+        return self._validate(value, from_dump=True)
 
     def empty(self, value):
         return (value is None) or (isinstance(value, (str, unicode)) and not value.strip())
@@ -1162,6 +1149,9 @@ class Property(object):
             return self.data_type(value)
         else:
             return value
+    
+    def convert_dump(self, value):
+        return self.convert(value)
     
     def __repr__(self):
         return ("<%s 'type':%r, 'verbose_name':%r, 'name':%r, " 
@@ -1278,6 +1268,9 @@ class PickleProperty(BlobProperty):
     
     def to_str(self, v):
         return pickle.dumps(v, pickle.HIGHEST_PROTOCOL)
+    
+    def convert_dump(self, v):
+        return pickle.loads(v)
     
 class DateTimeProperty(Property):
     data_type = datetime.datetime
@@ -1465,7 +1458,7 @@ class BooleanProperty(Property):
             return True
         else:
             return False
-    
+        
 class ReferenceProperty(Property):
     """A property that represents a many-to-one reference to another model.
     """
@@ -1644,6 +1637,8 @@ class ReferenceProperty(Property):
 
         return value
 
+    validate_dump = validate
+        
     def _id_attr_name(self):
         """Get attribute of referenced id.
         #todo add id function or key function to model
@@ -3310,7 +3305,7 @@ class Model(object):
         return count
             
     @classmethod
-    def load(cls, values, set_saved=True, convert_pickle=False):
+    def load(cls, values, set_saved=True, from_dump=False):
         if isinstance(values, (list, tuple)):
             d = cls._data_prepare(values)
         elif isinstance(values, dict):
@@ -3322,7 +3317,7 @@ class Model(object):
 #            raise BadValueError("ID property must be existed or could not be empty.")
         
         o = cls()
-        o._load(d, use_delay=True, convert_pickle=convert_pickle)
+        o._load(d, use_delay=True, from_dump=from_dump)
         if set_saved:
             o.set_saved()
             
@@ -3345,7 +3340,7 @@ class Model(object):
         self.update(**d)
         self.set_saved()
         
-    def _load(self, data, use_delay=False, convert_pickle=False):
+    def _load(self, data, use_delay=False, from_dump=False):
         if not data:
             return
         
@@ -3358,8 +3353,8 @@ class Model(object):
                     compounds.append(prop)
                     continue
                 value = data[prop.name]
-                if convert_pickle and isinstance(prop, PickleProperty):
-                    value = pickle.loads(value)
+                if from_dump:
+                    value = prop.validate_dump(value)
             else:
                 if prop.property_type == 'compound':
                     continue

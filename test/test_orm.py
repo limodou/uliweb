@@ -1838,7 +1838,9 @@ def test_load_dump():
     ...     decimal = DecimalProperty()
     ...     pickle = PickleProperty()
     >>> a = {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a': 1,'b': 2}, 'id':1}
-    >>> b = Test.load(a)
+    >>> b = Test.load(a, set_saved=False)
+    >>> b.save(insert=True)
+    True
     >>> b.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
     {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a': 1, 'b': 2}, 'id': 1}
     >>> b.dump()
@@ -1856,6 +1858,27 @@ def test_load_dump():
     >>> b.integer = Lazy
     >>> b.float = Lazy
     >>> b.decimal = Lazy
+    >>> class Test2(Model):
+    ...     name = Field(str)
+    ...     t = Reference(Test)
+    >>> a2 = Test2(t=b)
+    >>> a2.save()
+    True
+    >>> d = a2.dump()
+    >>> d
+    {'t': '1', 'id': '1', 'name': ''}
+    >>> x = Test2.load(d, from_dump=True)
+    >>> x
+    <Test2 {'name':u'','t':<ReferenceProperty:1>,'id':1}>
+    >>> a3 = Test2(name='a')
+    >>> a3.save()
+    True
+    >>> d = a3.dump()
+    >>> print d
+    {'t': '', 'id': '2', 'name': 'a'}
+    >>> a4 = Test2.load(d, from_dump=True)
+    >>> a4
+    <Test2 {'name':u'a','t':None,'id':2}>
     """
 
 def test_manytomany_loaddump():
