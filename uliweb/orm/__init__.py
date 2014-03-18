@@ -2604,6 +2604,7 @@ class _ReverseReferenceProperty(Property):
         self._model = model                 #A
         self._reference_id = reference_id   #A Reference(B) this is A's reference field
         self._reversed_id = reversed_id     #B's reference_field
+        self.verbose_name = ''
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
