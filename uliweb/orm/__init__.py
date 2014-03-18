@@ -21,7 +21,8 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
     'CommitAll', 'RollbackAll', 'set_lazy_model_init',
     'begin_sql_monitor', 'close_sql_monitor', 'set_model_config', 'text',
-    'get_object', 'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
+    'get_object', 'get_cached_object',
+    'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
     ]
 
 __auto_create__ = False
@@ -47,10 +48,12 @@ import threading
 import datetime
 import copy
 import re
+import cPickle as pickle
 from uliweb.utils import date as _date
-from uliweb.utils.common import flat_list, classonlymethod, simple_value
+from uliweb.utils.common import flat_list, classonlymethod, simple_value, safe_str
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement, text, true
+from sqlalchemy.sql.expression import BinaryExpression
 from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
@@ -164,6 +167,25 @@ def get_dispatch_send(default=True):
     if not hasattr(Local, 'dispatch_send'):
         Local.dispatch_send = default
     return Local.dispatch_send
+
+def get_local_cache(key, creator=None):
+    global Local
+    
+    if not hasattr(Local, 'local_cache'):
+        Local.local_cache = {}
+    value = Local.local_cache.get(key)
+    if value:
+        return value
+    if callable(creator):
+        value = creator()
+    else:
+        value = creator
+    if value:
+        Local.local_cache[key] = value
+    return value
+
+def clear_local_cache():
+    Local.local_cache = {}
 
 def set_echo(flag, time=None, explain=False, caller=True, out=sys.stdout.write):
     global Local
@@ -765,10 +787,10 @@ def get_object_id(engine_name, tablename, id):
 
 def get_object(table, id, cache=False, fields=None, use_local=False, engine_name=None):
     """
-    Get obj in Local.object_caches first and also use get_cached function if 
+    Get obj in Local.object_caches first and also use get(cache=True) function if 
     not found in object_caches
     """
-    from uliweb import functions
+    from uliweb import functions, settings
     
     model = get_model(table)
         
@@ -780,17 +802,27 @@ def get_object(table, id, cache=False, fields=None, use_local=False, engine_name
         if use_local:
             _name = engine_name or model.get_engine_name()
             key = get_object_id(_name, model.tablename, id)
-            value = functions.get_local_cache(key)
+            #if settings means it's in web environ
+            if 'FUNCTIONS' in settings:
+                value = functions.get_local_cache(key)
+            else:
+                value = get_local_cache(key)
             if value:
                 return value
-        obj = model.get_cached(id, fields=fields)
+        obj = model.get(id, fields=fields, cache=True)
         if use_local:
-            functions.get_local_cache(key, obj)
+            if 'FUNCTIONS' in settings:
+                value = functions.get_local_cache(key, obj)
+            else:
+                value = get_local_cache(key, obj)
     else:
         obj = model.get(id, fields=fields)
     
     return obj
         
+def get_cached_object(table, id, cache=True, fields=None, use_local=True, engine_name=None):
+    return get_object(table, id, cache, fields, use_local, engine_name)
+
 class SQLMointor(object):
     def __init__(self, key_length=65, record_details=False):
         self.count = SortedDict()
@@ -980,7 +1012,10 @@ class Property(object):
         if __server_default__:
             kwargs['server_default' ] = self.kwargs.get('server_default', self.server_default)
         else:
-            kwargs['server_default' ] = self.kwargs.get('server_default', None)
+            v = self.kwargs.get('server_default', None)
+            if v is not None and isinstance(v, (int, long)):
+                v = text(str(v))
+            kwargs['server_default' ] = v
         
         f_type = self._create_type()
         args = ()
@@ -1196,7 +1231,7 @@ class CharProperty(Property):
         return f_type
     
     def to_str(self, v):
-        return v
+        return safe_str(v)
     
 class StringProperty(CharProperty):
     field_class = VARCHAR
@@ -1240,6 +1275,9 @@ class BlobProperty(Property):
 class PickleProperty(BlobProperty):
     field_class = PickleType
     data_type = None
+    
+    def to_str(self, v):
+        return pickle.dumps(v, pickle.HIGHEST_PROTOCOL)
     
 class DateTimeProperty(Property):
     data_type = datetime.datetime
@@ -1479,10 +1517,12 @@ class ReferenceProperty(Property):
         f_type = self._create_type()
 #        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
         if __server_default__:
+            #for int or long data_type, it'll automatically set text('0')
             if self.data_type is int or self.data_type is long :
                 args['server_default'] = text('0')
             else:
-                args['server_default'] = self.reference_field.kwargs.get('server_default')
+                v = self.reference_field.kwargs.get('server_default')
+                args['server_default'] = v
         return Column(self.property_name, f_type, **args)
     
     def _create_type(self):
@@ -1677,6 +1717,8 @@ class OneToOne(ReferenceProperty):
 def get_objs_columns(objs, field='id'):
     ids = []
     new_objs = []
+    if isinstance(objs, (str, unicode)):
+        objs = [int(x) for x in objs.split(',')]
     for x in objs:
         if isinstance(x, (tuple, list)):
             new_objs.extend(x)
@@ -2028,6 +2070,15 @@ class ManyResult(Result):
         self.connection = self.modela.get_connection()
         self.kwargs = {}
         
+    def all(self, cache=False):
+        """
+        can use cache to return objects
+        """
+        if cache:
+            return [get_object(self.modelb, obj_id, cache=True, use_local=True) for obj_id in self.ids(True)]
+        else:
+            return self
+
     def get(self, condition=None):
         if not isinstance(condition, ColumnElement):
             return self.filter(self.modelb.c[self.realfieldb]==condition).one()
@@ -2554,6 +2605,7 @@ class _ReverseReferenceProperty(Property):
         self._model = model                 #A
         self._reference_id = reference_id   #A Reference(B) this is A's reference field
         self._reversed_id = reversed_id     #B's reference_field
+        self.verbose_name = ''
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
@@ -3092,6 +3144,11 @@ class Model(object):
         return engine_name
     
     @classmethod
+    def get_engine(cls):
+        ec = cls.get_engine_name()
+        return engine_manager[ec]
+        
+    @classmethod
     def connect(cls, ec):
         """
         Engine name or connection object
@@ -3179,14 +3236,25 @@ class Model(object):
             cls._c_lock.release()
             
     @classmethod
-    def get(cls, condition=None, connection=None, fields=None, many_fields=None, **kwargs):
+    def get(cls, condition=None, connection=None, fields=None, cache=False, engine_name=None, **kwargs):
         """
         Get object from Model, if given fields, then only fields will be loaded
         into object, other properties will be Lazy
+        
+        if cache is True or defined __cacheable__=True in Model class, it'll use cache first
         """
         
         if condition is None:
             return None
+        
+        can_cacheable = (cache or getattr(cls, '__cacheable__', None) and 
+            not isinstance(condition, BinaryExpression))
+        if can_cacheable:
+            #send 'get_object' topic to get cached object
+            obj = dispatch.get(cls, 'get_object', condition, engine_name=engine_name, connection=connection)
+            if obj:
+                return obj
+            
         if isinstance(condition, (int, long)):
             _cond = cls.c.id==condition
         elif isinstance(condition, (str, unicode)) and condition.isdigit():
@@ -3195,59 +3263,20 @@ class Model(object):
             _cond = condition
             
         #if there is no cached object, then just fetch from database
-        result = cls.connect(connection).filter(_cond, **kwargs).fields(*(fields or []))
-        result.run(1)
-        if not result.result:
-            return
+        obj = cls.connect(connection).filter(_cond, **kwargs).fields(*(fields or [])).one()
         
-        #add many_fields process
-        obj = None
-        r = result.result.fetchone()
-        if r:
-            obj = cls.load(r.items(), set_saved=False)
+        if can_cacheable:
+            dispatch.call(cls, 'set_object', instance=obj, engine_name=engine_name)
             
-            if many_fields:
-                for f in many_fields:
-                    if isinstance(f, (str, unicode)):
-                        f_name = '_' + f + '_'
-                    elif isinstance(f, Property):
-                        f_name = '_' + f.property_name + '_'
-                    else:
-                        raise BadValueError("many_fields needs property name or instance, but %r found" % f)
-                    getattr(obj, f_name, None)
-            obj.set_saved()
         return obj
     
     @classmethod
-    def get_or_notfound(cls, condition=None, connection=None, fields=None, many_fields=None):
-        obj = cls.get(condition, connection, fields=fields, many_fields=many_fields)
+    def get_or_notfound(cls, condition=None, connection=None, fields=None):
+        obj = cls.get(condition, connection, fields=fields)
         if not obj:
             raise NotFound("Can't found the object", cls, condition)
         return obj
     
-    @classmethod
-    def get_cached(cls, id=None, connection=None, fields=None, engine_name=None, **kwargs):
-        if id is None:
-            return None
-        
-        _cond = cls.c.id==id
-        #send 'get_object' topic to get cached object
-        obj = dispatch.get(cls, 'get_object', id, engine_name=engine_name, connection=connection)
-        if obj:
-            return obj
-        #if there is no cached object, then just fetch from database
-        obj = cls.connect(connection).filter(_cond, **kwargs).one()
-        #send 'set_object' topic to stored the object to cache
-        if obj:
-            dispatch.call(cls, 'set_object', instance=obj, fields=fields)
-        return obj
-
-    def push_cached(self, fields=None, engine_name=None):
-        """
-        Save object to cache
-        """
-        dispatch.call(self.__class__, 'set_object', instance=self, fields=fields, engine_name=engine_name)
-        
     @classmethod
     def _data_prepare(cls, record):
         d = {}
@@ -3362,33 +3391,3 @@ class Model(object):
                 d[k] = v.to_unicode(t)
         return d
         
-#    def get_delay_field(self, name, default=None):
-#        v = getattr(self, name, default)
-#        if v is Lazy:
-#            _id = self.id
-#            if not _id:
-#                raise BadValueError('Instance is not a validate object of Model %s, ID property is not found' % model_class.__name__)
-#            self.refresh()
-#            v = getattr(self, name, default)
-#        return v
-#    
-#    def get_cached_reference(self, fieldname, connection=None):
-#        prop = self.properties[fieldname]
-#        if not isinstance(prop, ReferenceProperty):
-#            raise BadPropertyTypeError("Property %s is not instance of RefernceProperty" % fieldname)
-#        
-#        reference_id = getattr(self, fieldname, None)
-#        if reference_id is not None:
-#            #this will cache the reference object
-#            resolved = getattr(self, prop._resolved_attr_name())
-#            if resolved is not None:
-#                return resolved
-#            else:
-#                instance = prop.reference_class.get_cached(reference_id, connection=connection)
-#                if instance is None:
-#                    raise NotFound('ReferenceProperty %s failed to be resolved' % self.reference_fieldname, self.reference_class, reference_id)
-#                setattr(model_instance, self._resolved_attr_name(), instance)
-#                return instance
-#        else:
-#            return None
-#
