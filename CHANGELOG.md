@@ -14,6 +14,7 @@ Uliweb Change Log
 * `ManyResult.all()` can receive a `cache` parameter
 * Improve `dump()` and `load()`, add PickleType , ManyToMany support
 * Refact objcache app implementation and add `exclude` config option
+* Fix pyini "key=" for raw output bug
 
 0.2.6 Version
 -----------------

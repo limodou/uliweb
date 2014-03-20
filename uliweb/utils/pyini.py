@@ -517,7 +517,7 @@ class Ini(SortedDict):
                     rest = line[end:].strip()
                     #if key= then value will be set ''
                     if rest == '':
-                        v = None
+                        value = 'None'
                     else:
                         f.seek(lastpos+end)
                         try:
@@ -525,21 +525,21 @@ class Ini(SortedDict):
                         except Exception, e:
                             print_exc()
                             raise Exception, "Parsing ini file error in %s:%d:%s" % (filename or self._inifile, lineno, line)
-                        if self._lazy:
-                            if iden_existed:
-                                v = EvalValue(value, filename or self._inifile, lineno, line)
-                            else:
-                                v = value
+                    if self._lazy:
+                        if iden_existed:
+                            v = EvalValue(value, filename or self._inifile, lineno, line)
                         else:
-                            if self._raw:
-                                v = RawValue(self._inifile, lineno, value, replace_flag)
-                            else:
-                                try:
-                                    v = eval_value(value, self.env(), self[sec_name], self._encoding, self._import_env)
-                                except Exception as e:
-                                    print_exc()
-                                    print dict(self)
-                                    raise Exception("Converting value (%s) error in %s:%d:%s" % (value, filename or self._inifile, lineno, line))
+                            v = value
+                    else:
+                        if self._raw:
+                            v = RawValue(self._inifile, lineno, value, replace_flag)
+                        else:
+                            try:
+                                v = eval_value(value, self.env(), self[sec_name], self._encoding, self._import_env)
+                            except Exception as e:
+                                print_exc()
+                                print dict(self)
+                                raise Exception("Converting value (%s) error in %s:%d:%s" % (value, filename or self._inifile, lineno, line))
                     section.add(keyname, v, comments, replace=replace_flag)
                     comments = []
             else:

@@ -3313,6 +3313,8 @@ class Model(object):
         else:
             raise BadValueError("Can't support the data type %r" % values)
         
+        print 'xxxxxxxxxxxxxxxxxxxxx', d
+        
 #        if 'id' not in d or not d['id']:
 #            raise BadValueError("ID property must be existed or could not be empty.")
         
