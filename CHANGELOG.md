@@ -15,6 +15,7 @@ Uliweb Change Log
 * Improve `dump()` and `load()`, add PickleType , ManyToMany support
 * Refact objcache app implementation and add `exclude` config option
 * Fix pyini "key=" for raw output bug
+* Fix objcache for Lazy field bug, it'll refresh first if found Lazy field
 
 0.2.6 Version
 -----------------

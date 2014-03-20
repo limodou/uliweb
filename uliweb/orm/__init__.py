@@ -3313,8 +3313,6 @@ class Model(object):
         else:
             raise BadValueError("Can't support the data type %r" % values)
         
-        print 'xxxxxxxxxxxxxxxxxxxxx', d
-        
 #        if 'id' not in d or not d['id']:
 #            raise BadValueError("ID property must be existed or could not be empty.")
         
@@ -3390,6 +3388,9 @@ class Model(object):
             if ((not fields) or (k in fields)) and (not exclude or (k not in exclude)):
                 if not isinstance(v, ManyToMany):
                     t = v.get_value_for_datastore(self)
+                    if t is Lazy:
+                        self.refresh()
+                        t = v.get_value_for_datastore(self)
                     if isinstance(t, Model):
                         t = t.id
                     d[k] = v.to_str(t)
