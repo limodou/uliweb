@@ -26,21 +26,18 @@ def get_commands(global_options):
                 register_command(c)
         
     def collect_commands():
-        from uliweb import get_apps
+        from uliweb import get_apps, get_app_dir
+        from uliweb.utils.common import is_pyfile_exist
         
         apps = get_apps(global_options.apps_dir, settings_file=global_options.settings,
                 local_settings_file=global_options.local_settings)
         for f in apps:
-            m = '%s.commands' % f
-            try:
+            path = get_app_dir(f)
+            if is_pyfile_exist(path, 'commands'):
+                m = '%s.commands' % f
                 mod = __import__(m, fromlist=['*'])
-            except ImportError as e:
-                if not str(e).startswith('No module named'):
-                    import traceback
-                    traceback.print_exc()
-                continue
             
-            find_mod_commands(mod)
+                find_mod_commands(mod)
 
     collect_commands()
     return __commands__

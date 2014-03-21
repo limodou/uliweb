@@ -16,6 +16,7 @@ Uliweb Change Log
 * Refact objcache app implementation and add `exclude` config option
 * Fix pyini "key=" for raw output bug
 * Fix objcache for Lazy field bug, it'll refresh first if found Lazy field
+* Fix executing orm command raise Exception not be thrown bug
 
 0.2.6 Version
 -----------------
