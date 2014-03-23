@@ -4,9 +4,9 @@
 
 __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
-    'get_model', 'set_model', 'engine_manager', 'set_auto_dotransaction',
+    'get_model', 'set_model', 'engine_manager', 'set_auto_transaction',
     'set_tablename_converter', 'set_check_max_length', 'set_post_do',
-    'rawsql', 'Lazy', 'set_echo',
+    'rawsql', 'Lazy', 'set_echo', 'Session', 'get_session',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
@@ -27,7 +27,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
 
 __auto_create__ = False
 __auto_set_model__ = True
-__auto_dotransaction__ = False
+__auto_transaction__ = False
 __debug_query__ = None
 __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
@@ -50,7 +50,8 @@ import copy
 import re
 import cPickle as pickle
 from uliweb.utils import date as _date
-from uliweb.utils.common import flat_list, classonlymethod, simple_value, safe_str
+from uliweb.utils.common import (flat_list, classonlymethod, simple_value, 
+    safe_str)
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement, text, true
 from sqlalchemy.sql.expression import BinaryExpression
@@ -61,6 +62,7 @@ import threading
 import warnings
 import inspect
 from uliweb.utils.sorteddict import SortedDict
+from . import patch
 
 Local = threading.local()
 Local.dispatch_send = True
@@ -81,7 +83,7 @@ class NotFound(Error):
 class ReservedWordError(Error):pass
 class ModelInstanceError(Error):pass
 class DuplicatePropertyError(Error):
-  """Raised when a property is duplicated in a model definition."""
+    """Raised when a property is duplicated in a model definition."""
 class BadValueError(Error):pass
 class BadPropertyTypeError(Error):pass
 class KindError(Error):pass
@@ -106,9 +108,9 @@ def set_auto_create(flag):
     global __auto_create__
     __auto_create__ = flag
     
-def set_auto_dotransaction(flag):
-    global __auto_dotransaction__
-    __auto_dotransaction__ = flag
+def set_auto_transaction(flag):
+    global __auto_transaction__
+    __auto_transaction__ = flag
 
 def set_auto_set_model(flag):
     global __auto_set_model__
@@ -168,31 +170,12 @@ def get_dispatch_send(default=True):
         Local.dispatch_send = default
     return Local.dispatch_send
 
-def get_local_cache(key, creator=None):
-    global Local
-    
-    if not hasattr(Local, 'local_cache'):
-        Local.local_cache = {}
-    value = Local.local_cache.get(key)
-    if value:
-        return value
-    if callable(creator):
-        value = creator()
-    else:
-        value = creator
-    if value:
-        Local.local_cache[key] = value
-    return value
-
-def clear_local_cache():
-    Local.local_cache = {}
-
-def set_echo(flag, time=None, explain=False, caller=True, out=sys.stdout.write):
+def set_echo(flag, time=None, explain=False, caller=True, session=None):
     global Local
     
     Local.echo = flag
-    Local.echo_func = out
-    Local.echo_args = {'time':time, 'explain':explain, 'caller':caller}
+    Local.echo_args = {'time':time, 'explain':explain, 'caller':caller, 
+        'session':None}
     
 def set_pk_type(name):
     global __pk_type__
@@ -211,24 +194,6 @@ def PKCLASS():
     else:
         return BigInteger
     
-class Transaction(object):
-    def __init__(self, connection):
-        self.connection = connection
-        self.trans = connection.begin()
-        
-    def do_(self, query):
-        return self.connection.execute(query)
-
-    def __enter__(self):
-        return self.do_
-    
-    def __exit__(self, type, value, tb):
-        if self.trans:
-            if type:
-                self.trans.rollback()
-            else:
-                self.trans.commit()
-
 class NamedEngine(object):
     def __init__(self, name, options):
         self.name = name
@@ -252,11 +217,11 @@ class NamedEngine(object):
         self.engine_instance = None
         self.metadata = MetaData()
         self.models = {}
-        self.connection = None
+        self.local = threading.local() #used to save thread vars
         
-        self.create()
+        self._create()
         
-    def create(self, new=False):
+    def _create(self, new=False):
         c = self.options
         
         db = self.engine_instance
@@ -267,28 +232,34 @@ class NamedEngine(object):
         self.engine_instance.metadata = self.metadata
         self.metadata.bind = self.engine_instance
             
-        self.create_all()
         return self.engine_instance
         
-    def create_all(self):
-        for cls in self.models.values():
-            if not cls['created'] and cls['model']:
-                cls['model'].bind(self.metadata, auto_create=__auto_create__)
-                cls['created'] = True
-                
-    def connect(self, **kwargs):
-        return self.engine.connect(**kwargs)
-    
+    def session(self, create=True):
+        """
+        Used to created default session
+        """
+        if hasattr(self.local, 'session'):
+            return self.local.session
+        else:
+            if create:
+                s = Session(self.name)
+                self.local.session = s
+                return s
+        
     @property
     def engine(self):
         return self.engine_instance
+    
+    def print_pool_status(self):
+        if self.engine.pool:
+            print self.engine.pool.status()
     
 class EngineManager(object):
     def __init__(self):
         self.engines = {}
         
-    def add(self, name, connection):
-        self.engines[name] = engine = NamedEngine(name, connection)
+    def add(self, name, connection_args):
+        self.engines[name] = engine = NamedEngine(name, connection_args)
         return engine
         
     def get(self, name=None):
@@ -302,46 +273,137 @@ class EngineManager(object):
     def __getitem__(self, name=None):
         return self.get(name)
     
-    def __setitem__(self, name, connection):
-        return self.add(name, connection)
+    def __setitem__(self, name, connection_args):
+        return self.add(name, connection_args)
     
     def __contains__(self, name):
         return name in self.engines
     
+    def items(self):
+        return self.engines.items()
+    
 engine_manager = EngineManager()
 
-def print_pool_status(ec=None):
-    ec = ec or 'default'
-    engine = engine_manager[ec]
-    if engine.engine.pool:
-        print engine.engine.pool.status()
+class Session(object):
+    """
+    used to manage relationship between engine_name and connect
+    can also manage transcation
+    """
+    def __init__(self, engine_name='default', auto_transaction=None, 
+        auto_close=True):
+        """
+        If auto_transaction is True, it'll automatically start transacation
+        in web environment, it'll be commit or rollback after the request finished
+        and in no-web environment, you should invoke commit or rollback yourself.
+        """
+        global __auto_transaction__
+        
+        self.engine_name = engine_name
+        self.auto_transaction = auto_transaction if auto_transaction is not None else __auto_transaction__
+        self.auto_close = auto_close
+        self.engine = engine_manager[engine_name]
+        self._conn = None
+        self._trans = None
+        self.local_cache = {}
+        
+    @property
+    def connection(self):
+        if self._conn:
+            return self._conn
+        else:
+            self._conn = self.engine.engine.connect()
+            return self._conn
+        
+    def execute(self, query, *args):
+        try:
+            if self.auto_transaction:
+                self.begin()
+            return self.connection.execute(query, *args)
+        except:
+            self.rollback()
+            raise
     
-def get_connection(connection='', default=True, 
-    debug=None, engine_name=None, connection_type='long', **args):
-    """
-    default encoding is utf-8
-    """
-    d = {
-        'connection_string':connection,
-        'debug_log':debug, 
-        'connection_args':args,
-        'connection_type':connection_type,
-        }
-    if connection:
-        #will create new connection
-        if default:
-            engine_name = engine_name or 'default'
-            engine = engine_manager.add(engine_name, d).engine
-            reset_local_connection(engine_name)
+    def set_echo(self, flag, time=None, explain=False, caller=True):
+        global set_echo
+        
+        set_echo(flag, time, explain, caller, self)
+        
+    def do_(self, query, args=None):
+        global do_
+        
+        return do_(query, self, args)
+    
+    def begin(self):
+        if not self._trans:
+            self.connection
+            self._trans = self._conn.begin()
+        return self._trans
+    
+    def commit(self):
+        if self._trans and self._conn.in_transaction():
+            self._trans.commit()
+        self._trans = None
+        if self.auto_close:
+            self._close()
+        
+    def in_transaction(self):
+        if not self._conn:
+            return False
+        return self._conn.in_transaction()
+    
+    def rollback(self):
+        if self._trans and self._conn.in_transaction():
+            self._trans.rollback()
+        self._trans = None
+        if self.auto_close:
+            self._close()
+            
+    def _close(self):
+        if self._conn:
+            self._conn.close()
+            self._conn = None
+            self.local_cache = {}
+            
+        if self.engine.options.connection_type == 'short':
+            self.engine.dispose()
+        
+    def close(self):
+        self.rollback()
+        self._close()
+        
+    def get_local_cache(self, key, creator=None):
+        value = self.local_cache.get(key)
+        if value:
+            return value
+        if callable(creator):
+            value = creator()
         else:
-            engine = NamedEngine('', d).engine
-        return engine
+            value = creator
+        if value:
+            self.local_cache[key] = value
+        return value
+        
+def get_connection(connection='', engine_name='default', connection_type='long', **args):
+    """
+    Creating an NamedEngine or just return existed engine instance
+
+    if '://' include in connection parameter, it'll create new engine object
+    otherwise return existed engine isntance
+    """
+    if '://' in connection:
+        d = {
+            'connection_string':connection,
+            'connection_args':args,
+            'connection_type':connection_type,
+            }
+        
+        return engine_manager.add(engine_name, d).engine
     else:
-        engine_name = engine_name or 'default'
-        if engine_name in engine_manager:
-            return engine_manager[engine_name].engine
+        connection = connection or 'default'
+        if connection in engine_manager:
+            return engine_manager[connection].engine
         else:
-            raise Error("Can't find engine %s" % engine_name)
+            raise Error("Can't find engine %s" % connection)
         
 def get_metadata(engine_name=None):
     """
@@ -355,66 +417,32 @@ def get_metadata(engine_name=None):
             get_model(tablename, engine_name)
     return engine.metadata
 
-def local_conection(ec, auto_transaction=False):
+def get_session(ec=None, create=True):
     """
     :param: ec - engine_name or connection
     auto_transaction will only effect for named engine
     """
-    global __auto_dotransaction__
     
     ec = ec or 'default'
-    #if connection strategy is threadlocal then directly return db
-    #but not connect
-#    engine = engine_manager[ec]
-#    if engine.options.connection_args['strategy'] == 'threadlocal':
-#        return engine.engine_instance
     if isinstance(ec, (str, unicode)):
-        if hasattr(Local, 'conn') and Local.conn.get(ec):
-            conn = Local.conn[ec]
-        else:
-            engine = engine_manager[ec]
-            conn = engine.connect()
-            
-            if not hasattr(Local, 'conn'):
-                Local.conn = {}
-            Local.conn[ec] = conn
-        if __auto_dotransaction__ or auto_transaction:
-            if not hasattr(Local, 'trans'):
-                Local.trans = {}
-            if not Local.trans.get(ec):
-                Local.trans[ec] = conn.begin()
-                
-    elif isinstance(ec, EngineBase.Connection) or isinstance(ec, EngineBase.Engine):
-        conn = ec
+        session = engine_manager[ec].session(create=True)
+    elif isinstance(ec, Session):
+        session = ec
     else:
-        raise Error("Connection %r should be existed engine name or valid Connection object" % ec)
-    return conn
+        raise Error("Connection %r should be existed engine name or Session object" % ec)
+    return session
     
-def reset_local_connection(ec):
-    """
-    """
-    if hasattr(Local, 'conn') and Local.conn.get(ec):
-        conn = Local.conn[ec]
-        conn.close()
-        engine = engine_manager[ec]
-        Local.conn[ec] = None
-    if hasattr(Local, 'trans') and Local.trans.get(ec):
-        Local.trans[ec] = None
-
 def Reset(ec=None):
-    ec = ec or 'default'
-    reset_local_connection(ec)
+    session = get_session(ec, False)
+    if session:
+        session.close()
     
 def ResetAll():
-    if hasattr(Local, 'trans'):
-        for k, v in Local.trans.items():
-            Local.trans[k] = None
-            
-    if hasattr(Local, 'conn'):
-        for k, v in Local.conn.items():
-            v.close()
-            Local.conn[k] = None
-
+    for k, v in engine_manager.items():
+        session = v.session(create=False)
+        if session:
+            session.close()
+    
 @dispatch.bind('post_do', kind=dispatch.LOW)
 def default_post_do(sender, query, conn, usetime):
     if __default_post_do__:
@@ -422,14 +450,12 @@ def default_post_do(sender, query, conn, usetime):
       
 re_placeholder = re.compile(r'%\(\w+\)s')
 def rawsql(query, ec=None):
-#    from MySQLdb.converters import conversions, escape
     if isinstance(query, Result):
         query = query.get_query()
 
     ec = ec or 'default'
     engine = engine_manager[ec]
     dialect = engine.engine.dialect
-#    enc = dialect.encoding
     comp = query.compile(dialect=dialect)
     b = re_placeholder.search(comp.string)
     if b:
@@ -438,15 +464,22 @@ def rawsql(query, ec=None):
         params = []
         for k in comp.positiontup:
             v = comp.params[k]
-#            if isinstance(v, unicode):
-#                v = v.encode(enc)
-#            params.append( escape(v, conversions) )
-#            return (comp.string.encode(enc).replace('?', '%s') % tuple(params))
             params.append(repr(simple_value(v)))
         line = comp.string.replace('?', '%s') % tuple(params)
         return line.replace('\n', '')+';'
     
-    
+def get_engine_name(ec=None):
+    """
+    Get the name of a engine or session
+    """
+    ec = ec or 'default'
+    if isinstance(ec, (str, unicode)):
+        return ec
+    elif isinstance(ec, Session):
+        return ec.engine_name
+    else:
+        raise Error("Parameter ec should be an engine_name or Session object, but %r found" % ec)
+        
 def do_(query, ec=None, args=None):
     """
     Execute a query
@@ -456,7 +489,7 @@ def do_(query, ec=None, args=None):
     from time import time
     from uliweb.utils.common import get_caller
     
-    conn = local_conection(ec)
+    conn = get_session(ec)
     b = time()
     result = conn.execute(query, *(args or ()))
     t = time() - b
@@ -465,27 +498,35 @@ def do_(query, ec=None, args=None):
     flag = False
     sql = ''
     if hasattr(Local, 'echo') and Local.echo:
-        if hasattr(Local, 'echo_args') and Local.echo_args['time']:
-            if t >= Local.echo_args['time']:
-                sql = rawsql(query)
-                
-                flag = True
+        if hasattr(Local, 'echo_args'):
+            _ec = Local.echo_args.get('session')
         else:
-            sql = rawsql(query)
-            flag = True
+            _ec = None
+        engine_name = get_engine_name(ec)
+        _e = get_engine_name(_ec)
+        
+        if not _ec or _ec and _ec == _e:
+            if hasattr(Local, 'echo_args') and Local.echo_args['time']:
+                if t >= Local.echo_args['time']:
+                    sql = rawsql(query)
+                    
+                    flag = True
+            else:
+                sql = rawsql(query)
+                flag = True
         
         if flag:
-            Local.echo_func('\n===>>>>> ')
+            print '\n===>>>>> [%s]' % engine_name,
             if hasattr(Local, 'echo_args') and Local.echo_args['caller']:
                 v = get_caller(skip=__file__)
-                Local.echo_func('(%s:%d:%s)\n' % v)
+                print '(%s:%d:%s)' % v
             else:
-                Local.echo_func('\n')
-            Local.echo_func(sql)
+                print
+            print sql
             if hasattr(Local, 'echo_args') and Local.echo_args['explain'] and sql:
                 r = conn.execute('explain '+sql).fetchone()
-                Local.echo_func('\n----\nExplain: %s' % ''.join(["%s=%r, " % (k, v) for k, v in r.items()]))
-            Local.echo_func('\n===<<<<< time used %fs\n\n' % t)
+                print '\n----\nExplain: %s' % ''.join(["%s=%r, " % (k, v) for k, v in r.items()])
+            print '===<<<<< time used %fs\n' % t
                 
     return result
 
@@ -542,83 +583,36 @@ def save_file(result, filename, encoding='utf8', headers=None, convertors=None, 
             w.writerow(r)
     
 def Begin(ec=None):
-    ec = ec or 'default'
-    if isinstance(ec, (str, unicode)):
-        conn = local_conection(ec, True)
-        return Local.trans[ec]
-    elif isinstance(ec, EngineBase.Connection):
-        return ec.begin()
-    else:
-        raise Error("Connection %r should be existed engine name or valid Connection object" % ec)
-    
-def Commit(close=False, ec=None, trans=None):
-    ec = ec or 'default'
-    if isinstance(ec, (str, unicode)):
-        if hasattr(Local, 'trans') and Local.trans.get(ec):
-            try:
-                Local.trans[ec].commit()
-            finally:
-                Local.trans[ec] = None
-                if close:
-                    Local.conn[ec].close()
-                    Local.conn[ec] = None
-    elif isinstance(ec, EngineBase.Connection):
-        trans.commit()
-        if close:
-            ec.close()
-    else:
-        raise Error("Connection %r should be existed engine name or valid Connection object" % ec)
+    session = get_session(ec)
+    return session.begin()
 
+def Commit(close=False, ec=None, trans=None):
+    session = get_session(ec, False)
+    if session:
+        return session.commit()
+    
 def CommitAll(close=False):
     """
     Commit all transactions according Local.conn
     """
-    if hasattr(Local, 'trans'):
-        for k, v in Local.trans.items():
-            if v:
-                v.commit()
-                Local.trans[k] = None
-            
-    if close and hasattr(Local, 'conn'):
-        for k, v in Local.conn.items():
-            if v:
-                v.close()
-                Local.conn[k] = None
-            
-def Rollback(close=False, ec=None, trans=None):
-    ec = ec or 'default'
+    for k, v in engine_manager.items():
+        session = v.session(create=False)
+        if session:
+            session.commit()
     
-    if isinstance(ec, (str, unicode)):
-        if hasattr(Local, 'trans') and Local.trans.get(ec):
-            try:
-                Local.trans[ec].rollback()
-            finally:
-                Local.trans[ec] = None
-                if close:
-                    Local.conn[ec].close()
-                    Local.conn[ec] = None
-    elif isinstance(ec, EngineBase.Connection):
-        trans.rollback()
-        if close:
-            ec.close()
-    else:
-        raise Error("Connection %r should be existed engine name or valid Connection object" % ec)
-
+def Rollback(close=False, ec=None, trans=None):
+    session = get_session(ec, False)
+    if session:
+        return session.rollback()
+    
 def RollbackAll(close=False):
     """
     Rollback all transactions, according Local.conn
     """
-    if hasattr(Local, 'trans'):
-        for k, v in Local.trans.items():
-            if v:
-                v.rollback()
-                Local.trans[k] = None
-            
-    if close and hasattr(Local, 'conn'):
-        for k, v in Local.conn.items():
-            if v:
-                v.close()
-                Local.conn[k] = None
+    for k, v in engine_manager.items():
+        session = v.session(create=False)
+        if session:
+            session.rollback()
     
 def check_reserved_word(f):
     if f in ['put', 'save', 'table', 'tablename'] or f in dir(Model):
@@ -626,14 +620,7 @@ def check_reserved_word(f):
             "Cannot define property using reserved word '%s'. " % f
             )
 
-#def create_all(db=None, engine_name=None):
-#    engine = engine_manager.get_engine(engine_name)
-#    for cls in engine.options['__models__'].values():
-#        if not cls['created'] and cls['model']:
-#            cls['model'].bind(engine.options['metadata'], auto_create=__auto_create__)
-#            cls['created'] = True
-        
-def set_model(model, tablename=None, created=None, engine_name=None):
+def set_model(model, tablename=None, created=None):
     """
     Register an model and tablename to a global variable.
     model could be a string format, i.e., 'uliweb.contrib.auth.models.User'
@@ -644,10 +631,19 @@ def set_model(model, tablename=None, created=None, engine_name=None):
         model_path
         appname
     """
+    
     if isinstance(model, type) and issubclass(model, Model):
         #use alias first
-        tablename = model.__alias__ or model.tablename
+        tablename = model._alias or model.tablename
     tablename = tablename.lower()
+    
+    #set global __models__
+    d = __models__.setdefault(tablename, {})
+    engines = d.get('config', {}).pop('engines', ['default'])
+    if isinstance(engines, (str, unicode)):
+        engines = [engines]
+    d['engines'] = engines
+    
     item = {}
     if created is not None:
         item['created'] = created
@@ -662,23 +658,19 @@ def set_model(model, tablename=None, created=None, engine_name=None):
         appname = model.__module__.rsplit('.', 1)[0]
         model_path = model.__module__ + '.' + model.__name__
         #for example 'uliweb.contrib.auth.models'
+        model.__engines__ = engines
         
     item['model'] = model
     item['model_path'] = model_path
     item['appname'] = appname
-    
-    engine_name = engine_name or 'default'
-    if not isinstance(engine_name, (str, unicode)):
-        raise BadValueError('engine name should be string type, but %r found' % engine_name)
-    
-    engine_manager[engine_name].models[tablename] = item
-    
-    #set global __models__
-    d = __models__.setdefault(tablename, {})
     d['model_path'] = model_path
-    d['engine_name'] = engine_name
+    d['appname'] = appname
     
-    __model_paths__[model_path] = engine_name
+    for name in engines:
+        if not isinstance(name, (str, unicode)):
+            raise BadValueError('Engine name should be string type, but %r found' % name)
+    
+        engine_manager[name].models[tablename] = item.copy()
     
 def set_model_config(model_name, config):
     """
@@ -689,9 +681,8 @@ def set_model_config(model_name, config):
     assert isinstance(model_name, str)
     assert isinstance(config, dict)
     
-    if model_name not in __models__:
-        raise ConfigurationError("Can't find mode %s" % model_name)
-    __models__[model_name]['config'] = config
+    d = __models__.setdefault(model_name, {})
+    d['config'] = config
     
 def valid_model(model, engine_name=None):
     if isinstance(model, type) and issubclass(model, Model):
@@ -705,14 +696,14 @@ def valid_model(model, engine_name=None):
 def check_model_class(model_cls):
 #    """
 #    :param model: Model instance
-#    Model.__engine_name__ could be a list, so if there are multiple then use
+#    Model.__engines__ could be a list, so if there are multiple then use
 #    the first one
 #    """
-#    tablename = model.__alias__ or model.tablename
+#    tablename = model._alias or model.tablename
 #    name = model.__name__
 #    appname = model.__module__
 #    model_path = appname + '.' + name
-#    return (tablename not in __models__) or (model_path in __model_paths__)
+#    return (tablename not in __models__)
 #
     #check the model_path
     model_path = model_cls.__module__ + '.' + model_cls.__name__
@@ -729,19 +720,13 @@ def find_metadata(model):
     engine = engine_manager[engine_name]
     return engine.metadata
     
-#def clone_model(model, ec=None):
-#    ec = ec or default
-#    name = '%s_%s' % (ec, model.__name__)
-#    cls = type(name, (model,), {'__tablename__':model.tablename, '__bind__':False})
-#    cls.__module__ = model.__module__
-#    return cls
-
 def get_model(model, engine_name=None):
     """
     Return a real model object, so if the model is already a Model class, then
     return it directly. If not then import it.
 
-    if engine_name is None, then it'll find other engine_name according __models__
+    if engine_name is None, then if there is multi engines defined, it'll use
+    'default', but if there is only one engine defined, it'll use this one
     """
     if model is _SELF_REFERENCE:
         return model
@@ -752,40 +737,51 @@ def get_model(model, engine_name=None):
     
     #make model name is lower case
     model = model.lower()
-    if model in __models__:
-        engine_name = __models__[model]['engine_name']
+    model_item = __models__.get(model)
+    if model_item:
+        if not engine_name:
+            #search according model_item, and it should has only one engine defined
+            engines = model_item['engines']
+            if len(engines) > 1:
+                engine_name = 'default'
+            else:
+                engine_name = engines[0]
         engine = engine_manager[engine_name]
-        if model in engine.models:
-            item = engine.models[model]
+            
+        item = engine.models.get(model)
+        if item:
             m = item['model']
             if isinstance(m, type) and issubclass(m, Model):
-                m.connect(engine_name)
-#                m.bind(engine.metadata)
                 return m
             else:
                 m, name = item['model_path'].rsplit('.', 1)
                 mod = __import__(m, fromlist=['*'])
                 model_inst = getattr(mod, name)
-                config = __models__[model].get('config', {})
-                if config:
-                    for k, v in config.items():
-                        setattr(model_inst, k, v)
-                item['model'] = model_inst
-                model_inst.__alias__ = model
-                model_inst.connect(engine_name)
-                
-                #todo add property init process
-                for k, v in model_inst.properties.items():
-                    v.__property_config__(model_inst, k)
+                if model_inst._bound:
+                    model_inst = model_inst._use(engine_name)
+                    item['model'] = model_inst
+                else:
+                    config = __models__[model].get('config', {})
+                    if config:
+                        for k, v in config.items():
+                            setattr(model_inst, k, v)
+                    item['model'] = model_inst
+                    model_inst._alias = model
+                    model_inst._engine_name = engine_name
+                    
+                    for k, v in model_inst.properties.items():
+                        v.__property_config__(model_inst, k)
+                    
                 #add bind process
                 model_inst.bind(engine.metadata)
                 return model_inst
+            
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
 def get_object_id(engine_name, tablename, id):
     return 'OC:%s:%s:%s' % (engine_name, tablename, str(id))
 
-def get_object(table, id, cache=False, fields=None, use_local=False, engine_name=None):
+def get_object(table, id, cache=False, fields=None, use_local=False, session=None):
     """
     Get obj in Local.object_caches first and also use get(cache=True) function if 
     not found in object_caches
@@ -800,28 +796,21 @@ def get_object(table, id, cache=False, fields=None, use_local=False, engine_name
       
     if cache:
         if use_local:
-            _name = engine_name or model.get_engine_name()
-            key = get_object_id(_name, model.tablename, id)
-            #if settings means it's in web environ
-            if 'FUNCTIONS' in settings:
-                value = functions.get_local_cache(key)
-            else:
-                value = get_local_cache(key)
+            s = get_session(session)
+            key = get_object_id(s.engine_name, model.tablename, id)
+            value = s.get_local_cache(key)
             if value:
                 return value
         obj = model.get(id, fields=fields, cache=True)
         if use_local:
-            if 'FUNCTIONS' in settings:
-                value = functions.get_local_cache(key, obj)
-            else:
-                value = get_local_cache(key, obj)
+            value = s.get_local_cache(key, obj)
     else:
         obj = model.get(id, fields=fields)
     
     return obj
 
-def get_cached_object(table, id, cache=True, fields=None, use_local=True, engine_name=None):
-    return get_object(table, id, cache, fields, use_local, engine_name)
+def get_cached_object(table, id, cache=True, fields=None, use_local=True, session=None):
+    return get_object(table, id, cache, fields, use_local, session)
 
 class SQLMointor(object):
     def __init__(self, key_length=65, record_details=False):
@@ -892,13 +881,6 @@ class ModelMetaclass(type):
         defined = set()
         for base in bases:
             if hasattr(base, 'properties'):
-#                property_keys = base.properties.keys()
-#                duplicate_properties = defined.intersection(property_keys)
-#                if duplicate_properties:
-#                    raise DuplicatePropertyError(
-#                        'Duplicate properties in base class %s already defined: %s' %
-#                        (base.__name__, list(duplicate_properties)))
-#                defined.update(property_keys)
                 cls.properties.update(base.properties)
         
         cls._manytomany = {}
@@ -911,26 +893,26 @@ class ModelMetaclass(type):
                     cls._manytomany[attr_name] = attr
          
         #if there is already defined primary_key, the id will not be primary_key
-        has_primary_key = bool([v for v in cls.properties.itervalues() if 'primary_key' in v.kwargs])
+        #enable multi primary
+        #has_primary_key = bool([v for v in cls.properties.itervalues() if 'primary_key' in v.kwargs])
         
         #add __without_id__ attribute to model, if set it, uliorm will not
         #create 'id' field for the model
         #if there is already has primary key, then id will not created 
         #change in 0.2.6 version
         without_id = getattr(cls, '__without_id__', False)
-        if not has_primary_key and 'id' not in cls.properties and not without_id:
+        if 'id' not in cls.properties and not without_id:
             cls.properties['id'] = f = Field(PKTYPE(), autoincrement=True, 
                 primary_key=True, default=None, nullable=False, server_default=None)
             if not __lazy_model_init__:
                 f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)
 
-#        fields_list = [(k, v) for k, v in cls.properties.items() if not isinstance(v, ManyToMany)]
         fields_list = [(k, v) for k, v in cls.properties.items()]
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls._fields_list = fields_list
         
-        if cls.__bind__ and not __lazy_model_init__:
+        if cls._bind and not __lazy_model_init__:
             cls.bind(auto_create=__auto_create__)
         
 class LazyValue(object):
@@ -1000,9 +982,6 @@ class Property(object):
         
         kwargs = self.kwargs.copy()
         kwargs['key'] = self.name
-#        if callable(self.default):
-#            kwargs['default'] = self.default()
-#        kwargs['default'] = self.default
         kwargs['primary_key'] = self.kwargs.get('primary_key', False)
         kwargs['autoincrement'] = self.kwargs.get('autoincrement', False)
         kwargs['index'] = self.kwargs.get('index', False)
@@ -1641,7 +1620,6 @@ class ReferenceProperty(Property):
         
     def _id_attr_name(self):
         """Get attribute of referenced id.
-        #todo add id function or key function to model
         """
         return self.reference_fieldname
 
@@ -1803,7 +1781,8 @@ class Result(object):
         if connection:
             self.connection = connection
         return self
-        
+    use = connect
+    
     def all(self):
         return self
     
@@ -1971,9 +1950,11 @@ class Result(object):
         result = self.result.fetchone()
         if result:
             return self.load(result)
+        
+    first = one
     
     def clear(self):
-        return self.model.remove(self.condition)
+        return do_(self.model.table.delete(self.condition), self.connection)
     
     remove = clear
             
@@ -2334,25 +2315,6 @@ class ManyToMany(ReferenceProperty):
         self.index_reverse = attrs['index_reverse'] if 'index_reverse' in attrs else __manytomany_index_reverse__
 
     def create(self, cls):
-#        if self.through:
-#            if not (
-#                    (isinstance(self.through, type) and issubclass(self.reference_class, Model)) or
-#                    valid_model(self.reference_class)):
-#                raise KindError('through must be Model or available table name')
-#            self.through = get_model(self.through)
-#            for k, v in self.through.properties.items():
-#                if isinstance(v, ReferenceProperty):
-#                    if self.model_class is v.reference_class:
-#                        self.fielda = k
-#                        self.reversed_fieldname = v.reference_fieldname
-#                    elif self.reference_class is v.reference_class:
-#                        self.fieldb = k
-#                        self.reference_fieldname = v.reference_fieldname
-#            if not hasattr(self.through, self.fielda):
-#                raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fielda, self.through))
-#            if not hasattr(self.through, self.fieldb):
-#                raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fieldb, self.through))
-#            self.table = self.through.table
         if not self.through:
             self.fielda = "%s_id" % self.model_class.tablename
             #test model_a is equels model_b
@@ -2702,11 +2664,13 @@ class Model(object):
 
     __metaclass__ = ModelMetaclass
     __dispatch_enabled__ = True
-    __engine_name__ = None
-    __connection__ = None
-    __alias__ = None #can be used via get_model(alias)
-    __collection_set_id__ = 1
-    __bind__ = True
+    _engine_name = None
+    _connection = None
+    _alias = None #can be used via get_model(alias)
+    _collection_set_id = 1
+    _bind = True
+    _bound = False
+    _base_class = None
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
@@ -2795,7 +2759,6 @@ class Model(object):
                 t = self._old_values.get(k, None)
                 if not isinstance(v, ManyToMany):
                     x = v.get_value_for_datastore(self)
-                    #todo If need to support ManyToMany and Reference except id field?
                     if isinstance(x, Model):
                         x = x.id
                 else:
@@ -2819,7 +2782,7 @@ class Model(object):
                     setattr(self, k, v)
         return self
             
-    def put(self, insert=False, connection=None, changed=None, saved=None, 
+    def put(self, insert=False, changed=None, saved=None, 
             send_dispatch=True, version=False, version_fieldname=None, 
             version_exception=True):
         """
@@ -2867,7 +2830,7 @@ class Model(object):
                     if callable(changed):
                         changed(self, created, self._old_values, d)
                         old.update(d)
-                    obj = do_(self.table.insert().values(**d), connection or self.get_connection())
+                    obj = do_(self.table.insert().values(**d), self.get_connection())
                     _saved = True
                     
                 setattr(self, 'id', obj.inserted_primary_key[0])
@@ -2911,7 +2874,7 @@ class Model(object):
                         if callable(changed):
                             changed(self, created, self._old_values, d)
                             old.update(d)
-                        result = do_(self.table.update(_cond).values(**d), connection or self.get_connection())
+                        result = do_(self.table.update(_cond).values(**d), self.get_connection())
                         _saved = True
                         if version:
                             if result.rowcount != 1:
@@ -2939,7 +2902,7 @@ class Model(object):
     
     save = put
     
-    def delete(self, manytomany=True, connection=None, delete_fieldname=None, send_dispatch=True):
+    def delete(self, manytomany=True, delete_fieldname=None, send_dispatch=True):
         """
         Delete current obj
         :param manytomany: if also delete all manytomany relationships
@@ -2959,7 +2922,7 @@ class Model(object):
             setattr(self, delete_fieldname, True)
             self.save()
         else:
-            do_(self.table.delete(self.table.c.id==self.id), connection or self.get_connection())
+            do_(self.table.delete(self.table.c.id==self.id), self.get_connection())
             self.id = None
             self._old_values = {}
         if send_dispatch and get_dispatch_send() and self.__dispatch_enabled__:
@@ -2974,7 +2937,11 @@ class Model(object):
                     s.append('%r:<%s:%d>' % (k, v.__class__.__name__, t.id))
                 else:
                     s.append('%r:%r' % (k, t))
-        return ('<%s {' % self.__class__.__name__) + ','.join(s) + '}>'
+        if self.__class__._base_class:
+            clsname = self.__class__._base_class.__name__
+        else:
+            clsname = self.__class__.__name__
+        return ('<%s {' % clsname) + ','.join(s) + '}>'
     
     def __str__(self):
         return str(self.id)
@@ -3054,8 +3021,8 @@ class Model(object):
             if hasattr(cls, collection_name):
                 #if the xxx_set is already existed, then automatically
                 #create unique collection_set id
-                collection_name = prefix + '_set_' + str(cls.__collection_set_id__)
-                cls.__collection_set_id__ += 1
+                collection_name = prefix + '_set_' + str(cls._collection_set_id)
+                cls._collection_set_id += 1
         else:
             if hasattr(cls, collection_name):
                 raise DuplicatePropertyError("Model %s already has property %s" % (cls.__name__, collection_name))
@@ -3109,9 +3076,10 @@ class Model(object):
         #create property, it'll create Table object
         prop.create(cls)
         #create real table
-        engine = get_connection(engine_name=cls.get_connection())
-        if not prop.through and not prop.table.exists(engine):
-            prop.table.create(engine, checkfirst=True)
+        if __auto_create__:
+            engine = cls.get_engine()
+            if not prop.through and not prop.table.exists(engine):
+                prop.table.create(engine, checkfirst=True)
 
     @classmethod
     def _set_tablename(cls, appname=None):
@@ -3125,18 +3093,13 @@ class Model(object):
         
     @classmethod
     def get_connection(cls):
-        if cls.__connection__:
-            return cls.__connection__
+        if cls._connection:
+            return cls._connection
         return cls.get_engine_name()
         
     @classmethod
     def get_engine_name(cls):
-        m = __models__.get(cls.__alias__, {})
-        m1 = __model_paths__.get(cls.__module__ + '.' + cls.__name__, None)
-        engine_name = cls.__engine_name__ or m.get('engine_name') or m1 or 'default'
-        if not isinstance(engine_name, (str, unicode)):
-            raise BadValueError('engine name should be string type, but %r found' % engine_name)
-        return engine_name
+        return cls._engine_name or 'default'
     
     @classmethod
     def get_engine(cls):
@@ -3144,15 +3107,35 @@ class Model(object):
         return engine_manager[ec]
         
     @classmethod
-    def connect(cls, ec):
+    def _use(cls, ec):
         """
-        Engine name or connection object
+        underly implement of use
         """
+        class ConnectModel(cls):
+            pass
+            
+        ConnectModel.tablename = cls.tablename
+        ConnectModel._base_class = cls
         if isinstance(ec, (str, unicode)):
-            cls.__engine_name__ = ec
+            ConnectModel._engine_name = ec
+        elif isinstance(ec, Session):
+            ConnectModel._engine_name = ec.engine_name
+            ConnectModel._connection = ec
+        return ConnectModel
+    
+    @classmethod
+    def use(cls, ec):
+        """
+        use will duplicate a new Model class and bind ec
+        
+        ec is Engine name or Sesstion object
+        """
+        
+        if isinstance(ec, (str, unicode)):
+            m = get_model(cls._alias, ec)
         else:
-            cls.__connection__ = ec
-        return cls
+            m = cls._use(ec)
+        return m
     
     @classmethod
     def bind(cls, metadata=None, auto_create=False):
@@ -3174,7 +3157,10 @@ class Model(object):
                         cols.append(c)
                         
                 #check the model_path
-                model_path = cls.__module__ + '.' + cls.__name__
+                if cls._base_class:
+                    model_path = cls._base_class.__module__ + '.' + cls._base_class.__name__
+                else:
+                    model_path = cls.__module__ + '.' + cls.__name__
                 _path = __models__.get(cls.tablename, {}).get('model_path', '')
                 if _path and model_path != _path:
                     return
@@ -3208,20 +3194,22 @@ class Model(object):
                     #otherwise the creation of tables will be via: create_all(db)
                     if cls.metadata.bind:
                         cls.create()
-                        set_model(cls, created=True, engine_name=cls.__engine_name__)
+                        set_model(cls, created=True)
                     else:
-                        set_model(cls, engine_name=cls.__engine_name__)
+                        set_model(cls)
                 else:
                     if __auto_set_model__:
-                        set_model(cls, engine_name=cls.__engine_name__)
+                        set_model(cls)
+                        
+                cls._bound = True
         finally:
             cls._lock.release()
             
     @classmethod
-    def create(cls, engine=None):
+    def create(cls):
         cls._c_lock.acquire()
         try:
-            engine = engine or get_connection(engine_name=cls.get_connection())
+            engine = get_connection(cls.get_engine_name())
             if not cls.table.exists(engine):
                 cls.table.create(engine, checkfirst=True)
             for x in cls.manytomany:
@@ -3231,7 +3219,7 @@ class Model(object):
             cls._c_lock.release()
             
     @classmethod
-    def get(cls, condition=None, connection=None, fields=None, cache=False, engine_name=None, **kwargs):
+    def get(cls, condition=None, fields=None, cache=False, engine_name=None, **kwargs):
         """
         Get object from Model, if given fields, then only fields will be loaded
         into object, other properties will be Lazy
@@ -3246,7 +3234,7 @@ class Model(object):
             not isinstance(condition, BinaryExpression))
         if can_cacheable:
             #send 'get_object' topic to get cached object
-            obj = dispatch.get(cls, 'get_object', condition, engine_name=engine_name, connection=connection)
+            obj = dispatch.get(cls, 'get_object', condition)
             if obj:
                 return obj
             
@@ -3258,16 +3246,16 @@ class Model(object):
             _cond = condition
             
         #if there is no cached object, then just fetch from database
-        obj = cls.connect(connection).filter(_cond, **kwargs).fields(*(fields or [])).one()
+        obj = cls.filter(_cond, **kwargs).fields(*(fields or [])).one()
         
         if can_cacheable:
-            dispatch.call(cls, 'set_object', instance=obj, engine_name=engine_name)
+            dispatch.call(cls, 'set_object', instance=obj)
             
         return obj
     
     @classmethod
-    def get_or_notfound(cls, condition=None, connection=None, fields=None):
-        obj = cls.get(condition, connection, fields=fields)
+    def get_or_notfound(cls, condition=None, fields=None):
+        obj = cls.get(condition, fields=fields)
         if not obj:
             raise NotFound("Can't found the object", cls, condition)
         return obj
@@ -3292,16 +3280,16 @@ class Model(object):
         return Result(cls, **kwargs).filter(*condition)
             
     @classonlymethod
-    def remove(cls, condition=None, connection=None, **kwargs):
+    def remove(cls, condition=None, **kwargs):
         if isinstance(condition, (int, long)):
             condition = cls.c.id==condition
         elif isinstance(condition, (tuple, list)):
             condition = cls.c.id.in_(condition)
-        do_(cls.table.delete(condition, **kwargs), connection or cls.get_connection())
+        do_(cls.table.delete(condition, **kwargs), cls.get_connection())
             
     @classmethod
-    def count(cls, condition=None, connection=None, **kwargs):
-        count = do_(cls.table.count(condition, **kwargs), connection or cls.get_connection()).scalar()
+    def count(cls, condition=None, **kwargs):
+        count = do_(cls.table.count(condition, **kwargs), cls.get_connection()).scalar()
         return count
             
     @classmethod
@@ -3323,12 +3311,12 @@ class Model(object):
             
         return o
     
-    def refresh(self, fields=None, connection=None, **kwargs):
+    def refresh(self, fields=None, **kwargs):
         """
         Re get the instance of current id
         """
         cond = self.c.id==self.id
-        query = self.connect(connection).filter(cond, **kwargs)
+        query = self.filter(cond, **kwargs)
         if not fields:
             fields = list(self.table.c)
         

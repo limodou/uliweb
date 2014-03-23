@@ -18,6 +18,19 @@ Uliweb Change Log
 * `ManyResult.all()` can receive a `cache` parameter
 * Improve `dump()` and `load()`, add PickleType , ManyToMany support
 * Refact objcache app implementation and add `exclude` config option
+* Refact multidb support
+* Remove primary_key detect, because multi primary_key columns can make composite primary key,
+  add partition support for mysql
+
+  you can define:
+
+    ```
+    __table_args__ = {
+        'mysql_partition_by':'HASH(YEAR(create_time))',
+        'mysql_partitions': '6'
+    }
+    ```
+    
 
 0.2.6 Version
 -----------------
