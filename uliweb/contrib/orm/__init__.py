@@ -21,9 +21,9 @@ def after_init_apps(sender):
     #judge if transaction middle has not install then set
     #AUTO_DOTRANSACTION is False
     if 'transaction' in settings.MIDDLEWARES:
-        orm.set_auto_dotransaction(False)
+        orm.set_auto_transaction(True)
     else:
-        orm.set_auto_dotransaction(settings.get_var('ORM/AUTO_DOTRANSACTION'))
+        orm.set_auto_transaction(settings.get_var('ORM/AUTO_TRANSACTION'))
     
     d = {'connection_string':settings.get_var('ORM/CONNECTION'),
         'connection_type':settings.get_var('ORM/CONNECTION_TYPE'),
@@ -42,20 +42,21 @@ def after_init_apps(sender):
         }
         orm.engine_manager.add(name, x)
 
+    if 'MODELS_CONFIG' in settings:
+        for name, v in settings.MODELS_CONFIG.items():
+            orm.set_model_config(name, v)
+    
     if 'MODELS' in settings:
         for name, model_path in settings.MODELS.items():
             if not model_path: continue
             if isinstance(model_path, (str, unicode)):
                 path = model_path
-                engine_name = 'default'
             else:
-                path, engine_name = model_path
+                raise Exception("Model path should be a string but %r found" % model_path)
+            
             for k, v in __app_alias__.iteritems():
                 if path.startswith(k):
                     path = v + path[len(k):]
                     break
-            orm.set_model(path, name, engine_name=engine_name)
+            orm.set_model(path, name)
 
-    if 'MODELS_CONFIG' in settings:
-        for name, v in settings.MODELS_CONFIG.items():
-            orm.set_model_config(name, v)

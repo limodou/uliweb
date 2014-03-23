@@ -24,13 +24,15 @@ def get_engine(options, global_options):
     #set_auto_set_model(True)
     engine_name = options.engine
     engine = get_connection(engine_name=engine_name)
+    engine.engine_name = engine_name
     if global_options.verbose:
         print_engine(engine)
+        
     return engine
 
 def print_engine(engine):
     url = re.sub(r'(?<=//)(.*?):.*@', r'\1:***@', str(engine.url))
-    print 'Connection : %s' % url
+    print 'Connection [Engine:%s]:%s' % (engine.engine_name, url)
     print
     
 def reflect_table(engine, tablename):
@@ -91,7 +93,7 @@ def get_sorted_tables(tables):
     return sorted(tables.items(), cmp=_cmp)
     
 def dump_table(table, filename, con, std=None, delimiter=',', format=None, 
-    encoding='utf-8', inspector=None):
+    encoding='utf-8', inspector=None, engine_name=None):
     from uliweb.utils.common import str_value
     from StringIO import StringIO
     import csv
@@ -110,7 +112,7 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None,
         table = Table(table.name, meta)
         inspector.reflecttable(table, None)
         
-    result = do_(table.select())
+    result = do_(table.select(), engine_name)
     fields = [x.name for x in table.c]
     if not format:
         print >>std, ' '.join(fields)
@@ -131,7 +133,7 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None,
     return 'OK (%d/%lfs)' % (n, time()-b)
 
 def load_table(table, filename, con, delimiter=',', format=None, 
-    encoding='utf-8', delete=True, bulk=100):
+    encoding='utf-8', delete=True, bulk=100, engine_name=None):
     import csv
     from uliweb.utils.date import to_date, to_datetime
     
@@ -141,7 +143,7 @@ def load_table(table, filename, con, delimiter=',', format=None,
     table = reflect_table(con, table.name)
     
     if delete:
-        do_(table.delete())
+        do_(table.delete(), engine_name)
     
     b = time()
     bulk = max(1, bulk)
@@ -183,7 +185,7 @@ def load_table(table, filename, con, delimiter=',', format=None,
                                     params[c.name] = record[c.name]
                 buf.append(params)
                 if count >= bulk:
-                    do_(table.insert(), args=buf)
+                    do_(table.insert(), engine_name, args=buf)
                     count = 0
                     buf = []
             except:
@@ -191,7 +193,7 @@ def load_table(table, filename, con, delimiter=',', format=None,
                 raise
         
         if buf:
-            do_(table.insert(), args=buf)
+            do_(table.insert(), engine_name, args=buf)
             
         return 'OK (%d/%lfs)' % (n, time()-b)
     finally:
@@ -429,7 +431,8 @@ class DumpCommand(SQLCommandMixin, Command):
             else:
                 fileobj = filename
             t = dump_table(t, fileobj, engine, delimiter=options.delimiter, 
-                format=format, encoding=options.encoding, inspector=inspector)
+                format=format, encoding=options.encoding, inspector=inspector,
+                engine_name=engine.engine_name)
             #write zip content
             if options.zipfile and zipfile:
                 zipfile.writestr(filename, fileobj.getvalue())
@@ -498,7 +501,8 @@ class DumpTableCommand(SQLCommandMixin, Command):
                 fileobj = filename
                 
             t = dump_table(t, fileobj, engine, delimiter=options.delimiter, 
-                format=format, encoding=options.encoding, inspector=inspector)
+                format=format, encoding=options.encoding, inspector=inspector,
+                engine_name=engine.engine_name)
 
             #write zip content
             if options.zipfile and zipfile:
@@ -545,7 +549,8 @@ class DumpTableFileCommand(SQLCommandMixin, Command):
         else:
             format = None
         t = dump_table(t, args[1], engine, delimiter=options.delimiter, 
-            format=format, encoding=options.encoding, inspector=inspector)
+            format=format, encoding=options.encoding, inspector=inspector,
+            engine_name=engine.engine_name)
         if global_options.verbose:
             print t
         
@@ -607,7 +612,8 @@ are you sure to load data""" % options.engine
                 else:
                     format = None
                 t = load_table(t, filename, engine, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding, bulk=int(options.bulk))
+                    format=format, encoding=options.encoding, bulk=int(options.bulk),
+                    engine_name=engine.engine_name)
                 orm.Commit()
                 if global_options.verbose:
                     print t
@@ -674,7 +680,8 @@ are you sure to load data""" % (options.engine, ','.join(args))
                 else:
                     format = None
                 t = load_table(t, filename, engine, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding, delete=ans=='Y', bulk=int(options.bulk))
+                    format=format, encoding=options.encoding, delete=ans=='Y', 
+                    bulk=int(options.bulk), engine_name=engine.engine_name)
                 orm.Commit()
                 if global_options.verbose:
                     print t
@@ -735,7 +742,8 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
             else:
                 format = None
             t = load_table(t, args[1], engine, delimiter=options.delimiter, 
-                format=format, encoding=options.encoding, delete=ans=='Y', bulk=int(options.bulk))
+                format=format, encoding=options.encoding, delete=ans=='Y', 
+                bulk=int(options.bulk), engine_name=engine.engine_name)
             orm.Commit()
             if global_options.verbose:
                 print t
@@ -848,7 +856,7 @@ class ValidatedbCommand(SQLCommandMixin, Command):
                 flag = 'NOT EXISTED'
             else:
                 try:
-                    result = list(do_(t.select().limit(1)))
+                    result = list(do_(t.select().limit(1), engine.engine_name))
                     flag = 'OK'
                 except Exception as e:
                     if options.traceback:

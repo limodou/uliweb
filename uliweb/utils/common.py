@@ -5,6 +5,7 @@ import cPickle
 import inspect
 
 log = logging
+class _Default(object): pass
 
 def safe_import(path):
     module = path.split('.')
@@ -652,7 +653,22 @@ def trim_path(path, length=30):
         if t > length-4:
             break
     return '.../' + '/'.join(s[i+1:])
-    
+  
+class cached_property(object):
+    """
+    cached function return value
+    """
+    def __init__(self, func):
+        self.value = _Default
+        self.func = func
+
+    def __get__(self, obj, type=None):
+        value = self.value
+        if self.value is _Default:
+            value = self.func(type)
+            self.value = value
+        return value
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:

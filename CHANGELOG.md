@@ -4,6 +4,10 @@ Uliweb Change Log
 0.3 Version
 -----------------
 
+* Fix pyini "key=" for raw output bug
+* Fix objcache for Lazy field bug, it'll refresh first if found Lazy field
+* Fix executing orm command raise Exception not be thrown bug
+* Refact multidb support
 * Change UserWarn to DeprecationWarning
 * Fix syncdb for different table name between `Model.__tablename__` and settings bug
 * Remove `get_cached()` and add `cache` parameter to `Model.get()`
@@ -14,9 +18,6 @@ Uliweb Change Log
 * `ManyResult.all()` can receive a `cache` parameter
 * Improve `dump()` and `load()`, add PickleType , ManyToMany support
 * Refact objcache app implementation and add `exclude` config option
-* Fix pyini "key=" for raw output bug
-* Fix objcache for Lazy field bug, it'll refresh first if found Lazy field
-* Fix executing orm command raise Exception not be thrown bug
 
 0.2.6 Version
 -----------------
