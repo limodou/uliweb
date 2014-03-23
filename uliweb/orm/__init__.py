@@ -754,10 +754,10 @@ def get_model(model, engine_name=None):
             if isinstance(m, type) and issubclass(m, Model):
                 return m
             else:
-                m, name = item['model_path'].rsplit('.', 1)
-                mod = __import__(m, fromlist=['*'])
+                mod_path, name = item['model_path'].rsplit('.', 1)
+                mod = __import__(mod_path, fromlist=['*'])
                 model_inst = getattr(mod, name)
-                if model_inst._bound:
+                if model_inst._bound_classname == model:
                     model_inst = model_inst._use(engine_name)
                     item['model'] = model_inst
                 else:
@@ -2669,7 +2669,7 @@ class Model(object):
     _alias = None #can be used via get_model(alias)
     _collection_set_id = 1
     _bind = True
-    _bound = False
+    _bound_classname = ''
     _base_class = None
     
     _lock = threading.Lock()
@@ -3077,7 +3077,7 @@ class Model(object):
         prop.create(cls)
         #create real table
         if __auto_create__:
-            engine = cls.get_engine()
+            engine = cls.get_engine().engine
             if not prop.through and not prop.table.exists(engine):
                 prop.table.create(engine, checkfirst=True)
 
@@ -3201,7 +3201,7 @@ class Model(object):
                     if __auto_set_model__:
                         set_model(cls)
                         
-                cls._bound = True
+                cls._bound_classname = cls._alias
         finally:
             cls._lock.release()
             

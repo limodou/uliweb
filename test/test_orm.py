@@ -2156,7 +2156,7 @@ def test_primary_key():
     ...     year = Field(int)
     ...     version = Field(int)
     >>> Test.properties.keys()
-    ['username', 'version', 'user_id', 'year']
+    ['username', 'version', 'user_id', 'id', 'year']
     """
 
 def test_get_object():

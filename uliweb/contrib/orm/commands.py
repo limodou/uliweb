@@ -55,7 +55,11 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
     tables_map = {}
     try:
         for tablename, m in engine.models.items():
-            x = orm.get_model(tablename, engine_name)
+            try:
+                x = orm.get_model(tablename, engine_name)
+            except:
+                print "Error on Model [%s]" % tablename
+                raise
             tables_map[x.tablename] = tablename
     except:
         print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
