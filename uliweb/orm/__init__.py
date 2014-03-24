@@ -1793,17 +1793,8 @@ class Result(object):
             return self.filter(condition).one()
     
     def count(self):
-        flag = False
-        #judge if there is a distince process
-        for name, args, kwargs in self.funcs:
-            if name == 'distinct':
-                flag = True
-                break
-        if not flag:
-            return self.model.count(self.condition)
-        else:
-            sql = select([func.count(func.distinct(self.model.c.id))], self.condition)
-            return self.do_(sql).scalar()
+        query = self.get_query([func.count('*')])
+        return self.do_(query).scalar()
 
     def filter(self, *condition):
         """
@@ -1912,17 +1903,20 @@ class Result(object):
 
         return save_file(self.run(), filename, encoding=encoding, headers=headers, convertors=convertors)
     
-    def get_query(self):
+    def get_query(self, columns=None):
         #user can define default_query, and default_query 
         #should be class method
+        
+        columns = columns or self.get_columns()
+        
         if self.default_query_flag:
             _f = getattr(self.model, 'default_query', None)
             if _f:
                 _f(self)
         if self.condition is not None:
-            query = select(self.get_columns(), self.condition, **self.kwargs)
+            query = select(columns, self.condition, from_obj=[self.model.table], **self.kwargs)
         else:
-            query = select(self.get_columns(), **self.kwargs)
+            query = select(columns, from_obj=[self.model.table], **self.kwargs)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         if self._group_by:
@@ -2154,15 +2148,12 @@ class ManyResult(Result):
     remove = clear
     
     def count(self):
-        result = self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & self.condition).execute()
-        count = 0
-        if result:
-            r = result.fetchone()
-            if r:
-                count = r[0]
-        else:
-            count = 0
-        return count
+        return self.do_(
+            self.table.count(
+                (self.table.c[self.fielda]==self.valuea) & 
+                (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & 
+                self.condition)
+            ).scalar()
     
     def has(self, *objs):
         ids = get_objs_columns(objs, self.realfieldb)
@@ -2170,15 +2161,20 @@ class ManyResult(Result):
         if not ids:
             return False
         
-        count = self.do_(self.table.count((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids)))).scalar()
-        return count > 0
+        row = self.do_(select([text('*')], 
+            (self.table.c[self.fielda]==self.valuea) & 
+            (self.table.c[self.fieldb].in_(ids))).limit(1))
+        #hack rowcount for sqlite will always return -1
+        if row.rowcount == -1:
+            return len(list(row)) > 0
+        return row.rowcount > 0
         
     def fields(self, *args, **kwargs):
         if args:
             args = flat_list(args)
             if args:
-                if 'id' not in args:
-                    args.append('id')
+                if 'id' not in args and 'id' in self.modelb.c:
+                    args.append(self.modelb.c.id)
                 self.funcs.append(('with_only_columns', ([self.get_column(self.modelb, x) for x in args],), kwargs))
         return self
 

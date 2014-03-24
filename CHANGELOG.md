@@ -34,6 +34,7 @@ Uliweb Change Log
 * move uliweb/orm/middle*.py to uliweb/contrib/orm
 * move uliweb/i18n/middle_i18n.py to uliweb/contrib/i18n
 * move storage from core to utils directory
+* improve count process
 
 0.2.6 Version
 -----------------
