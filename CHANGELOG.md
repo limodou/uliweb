@@ -30,7 +30,7 @@ Uliweb Change Log
         'mysql_partitions': '6'
     }
     ```
-    
+* add None patch process, you can set '', 'empty, 'exception'.
 
 0.2.6 Version
 -----------------

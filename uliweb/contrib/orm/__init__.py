@@ -18,6 +18,14 @@ def after_init_apps(sender):
     convert = import_attr(convert_path) if convert_path else None
     orm.set_tablename_converter(convert)
     
+    patch_none = settings.get_var('ORM/PATCH_NONE')
+    if patch_none:
+        from sqlalchemy.sql.compiler import SQLCompiler
+        if patch_none == 'empty':
+            setattr(SQLCompiler, 'visit_null', visit_null_empty)
+        elif patch_none == 'exception':
+            setattr(SQLCompiler, 'visit_null', visit_null_exception)
+    
     #judge if transaction middle has not install then set
     #AUTO_DOTRANSACTION is False
     if 'transaction' in settings.MIDDLEWARES:
@@ -60,3 +68,8 @@ def after_init_apps(sender):
                     break
             orm.set_model(path, name)
 
+def visit_null_empty(self, expr, **kw):
+    return ''
+
+def visit_null_exception(self, expr, **kw):
+    raise Exception("You chould not use None in sql condition")
