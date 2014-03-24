@@ -15,8 +15,8 @@ from werkzeug.routing import Map
 
 import template
 from js import json_dumps
-from storage import Storage
 import dispatch
+from uliweb.utils.storage import Storage
 from uliweb.utils.common import (pkg, log, import_attr, 
     myimport, wraps, norm_path)
 import uliweb.utils.pyini as pyini

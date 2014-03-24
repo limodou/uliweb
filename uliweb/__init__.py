@@ -20,7 +20,7 @@ from .core.SimpleFrame import (Request, Response, redirect, Redirect, error, jso
         functions, response, request, settings, application, NotFound, HTTPException,
     )
 from .core.js import json_dumps
-from .core.storage import Storage
+from .utils.storage import Storage
 from .core.rules import get_endpoint
 
 class Middleware(object):

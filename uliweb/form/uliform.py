@@ -8,7 +8,7 @@ from uliweb.i18n import gettext_lazy as _
 from uliweb.core.html import Buf, Tag, begin_tag, u_str
 from widgets import *
 from layout import *
-from uliweb.core.storage import Storage
+from uliweb.utils.storage import Storage
 from uliweb.utils import date
 
 DEFAULT_FORM_CLASS = 'form'
