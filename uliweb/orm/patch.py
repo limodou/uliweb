@@ -1,3 +1,4 @@
+#this patch comes from https://groups.google.com/forum/#!msg/sqlalchemy/k9dx0P1jap0/RdxtBJhwFO0J
 from sqlalchemy import *
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.ext.compiler import compiles

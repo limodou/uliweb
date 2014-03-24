@@ -31,6 +31,7 @@ Uliweb Change Log
     }
     ```
 * add None patch process, you can set '', 'empty, 'exception'.
+* move uliweb/orm middle*.py to uliweb/contrib/orm
 
 0.2.6 Version
 -----------------
