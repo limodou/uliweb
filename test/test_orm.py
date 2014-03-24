@@ -1881,6 +1881,44 @@ def test_load_dump():
     <Test2 {'name':u'a','t':None,'id':2}>
     """
 
+def test_reference_loaddump():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     user = Reference(User)
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> g1 = Group(name='python', user=a)
+    >>> g1.save()
+    True
+    >>> g1.dump()
+    {'user': '1', 'id': '1', 'name': 'python'}
+    >>> g1.dump(exclude=['user'])
+    {'id': '1', 'name': 'python'}
+    >>> g1.dump(fields=[], exclude=['user'])
+    {'id': '1', 'name': 'python'}
+    >>> g1.dump(fields=['name'], exclude=['user'])
+    {'id': '1', 'name': 'python'}
+    >>> d = g1.dump(['name', 'user'])
+    >>> print d
+    {'user': '1', 'id': '1', 'name': 'python'}
+    >>> g = Group.load(d)
+    >>> print g._user_
+    1
+    >>> g.user
+    <User {'username':u'limodou','year':5,'id':1}>
+    >>> x = {'user': '', 'id': '1', 'name': 'python'}
+    >>> g2 = Group.load(x)
+    >>> g2.user
+    """
+
 def test_manytomany_loaddump():
     """
     >>> db = get_connection('sqlite://')
@@ -1904,6 +1942,8 @@ def test_manytomany_loaddump():
     >>> g1 = Group(name='python', users=[a.id, b.id])
     >>> g1.save()
     True
+    >>> print g1._users_
+    [1, 2]
     >>> g1.dump()
     {'id': '1', 'name': 'python'}
     >>> g1.dump(exclude=['users'])
@@ -1922,6 +1962,16 @@ def test_manytomany_loaddump():
     [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
     >>> g.users.all(cache=True)
     [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
+    >>> x = {'users': '', 'id': '1', 'name': 'python'}
+    >>> g3 = Group.load(x, from_dump=True)
+    >>> print g3._users_
+    []
+    >>> list(g3.users)
+    [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
+    >>> x = {'users': '1,2', 'id': '1', 'name': 'python'}
+    >>> g4 = Group.load(x, from_dump=True)
+    >>> print g4._users_
+    [1, 2]
     """
     
 def test_manytomany_delete_fieldname():
@@ -2184,72 +2234,32 @@ def test_get_object():
     <Test {'username':u'limodou','year':0,'id':1}>
     """
 
-#if __name__ == '__main__':
-#    from sqlalchemy.schema import CreateTable, CreateIndex
-#    
-#    db = get_connection('sqlite://')
-#    db.metadata.drop_all()
-#    db.echo = True
-#    set_server_default(True)
-#    set_nullable(False)
-#    
-#    class Test(Model):
-#        username = Field(CHAR, max_length=20)
-#        year = Field(int)
-#    class Test1(Model):
-#        test = Reference(Test, collection_name='tttt', reference_fieldname='username')
-#        year = Field(int)
-#        name = Field(CHAR, max_length=20)
-#    a1 = Test(username='limodou1', year=20)
-#    a1.save()
-
-#if __name__ == '__main__':
-#    db = get_connection('sqlite://')
-#    db.echo = True
-#    db.metadata.drop_all()
-#    #set_server_default(True)
-#    class Test(Model):
-#        username = Field(CHAR, max_length=20)
-#        year = Field(int)
-#    class Test1(Model):
-#        test = Reference(Test)
-#        year = Field(int)
-#        name = Field(CHAR, max_length=20)
-#    a1 = Test(username='limodou1', year=20)
-#    a1.save()
-#    
-#    b1 = Test1(name='user', year=5, test=a1)
-#    b1.save()
-#    
-#    b2 = Test1(name='aaaa', year=10)
-#    b2.save()
-#    
-#    c = Test1.get(Test1.c.name=='aaaa')
-#    print repr(c), c._test_
-#    set_server_default(False)
-#    
-
-
-##set_debug_query(True)
 #db = get_connection('sqlite://')
+#db.echo = False
 #db.metadata.drop_all()
-#import datetime
-#class Test(Model):
-#    string = StringProperty(max_length=40)
-#    boolean = BooleanProperty()
-#    integer = IntegerProperty()
-#    date1 = DateTimeProperty()
-#    date2 = DateProperty()
-#    date3 = TimeProperty()
-#    float = FloatProperty()
-#    decimal = DecimalProperty()
-#    pickle = PickleProperty()
-#a = {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a':1, 'b':2}, 'id':1}
-#b = Test(**a)
+#class User(Model):
+#    username = Field(CHAR, max_length=20)
+#    year = Field(int)
+#class Group(Model):
+#    name = Field(str, max_length=20)
+#    users = ManyToMany(User)
+#a = User(username='limodou', year=5)
+#a.save()
+#
+#b = User(username='user', year=10)
 #b.save()
-#d = b.dump()
-#print d
-#print b.dump(fields=['pickle'])
-#x = Test.load(d, convert_pickle=True)
-#print repr(x)
-
+#
+#c = User(username='abc', year=20)
+#c.save()
+#
+#g1 = Group(name='python', users=[a.id, b.id])
+#g1.save()
+#print g1._users_
+#
+#x = {'users': '', 'id': '1', 'name': 'python'}
+#g3 = Group.load(x, from_dump=True)
+#print g3._users_
+#
+#x = {'users': '1,2', 'id': '1', 'name': 'python'}
+#g4 = Group.load(x, from_dump=True)
+#print g4._users_

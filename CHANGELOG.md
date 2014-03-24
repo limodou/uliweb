@@ -35,6 +35,7 @@ Uliweb Change Log
 * move uliweb/i18n/middle_i18n.py to uliweb/contrib/i18n
 * move storage from core to utils directory
 * improve count process
+* Fix Reference and ManyToMany dump and load bug
 
 0.2.6 Version
 -----------------

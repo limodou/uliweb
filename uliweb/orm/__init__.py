@@ -1634,6 +1634,13 @@ class ReferenceProperty(Property):
         """
         return '_RESOLVED' + self._attr_name()
 
+    def convert(self, value):
+        if value == '':
+            return 0
+        if value is None:
+            return value
+        return self.data_type(value)
+    
 Reference = ReferenceProperty
 
 class OneToOne(ReferenceProperty):
@@ -2528,6 +2535,11 @@ class ManyToMany(ReferenceProperty):
                 cond = c & cond
         return (self.table.c[self.fielda] == self.model_class.c[self.reversed_fieldname]) & (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & cond
         
+    def convert_dump(self, value):
+        if not value:
+            return []
+        return [int(x) for x in value.split(',')]
+    
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
     """
