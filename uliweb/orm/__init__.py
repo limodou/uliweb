@@ -1700,6 +1700,8 @@ def get_objs_columns(objs, field='id'):
     if isinstance(objs, (str, unicode)):
         objs = [int(x) for x in objs.split(',')]
     for x in objs:
+        if not x:
+            continue
         if isinstance(x, (tuple, list)):
             new_objs.extend(x)
         else:
