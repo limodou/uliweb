@@ -15,6 +15,8 @@ def client(project_path='.', settings_file='settings.ini', local_settings_file='
     from werkzeug.test import Client
     from werkzeug.wrappers import Response
     
+    setattr(Client, 'test_url', test_url)
+
     app = get_app(project_path, settings_file, local_settings_file)
     c = Client(app, Response)
     c.app = app
@@ -24,6 +26,8 @@ def client_from_application(app):
     from werkzeug.test import Client
     from werkzeug.wrappers import Response
     
+    setattr(Client, 'test_url', test_url)
+
     c = Client(app, Response)
     c.app = app
     return c
@@ -34,3 +38,60 @@ def BlankRequest(url, **kwargs):
     
     env = create_environ(path=url, **kwargs)
     return Request(env)
+
+def test_url(self, url, data=None, method='get', ok_test=(200, 304, 302), log=True):
+    """
+    Test if an url is ok
+    ok_test can be tuple: it should be status_code list
+        callable: then return true will be ok
+    """
+    if data is None:
+        data = {}
+    func = getattr(self, method.lower())
+    r = func(url, data=data)
+    
+    result = False
+    if isinstance(ok_test, (list, tuple)):
+        result = r.status_code in ok_test
+    #int,long will be treated as status code
+    elif isinstance(ok_test, (int, long)):
+        result = r.status_code == ok_test
+    #str,unicode will be treated as text
+    elif isinstance(ok_test, (str, unicode)):
+        result = ok_test in r.data
+    elif callable(ok_test):
+        result = ok_test(url, data, method, r.status_code, r.data)    
+
+    flag = 'OK' if result else 'Failed'
+    log_func = None
+    if callable(log):
+        log_func = log
+    elif log is True:
+        log_func = default_log
+    elif isinstance(log, (str, unicode)):
+        log_func = log_to_file(log)
+    if log_func:
+        log_func(url, data, method, ok_test, result, r)
+    return result, r
+
+def default_log(url, data, method, ok_test, result, response):
+    flag = 'OK' if result else 'Failed'
+    print 'Testing %s...%s' % (url, flag)
+    
+def log_to_file(logfile, response_text=False):
+    if isinstance(logfile, (str, unicode)):
+        log = open(logfile, 'a')
+    else:
+        log = logfile
+    def _log(url, data, method, ok_test, result, response):
+        flag = 'OK' if result else 'Failed'
+        log.write('Testing %s...%s\n' % (url, flag))
+        if not result:
+            log.write('    Response code=%d\n' % response.status_code)
+            if response_text:
+                log.write('----------------- Response Text -----------------\n')
+                log.write(response.data)
+                log.write('================= Response Text =================\n')
+    return _log
+                
+            

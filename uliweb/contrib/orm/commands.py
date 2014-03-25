@@ -866,7 +866,7 @@ def get_commands(mod):
     
     def check(c):
         return (inspect.isclass(c) and 
-            issubclass(c, Command) and c is not Command and c is not CommandManager)
+            issubclass(c, Command) and c is not Command and not issubclass(c, CommandManager))
     
     for name in dir(mod):
         c = getattr(mod, name)

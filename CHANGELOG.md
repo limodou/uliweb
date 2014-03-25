@@ -40,6 +40,7 @@ Uliweb Change Log
     ```
 * Fix sqldot bug and improve sqlhtml generation
 * Eanble colored log output by default.
+* Add recorder app, you can use it to record the visit url, and test it later
 
 0.2.5 Version
 -----------------

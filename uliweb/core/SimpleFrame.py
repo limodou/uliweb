@@ -1186,6 +1186,9 @@ class Dispatcher(object):
                         if not ins:
                             ins = cls(self, settings)
                         response = ins.process_response(req, response)
+                        
+                        if not isinstance(response, Response):
+                            raise Exception("Middleware %s should return an Response object, but %r found" % (ins.__class__.__name__, response))
                 
                 #process post_response call, you can set some async process in here
                 #but the sync may fail, so you should think about the checking mechanism

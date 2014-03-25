@@ -538,13 +538,17 @@ def pretty_dict(d, leading=' ', newline='\n', indent=0, tabstop=4, process=None)
             continue
         yield '%s%s : %s%s' % (indent*tabstop*leading, k, simple_value(v), newline)
 
-def request_url():
+def request_url(req=None):
+    """
+    Get full url of a request
+    """
     from uliweb import request
     
-    if request.query_string:
-        return request.path + '?' + request.query_string
+    r = req or request
+    if r.query_string:
+        return r.path + '?' + r.query_string
     else:
-        return request.path
+        return r.path
 
 def flat_list(*alist):
     """
