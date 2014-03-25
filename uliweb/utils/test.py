@@ -67,7 +67,7 @@ def test_url(self, url, data=None, method='get', ok_test=(200, 304, 302), log=Tr
     if callable(log):
         log_func = log
     elif log is True:
-        log_func = default_log
+        log_func = log_to_file(sys.stdout)
     elif isinstance(log, (str, unicode)):
         log_func = log_to_file(log)
     if log_func:
@@ -87,6 +87,7 @@ def log_to_file(logfile, response_text=False):
         flag = 'OK' if result else 'Failed'
         log.write('Testing %s...%s\n' % (url, flag))
         if not result:
+            log.write('    ok_test = %s\n' % ok_test)
             log.write('    Response code=%d\n' % response.status_code)
             if response_text:
                 log.write('----------------- Response Text -----------------\n')

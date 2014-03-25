@@ -7,7 +7,8 @@ c = client('.')
 print 'Current directory is %s' % os.getcwd()
 print
 
-log = 'recorder_test_%s.log' % datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+#log = 'recorder_test_%s.log' % datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+log = True
 
 {{for row in rows:}}{{<< row}}
 {{pass}}
