@@ -66,18 +66,17 @@ def get_object(model, cid, engine_name=None, connection=None):
         return
     
     _id = get_id(engine_name or model.get_engine_name(), tablename, cid)
-    log.debug("Try to find objcache:get:table=%s:id=[%s]" % (tablename, _id))
-    if redis.exists(_id):
-        v = redis.hgetall(_id)
-        try:
+    try:
+        log.debug("Try to find objcache:get:table=%s:id=[%s]" % (tablename, _id))
+        if redis.exists(_id):
+            v = redis.hgetall(_id)
             o = model.load(v, from_dump=True)
-        except Exception, e:
-            log.exception(e)
-            raise
-        log.debug("Found!")
-        return o
-    else:
-        log.debug("Not Found!")
+            log.debug("Found!")
+            return o
+        else:
+            log.debug("Not Found!")
+    except Exception, e:
+        log.exception(e)
        
 
 def set_object(model, instance, fields=None, engine_name=None):
