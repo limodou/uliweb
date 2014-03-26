@@ -4,7 +4,8 @@
 
 __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_debug_query', 'set_auto_create', 'set_auto_set_model', 
-    'get_model', 'set_model', 'engine_manager', 'set_auto_transaction',
+    'get_model', 'set_model', 'engine_manager', 
+    'set_auto_transaction_in_web', 'set_auto_transaction_in_notweb',
     'set_tablename_converter', 'set_check_max_length', 'set_post_do',
     'rawsql', 'Lazy', 'set_echo', 'Session', 'get_session',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
@@ -27,7 +28,8 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
 
 __auto_create__ = False
 __auto_set_model__ = True
-__auto_transaction__ = False
+__auto_transaction_in_web__ = False
+__auto_transaction_in_notweb__ = False
 __debug_query__ = None
 __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
@@ -108,9 +110,13 @@ def set_auto_create(flag):
     global __auto_create__
     __auto_create__ = flag
     
-def set_auto_transaction(flag):
-    global __auto_transaction__
-    __auto_transaction__ = flag
+def set_auto_transaction_in_notweb(flag):
+    global __auto_transaction_in_notweb__
+    __auto_transaction_in_notweb__ = flag
+
+def set_auto_transaction_in_web(flag):
+    global __auto_transaction_in_web__
+    __auto_transaction_in_web__ = flag
 
 def set_auto_set_model(flag):
     global __auto_set_model__
@@ -296,16 +302,29 @@ class Session(object):
         in web environment, it'll be commit or rollback after the request finished
         and in no-web environment, you should invoke commit or rollback yourself.
         """
-        global __auto_transaction__
-        
         self.engine_name = engine_name
-        self.auto_transaction = auto_transaction if auto_transaction is not None else __auto_transaction__
+        self.auto_transaction = auto_transaction
         self.auto_close = auto_close
         self.engine = engine_manager[engine_name]
         self._conn = None
         self._trans = None
         self.local_cache = {}
+       
+    @property
+    def need_transaction(self):
+        from uliweb import is_in_web
+
+        global __auto_transaction_in_notweb__, __auto_transaction_in_web__
         
+        if self.auto_transaction is not None:
+            return self.auto_transaction
+        else:
+            #distinguish in web or not web environment
+            if is_in_web():
+                return __auto_transaction_in_web__
+            else:
+                return __auto_transaction_in_notweb__
+            
     @property
     def connection(self):
         if self._conn:
@@ -315,12 +334,14 @@ class Session(object):
             return self._conn
         
     def execute(self, query, *args):
+        t = self.need_transaction
         try:
-            if self.auto_transaction:
+            if t:
                 self.begin()
             return self.connection.execute(query, *args)
         except:
-            self.rollback()
+            if t:
+                self.rollback()
             raise
     
     def set_echo(self, flag, time=None, explain=False, caller=True):
@@ -419,8 +440,7 @@ def get_metadata(engine_name=None):
 
 def get_session(ec=None, create=True):
     """
-    :param: ec - engine_name or connection
-    auto_transaction will only effect for named engine
+    ec - engine_name or connection
     """
     
     ec = ec or 'default'
@@ -483,8 +503,6 @@ def get_engine_name(ec=None):
 def do_(query, ec=None, args=None):
     """
     Execute a query
-    if auto_transaction is True, then if there is no connection existed,
-    then auto created an connection, and auto begin transaction
     """
     from time import time
     from uliweb.utils.common import get_caller
@@ -586,12 +604,12 @@ def Begin(ec=None):
     session = get_session(ec)
     return session.begin()
 
-def Commit(close=False, ec=None, trans=None):
+def Commit(ec=None):
     session = get_session(ec, False)
     if session:
         return session.commit()
     
-def CommitAll(close=False):
+def CommitAll():
     """
     Commit all transactions according Local.conn
     """
@@ -600,12 +618,12 @@ def CommitAll(close=False):
         if session:
             session.commit()
     
-def Rollback(close=False, ec=None, trans=None):
+def Rollback(ec=None):
     session = get_session(ec, False)
     if session:
         return session.rollback()
     
-def RollbackAll(close=False):
+def RollbackAll():
     """
     Rollback all transactions, according Local.conn
     """

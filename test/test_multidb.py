@@ -102,11 +102,11 @@ def test_5():
     >>> session = Session()
     >>> B = get_model('blog')
     >>> r = B.all().remove()
-    >>> Commit()
     >>> B1 = B.use(session)
     >>> print session.in_transaction()
     False
     >>> r = B1.all().remove()
+    >>> trans = session.begin()
     >>> print session.in_transaction()
     True
     >>> a = B1(title='1', content='1')
@@ -131,11 +131,9 @@ def test_local_cache():
     '222'
     >>> B = get_model('blog')
     >>> r = B.all().remove()
-    >>> Commit()
     >>> a = B(title='1', content='1')
     >>> a.save()
     True
-    >>> Commit()
     >>> set_echo(True)
     >>> get_cached_object('blog', 1) # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
     <BLANKLINE>
@@ -163,11 +161,11 @@ def test_rollback():
     >>> session = Session()
     >>> B = get_model('blog')
     >>> r = B.all().remove()
-    >>> Commit()
     >>> B1 = B.use(session)
     >>> print session.in_transaction()
     False
     >>> r = B1.all().remove()
+    >>> trans = session.begin()
     >>> print session.in_transaction()
     True
     >>> a = B1(title='1', content='1')
@@ -178,6 +176,61 @@ def test_rollback():
     0
     """
     
+def test_blog_add():
+    """
+    >>> app = make_simple_application(project_dir='.')
+    >>> from uliweb import is_in_web
+    >>> from uliweb.utils.test import client
+    >>> Blog = get_model('blog')
+    >>> r = Blog.all().remove()
+    >>> c = client('.')
+    >>> r = c.get('/test_add')
+    >>> print r.data
+    ok
+    >>> print list(Blog.all())
+    [<Blog {'title':u'test_add','content':u'test_add','id':1}>]
+    >>> b = Blog.get(Blog.c.title=='test_add')
+    >>> b
+    <Blog {'title':u'test_add','content':u'test_add','id':1}>
+    >>> b.delete()
+    >>> Blog.count()
+    0
+    """
+
+def test_blog_rollback():
+    """
+    >>> app = make_simple_application(project_dir='.')
+    >>> from uliweb import is_in_web
+    >>> from uliweb.utils.test import client
+    >>> Blog = get_model('blog')
+    >>> r = Blog.all().remove()
+    >>> c = client('.')
+    >>> try:
+    ...     r = c.get('/test_rollback')
+    ... except Exception:
+    ...     print 'fail'
+    fail
+    >>> print list(Blog.all())
+    []
+    """
+
+def test_blog_manual_commit():
+    """
+    >>> app = make_simple_application(project_dir='.')
+    >>> from uliweb import is_in_web
+    >>> from uliweb.utils.test import client
+    >>> Blog = get_model('blog')
+    >>> r = Blog.all().remove()
+    >>> c = client('.')
+    >>> r = c.get('/test_manual_commit')
+    >>> print list(Blog.all())
+    [<Blog {'title':u'test_add','content':u'test_add','id':1}>]
+    >>> r = Blog.all().remove()
+    >>> r = c.get('/test_manual_rollback')
+    >>> print list(Blog.all())
+    []
+    """
+
 #del session
 #del a
 #del B1

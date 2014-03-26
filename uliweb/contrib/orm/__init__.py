@@ -29,9 +29,10 @@ def after_init_apps(sender):
     #judge if transaction middle has not install then set
     #AUTO_DOTRANSACTION is False
     if 'transaction' in settings.MIDDLEWARES:
-        orm.set_auto_transaction(True)
+        orm.set_auto_transaction_in_web(True)
     else:
-        orm.set_auto_transaction(settings.get_var('ORM/AUTO_TRANSACTION'))
+        orm.set_auto_transaction_in_web(settings.get_var('ORM/AUTO_TRANSACTION_IN_WEB'))
+    orm.set_auto_transaction_in_notweb(settings.get_var('ORM/AUTO_TRANSACTION_IN_NOTWEB'))
     
     d = {'connection_string':settings.get_var('ORM/CONNECTION'),
         'connection_type':settings.get_var('ORM/CONNECTION_TYPE'),

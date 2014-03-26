@@ -8,7 +8,7 @@ os.chdir('test_multidb')
 manage.call('uliweb syncdb')
 manage.call('uliweb syncdb --engine=b')
 
-def test_1():
+def test_is_in_web():
     """
     >>> app = make_simple_application(project_dir='.')
     >>> from uliweb import is_in_web
@@ -20,3 +20,4 @@ def test_1():
     >>> print r.data
     True
     """
+    
