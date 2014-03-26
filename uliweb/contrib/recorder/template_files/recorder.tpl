@@ -1,5 +1,5 @@
 
-def test(log, counter):
+def test(c, log, counter):
     {{for row in rows:}}{{<< row}}
     {{pass}}
 
@@ -16,7 +16,7 @@ if __name__ == '__main__':
     log = True
     
     counter = Counter()
-    test(log, counter)
+    test(c, log, counter)
     
     print
     print 'Total cases is %d, %d passed, %d failed' % (counter.totle, 
