@@ -82,7 +82,6 @@ class StatusCommand(Command):
 
     def handle(self, options, global_options, *args):
         from uliweb import functions
-        from uliweb.orm import Commit
         
         self.get_application(global_options)
         
@@ -123,7 +122,7 @@ class PrintCommand(Command):
 
         if args:
             if os.path.exists(args[0]):
-                ans = get_answer("Ths file %s is already exists, do you want to overwrite it?")
+                ans = get_answer("Ths file %s is already exists, do you want to overwrite it?" % args[0])
                 if ans != 'Y':
                     return
                 

@@ -39,7 +39,7 @@ def BlankRequest(url, **kwargs):
     env = create_environ(path=url, **kwargs)
     return Request(env)
 
-def test_url(self, url, data=None, method='get', ok_test=(200, 304, 302), log=True):
+def test_url(self, url, data=None, method='get', ok_test=(200, 304, 302), log=True, counter=None):
     """
     Test if an url is ok
     ok_test can be tuple: it should be status_code list
@@ -62,6 +62,9 @@ def test_url(self, url, data=None, method='get', ok_test=(200, 304, 302), log=Tr
     elif callable(ok_test):
         result = ok_test(url, data, method, r.status_code, r.data)    
 
+    if counter:
+        counter.add(result)
+        
     flag = 'OK' if result else 'Failed'
     log_func = None
     if callable(log):
@@ -72,7 +75,7 @@ def test_url(self, url, data=None, method='get', ok_test=(200, 304, 302), log=Tr
         log_func = log_to_file(log)
     if log_func:
         log_func(url, data, method, ok_test, result, r)
-    return result, r
+    return result
 
 def default_log(url, data, method, ok_test, result, response):
     flag = 'OK' if result else 'Failed'
@@ -95,4 +98,15 @@ def log_to_file(logfile, response_text=False):
                 log.write('================= Response Text =================\n')
     return _log
                 
-            
+class Counter(object):
+    def __init__(self):
+        self.total = 0
+        self.passed = 0
+        self.failed = 0
+        
+    def add(self, passed=True):
+        if passed:
+            self.passed +=1
+        else:
+            self.failed += 1
+        self.total += 1
