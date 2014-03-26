@@ -36,6 +36,7 @@ Uliweb Change Log
 * move storage from core to utils directory
 * improve count process
 * Fix Reference and ManyToMany dump and load bug
+* Add `is_in_web()` funciton, so you can test if current frame is in web executation
 
 0.2.6 Version
 -----------------

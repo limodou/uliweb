@@ -382,6 +382,9 @@ def get_settings(project_dir, include_apps=None, settings_file='settings.ini',
         x.GLOBAL.FILESYSTEM_ENCODING = sys.getfilesystemencoding() or x.GLOBAL.DEFAULT_ENCODING
     return x
 
+def is_in_web():
+    return getattr(local, 'in_web', False)
+
 class Loader(object):
     def __init__(self, tmpfilename, vars, env, dirs, notest=False):
         self.tmpfilename = tmpfilename
@@ -1137,6 +1140,8 @@ class Dispatcher(object):
         local.response = res = Response(content_type='text/html')
         #add local cached
         local.local_cache = {}
+        #add in web flag
+        local.in_web = True
         
         url_adapter = get_url_adapter('default')
         try:
@@ -1214,6 +1219,7 @@ class Dispatcher(object):
                 raise
         finally:
             local.local_cache = {}
+            local.in_web = False
         return response
     
     def handler(self):
