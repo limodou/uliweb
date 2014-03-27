@@ -20,11 +20,11 @@ def after_init_apps(sender):
     
     patch_none = settings.get_var('ORM/PATCH_NONE')
     if patch_none:
-        from sqlalchemy.sql.compiler import SQLCompiler
+        import sqlalchemy.sql.expression as exp
         if patch_none == 'empty':
-            setattr(SQLCompiler, 'visit_null', visit_null_empty)
+            exp.and_ = and_empty(exp.and_)
         elif patch_none == 'exception':
-            setattr(SQLCompiler, 'visit_null', visit_null_exception)
+            exp.and_ = and_exception(exp.and_)
     
     #judge if transaction middle has not install then set
     #AUTO_DOTRANSACTION is False
@@ -69,8 +69,24 @@ def after_init_apps(sender):
                     break
             orm.set_model(path, name)
 
-def visit_null_empty(self, expr, **kw):
-    return ''
+def and_empty(func):
+    def and_(*clauses):
+        if len(clauses) == 1:
+            return clauses[0]
+        if clauses[1] is None:
+            return clauses[0]
+        return func(*clauses)
+    return and_
 
-def visit_null_exception(self, expr, **kw):
-    raise Exception("You chould not use None in sql condition")
+def and_exception(func):
+    def and_(*clauses):
+        if len(clauses) == 1:
+            return clauses[0]
+        if clauses[1] is None:
+            raise Exception("You chould not use None in sql condition")
+        return func(*clauses)
+    return and_
+
+
+
+    
