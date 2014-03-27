@@ -1270,7 +1270,8 @@ class DetailTableLayout(object):
                     title = fields[2:-2].strip()
                     if title:
                         fieldset = True
-                        buf.body << '<fieldset><legend>%s</legend>' % title
+                        buf.body << '<fieldset>'
+                        buf.body << self.title(title)
                     
                     buf.body << '<table class="%s"><tbody>' % self.table_class
                     table = True
@@ -1295,6 +1296,11 @@ class DetailTableLayout(object):
     
     def __str__(self):
         return str(self.render())
+    
+    def title(self, title=''):
+        if title:
+            return '<legend>%s</legend>' % title
+        return ''
     
 class DetailView(object):
     def __init__(self, model, condition=None, obj=None, fields=None, 
