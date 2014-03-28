@@ -604,29 +604,45 @@ def Begin(ec=None):
     session = get_session(ec)
     return session.begin()
 
-def Commit(ec=None):
+def Commit(ec=None, close=None):
+    if close:
+        warnings.simplefilter('default')
+        warnings.warn("close parameter will not need at all.", DeprecationWarning)
+        
     session = get_session(ec, False)
     if session:
         return session.commit()
     
-def CommitAll():
+def CommitAll(close=None):
     """
     Commit all transactions according Local.conn
     """
+    if close:
+        warnings.simplefilter('default')
+        warnings.warn("close parameter will not need at all.", DeprecationWarning)
+    
     for k, v in engine_manager.items():
         session = v.session(create=False)
         if session:
             session.commit()
     
-def Rollback(ec=None):
+def Rollback(ec=None, close=None):
+    if close:
+        warnings.simplefilter('default')
+        warnings.warn("close parameter will not need at all.", DeprecationWarning)
+
     session = get_session(ec, False)
     if session:
         return session.rollback()
     
-def RollbackAll():
+def RollbackAll(close=None):
     """
     Rollback all transactions, according Local.conn
     """
+    if close:
+        warnings.simplefilter('default')
+        warnings.warn("close parameter will not need at all.", DeprecationWarning)
+
     for k, v in engine_manager.items():
         session = v.session(create=False)
         if session:
