@@ -14,7 +14,7 @@ class RecorderrMiddle(Middleware):
         
         S = functions.get_model('uliwebrecorderstatus')
         s = S.all().one()
-        if s and s.status == 'E':
+        if not s or s.status == 'E':
             return response
         
         if settings.get_var('ULIWEBRECORDER/response_text'):
