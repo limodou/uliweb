@@ -138,7 +138,7 @@ def test_local_cache():
     >>> get_cached_object('blog', 1) # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
     <BLANKLINE>
     ===>>>>> [default] (...)
-    SELECT blog.title, blog.content, blog.id FROM blog WHERE blog.id = 1 AND 1 LIMIT 1 OFFSET 0;
+    SELECT blog.title, blog.content, blog.id FROM blog WHERE blog.id = 1 LIMIT 1 OFFSET 0;
     ===<<<<< time used ...s
     <BLANKLINE>
     <Blog {'title':u'1','content':u'1','id':1}>
@@ -231,28 +231,12 @@ def test_blog_manual_commit():
     []
     """
 
-#del session
-#del a
-#del B1
+def test_patch_none():
+    """
+    >>> app = make_simple_application(project_dir='.')
+    >>> Blog = get_model('blog')
+    >>> cond = None
+    >>> print (Blog.c.id == 1) & cond
+    blog.id = :id_1
+    """
 
-#import objgraph
-#objgraph.show_backrefs(objgraph.by_type('ConnectModel'),
-#                       filename='session.png') 
-
-#app = make_simple_application(project_dir='.')
-#import uliweb.orm as orm
-#db = get_connection()
-#db.echo = True
-#session = Session()
-#B = get_model('blog')
-#r = B.all().remove()
-#Commit()
-#B1 = B.use(session)
-#print session.in_transaction()
-#r = B1.all().remove()
-#print session.in_transaction()
-#
-#a = B1(title='1', content='1')
-#a.save()
-#session.commit()
-#B.get(1)
