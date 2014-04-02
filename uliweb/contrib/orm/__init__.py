@@ -20,11 +20,14 @@ def after_init_apps(sender):
     
     patch_none = settings.get_var('ORM/PATCH_NONE')
     if patch_none:
-        import sqlalchemy.sql.elements as exp
-        if patch_none == 'empty':
-            exp.and_ = and_empty(exp.and_)
-        elif patch_none == 'exception':
-            exp.and_ = and_exception(exp.and_)
+        from sqlalchemy import __version__
+        
+        if tuple(map(int, __version__.split('.')[:2])) >= (0, 9):
+            import sqlalchemy.sql.elements as exp
+            if patch_none == 'empty':
+                exp.and_ = and_empty(exp.and_)
+            elif patch_none == 'exception':
+                exp.and_ = and_exception(exp.and_)
     
     #judge if transaction middle has not install then set
     #AUTO_DOTRANSACTION is False
