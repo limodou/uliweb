@@ -59,7 +59,7 @@ def get_object(model, cid, engine_name=None, connection=None):
     redis = get_redis()
     if not redis: return
 
-    tablename = model.tablename
+    tablename = model._alias or model.tablename
     
     info = settings.get_var('OBJCACHE_TABLES/%s' % tablename, {})
     if info is None:
@@ -92,7 +92,7 @@ def set_object(model, instance, fields=None, engine_name=None):
     redis = get_redis()
     if not redis: return
     
-    tablename = model.tablename
+    tablename = model._alias or model.tablename
     exclude = []
     if not fields:
         fields, exclude = get_fields(tablename)

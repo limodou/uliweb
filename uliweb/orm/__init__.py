@@ -3285,25 +3285,31 @@ class Model(object):
         if condition is None:
             return None
         
-        can_cacheable = (cache or getattr(cls, '__cacheable__', None) and 
-            not isinstance(condition, BinaryExpression))
+        can_cacheable = (cache or getattr(cls, '__cacheable__', None)) and \
+            not isinstance(condition, BinaryExpression)
         if can_cacheable:
             #send 'get_object' topic to get cached object
             obj = dispatch.get(cls, 'get_object', condition)
             if obj:
                 return obj
+            #if the condition is not Expression, then just return None
+            #because Uliweb doesn't know the real condition
+            if isinstance(condition, BinaryExpression):
+                return None
             
         if isinstance(condition, (int, long)):
             _cond = cls.c.id==condition
         elif isinstance(condition, (str, unicode)) and condition.isdigit():
             _cond = cls.c.id==int(condition)
-        else:
+        elif isinstance(condition, BinaryExpression):
             _cond = condition
-            
+        else:
+            raise Error("The condition [%s] is not correct" % condition)
+        
         #if there is no cached object, then just fetch from database
         obj = cls.filter(_cond, **kwargs).fields(*(fields or [])).one()
         
-        if can_cacheable:
+        if cache or getattr(cls, '__cacheable__', None):
             dispatch.call(cls, 'set_object', instance=obj)
             
         return obj
