@@ -30,6 +30,8 @@ def test_1():
     [<Test {'username':u'limodou','year':30,'birth':datetime.date(2011, 3, 4),'id':1}>, <Test {'username':u'limodou1','year':30,'birth':None,'id':2}>]
     >>> print Test.count()
     2
+    >>> Test.any()
+    True
     >>> a.username
     u'limodou'
     >>> list(Test.filter(Test.c.username==u'limodou'))
@@ -49,6 +51,8 @@ def test_1():
     >>> Test.remove(Test.c.id==2)
     >>> Test.count()
     0
+    >>> Test.any()
+    False
     >>> a = Test(username='tttt')
     >>> a.save()
     True
@@ -106,6 +110,8 @@ def test_3():
     <Test1 {'test1':<ReferenceProperty:1>,'test2':<ReferenceProperty:1>,'name':u'user','id':1}>
     >>> a1.test1.count()
     2
+    >>> a1.test1.any()
+    True
     >>> list(a2.test2.all())
     [<Test1 {'test1':<ReferenceProperty:1>,'test2':<ReferenceProperty:2>,'name':u'aaaa','id':2}>]
     >>> list(a1.test1.filter(Test1.c.name=='user'))
@@ -261,6 +267,8 @@ def test_7():
     >>> g1.users.clear()
     >>> g1.users.count()
     0
+    >>> g1.users.any()
+    False
     >>> g1.users.add(a, b, c)
     True
     >>> g1.users.add([a, b, c])
@@ -271,6 +279,8 @@ def test_7():
     {'users': [1, 2, 3], 'id': 1, 'name': 'python'}
     >>> g1.users.count()
     3
+    >>> g1.users.any()
+    True
     >>> g1.users.has(a)
     True
     >>> g1.users.has(100)
@@ -624,6 +634,8 @@ def test_result():
     2
     >>> print Test.filter(Test.c.year>5).count()
     1
+    >>> Test.filter(Test.c.year>5).any()
+    True
     >>> print list(Test.all().values(Test.c.username, 'year'))
     [(u'limodou', 10), (u'user', 5)]
     >>> print list(Test.all().values('username'))

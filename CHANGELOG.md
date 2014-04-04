@@ -38,6 +38,7 @@ Uliweb Change Log
 * Fix Reference and ManyToMany dump and load bug
 * Add `is_in_web()` funciton, so you can test if current frame is in web executation
 * Add `--gevent` support to call command
+* Add `any` to Model, Result, ManyResult
 
 0.2.6 Version
 -----------------

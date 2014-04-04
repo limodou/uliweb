@@ -1839,6 +1839,12 @@ class Result(object):
         query = self.get_query([func.count('*')])
         return self.do_(query).scalar()
 
+    def any(self):
+        row = self.do_(
+            self.get_query().limit(1)
+            )
+        return len(list(row)) > 0
+
     def filter(self, *condition):
         """
         If there are multple condition, then treats them *and* relastion.
@@ -2198,6 +2204,14 @@ class ManyResult(Result):
                 self.condition)
             ).scalar()
     
+    def any(self):
+        row = self.do_(
+            select([self.table.c[self.fieldb]], 
+                (self.table.c[self.fielda]==self.valuea) &
+                self.condition).limit(1)
+            )
+        return len(list(row)) > 0
+
     def has(self, *objs):
         ids = get_objs_columns(objs, self.realfieldb)
         
@@ -2207,10 +2221,7 @@ class ManyResult(Result):
         row = self.do_(select([text('*')], 
             (self.table.c[self.fielda]==self.valuea) & 
             (self.table.c[self.fieldb].in_(ids))).limit(1))
-        #hack rowcount for sqlite will always return -1
-        if row.rowcount == -1:
-            return len(list(row)) > 0
-        return row.rowcount > 0
+        return len(list(row)) > 0
         
     def fields(self, *args, **kwargs):
         if args:
@@ -3335,7 +3346,11 @@ class Model(object):
     def count(cls, condition=None, **kwargs):
         count = do_(cls.table.count(condition, **kwargs), cls.get_connection()).scalar()
         return count
-            
+    
+    @classmethod
+    def any(cls, *condition, **kwargs):
+        return Result(cls, **kwargs).filter(*condition).any()
+    
     @classmethod
     def load(cls, values, set_saved=True, from_dump=False):
         if isinstance(values, (list, tuple)):
