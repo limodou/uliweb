@@ -552,16 +552,26 @@ class CallCommand(Command):
             help='Appname. If not provide, then will search exefile in whole project.'),
         make_option('--without-application', action='store_false', default=True, dest='application',
             help='If create application first, default is False.'),
+        make_option('--gevent', action='store_true', default=False, dest='gevent',
+            help='Apply gevent monkey patch before execute the script.'),
     )
     has_options = True
     
     def handle(self, options, global_options, *args):
+        from uliweb.utils.common import is_pyfile_exist
+        from uliweb.core.SimpleFrame import get_app_dir
+        
         if not args:
             print "Error: There is no command module name behind call command."
             return
         else:
             command = args[0]
         
+        if options.gevent:
+            from gevent import monkey
+            
+            monkey.patch_all()
+            
         if options.application:
             self.get_application(global_options)
             
@@ -573,25 +583,34 @@ class CallCommand(Command):
         
         def get_module(command, apps):
             if '.' in command:
-                yield command
+                yield 'mod', '', command
             else:
                 for f in apps:
-                    yield '%s.%s' % (f, command)
+                    yield 'app', f, command
                 
-        for m in get_module(command, apps):
-            try:
-                mod = __import__(m, fromlist=['*'])
+        for _type, app, m in get_module(command, apps):
+            mod = None
+            if _type == 'mod':
+                mod_name = m
                 if global_options.verbose:
-                    print "Importing... %s" % m
+                    print "Importing... %s" % mod_name
+                mod = __import__(m, fromlist=['*'])
+            else:
+                path = get_app_dir(app)
+                if is_pyfile_exist(path, m):
+                    mod_name = app + '.' + m
+                    if global_options.verbose:
+                        print "Importing... %s" % mod_name
+                    mod = __import__('%s.%s' % (app, m), fromlist=['*'])
+            
+            if mod:
                 if hasattr(mod, 'call'):
                     getattr(mod, 'call')(args, options, global_options)
                 elif hasattr(mod, 'main'):
                     getattr(mod, 'main')(args, options, global_options)
                 else:
-                    raise Exception("Can't find call or main function in module %s" % m)
+                    print "Can't find call() or main() function in module %s" % mod_name
                 exe_flag = True
-            except ImportError:
-                pass
             
         if not exe_flag:
             print "Error: Can't import the [%s], please check the file and try again." % command
