@@ -815,7 +815,7 @@ def get_model(model, engine_name=None):
 def get_object_id(engine_name, tablename, id):
     return 'OC:%s:%s:%s' % (engine_name, tablename, str(id))
 
-def get_object(table, id, cache=False, fields=None, use_local=False, session=None):
+def get_object(table, id, condition=None, cache=False, fields=None, use_local=False, session=None):
     """
     Get obj in Local.object_caches first and also use get(cache=True) function if 
     not found in object_caches
@@ -835,16 +835,16 @@ def get_object(table, id, cache=False, fields=None, use_local=False, session=Non
             value = s.get_local_cache(key)
             if value:
                 return value
-        obj = model.get(id, fields=fields, cache=True)
+        obj = model.get(id, condition=condition, fields=fields, cache=True)
         if use_local:
             value = s.get_local_cache(key, obj)
     else:
-        obj = model.get(id, fields=fields)
+        obj = model.get(id, condition=condition, fields=fields)
     
     return obj
 
-def get_cached_object(table, id, cache=True, fields=None, use_local=True, session=None):
-    return get_object(table, id, cache, fields, use_local, session)
+def get_cached_object(table, id, condition=None, cache=True, fields=None, use_local=True, session=None):
+    return get_object(table, id, condition, cache, fields, use_local, session)
 
 class SQLMointor(object):
     def __init__(self, key_length=65, record_details=False):
@@ -3274,7 +3274,7 @@ class Model(object):
             cls._c_lock.release()
             
     @classmethod
-    def get(cls, condition=None, fields=None, cache=False, engine_name=None, **kwargs):
+    def get(cls, id=None, condition=None, fields=None, cache=False, engine_name=None, **kwargs):
         """
         Get object from Model, if given fields, then only fields will be loaded
         into object, other properties will be Lazy
@@ -3282,29 +3282,28 @@ class Model(object):
         if cache is True or defined __cacheable__=True in Model class, it'll use cache first
         """
         
-        if condition is None:
+        if id is None and condition is None:
             return None
         
         can_cacheable = (cache or getattr(cls, '__cacheable__', None)) and \
-            not isinstance(condition, BinaryExpression)
+            not isinstance(id, BinaryExpression)
         if can_cacheable:
             #send 'get_object' topic to get cached object
-            obj = dispatch.get(cls, 'get_object', condition)
+            obj = dispatch.get(cls, 'get_object', id)
             if obj:
                 return obj
-            #if the condition is not Expression, then just return None
-            #because Uliweb doesn't know the real condition
-            if isinstance(condition, BinaryExpression):
-                return None
-            
-        if isinstance(condition, (int, long)):
-            _cond = cls.c.id==condition
-        elif isinstance(condition, (str, unicode)) and condition.isdigit():
-            _cond = cls.c.id==int(condition)
-        elif isinstance(condition, BinaryExpression):
+
+        if condition:
             _cond = condition
         else:
-            raise Error("The condition [%s] is not correct" % condition)
+            if isinstance(id, (int, long)):
+                _cond = cls.c.id==id
+            elif isinstance(id, (str, unicode)) and id.isdigit():
+                _cond = cls.c.id==int(id)
+            elif isinstance(id, BinaryExpression):
+                _cond = id
+            else:
+                raise Error("The id [%s] is not correct, it should be integer or Expression" % id)
         
         #if there is no cached object, then just fetch from database
         obj = cls.filter(_cond, **kwargs).fields(*(fields or [])).one()
@@ -3313,6 +3312,9 @@ class Model(object):
             dispatch.call(cls, 'set_object', instance=obj)
             
         return obj
+    
+    def put_cached(self):
+        dispatch.call(self.__class__, 'set_object', instance=self)
     
     @classmethod
     def get_or_notfound(cls, condition=None, fields=None):

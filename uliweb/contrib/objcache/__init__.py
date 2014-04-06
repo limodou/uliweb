@@ -12,6 +12,8 @@ def get_fields(tablename):
         return [], []
     
     info = tables[tablename] or []
+    if isinstance(info, (str, unicode)):
+        info = [info]
     exclude = []
     if not isinstance(info, (tuple, list)):
         fields = info.get('fields', [])
@@ -20,14 +22,21 @@ def get_fields(tablename):
         fields = info
     return fields, exclude
 
-def get_id(engine, tablename, id):
+def get_id(engine, tablename, id=0, table_prefix=False):
     from uliweb import settings
     
     table = functions.get_table(tablename)
     d = {'engine':engine, 'table_id':table.id, 'id':str(id)}
-    format = settings.get_var('OBJCACHE/key_format', 'OC:%(engine)s:%(table_id)d:%(id)s')
+    if table_prefix:
+        format = settings.get_var('OBJCACHE/table_format', 'OC:%(engine)s:%(table_id)d:')
+    else:
+        format = settings.get_var('OBJCACHE/key_format', 'OC:%(engine)s:%(table_id)d:%(id)s')
     return format % d
 
+def clear_table(engine, tablename):
+    prefix = get_id(engine, tablename, table_prefix=True) + '*'
+    return functions.redis_clear_prefix(prefix)
+        
 def get_redis():
     try:
         redis = functions.get_redis()

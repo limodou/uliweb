@@ -36,7 +36,6 @@ class SessionMiddle(Middleware):
             serial_cls = import_attr(serial_cls_path)
         else:
             serial_cls = None
-        print 'xxxxxxxxxxxxxxxx', self.options
         session = Session(key, storage_type=self.session_storage_type, 
             options=self.options, expiry_time=self.timeout, serial_cls=serial_cls)
         request.session = session

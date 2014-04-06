@@ -1,3 +1,4 @@
+import re
 __connection_pool__ = None
 
 def get_redis(**options):
@@ -34,4 +35,66 @@ def get_redis(**options):
             log.exception(e)
             client = None
     return client
+  
+re_compare_op = re.compile(r'^[><=]+')
+def after_init_apps(sender):
+    """
+    Check redis version
+    """
+    from uliweb import settings
+    from uliweb.utils.common import log
     
+    check = settings.get_var('REDIS/check_version')
+    if check:
+        client = get_redis()
+        try:
+            info = client.info()
+        except Exception as e:
+            log.exception(e)
+            raise Exception('Redis is not started!')
+        
+        redis_version = info['redis_version']
+        version = tuple(map(int, redis_version.split('.')))
+        op = re_compare_op.search(check)
+        if op:
+            _op = op.group()
+            _v = check[op.end()+1:].strip()
+        else:
+            _op = '='
+            _v = check
+        nv = tuple(map(int, _v.split('.')))
+        if _op == '=':
+            flag = version[:len(nv)] == nv
+        elif _op == '>=':
+            flag = version >= nv
+        elif _op == '>':
+            flag = version > nv
+        elif _op == '<=':
+            flag = version <= nv
+        elif _op == '<':
+            flag = version < nv
+        else:
+            raise Exception("Can't support operator %s when check redis version" % _op)
+        if not flag:
+            raise Exception("Redis version %s is not matched what you want %s" % (redis_version, _v))
+            
+        
+def clear_prefix(prefix):
+    redis = get_redis()
+    if redis:
+        text = """
+local n = 0
+for _,k in ipairs(redis.call('keys', ARGV[1])) do 
+    redis.call('del', k)
+    n = n + 1
+end
+return n
+"""
+        script = redis.register_script(text)
+        pipe = redis.pipeline()
+        script(args=[prefix], client=pipe)
+        r = pipe.execute()
+        return r[0]
+        
+    return 0
+        

@@ -39,6 +39,13 @@ Uliweb Change Log
 * Add `is_in_web()` funciton, so you can test if current frame is in web executation
 * Add `--gevent` support to call command
 * Add `any` to Model, Result, ManyResult
+* Add `clear_prefix()` to redis_cli APP, this feature need redis 2.6+ version
+* Add version check to redis_cli APP, default is disabled
+* Add `clear_table()` to objcache APP
+* Add 'id' parameter to `get()` and `get_object()` and `get_cached_object()` functions,
+  so that if the ID can't be found in cache, condition (old parameter) will be used.
+  And when id and condition given both, only when id is not integer or valid expression
+  condition will be used. So in most cases, you don't need pass condition.
 
 0.2.6 Version
 -----------------
