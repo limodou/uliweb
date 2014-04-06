@@ -8,6 +8,11 @@ class SessionMiddle(Middleware):
         from datetime import timedelta
         self.options = dict(settings.get('SESSION_STORAGE', {}))
         self.options['data_dir'] = application_path(self.options['data_dir'])
+        if 'url' not in self.options:
+            _url = (settings.get_var('ORM/CONNECTION', '') or
+            settings.get_var('ORM/CONNECTIONS', {}).get('default', {}).get('CONNECTION', ''))
+            if _url:
+                self.options['url'] = _url
         
         #process Session options
         self.remember_me_timeout = settings.SESSION.remember_me_timeout

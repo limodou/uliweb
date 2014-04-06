@@ -46,6 +46,7 @@ Uliweb Change Log
   so that if the ID can't be found in cache, condition (old parameter) will be used.
   And when id and condition given both, only when id is not integer or valid expression
   condition will be used. So in most cases, you don't need pass condition.
+* If not set url option for session of database type, it'll automatically use ORM settings if exists
 
 0.2.6 Version
 -----------------
