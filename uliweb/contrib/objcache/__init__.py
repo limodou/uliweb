@@ -26,11 +26,11 @@ def get_id(engine, tablename, id=0, table_prefix=False):
     from uliweb import settings
     
     table = functions.get_table(tablename)
-    d = {'engine':engine, 'table_id':table.id, 'id':str(id)}
+    d = {'engine':engine, 'tableid':table.id, 'id':str(id), 'tablename':tablename}
     if table_prefix:
-        format = settings.get_var('OBJCACHE/table_format', 'OC:%(engine)s:%(table_id)d:')
+        format = settings.get_var('OBJCACHE/table_format', 'OC:%(engine)s:%(tableid)d:')
     else:
-        format = settings.get_var('OBJCACHE/key_format', 'OC:%(engine)s:%(table_id)d:%(id)s')
+        format = settings.get_var('OBJCACHE/key_format', 'OC:%(engine)s:%(tableid)d:%(id)s')
     return format % d
 
 def clear_table(engine, tablename):
