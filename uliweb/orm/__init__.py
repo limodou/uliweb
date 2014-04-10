@@ -56,7 +56,6 @@ from uliweb.utils.common import (flat_list, classonlymethod, simple_value,
     safe_str)
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement, text, true
-from sqlalchemy.sql.expression import BinaryExpression
 from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
@@ -3286,7 +3285,7 @@ class Model(object):
             return None
         
         can_cacheable = (cache or getattr(cls, '__cacheable__', None)) and \
-            not isinstance(id, BinaryExpression)
+            isinstance(id, (int, long, str, unicode))
         if can_cacheable:
             #send 'get_object' topic to get cached object
             obj = dispatch.get(cls, 'get_object', id)
@@ -3300,10 +3299,8 @@ class Model(object):
                 _cond = cls.c.id==id
             elif isinstance(id, (str, unicode)) and id.isdigit():
                 _cond = cls.c.id==int(id)
-            elif isinstance(id, BinaryExpression):
-                _cond = id
             else:
-                raise Error("The id [%s] is not correct, it should be integer or Expression" % id)
+                _cond = id
         
         #if there is no cached object, then just fetch from database
         obj = cls.filter(_cond, **kwargs).fields(*(fields or [])).one()
