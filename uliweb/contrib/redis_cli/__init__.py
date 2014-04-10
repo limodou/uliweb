@@ -51,7 +51,8 @@ def after_init_apps(sender):
             info = client.info()
         except Exception as e:
             log.exception(e)
-            raise Exception('Redis is not started!')
+            log.error('Redis is not started!')
+            return
         
         redis_version = info['redis_version']
         version = tuple(map(int, redis_version.split('.')))
@@ -74,9 +75,9 @@ def after_init_apps(sender):
         elif _op == '<':
             flag = version < nv
         else:
-            raise Exception("Can't support operator %s when check redis version" % _op)
+            log.error("Can't support operator %s when check redis version" % _op)
         if not flag:
-            raise Exception("Redis version %s is not matched what you want %s" % (redis_version, _v))
+            log.error("Redis version %s is not matched what you want %s" % (redis_version, _v))
             
         
 def clear_prefix(prefix):
