@@ -346,7 +346,11 @@ class ConfigCommand(Command):
                 x = Ini(conf_ini)
                 for k, v in x.INPUT.items():
                     if isinstance(v, (tuple, list)):
-                        prompt, default = v
+                        if len(v) == 2:
+                            prompt, default = v
+                        else:
+                            prompt = v[0]
+                            default = ''
                     else:
                         prompt, default = v or '', ''
                     if not prompt.strip():
