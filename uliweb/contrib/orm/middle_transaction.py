@@ -1,5 +1,5 @@
 from uliweb import Middleware
-from uliweb.orm import Begin, CommitAll, RollbackAll
+from uliweb.orm import Begin, CommitAll, RollbackAll, set_echo
 
 class TransactionMiddle(Middleware):
     ORDER = 80
@@ -8,6 +8,7 @@ class TransactionMiddle(Middleware):
         self.settings = settings
         
     def process_request(self, request):
+        set_echo(False)
         Begin()
 
     def process_response(self, request, response):
