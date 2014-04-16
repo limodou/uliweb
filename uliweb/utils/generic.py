@@ -361,13 +361,15 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
     field_type = None
     if isinstance(field, (str, unicode)):
         prop = getattr(model, field)
-        if not prop:
-            raise UliwebError("Can't find attribute in Model(%r)" % model)
         field = {'prop':prop}
     elif 'field' in field and isinstance(field['field'], BaseField): #if the prop is already Form.BaseField, so just return it
         return field['field']
     
     prop = field['prop']
+
+    if not prop:
+        raise UliwebError("Can't find property %s in Model(%r)" % (field['name'], model))
+    
     label = field.get('verbose_name', None) or prop.verbose_name or prop.property_name
     hint = field.get('hint', '') or prop.hint
     placeholder = field.get('placeholder', '') or prop.placeholder
