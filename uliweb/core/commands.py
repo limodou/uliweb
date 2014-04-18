@@ -284,6 +284,9 @@ class CommandManager(Command):
             global_options = self.global_options
             args = self.argv
     
+        global_options.settings = global_options.settings or os.environ.get('SETTINGS', 'settings.ini')
+        global_options.local_settings = global_options.local_settings or os.environ.get('LOCAL_SETTINGS', 'local_settings.ini')
+        
         if callback:
             callback(global_options)
             
@@ -333,9 +336,9 @@ class ApplicationCommandManager(CommandManager):
             help='show this help message and exit.'),
         make_option('-v', '--verbose', action='store_true', 
             help='Output the result in verbose mode.'),
-        make_option('-s', '--settings', dest='settings', default='settings.ini',
+        make_option('-s', '--settings', dest='settings', default='',
             help='Settings file name. Default is "settings.ini".'),
-        make_option('-L', '--local_settings', dest='local_settings', default='local_settings.ini',
+        make_option('-L', '--local_settings', dest='local_settings', default='',
             help='Local settings file name. Default is "local_settings.ini".'),
         make_option('--project', default='.', dest='project',
             help='Your project directory, default is current directory.'),

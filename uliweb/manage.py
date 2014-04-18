@@ -66,9 +66,10 @@ def install_config(apps_dir):
                     sys.path.insert(0, p)
                     
 def make_application(debug=None, apps_dir='apps', project_dir=None, 
-    include_apps=None, debug_console=True, settings_file='settings.ini', 
-    local_settings_file='local_settings.ini', start=True, default_settings=None, 
-    dispatcher_cls=None, dispatcher_kwargs=None, debug_cls=None, debug_kwargs=None, reuse=True):
+    include_apps=None, debug_console=True, settings_file=None, 
+    local_settings_file=None, start=True, default_settings=None, 
+    dispatcher_cls=None, dispatcher_kwargs=None, debug_cls=None, debug_kwargs=None, 
+    reuse=True, verbose=False):
     """
     Make an application object
     """
@@ -78,6 +79,10 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     #is reuse, then create application only one
     if reuse and hasattr(SimpleFrame.__global__, 'application') and SimpleFrame.__global__.application:
         return SimpleFrame.__global__.application
+    
+    #process settings and local_settings
+    settings_file = settings_file or os.environ.get('SETTINGS', 'settings.ini')
+    local_settings_file = local_settings_file or os.environ.get('LOCAL_SETTINGS', 'local_settings.ini')
     
     dispatcher_cls = dispatcher_cls or SimpleFrame.Dispatcher
     dispatcher_kwargs = dispatcher_kwargs or {}
@@ -102,6 +107,10 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
         start=start,
         default_settings=default_settings,
         **dispatcher_kwargs)
+    
+    if verbose:
+        log.info(' * settings file is "%s"' % settings_file)
+        log.info(' * local settings file is "%s"' % local_settings_file)
     
     #settings global application object
     SimpleFrame.__global__.application = app
@@ -148,7 +157,7 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     return app
 
 def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
-    settings_file='settings.ini', local_settings_file='local_settings.ini', 
+    settings_file='', local_settings_file='', 
     default_settings=None, dispatcher_cls=None, dispatcher_kwargs=None, reuse=True):
     settings = {'ORM/AUTO_DOTRANSACTION':False}
     settings.update(default_settings or {})
@@ -737,7 +746,8 @@ class RunserverCommand(Command):
         def get_app(debug_cls=None):
             return make_application(options.debug, project_dir=global_options.project, 
                         include_apps=include_apps, settings_file=global_options.settings,
-                        local_settings_file=global_options.local_settings, debug_cls=debug_cls)
+                        local_settings_file=global_options.local_settings, debug_cls=debug_cls,
+                        verbose=global_options.verbose)
         
         if options.ssl:
             ctx = 'adhoc'
@@ -934,10 +944,7 @@ class ShellCommand(Command):
     def make_shell_env(self, global_options):
         from uliweb import functions
         
-        application = SimpleFrame.Dispatcher(project_dir=global_options.project, 
-            settings_file=global_options.settings, 
-            local_settings_file=global_options.local_settings, 
-            start=False)
+        application = self.get_application()
         
         if global_options.project not in sys.path:
             sys.path.insert(0, global_options.project)

@@ -47,6 +47,7 @@ Uliweb Change Log
   And when id and condition given both, only when id is not integer or valid expression
   condition will be used. So in most cases, you don't need pass condition.
 * If not set url option for session of database type, it'll automatically use ORM settings if exists
+* Add settings and local_settings env variables support
 
 0.2.6 Version
 -----------------
