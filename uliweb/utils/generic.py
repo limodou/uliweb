@@ -2194,7 +2194,7 @@ class ListView(SimpleListView):
         self._query = query
         self.table_width = table_width
         self.table_class_attr = table_class_attr
-        self.total = total
+        self.total = total or 0
         self.pagination = pagination
         self.create_total_infos(total_fields)
         self.template_data = template_data or {}
@@ -2223,7 +2223,9 @@ class ListView(SimpleListView):
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
             if isinstance(query, orm.Result):
                 if not self.manual:
+                    functions.set_echo(True)
                     self.total = query.count()
+                    functions.set_echo(False)
             else:
                 if not self.manual:
                     self.total = self.count(query)
