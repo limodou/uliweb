@@ -385,7 +385,7 @@ class Session(object):
             self.local_cache = {}
             
         if self.engine.options.connection_type == 'short':
-            self.engine.dispose()
+            self.engine.engine.dispose()
         
     def close(self):
         self.rollback()
