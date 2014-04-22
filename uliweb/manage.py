@@ -942,14 +942,22 @@ class ShellCommand(Command):
     banner = "Uliweb Command Shell"
     
     def make_shell_env(self, global_options):
-        from uliweb import functions
-        
-        application = self.get_application()
+        from uliweb import functions, settings
+        from uliweb.core.SimpleFrame import Dispatcher
+
+        application = self.get_application(global_options)
         
         if global_options.project not in sys.path:
             sys.path.insert(0, global_options.project)
+
+        app = application
+        while app:
+            if isinstance(app, Dispatcher):
+                break
+            else:
+                app = app.app
         
-        env = {'application':application, 'settings':application.settings, 'functions':functions}
+        env = {'application':app, 'settings':settings, 'functions':functions}
         return env
     
     def handle(self, options, global_options, *args):

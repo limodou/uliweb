@@ -48,6 +48,7 @@ Uliweb Change Log
   condition will be used. So in most cases, you don't need pass condition.
 * If not set url option for session of database type, it'll automatically use ORM settings if exists
 * Add settings and local_settings env variables support
+* Fix count bug
 
 0.2.6 Version
 -----------------
