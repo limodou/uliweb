@@ -1835,7 +1835,10 @@ class Result(object):
             return self.filter(condition).one()
     
     def count(self):
-        query = self.get_query([func.count('*')], count=True)
+        if self.condition is not None:
+            query = select([func.count('*')], self.condition, from_obj=[self.model.table])
+        else:
+            query = select([func.count('*')], from_obj=[self.model.table])
         return self.do_(query).scalar()
 
     def any(self):
@@ -1951,7 +1954,7 @@ class Result(object):
 
         return save_file(self.run(), filename, encoding=encoding, headers=headers, convertors=convertors)
     
-    def get_query(self, columns=None, count=False):
+    def get_query(self, columns=None):
         #user can define default_query, and default_query 
         #should be class method
         columns = columns or self.get_columns()
@@ -1965,9 +1968,6 @@ class Result(object):
         else:
             query = select(columns, from_obj=[self.model.table], **self.kwargs)
         for func, args, kwargs in self.funcs:
-            #if count is True, then remove limit and offest clause
-            if count and func in ('limit', 'offset'):
-                continue 
             query = getattr(query, func)(*args, **kwargs)
         if self._group_by:
             query = query.group_by(*self._group_by)
