@@ -3307,9 +3307,9 @@ class Model(object):
         #if there is no cached object, then just fetch from database
         obj = cls.filter(_cond, **kwargs).fields(*(fields or [])).one()
         
-        if cache or getattr(cls, '__cacheable__', None):
+        if obj and cache or getattr(cls, '__cacheable__', None):
             dispatch.call(cls, 'set_object', instance=obj)
-            
+
         return obj
     
     def put_cached(self):
