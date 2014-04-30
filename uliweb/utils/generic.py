@@ -67,7 +67,7 @@ class ReferenceSelectField(SelectField):
     def __init__(self, model, group_field=None, value_field='id', condition=None, 
         query=None, label='', default=None, required=False, validators=None, 
         name='', html_attrs=None, help_string='', build=None, empty='', 
-        get_display=None, **kwargs):
+        get_display=None, post_choices=None, **kwargs):
         super(ReferenceSelectField, self).__init__(label=label, default=default, choices=None, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
         self.model = model
         self.group_field = group_field
@@ -75,46 +75,50 @@ class ReferenceSelectField(SelectField):
         self.condition = condition
         self.query = query
         self.get_display = get_display or unicode
+        self.post_choices = post_choices
         
     def get_choices(self):
         if self.choices:
             if callable(self.choices):
-                return self.choices()
+                _choices = self.choices()
             else:
-                return self.choices
-            
-        model = get_model(self.model)
-        if not self.group_field:
-            if hasattr(model, 'Meta'):
-                self.group_field = getattr(model.Meta, 'group_field', None)
+                _choices = self.choices
+        else:
+            model = get_model(self.model)
+            if not self.group_field:
+                if hasattr(model, 'Meta'):
+                    self.group_field = getattr(model.Meta, 'group_field', None)
+                else:
+                    self.group_field = None
+               
+            if self.query is not None:
+                query = self.query
             else:
-                self.group_field = None
-           
-        if self.query is not None:
-            query = self.query
+                query = model.all()
+                if hasattr(model, 'Meta') and hasattr(model.Meta, 'order_by'):
+                    _order = model.Meta.order_by
+                    if not isinstance(_order, (list, tuple)):
+                        _order = [model.Meta.order_by]
+                    for x in _order:
+                        if x.startswith('-'):
+                            f = model.c[x[1:]].desc()
+                        else:
+                            if x.startswith('+'):
+                                x = x[1:]
+                            f = model.c[x].asc()
+                        query = query.order_by(f)
+            if self.condition is not None:
+                query = query.filter(self.condition)
+            if self.group_field:
+                query = query.order_by(model.c[self.group_field].asc())
+            if self.group_field:
+                _choices = [(x.get_display_value(self.group_field), getattr(x, self.value_field), self.get_display(x)) for x in query]
+            else:
+                _choices = [(getattr(x, self.value_field), self.get_display(x)) for x in query]
+        if self.post_choices:
+            return self.post_choices(_choices)
         else:
-            query = model.all()
-            if hasattr(model, 'Meta') and hasattr(model.Meta, 'order_by'):
-                _order = model.Meta.order_by
-                if not isinstance(_order, (list, tuple)):
-                    _order = [model.Meta.order_by]
-                for x in _order:
-                    if x.startswith('-'):
-                        f = model.c[x[1:]].desc()
-                    else:
-                        if x.startswith('+'):
-                            x = x[1:]
-                        f = model.c[x].asc()
-                    query = query.order_by(f)
-        if self.condition is not None:
-            query = query.filter(self.condition)
-        if self.group_field:
-            query = query.order_by(model.c[self.group_field].asc())
-        if self.group_field:
-            r = [(x.get_display_value(self.group_field), getattr(x, self.value_field), self.get_display(x)) for x in query]
-        else:
-            r = [(getattr(x, self.value_field), self.get_display(x)) for x in query]
-        return r
+            return _choices
     
     def to_python(self, data):
         attr = getattr(get_model(self.model), self.value_field)
