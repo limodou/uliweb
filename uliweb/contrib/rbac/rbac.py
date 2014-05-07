@@ -53,7 +53,7 @@ def has_role(user, *roles, **kwargs):
         if isinstance(role, (str, unicode)):
             role = Role.get(Role.c.name==role)
             if not role:
-                return False
+                continue
         name = role.name
         
         func = __role_funcs__.get(name, None)
