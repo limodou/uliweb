@@ -255,7 +255,8 @@ def get_app_dir(app):
         __app_dirs__[app] = path
         return path
 
-def get_app_depends(app, existed_apps=None):
+def get_app_depends(app, existed_apps=None, installed_apps=None):
+    installed_apps = installed_apps or []
     if existed_apps is None:
         s = set()
     else:
@@ -273,8 +274,8 @@ def get_app_depends(app, existed_apps=None):
         x = pyini.Ini(configfile)
         apps = x.get_var('DEPENDS/REQUIRED_APPS', [])
         for i in apps:
-            if i not in s:
-                for j in get_app_depends(i, s):
+            if i not in s and i not in installed_apps:
+                for j in get_app_depends(i, s, installed_apps):
                     yield j
     s.add(app)
     yield app
@@ -316,28 +317,29 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
     inifile = norm_path(os.path.join(apps_dir, settings_file))
     apps = []
     visited = set()
+    installed_apps = []
     if not os.path.exists(apps_dir):
         return apps
     if os.path.exists(inifile):
         x = pyini.Ini(inifile)
         if x:
-            for app in x.GLOBAL.get('INSTALLED_APPS', []):
-                apps.extend(list(get_app_depends(app, visited)))
+            installed_apps.extend(x.GLOBAL.get('INSTALLED_APPS', []))
 
     local_inifile = norm_path(os.path.join(apps_dir, local_settings_file))
     if os.path.exists(local_inifile):
         x = pyini.Ini(local_inifile)
-        if x and 'GLOBAL' in x:
-            for app in x.GLOBAL.get('INSTALLED_APPS', []):
-                apps.extend(list(get_app_depends(app, visited)))
+        if x:
+            installed_apps.extend(x.GLOBAL.get('INSTALLED_APPS', []))
+
+    installed_apps.extend(include_apps)
+
+    for app in installed_apps:
+        apps.extend(list(get_app_depends(app, visited, installed_apps)))
 
     if not apps and os.path.exists(apps_dir):
         for p in os.listdir(apps_dir):
             if os.path.isdir(os.path.join(apps_dir, p)) and p not in ['.svn', 'CVS', '.git'] and not p.startswith('.') and not p.startswith('_'):
                 apps.append(p)
-    
-    for app in include_apps:
-        apps.extend(list(get_app_depends(app, visited)))
 
     return apps
 
