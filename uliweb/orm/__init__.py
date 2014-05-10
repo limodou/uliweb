@@ -1125,17 +1125,16 @@ class Property(object):
         if value is Lazy:
             return value
         
-        if value is not None:
-            try:
-                if from_dump:
-                    value = self.convert_dump(value)
-                else:
-                    value = self.convert(value)
-            except TypeError, err:
-                raise BadValueError('Property %s must be convertible '
-                    'to %s, but the value is (%s)' % (self.name, self.data_type, err))
-            if hasattr(self, 'custom_validate'):
-                value = self.custom_validate(value)
+        try:
+            if from_dump:
+                value = self.convert_dump(value)
+            else:
+                value = self.convert(value)
+        except TypeError, err:
+            raise BadValueError('Property %s must be convertible '
+                'to %s, but the value is (%s)' % (self.name, self.data_type, err))
+        if hasattr(self, 'custom_validate'):
+            value = self.custom_validate(value)
                 
         for v in self.validators:
             v(value)
@@ -1220,6 +1219,8 @@ class CharProperty(Property):
         super(CharProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
     
     def convert(self, value):
+        if not value:
+            return u''
         if isinstance(value, str):
             return unicode(value, __default_encoding__)
         else:
@@ -1406,6 +1407,11 @@ class FloatProperty(Property):
         f_type = self.type_class(precision=self.precision, **self.type_attrs)
         return f_type
     
+    def convert(self, value):
+        if value == '' or value is None:
+            return 0.0
+        return self.data_type(value)
+
     def custom_validate(self, value):
         if value and not isinstance(value, float):
             raise BadValueError('Property %s must be a float, not a %s' 
@@ -1426,12 +1432,11 @@ class DecimalProperty(Property):
         self.precision = precision
         self.scale = scale
    
-    def custom_validate(self, value):
-        if value is not None and not isinstance(value, decimal.Decimal):
-            raise BadValueError('Property %s must be a decimal, not a %s'
-                % (self.name, type(value).__name__))
-        return value
-    
+    def convert(self, value):
+        if value == '' or value is None:
+            return decimal.Decimal('0.0')
+        return self.data_type(value)
+
     def _create_type(self):
         f_type = self.type_class(precision=self.precision, scale=self.scale, **self.type_attrs)
         return f_type
@@ -2912,9 +2917,6 @@ class Model(object):
                             if isinstance(v, DateTimeProperty) and v.auto_now and k not in d:
                                 d[k] = v.now()
                             elif (not k in d) and v.auto:
-                                d[k] = v.default_value()
-                            #if value is None, then try to use default value
-                            elif k in d and d[k] is None:
                                 d[k] = v.default_value()
                         else:
                             if k in d:

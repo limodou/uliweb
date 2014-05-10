@@ -57,7 +57,7 @@ def test_1():
     >>> a.save()
     True
     """
-    
+
 #testing model alter one the fly
 def test_2():
     """
@@ -574,7 +574,35 @@ def test_to_dict():
     >>> a.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
     {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'id': 1}
     """
-    
+
+def test_none_value():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> import datetime
+    >>> class Test(Model):
+    ...     string = StringProperty(max_length=40)
+    ...     boolean = BooleanProperty()
+    ...     integer = IntegerProperty()
+    ...     date1 = DateTimeProperty()
+    ...     date2 = DateProperty()
+    ...     date3 = TimeProperty()
+    ...     float = FloatProperty()
+    ...     decimal = DecimalProperty()
+    >>> a = Test()
+    >>> a.date1 = None
+    >>> a.date2 = None
+    >>> a.date3 = None
+    >>> a.string = None
+    >>> a.boolean = None
+    >>> a.integer = None
+    >>> a.float = None
+    >>> a.decimal = None
+    >>> a.to_dict()
+    {'date1': None, 'date3': None, 'date2': None, 'string': '', 'decimal': '0.0', 'float': 0.0, 'boolean': False, 'integer': None, 'id': None}
+    """
+
 def test_match():
     """
     >>> set_debug_query(False)
