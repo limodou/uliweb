@@ -2913,6 +2913,9 @@ class Model(object):
                                 d[k] = v.now()
                             elif (not k in d) and v.auto:
                                 d[k] = v.default_value()
+                            #if value is None, then try to use default value
+                            elif k in d and d[k] is None:
+                                d[k] = v.default_value()
                         else:
                             if k in d:
                                 _manytomany[k] = d.pop(k)
