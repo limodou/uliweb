@@ -26,7 +26,7 @@ class GenericCommand(Command):
         make_option('--editview_popup', dest='editview_popup', action='store_true', help='Edit View using popup or using new window.'),
         make_option('--editview_ajax', dest='editview_ajax', action='store_true', help='Edit View using ajax or not.'),
         make_option('--deleteview_ajax', dest='deleteview_ajax', action='store_true', help='Delete View using ajax or not.'),
-        make_option('--theme', dest='theme', help='theme name, available themes is [a-angularjs].'),
+        make_option('--theme', dest='theme', help='theme name, available themes is [angularjs, html, easyui, avalon, mmgrid].'),
     )
     help = 'Create a scaffold for an generic(CRUD) admin interface.'
     args = ''
@@ -38,7 +38,7 @@ class GenericCommand(Command):
         d = {}
         d['appname'] = get_input("Appname:", option_value=options.appname)
         d['tablename'] = get_input("Table Name:", option_value=options.tablename)
-        d['theme'] = get_input("Creation Theme([a]ngularjs, [h]tml), [e]sayui)[a]:", default="a", choices='ahe', option_value=options.theme)
+        d['theme'] = get_input("Creation Theme([a]ngularjs, [h]tml), [e]sayui)[a], [m]mGrid, a[v]alon:", default="m", choices='ahemv', option_value=options.theme)
         view_name = camel_to_cap(d['tablename'])+'View'
         view_file_name = 'views_%s.py' % d['tablename']
         url_prefix = '/'+d['appname']
@@ -56,7 +56,7 @@ class GenericCommand(Command):
         d['editview_ajax'] = get_answer("Edit View using ajax", quit='q') == 'Y'
         d['deleteview_ajax'] = get_answer("Delete View using ajax", quit='q') == 'Y'
         
-        theme = {'a':'angularjs', 'h':'html', 'e':'easyui'}
+        theme = {'a':'angularjs', 'h':'html', 'e':'easyui', 'm':'mmgrid', 'v':'avalon'}
         
         d['theme_name'] = theme_name = theme.get(d['theme'])
         self.process(theme_name, d, options, global_options, args)

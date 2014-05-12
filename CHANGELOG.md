@@ -50,6 +50,7 @@ Uliweb Change Log
 * Add settings and local_settings env variables support
 * Fix count bug
 * Change orm requirement.txt, add uliweb-alembic package
+* generic app add avalon and mmgrid support
 
 0.2.6 Version
 -----------------

@@ -1,0 +1,175 @@
+#uliweb-template-tag:[[,]]
+{{extend "[[=appname]]_layout.html"}}
+
+{{block content_main}}
+{{use "jquery"}}
+{{use "jqutils", ajaxForm=True}}
+{{use "avalon"}}
+{{use "fontawesome"}}
+{{use "bootheme"}}
+{{include "inc_jquery_dialog2.html"}}
+{{include "inc_paginate.html"}}
+{{include "inc_show_flashes.html"}}
+
+<div class="row-fluid" ms-controller="adminCtrl">
+    <div class="line">
+        <a class="btn btn-primary" [[if not addview_popup:]]href="[[=url]]/add"[[pass]] type="button" [[if addview_popup:]]ms-click="add()"[[pass]]><i class="icon-plus icon-white"></i>{{=_('Add')}}</a>
+    </div>
+    <div class="line">
+        <table class="table table-bordered table-header">
+            <colgroup>
+                {{for f in view.table_info['fields_list']:}}
+                    {{if f.get('hidden', False):}}
+                        {{continue}}
+                    {{pass}}
+                    {{w = f.get('width', -1)}}
+                    {{if w > -1:}}
+                        <col width="{{=w}}px"></col>
+                    {{else:}}
+                        <col width="*"></col>
+                    {{pass}}
+                {{pass}}
+                <col width="70px"></col>
+            </colgroup>
+            <thead>
+                <tr>
+                    {{for f in view.table_info['fields_list']:}}
+                        {{if f.get('hidden', False):}}
+                            {{continue}}
+                        {{pass}}
+                        <th>{{=f.get('verbose_name') or f['name']}}</th>
+                    {{pass}}
+                    <th>{{=_('Action')}}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ms-repeat-obj="objects">
+                    {{for f in view.table_info['fields_list']:}}
+                        {{if f.get('hidden', False):}}
+                            {{continue}}
+                        {{pass}}
+                        <td>{%obj.{{ =f['name'] }}|html%}</td>
+                    {{pass}}
+                    <td>
+                        <a ms-href="[[=url]]/view/{%obj.id%}" data-click="view"><i class="icon-eye-open" title="{{=_('View')}}"></i></a>
+                        <a [[if not editview_popup:]]ms-href="[[=url]]/edit/{%obj.id%}"[[pass]] [[if editview_popup:]]ms-click="edit(obj.id)"[[pass]]><i class="icon-edit" title="{{=_('Edit')}}"></i></a>
+                        <a [[if not deleteview_ajax:]]ms-href="[[=url]]/delete/{%obj.id%}"[[pass]] [[if deleteview_ajax:]]ms-click="remove(obj.id)"[[pass]]><i class="icon-remove" title="{{=_('Remove')}}"></i></a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        [[if pagination:]]
+        <div class="pagination pagination-centered"></div>
+        [[pass]]
+    </div>
+</div>
+<!-- Download code -->
+[[if download:]]
+<script>
+	$(function(){
+		$('a[data-click="download"]').click(function(e){
+			var query_string = $.query_string.remove('data').set('download', '').toString();
+			$.download('{{=request.path}}' + query_string);
+		});
+	});
+</script>
+[[pass]]
+
+<script>
+var model = avalon.define('adminCtrl', function(vm) {
+    vm.objects = [];
+    vm.query = function(page){
+        page = page || 1;
+        $.get('[[=url]]?data=1'[[if pagination:]]+'&page='+page[[pass]])
+            .success(function(data, status, headers, config){
+                vm.objects = data.rows;
+
+                [[if pagination:]]
+                function callback(page){
+                    vm.query(page);
+                }
+                create_pagination('.pagination', data.total, data.page_rows, data.pageno, callback, {first:'', last:'', totalMessage:''});
+                [[pass]]
+            });
+    }
+    vm.find_object = function(id){
+        if (!vm.objects) return -1;
+        for(var i=0; i<vm.objects.length; i++){
+            if (vm.objects[i].id == id){
+                return i;
+            }
+        }
+        return -1;
+    }
+    vm.get_object = function(id){
+        if (id)
+            return vm.objects[vm.find_object(id)];
+        else
+            return {}
+    }
+    vm.add = function(){
+        var dialog = $('<div id="add_object"></div>').dialog2(
+            {
+                autoFocus:false, 
+                url:'[[=url]]/add',
+                ajaxFormOptions: {
+                    onSuccess: common_ajaxForm_success({
+                        success:function(data){
+                            $(this).dialog2('close');
+                            vm.objects.push(data.data);
+                        }
+                    }),
+                    dataType: 'json'
+                }
+            }); 
+        dialog.bind('dialog2.content-update', function(e){
+            //add what you want to do after the content update from server
+        });
+    }
+    vm.edit = function(id){
+        var dialog = $('<div id="edit_object"></div>').dialog2(
+            {
+                autoFocus:false, 
+                url:'[[=url]]/edit/'+id,
+                ajaxFormOptions: {
+                    onSuccess: common_ajaxForm_success({
+                        success:function(data){
+                            $(this).dialog2('close');
+                            var index = vm.find_object(id);
+                            if (index > -1){
+                                vm.objects[index] = data.data;
+                                return;
+                            }
+                        }
+                    }),
+                    dataType: 'json'
+                }
+            }); 
+        dialog.bind('dialog2.content-update', function(e){
+            //add what you want to do after the content update from server
+        });
+    }
+    vm.remove = function(id){
+        if(!confirm('{{=_("Do you want to delete this record?")}}'))
+            return;
+        $.post('[[=url]]/delete/'+id).success(function(data){
+            if(data.success){
+                var index = vm.find_object(id);
+                if (index > -1){
+                    vm.objects.splice(index, 1);
+                }
+            }else{
+                show_message(data.message, 'error');
+            }
+        });
+    }
+});
+$(function(){
+    model.query();
+});
+$(document).ajaxError(function(e, jqxhr, settings, exception){
+    show_message("{{=_('Request process failed!')}}", 'error');
+});
+
+</script>
+{{end}}
