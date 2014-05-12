@@ -3,6 +3,7 @@ import datetime
 from uliweb.i18n import ugettext_lazy as _
 from uliweb import functions
 from . import encrypt_password, check_password
+from uliweb.utils.common import get_var
 
 class User(Model):
     username = Field(str, verbose_name=_('Username'), max_length=30, unique=True, index=True, nullable=False)
@@ -75,6 +76,7 @@ class UserGroup(Model):
     number_of_children = Field(int, verbose_name=_('Number of Children'))
     number_of_people = Field(int, verbose_name=_('Number of People'))
     order = Field(int, verbose_name=_('Order'), default=9999)
+    type = Field(CHAR, max_length=1, verbose_name=_('Group Type'), choices=get_var('AUTH/USER_GROUP_TYPE'))
     
     def __unicode__(self):
         return self.name
