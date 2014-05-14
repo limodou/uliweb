@@ -18,6 +18,7 @@ class GenericCommand(Command):
         make_option('-d', '--download', dest='download', action='store_true', help='Download support.'),
         make_option('--downloadfile', dest='downloadfile', help='Download filename.'),
         make_option('--viewfile', dest='viewfile', help='View file name.'),
+        make_option('--layout', dest='layout', help='Layout template name.'),
         make_option('-u', '--url', dest='url', help='Class View URL prefix.'),
         make_option('-p', '--pagination', action='store_true', dest='pagination', help='Enable pagination.'),
         make_option('-q', '--query', action='store_true', dest='query', help='Enable query.'),
@@ -36,14 +37,16 @@ class GenericCommand(Command):
     
     def handle(self, options, global_options, *args):
         d = {}
-        d['appname'] = get_input("Appname:", option_value=options.appname)
-        d['tablename'] = get_input("Table Name:", option_value=options.tablename)
+        d['appname'] = get_input("Appname:", option_value=options.appname).lower()
+        d['tablename'] = get_input("Table Name:", option_value=options.tablename).lower()
         d['theme'] = get_input("Creation Theme([a]ngularjs, [h]tml), [e]sayui)[a], [m]mGrid, a[v]alon:", default="m", choices='ahemv', option_value=options.theme)
         view_name = camel_to_cap(d['tablename'])+'View'
         view_file_name = 'views_%s.py' % d['tablename']
         url_prefix = '/'+d['appname']
         d['classname'] = get_input("View Class Name [%s]:" % view_name, default=view_name, option_value=options.classname)
         d['viewfile'] = get_input("Save views to [%s]:" % view_file_name, default=view_file_name, option_value=options.viewfile)
+        layout_name = d['appname'].lower() + '_layout.html'
+        d['layout'] = get_input("Layout template name [%s]:" % layout_name, default=layout_name, option_value=options.layout)
         d['url'] = get_input("Class View URL prefix [%s]:" % url_prefix, default=url_prefix, option_value=options.url)
         d['pagination'] = get_answer("Enable pagination", quit='q') == 'Y'
         d['query'] = get_answer("Enable query", quit='q') == 'Y'
@@ -115,7 +118,12 @@ class GenericCommand(Command):
             shutil.copy2(os.path.join(gpath, 'config.ini'), path)
             
         cpath = pkg.resource_filename('uliweb.contrib.generic', 'template_files/common')
-        
+
+        #check if layout is existed, if not then create it
+        layout_file = os.path.join(path, 'templates', data['layout'])
+        if not os.path.exists(layout_file):
+            self.copy_template(os.path.join(cpath, 'layout.html'), data, layout_file)
+
         #copy views file
         self.copy_view(os.path.join(cpath, 'views.py.tmpl'), data, 
             os.path.join(path, data['viewfile']), options.replace)

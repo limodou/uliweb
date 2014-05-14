@@ -1,0 +1,11 @@
+#uliweb-template-tag:[[,]]
+
+{{extend "layout.html"}}
+
+{{block menu}}
+{{menu('[[=appname]]')}}
+{{end}}
+
+{{block content}}
+{{include "bootstrap/inc_full.html"}}
+{{end}}

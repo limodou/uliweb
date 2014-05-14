@@ -2843,7 +2843,7 @@ class Model(object):
                     setattr(self, k, v)
         return self
             
-    def put(self, insert=False, changed=None, saved=None, 
+    def save(self, insert=False, changed=None, saved=None,
             send_dispatch=True, version=False, version_fieldname=None, 
             version_exception=True):
         """
@@ -2960,9 +2960,12 @@ class Model(object):
                     saved(self, created, self._old_values, old)
                     
         return _saved
-    
-    save = put
-    
+
+    def put(self, *args, **kwargs):
+        warnings.simplefilter('default')
+        warnings.warn("put method will be deprecated in next version.", DeprecationWarning)
+        return self.save(*args, **kwargs)
+
     def delete(self, manytomany=True, delete_fieldname=None, send_dispatch=True):
         """
         Delete current obj

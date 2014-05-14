@@ -1,5 +1,5 @@
 #uliweb-template-tag:[[,]]
-{{extend "[[=appname]]_layout.html"}}
+{{extend "[[=layout]]"}}
 
 {{block content_main}}
 {{use "jquery"}}
@@ -11,7 +11,7 @@
 {{include "inc_paginate.html"}}
 {{include "inc_show_flashes.html"}}
 
-<div class="row-fluid" ms-controller="adminCtrl">
+<div class="row-fluid content-outter" ms-controller="adminCtrl">
     <div class="line">
         <a class="btn btn-primary" [[if not addview_popup:]]href="[[=url]]/add"[[pass]] type="button" [[if addview_popup:]]ms-click="add()"[[pass]]><i class="icon-plus icon-white"></i>{{=_('Add')}}</a>
     </div>

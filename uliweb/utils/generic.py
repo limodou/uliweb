@@ -644,12 +644,13 @@ class AddView(object):
     def __init__(self, model, ok_url=None, ok_template=None, form=None, success_msg=None, 
         fail_msg=None, use_flash=True,
         data=None, default_data=None, fields=None, form_cls=None, form_args=None,
-        static_fields=None, hidden_fields=None, pre_save=None, post_save=None,
+        static_fields=None, hidden_fields=None, save=None, pre_save=None, post_save=None,
         post_created_form=None, layout=None, file_replace=True, template_data=None, 
         success_data=None, fail_data=None, meta='AddForm', get_form_field=None, post_fail=None,
         types_convert_map=None, fields_convert_map=None, json_func=None,
         file_convert=True, upload_to=None, upload_to_sub=None, 
-        fileserving_config='UPLOAD', protect=False, protect_field_name=None):
+        fileserving_config='UPLOAD', protect=False, protect_field_name=None,
+        version=False, version_fieldname='version', version_exception=True):
 
         self.model = get_model(model)
         self.meta = meta
@@ -672,6 +673,7 @@ class AddView(object):
         self.form_args = form_args or {}
         self.static_fields = static_fields or []
         self.hidden_fields = hidden_fields or []
+        self.save = save or self.default_save
         self.pre_save = pre_save
         self.post_save = post_save
         self.post_created_form = post_created_form
@@ -688,6 +690,9 @@ class AddView(object):
         self.fileserving = get_fileserving(fileserving_config)
         self.protect = protect
         self.protect_field_name = protect_field_name or self.protect_field_name
+        self.version = version
+        self.version_fieldname = version_fieldname
+        self.version_exception = version_exception
         self.form = self.make_form(form)
         
     def get_fields(self):
@@ -811,19 +816,6 @@ class AddView(object):
             fobj['file'], replace=self.file_replace, 
             convert=self.file_convert)
         
-#    def save_files(self, obj, files):
-#        d = {}
-#        flag = False
-#        for name, (f, data) in files.items():
-#            d[name] = self._process_file(obj, data, f)
-#
-#        if d:
-#            obj.update(**d)
-#            obj.save()
-#            flag = True
-#            
-#        return flag
-    
     def on_success_data(self, obj, data):
         if self.success_data is True:
             return obj.to_dict()
@@ -960,20 +952,13 @@ class AddView(object):
             self.form.bind(data)
             return self.display(json_result)
         
-    def save(self, data):
+    def default_save(self, data):
         obj = self.model(**data)
-        obj.save()
+        obj.save(version=self.version, version_fieldname=self.version_fieldname,
+                        version_exception=self.version_exception)
         
-#        self.save_manytomany(obj, data)
         return obj
         
-#    def save_manytomany(self, obj, data):
-#        #process manytomany property
-#        for k, v in obj._manytomany.iteritems():
-#            if k in data:
-#                value = data[k]
-#                if value:
-#                    getattr(obj, k).add(*value)
 
 class EditView(AddView):
     success_msg = _('The information has been saved successfully!')
@@ -1073,24 +1058,10 @@ class EditView(AddView):
             self.form.bind(d)
             return self.display(json_result)
         
-    def save(self, obj, data):
+    def default_save(self, obj, data):
         obj.update(**data)
-        r = obj.save()
-#        r1 = self.save_manytomany(obj, data)
-#        return r or r1
-        return r
-        
-    def save_manytomany(self, obj, data):
-        #process manytomany property
-        r = False
-        for k, v in obj._manytomany.iteritems():
-            if k in data:
-                field = getattr(obj, k)
-                value = data[k]
-                if value:
-                    r = getattr(obj, k).update(*value) or r
-                else:
-                    getattr(obj, k).clear()
+        r = obj.save(version=self.version, version_fieldname=self.version_fieldname,
+                        version_exception=self.version_exception)
         return r
         
     def query(self):

@@ -18,7 +18,6 @@ Uliweb Change Log
 * `ManyResult.all()` can receive a `cache` parameter
 * Improve `dump()` and `load()`, add PickleType , ManyToMany support
 * Refact objcache app implementation and add `exclude` config option
-* Refact multidb support
 * Remove primary_key detect, because multi primary_key columns can make composite primary key,
   add partition support for mysql
 
@@ -51,6 +50,8 @@ Uliweb Change Log
 * Fix count bug
 * Change orm requirement.txt, add uliweb-alembic package
 * generic app add avalon and mmgrid support
+* Model.put() not is deprecated, you should use save
+* `generic.py` add version support when saving, and add `save` callback parameter.
 
 0.2.6 Version
 -----------------
