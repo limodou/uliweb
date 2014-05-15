@@ -711,7 +711,8 @@ class Form(object):
             self.ok = True
             self.errors = {}
             self.data = result
-            
+
+        #the data of static field will be put into parsed data
         for k, v in self.fields.iteritems():
             if v.static and k in old_data:
                 self.data[k] = old_data[k]
