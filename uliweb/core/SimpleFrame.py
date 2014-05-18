@@ -579,7 +579,6 @@ class Dispatcher(object):
         env['settings'] = settings
         env['json'] = json
         env['jsonp'] = jsonp
-        env['function'] = function
         env['functions'] = functions
         env['json_dumps'] = json_dumps
 
