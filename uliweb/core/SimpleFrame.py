@@ -15,7 +15,7 @@ try:
 except:
     from sets import Set as set
 
-from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
+from werkzeug import ClosingIterator, Local, LocalManager
 from werkzeug.exceptions import HTTPException, NotFound, BadRequest
 from werkzeug.routing import Map
 
@@ -506,7 +506,7 @@ class Dispatcher(object):
         #process exposes
         self.install_exposes()
         #process middlewares
-        Dispatcher.middlewares = self.install_middlewares()
+        self.install_middlewares()
         
         self.debug = settings.GLOBAL.get('DEBUG', False)
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
@@ -682,7 +682,7 @@ class Dispatcher(object):
     {{pass}}
     </table>
     """ % description
-        return self.Response(template.template(text, kwargs), status=404, content_type='text/html')
+        return make_response(template.template(text, kwargs), status=404)
         
     def not_found(self, e):
         if self.debug:
@@ -858,13 +858,13 @@ class Dispatcher(object):
             response.write(self.template(tmpfile, result, env, default_template=d))
         elif isinstance(result, (str, unicode)):
             response.write(result)
-        elif isinstance(result, (Response, BaseResponse)):
+        elif isinstance(result, self.Response):
             response = result
         #add generator support 2014-1-8
         elif isinstance(result, types.GeneratorType):
-            return Response(result, direct_passthrough=True, content_type='text/html;charset=utf-8')
+            return make_response(result, direct_passthrough=True)
         else:
-            response = Response(str(result), content_type='text/html')
+            response = make_response(str(result))
         return response
     
     def get_view_env(self):
@@ -1096,8 +1096,28 @@ class Dispatcher(object):
                 raise UliwebError('EXPOSES definition [%s=%r] is not right' % (name, args))
        
     def install_middlewares(self):
-        return self.sort_middlewares(settings.get('MIDDLEWARES', {}).values())
-    
+        m = self.sort_middlewares(settings.get('MIDDLEWARES', {}).values())
+        self.__class__.middlewares = m
+        self.__class__.pocess_request_classes = req_clses = []
+        self.__class__.pocess_response_classes = res_clses = []
+        self.__class__.pocess_exception_classes = ex_clses = []
+
+        for cls in m:
+            f = getattr(cls, 'process_request', None)
+            if f:
+                req_clses.append(cls)
+
+        r_m = reversed(m)
+        for cls in r_m:
+            f = getattr(cls, 'process_response', None)
+            if f:
+                res_clses.append(cls)
+
+        for cls in r_m:
+            f = getattr(cls, 'process_exception', None)
+            if f:
+                ex_clses.append(cls)
+
     def sort_middlewares(self, middlewares):
         #middleware process
         #middleware can be defined as
@@ -1195,13 +1215,12 @@ class Dispatcher(object):
                 response = None
                 _clses = {}
                 _inss = {}
-                for cls in middlewares:
-                    if hasattr(cls, 'process_request'):
-                        ins = cls(self, settings)
-                        _inss[cls] = ins
-                        response = ins.process_request(req)
-                        if response is not None:
-                            break
+                for cls in self.pocess_request_classes:
+                    ins = cls(self, settings)
+                    _inss[cls] = ins
+                    response = ins.process_request(req)
+                    if response is not None:
+                        break
                 
                 if response is None:
                     try:
@@ -1215,25 +1234,23 @@ class Dispatcher(object):
                         if post_call:
                             response = post_call(req, response)
                     except Exception as e:
-                        for cls in reversed(middlewares):
-                            if hasattr(cls, 'process_exception'):
-                                ins = _inss.get(cls)
-                                if not ins:
-                                    ins = cls(self, settings)
-                                response = ins.process_exception(req, e)
-                                if response:
-                                    break
+                        for cls in self.pocess_exception_classes:
+                            ins = _inss.get(cls)
+                            if not ins:
+                                ins = cls(self, settings)
+                            response = ins.process_exception(req, e)
+                            if response:
+                                break
                         raise
                     
-                for cls in reversed(middlewares):
-                    if hasattr(cls, 'process_response'):
-                        ins = _inss.get(cls)
-                        if not ins:
-                            ins = cls(self, settings)
-                        response = ins.process_response(req, response)
-                        
-                        if not isinstance(response, self.Response):
-                            raise Exception("Middleware %s should return an Response object, but %r found" % (ins.__class__.__name__, response))
+                for cls in self.pocess_response_classes:
+                    ins = _inss.get(cls)
+                    if not ins:
+                        ins = cls(self, settings)
+                    response = ins.process_response(req, response)
+
+                    if not isinstance(response, self.Response):
+                        raise Exception("Middleware %s should return an Response object, but %r found" % (ins.__class__.__name__, response))
                 
                 #process post_response call, you can set some async process in here
                 #but the sync may fail, so you should think about the checking mechanism
