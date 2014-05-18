@@ -8,14 +8,20 @@ import cgi
 import inspect
 import re
 import types
-from werkzeug import Request as OriginalRequest, Response as OriginalResponse
+import warnings
+
+try:
+    set
+except:
+    from sets import Set as set
+
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, BadRequest
 from werkzeug.routing import Map
 
-import template
-from js import json_dumps
-import dispatch
+from . import template
+from .js import json_dumps
+from . import dispatch
 from uliweb.utils.storage import Storage
 from uliweb.utils.common import (pkg, log, import_attr, 
     myimport, wraps, norm_path)
@@ -25,12 +31,7 @@ from uliweb.utils.localproxy import LocalProxy, Global
 from uliweb import UliwebError
 
 #from rules import Mapping, add_rule
-import rules
-
-try:
-    set
-except:
-    from sets import Set as set
+from . import rules
 
 local = Local()
 __global__ = Global()
@@ -42,6 +43,10 @@ url_adapters = {}
 __app_dirs__ = {}
 __app_alias__ = {}
 _xhr_redirect_json = True
+request = None
+response = None
+make_request = None
+make_response = None
 
 r_callback = re.compile(r'^[\w_]+$')
 #Initialize pyini env
@@ -54,7 +59,6 @@ __global__.settings = pyini.Ini(lazy=True)
 #User can defined decorator functions in settings DECORATORS
 #and user can user @decorators.function_name in views
 #and this usage need settings be initialized before decorator invoking
-
 class Finder(object):
     def __init__(self, section):
         self.__objects = {}
@@ -85,16 +89,6 @@ class Finder(object):
 decorators = Finder('DECORATORS')
 functions = Finder('FUNCTIONS')
 
-class Request(OriginalRequest):
-    GET = OriginalRequest.args
-    POST = OriginalRequest.form
-    params = OriginalRequest.values
-    FILES = OriginalRequest.files
-    
-class Response(OriginalResponse):
-    def write(self, value):
-        self.stream.write(value)
-    
 class HTTPError(Exception):
     def __init__(self, errorpage=None, **kwargs):
         self.errorpage = errorpage or settings.GLOBAL.ERROR_PAGE
@@ -109,7 +103,7 @@ def redirect(location, code=302):
     if _xhr_redirect_json and request.is_xhr:
         response = json({'success':False, 'redirect':location}, status=500)
     else:
-        response = Response(
+        response = make_response(
             '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">\n'
             '<title>Redirecting...</title>\n'
             '<h1>Redirecting...</h1>\n'
@@ -138,16 +132,6 @@ def error(message='', errorpage=None, request=None, appname=None, **kwargs):
         kwargs.setdefault('link', functions.request_url())
     raise HTTPError(errorpage, **kwargs)
 
-def function(fname, *args, **kwargs):
-    func = settings.get_var('FUNCTIONS/'+fname)
-    if func:
-        if args or kwargs:
-            return import_attr(func)(*args, **kwargs)
-        else:
-            return import_attr(func)
-    else:
-        raise UliwebError("Can't find the function [%s] in settings" % fname)
- 
 def json(data, **json_kwargs):
     if 'content_type' not in json_kwargs:
         json_kwargs['content_type'] = 'application/json; charset=utf-8'
@@ -156,17 +140,17 @@ def json(data, **json_kwargs):
         @wraps(data)
         def f(*arg, **kwargs):
             ret = data(*arg, **kwargs)
-            return Response(json_dumps(ret), **json_kwargs)
+            return make_response(json_dumps(ret), **json_kwargs)
         return f
     else:
-        return Response(json_dumps(data), **json_kwargs)
+        return make_response(json_dumps(data), **json_kwargs)
     
 def jsonp(data, **json_kwargs):
     """
     jsonp is callback key name
     """
-    from uliweb import request
-    
+    global request
+
     if 'jsonp' in json_kwargs:
         cb = json_kwargs.pop('jsonp')
     else:
@@ -182,10 +166,10 @@ def jsonp(data, **json_kwargs):
         @wraps(data)
         def f(*arg, **kwargs):
             ret = data(*arg, **kwargs)
-            return Response(begin + '(' + json_dumps(ret) + ');', **json_kwargs)
+            return make_response(begin + '(' + json_dumps(ret) + ');', **json_kwargs)
         return f
     else:
-        return Response(begin + '(' + json_dumps(data) + ');', **json_kwargs)
+        return make_response(begin + '(' + json_dumps(data) + ');', **json_kwargs)
 
 def expose(rule=None, **kwargs):
     e = rules.Expose(rule, **kwargs)
@@ -245,7 +229,7 @@ def get_app_dir(app):
         p = app.split('.')
         try:
             path = pkg.resource_filename(p[0], '')
-        except ImportError, e:
+        except ImportError as e:
             log.error("Can't import app %s" % p[0])
             log.exception(e)
             path = ''
@@ -414,6 +398,43 @@ class Loader(object):
             return True
         return filename.endswith('.html')
     
+class DispatcherHandler(object):
+    def __init__(self, application):
+        self.application = application
+
+    def open(self, *args, **kw):
+        return self.application.open(*args, **kw)
+
+    def get(self, *args, **kw):
+        """Like open but method is enforced to GET."""
+        kw['method'] = 'GET'
+        return self.open(*args, **kw)
+
+    def patch(self, *args, **kw):
+        """Like open but method is enforced to PATCH."""
+        kw['method'] = 'PATCH'
+        return self.open(*args, **kw)
+
+    def post(self, *args, **kw):
+        """Like open but method is enforced to POST."""
+        kw['method'] = 'POST'
+        return self.open(*args, **kw)
+
+    def head(self, *args, **kw):
+        """Like open but method is enforced to HEAD."""
+        kw['method'] = 'HEAD'
+        return self.open(*args, **kw)
+
+    def put(self, *args, **kw):
+        """Like open but method is enforced to PUT."""
+        kw['method'] = 'PUT'
+        return self.open(*args, **kw)
+
+    def delete(self, *args, **kw):
+        """Like open but method is enforced to DELETE."""
+        kw['method'] = 'DELETE'
+        return self.open(*args, **kw)
+
 class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, 
@@ -438,6 +459,8 @@ class Dispatcher(object):
             dispatch.call(self, 'startup')
     
     def init(self, project_dir, apps_dir):
+        global settings
+
         if not project_dir:
             project_dir = norm_path(os.path.join(apps_dir, '..'))
         
@@ -447,7 +470,10 @@ class Dispatcher(object):
         Dispatcher.modules = self.collect_modules()
         
         self.install_settings(self.modules['settings'])
-        
+
+        #init adapter
+        self.install_adapter()
+
         #process global_objects
         self.install_global_objects()
         
@@ -642,7 +668,7 @@ class Dispatcher(object):
         return template.template(text, vars, env, dirs, default_template)
     
     def render(self, templatefile, vars, env=None, dirs=None, default_template=None, content_type='text/html', status=200):
-        return Response(self.template(templatefile, vars, env, dirs, default_template=default_template), status=status, content_type=content_type)
+        return make_response(self.template(templatefile, vars, env, dirs, default_template=default_template), status=status, content_type=content_type)
     
     def _page_not_found(self, description=None, **kwargs):
         description = 'The requested URL "{{=url}}" was not found on the server.'
@@ -656,7 +682,7 @@ class Dispatcher(object):
     {{pass}}
     </table>
     """ % description
-        return Response(template.template(text, kwargs), status=404, content_type='text/html')
+        return self.Response(template.template(text, kwargs), status=404, content_type='text/html')
         
     def not_found(self, e):
         if self.debug:
@@ -710,18 +736,6 @@ class Dispatcher(object):
                 #so the real mod should be mod.__module__
                 mod = sys.modules[mod.__module__]
                 
-#            module, func = endpoint.rsplit('.', 1)
-#            #if the module contains a class name, then import the class
-#            #it set by expose()
-#            x, last = module.rsplit('.', 1)
-#            if last.startswith('views'):
-#                mod = __import__(module, {}, {}, [''])
-#                handler = getattr(mod, func)
-#            else:
-#                module = x
-#                mod = __import__(module, {}, {}, [''])
-#                _klass = getattr(mod, last)()
-#                handler = getattr(_klass, func)
         elif callable(endpoint):
             handler = endpoint
             mod = sys.modules[handler.__module__]
@@ -869,7 +883,6 @@ class Dispatcher(object):
         local_env['error'] = error
         local_env['settings'] = __global__.settings
         local_env['json'] = json
-        local_env['function'] = function
         local_env['functions'] = functions
         local_env['json_dumps'] = json_dumps
         
@@ -945,12 +958,37 @@ class Dispatcher(object):
         modules['views'] = list(views)
         modules['settings'] = settings
         return modules
-    
+
+    def install_adapter(self):
+        global request, response, make_response, make_request
+        import uliweb
+
+        #install Request, Response
+        default_path = 'uliweb.adapter.http.werkzeug_adapter'
+        http = settings.get_var('CONFIG/http')
+        if http and http != 'default':
+            path = 'uliweb.adapter.http.%s_adapter' % http
+        else:
+            path = default_path
+
+        try:
+            mod = myimport(path)
+        except ImportError as e:
+            mod = myimport(default_path)
+
+        uliweb.Request = self.Request = mod.Request
+        uliweb.Response = self.Response = mod.Response
+        uliweb.request = request = LocalProxy(local, 'request', self.Request)
+        uliweb.response = response = LocalProxy(local, 'response', self.Response)
+
+        make_request = mod.make_request
+        make_response = mod.make_response
+
     def install_views(self, views):
         for v in views:
             try:
                 myimport(v)
-            except Exception, e:
+            except Exception as e:
                 log.exception(e)
          
     def init_urls(self):
@@ -970,9 +1008,9 @@ class Dispatcher(object):
         for p in self.apps:
             try:
                 myimport(p)
-            except ImportError, e:
+            except ImportError as e:
                 pass
-            except BaseException, e:
+            except BaseException as e:
                 log.exception(e)
             
     def install_template_processors(self):
@@ -1138,8 +1176,8 @@ class Dispatcher(object):
         if middlewares is None:
             middlewares = self.middlewares
             
-        local.request = req = Request(environ)
-        local.response = res = Response(content_type='text/html')
+        local.request = req = make_request(environ)
+        local.response = res = make_response()
         #add local cached
         local.local_cache = {}
         #add in web flag
@@ -1176,7 +1214,7 @@ class Dispatcher(object):
                                 response = e.get_response()
                         if post_call:
                             response = post_call(req, response)
-                    except Exception, e:
+                    except Exception as e:
                         for cls in reversed(middlewares):
                             if hasattr(cls, 'process_exception'):
                                 ins = _inss.get(cls)
@@ -1194,7 +1232,7 @@ class Dispatcher(object):
                             ins = cls(self, settings)
                         response = ins.process_response(req, response)
                         
-                        if not isinstance(response, (OriginalResponse, Response)):
+                        if not isinstance(response, self.Response):
                             raise Exception("Middleware %s should return an Response object, but %r found" % (ins.__class__.__name__, response))
                 
                 #process post_response call, you can set some async process in here
@@ -1207,13 +1245,13 @@ class Dispatcher(object):
                 
             #endif
             
-        except HTTPError, e:
+        except HTTPError as e:
             response = self.render(e.errorpage, Storage(e.errors))
-        except NotFound, e:
+        except NotFound as e:
             response = self.not_found(e)
-        except HTTPException, e:
+        except HTTPException as e:
             response = e
-        except Exception, e:
+        except Exception as e:
             if not self.settings.get_var('GLOBAL/DEBUG'):
                 response = self.internal_error(e)
             else:
@@ -1231,44 +1269,6 @@ class Dispatcher(object):
         response = self._open(environ)
         return response(environ, start_response)
             
-class DispatcherHandler(object):
-    def __init__(self, application):
-        self.application = application
-        
-    def open(self, *args, **kw):
-        return self.application.open(*args, **kw)
-        
-    def get(self, *args, **kw):
-        """Like open but method is enforced to GET."""
-        kw['method'] = 'GET'
-        return self.open(*args, **kw)
-    
-    def patch(self, *args, **kw):
-        """Like open but method is enforced to PATCH."""
-        kw['method'] = 'PATCH'
-        return self.open(*args, **kw)
-    
-    def post(self, *args, **kw):
-        """Like open but method is enforced to POST."""
-        kw['method'] = 'POST'
-        return self.open(*args, **kw)
-    
-    def head(self, *args, **kw):
-        """Like open but method is enforced to HEAD."""
-        kw['method'] = 'HEAD'
-        return self.open(*args, **kw)
-    
-    def put(self, *args, **kw):
-        """Like open but method is enforced to PUT."""
-        kw['method'] = 'PUT'
-        return self.open(*args, **kw)
-    
-    def delete(self, *args, **kw):
-        """Like open but method is enforced to DELETE."""
-        kw['method'] = 'DELETE'
-        return self.open(*args, **kw)
 
-response = LocalProxy(local, 'response', Response)
-request = LocalProxy(local, 'request', Request)
 settings = LocalProxy(__global__, 'settings', pyini.Ini)
 application = LocalProxy(__global__, 'application', Dispatcher)
