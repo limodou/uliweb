@@ -435,6 +435,61 @@ class DispatcherHandler(object):
         kw['method'] = 'DELETE'
         return self.open(*args, **kw)
 
+class ContextStorage(object):
+    """
+    Used to save increament vars
+    """
+
+    __variables__ = {}
+
+    def __init__(self, args={}):
+        self.__class__.__variables__ = args
+        self._vars = {}
+
+    def __getattr__(self, key):
+        try: 
+            return self['_vars'][key]
+        except KeyError as e: 
+            try:
+                return self[key]
+            except KeyError as e:
+                return None
+
+    def copy(self):
+        n = ContextStorage(self.__variables__)
+        n._vars = self._vars.copy()
+        return n
+
+    def to_dict(self):
+        d = self._vars.copy()
+        d.update(self.__variables__)
+        return d
+
+    def __getitem__(self, key):
+        try:
+            return self._vars[key]
+        except KeyError as e:
+            return self.__variables__[key]
+
+    def __setitem__(self, key, value):
+        self._vars[key] = value
+
+    def update(self, arg):
+        self._vars.update(arg)
+
+    def items(self):
+        keys = set()
+        for k, v in self._vars.items():
+            keys.add(k)
+            yield k, v
+
+        for k, v in self.__variables__.items():
+            if k not in keys:
+                yield k, v
+
+    def __repr__(self):
+        return '<ContextStorage ' + repr(self.__variables__) + ' ' + repr(self._vars) + ' >'
+
 class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, 
@@ -515,7 +570,7 @@ class Dispatcher(object):
         Dispatcher.installed = True
         
     def _prepare_env(self):
-        env = Storage({})
+        env = {}
         env['url_for'] = url_for
         env['redirect'] = redirect
         env['Redirect'] = Redirect
@@ -524,7 +579,13 @@ class Dispatcher(object):
         env['settings'] = settings
         env['json'] = json
         env['jsonp'] = jsonp
-        return env
+        env['function'] = function
+        env['functions'] = functions
+        env['json_dumps'] = json_dumps
+
+
+        c = ContextStorage(env)
+        return c
     
     def set_log(self):
         import logging
@@ -711,12 +772,6 @@ class Dispatcher(object):
         log.exception(e)
         return response
     
-    def get_env(self, env=None):
-        e = Storage(self.env.copy())
-        if env:
-            e.update(env)
-        return e
-    
     def prepare_request(self, request, rule):
         from uliweb.utils.common import safe_import
 
@@ -758,7 +813,7 @@ class Dispatcher(object):
         #get env
         wrap = wrap_result or self.wrap_result
         env = self.get_view_env()
-        
+
         #if there is __begin__ then invoke it, if __begin__ return None, it'll
         #continue running
         
@@ -870,28 +925,27 @@ class Dispatcher(object):
     def get_view_env(self):
         #prepare local env
         local_env = {}
-        
+
         #process before view call
         dispatch.call(self, 'prepare_view_env', local_env)
         
         local_env['application'] = __global__.application
         local_env['request'] = local.request
         local_env['response'] = local.response
-        local_env['url_for'] = url_for
-        local_env['redirect'] = redirect
-        local_env['Redirect'] = Redirect
-        local_env['error'] = error
         local_env['settings'] = __global__.settings
-        local_env['json'] = json
-        local_env['functions'] = functions
-        local_env['json_dumps'] = json_dumps
         
+        env = Storage(self.env.to_dict())
+        env.update(local_env)
+        return env
+    
+
         return self.get_env(local_env)
        
     def _call_function(self, handler, request, response, env, args=None, kwargs=None):
         
-        for k, v in env.items():
-            handler.func_globals[k] = v
+        handler.func_globals.update(env)
+        # for k, v in env.items():
+        #     handler.func_globals[k] = v
         
         handler.func_globals['env'] = env
         
