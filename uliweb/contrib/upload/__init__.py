@@ -1,5 +1,5 @@
 import os
-from uliweb import settings, request, url_for
+from uliweb import settings, url_for
 from uliweb.utils import files
 from uliweb.utils.common import import_attr, application_path, log
 import random
@@ -69,7 +69,7 @@ class FileServing(object):
             elif self.x_sendfile == 'apache':
                 self.x_header_name = 'X-Sendfile'
             else:
-                raise Exception, "X_HEADER can't be None, or X_SENDFILE is not supprted"
+                raise Exception("X_HEADER can't be None, or X_SENDFILE is not supprted")
         if isinstance(self._filename_converter, (str, unicode)):
             self._filename_converter_cls = import_attr(self._filename_converter)
         else:
@@ -110,6 +110,7 @@ class FileServing(object):
         action will be "download", "inline"
         and if the request.GET has 'action', then the action will be replaced by it.
         """
+        from uliweb import request
         from uliweb.utils.common import safe_str
         from uliweb.utils.filedown import filedown
         
@@ -166,7 +167,7 @@ class FileServing(object):
         if os.path.exists(f):
             try:
                 os.unlink(f)
-            except Exception, e:
+            except Exception as e:
                 log.exception(e)
     
     def get_href(self, filename, **kwargs):
