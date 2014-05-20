@@ -1439,6 +1439,26 @@ class GenericFileServing(FileServing):
         '_filename_converter': ('UPLOAD/FILENAME_CONVERTER',  FilenameConverter),
     }
 
+def download_file(filename):
+    from uliweb import request
+    import urllib2
+
+    alt_filename = request.GET.get('alt')
+    if not alt_filename:
+        alt_filename = filename
+    else:
+        alt_filename = urllib2.unquote(alt_filename)
+
+    downloader = GenericFileServing()
+    real_filename = downloader.get_filename(filename, convert=False)
+    x_sendfile = downloader.x_sendfile
+    if x_sendfile:
+        x_filename = os.path.join(downloader.x_file_prefix, real_filename)
+    else:
+        x_filename = ''
+    return downloader.download(alt_filename, action='', real_filename=real_filename,
+                               x_sendfile=x_sendfile, x_filename=x_filename)
+
 class SimpleListView(object):
     def __init__(self, fields=None, query=None, 
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
