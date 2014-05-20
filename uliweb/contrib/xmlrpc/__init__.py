@@ -39,24 +39,24 @@ def xmlrpc(func, name=None):
                 else:
                     __xmlrpc_functions__[f_name] = rule
     else:
-        raise Exception, "Can't support this type [%r]" % func
+        raise Exception("Can't support this type [%r]" % func)
     return func
     
 if __name__ == '__main__':
     @xmlrpc
     def f(name):
-        print name
+        print (name)
         
-    print __xmlrpc_functions__
+    print (__xmlrpc_functions__)
     
     @xmlrpc('B')
     class A(object):
         def p(self):
-            print 'ppp'
+            print ('ppp')
             
         @xmlrpc('test')
         def t(self):
-            print 'ttt'
+            print ('ttt')
             
-    print __xmlrpc_functions__
+    print (__xmlrpc_functions__)
     

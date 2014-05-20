@@ -1,4 +1,4 @@
-def _wrap_result(result, request, response, env):
+def _wrap_result(handler, result, request, response, env):
     return result
 
 def xmlrpc():
@@ -18,7 +18,7 @@ def xmlrpc():
         else:
             xml = xmlrpclib.dumps(xmlrpclib.Fault(-32400, 'system error: Cannot find or call %s' % m), methodresponse=1)
             log.debug('xmlrpc error: Cannot find or call %s' % m)
-    except Exception, e:
+    except Exception as e:
         xml = xmlrpclib.dumps(xmlrpclib.Fault(-32400, 'system error: %s' % e), methodresponse=1)
         log.exception('xmlrpc error')
     response = Response(xml, content_type='text/xml; charset=utf-8')

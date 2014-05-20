@@ -64,32 +64,32 @@ def soap(func=None, name=None, returns=None, args=None, doc=None, target='SOAP')
                 else:
                     target_functions[f_name] = endpoint
     else:
-        raise Exception, "Can't support this type [%r]" % func
+        raise Exception("Can't support this type [%r]" % func)
     return func
     
 if __name__ == '__main__':
     @soap
     def f(name):
-        print name
+        print (name)
         
     @soap('GetName', returns={'Int':int}, args={'a':int})
     def p(a):
-        print a
+        print (a)
         
     @soap(returns={'Int':int}, args={'a':int})
     def d(a):
-        print a
+        print (a)
     
-    print __soap_functions__
+    print (__soap_functions__)
     
     @soap('B')
     class A(object):
         def p(self):
-            print 'ppp'
+            print ('ppp')
             
         @soap('test')
         def t(self):
-            print 'ttt'
+            print ('ttt')
             
-    print __soap_functions__
+    print (__soap_functions__)
     
