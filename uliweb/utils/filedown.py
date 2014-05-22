@@ -114,7 +114,7 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
         headers.append(('Content-Disposition', 'inline; %s' % d_filename))
     if x_sendfile:
         if not x_header_name or not x_filename:
-            raise Exception, "x_header_name or x_filename can't be empty"
+            raise Exception("x_header_name or x_filename can't be empty")
         headers.append((x_header_name, x_filename))
         return Response('', status=200, headers=headers,
             direct_passthrough=True)
@@ -129,7 +129,7 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
             rbegin,rend = range.ranges[0]
             try:
                 fsize = os.path.getsize(real_filename)
-            except OSError,e:
+            except OSError as e:
                 return Response("Not found",status=404)
             if (rbegin+1)<fsize:
                 if rend == None:

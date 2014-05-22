@@ -1453,7 +1453,7 @@ def download_file(filename):
     real_filename = downloader.get_filename(filename, convert=False)
     x_sendfile = downloader.x_sendfile
     if x_sendfile:
-        x_filename = os.path.join(downloader.x_file_prefix, real_filename)
+        x_filename = os.path.join(downloader.x_file_prefix, filename)
     else:
         x_filename = ''
     return downloader.download(alt_filename, action='', real_filename=real_filename,

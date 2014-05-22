@@ -33,8 +33,6 @@ except:
     from sets import Set as set
 
 local = Local()
-local.request = None
-local.response = None
 __global__ = Global()
 local_manager = LocalManager([local])
 url_map = Map()
