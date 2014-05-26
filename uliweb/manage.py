@@ -1061,64 +1061,16 @@ class FindCommand(Command):
         filename = None
         template_file = None
         if not tree:
-            for dir in application.template_dirs:
-                filename = os.path.join(dir, template)
-                if os.path.exists(filename):
-                    if not template_file:
-                        template_file = filename
-                    print filename.replace('\\', '/')
-        else:
-            tree_ids = {}
-            nodes = {}
-                    
-            def make_tree(alist):
-                parents = []
-                for p, c, prop in alist:
-                    _ids = tree_ids.setdefault(p, [])
-                    _ids.append(c)
-                    nodes[c] = {'id':c, 'prop':prop}
-                    parents.append(p)
-                
-                d = list(set(parents) - set(nodes.keys()))
-                for x in d:
-                    nodes[x] = {'id':x, 'prop':''}
-                return d
-                    
-            def print_tree(subs, cur=None, level=1, indent=4):
-                for x in subs:
-                    n = nodes[x]
-                    caption = ('(%s)' % n['prop']) if n['prop'] else ''
-                    if cur == n['id']:
-                        print '-'*(level*indent-1)+'>', '%s%s' % (caption, n['id'])
-                    else:
-                        print ' '*level*indent, '%s%s' % (caption, n['id'])
-                    print_tree(tree_ids.get(x, []), cur=cur, level=level+1, indent=indent)
-            
-            templates = []
-            path = os.getcwd()
-            for dir in application.template_dirs:
-                filename = os.path.join(dir, template)
-                if os.path.exists(filename):
-                    if not template_file:
-                        template_file = filename
-                    
-                    print get_rel_filename(filename, path)
-                    print
-                    print '-------------- Tree --------------'
-                    break
-            if filename:
-                def see(action, cur_filename, filename):
-                    #templates(get_rel_filename(filename, path), cur_filename, action)
-                    if action == 'extend':
-                        templates.append((get_rel_filename(filename, path), get_rel_filename(cur_filename, path), action))
-                    else:
-                        templates.append((get_rel_filename(cur_filename, path), get_rel_filename(filename, path), action))
-                    
-                t = Template(open(filename, 'rb').read(), vars={}, dirs=application.template_dirs, see=see)
-                t.set_filename(filename)
-                t.get_parsed_code()
+            files = application.template_loader.find_templates(template)
+            if files:
+                template_file = files[0]
 
-                print_tree(make_tree(templates), get_rel_filename(filename, path))
+                for x in files:
+                    print x
+            else:
+                print 'Not Found'
+        else:
+            application.template_loader.print_tree(template)
                 
         if template_file and blocks:
             print

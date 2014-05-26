@@ -390,31 +390,19 @@ def is_in_web():
     return getattr(local, 'in_web', False)
 
 class Loader(object):
-    def __init__(self, tmpfilename, vars, env, dirs, notest=False):
-        self.tmpfilename = tmpfilename
-        self.dirs = dirs
-        self.vars = vars
-        self.env = env
-        self.notest = notest
-        
+    def __init__(self, filename, template_loader):
+        self.filename = filename
+        self.loader = template_loader
+
     def get_source(self, exc_type, exc_value, exc_info, tb):
-        from uliweb.core.template import Template
-        t = Template('', self.vars, self.env, self.dirs)
-        t.set_filename(self.tmpfilename)
-        use_temp_flag, filename, text = t.get_parsed_code()
-        
+        code = self.loader.load(self.filename).code
         if exc_type is SyntaxError:
             import re
             r = re.search(r'line (\d+)', str(exc_value))
             lineno = int(r.group(1))
         else:
             lineno = tb.tb_frame.f_lineno
-        return self.tmpfilename, lineno, text 
-    
-    def test(self, filename):
-        if self.notest:
-            return True
-        return filename.endswith('.html')
+        return self.filename, lineno, code
     
 class Dispatcher(object):
     installed = False
@@ -447,7 +435,7 @@ class Dispatcher(object):
         Dispatcher.apps_dir = norm_path(os.path.join(project_dir, 'apps'))
         Dispatcher.apps = get_apps(self.apps_dir, self.include_apps, self.settings_file, self.local_settings_file)
         Dispatcher.modules = self.collect_modules()
-        
+
         self.install_settings(self.modules['settings'])
         
         #process global_objects
@@ -471,9 +459,8 @@ class Dispatcher(object):
         
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_dirs = self.get_template_dirs()
-        Dispatcher.template_processors = {}
-        self.install_template_processors()
-        
+        Dispatcher.tmplate_loader = self.install_template_loader(Dispatcher.template_dirs)
+
         #begin to start apps
         self.install_apps()
         dispatch.call(self, 'after_init_apps')
@@ -609,42 +596,35 @@ class Dispatcher(object):
                 return path
         return None
     
-    def get_template_processor(self, filename):
-        ext = os.path.splitext(filename)[1]
-        if ext in self.template_processors:
-            return self.template_processors[ext]['func'], self.template_processors[ext]['args']
-        else:
-            return template.template_file, {}
+    def install_template_loader(self, dirs):
+        Loader = import_attr(settings.get_var('TEMPLATE_PROCESSOR/loader'))
+        args = settings.get_var('TEMPLATE')
+        if self.debug:
+            args['check_modified_time'] = True
+        return Loader(dirs, **args)
 
-    def template(self, filename, vars=None, env=None, dirs=None, default_template=None):
+    def template(self, filename, vars=None, env=None, default_template=None):
         vars = vars or {}
-        dirs = dirs or self.template_dirs
         env = env or self.get_view_env()
         
-        func, kwargs = self.get_template_processor(filename)
-        
         if self.debug:
-            def _compile(code, filename, action, env, Loader=Loader):
-                env['__loader__'] = Loader(filename, vars, env, dirs, notest=True)
+            def _compile(code, filename, action):
+                env['__loader__'] = Loader(filename, self.template_loader)
                 try:
                     return compile(code, filename, 'exec')
                 except:
 #                    file('out.html', 'w').write(code)
                     raise
-            
-            return func(filename, vars, env, dirs, default_template, compile=_compile, **kwargs)
+
+            self.template_loader._compile = _compile
+            t = self.template_loader.load(filename, default_template=default_template)
+            return t.generate(vars, env)
         else:
-            return func(filename, vars, env, dirs, default_template, **kwargs)
+            t = self.template_loader.load(filename, default_template=default_template)
+            return t.generate(vars, env)
     
-    def render_text(self, text, vars=None, env=None, dirs=None, default_template=None):
-        vars = vars or {}
-        env = env or self.get_view_env()
-        dirs = dirs or self.template_dirs
-        
-        return template.template(text, vars, env, dirs, default_template)
-    
-    def render(self, templatefile, vars, env=None, dirs=None, default_template=None, content_type='text/html', status=200):
-        return Response(self.template(templatefile, vars, env, dirs, default_template=default_template), status=status, content_type=content_type)
+    def render(self, templatefile, vars, env=None, default_template=None, content_type='text/html', status=200):
+        return Response(self.template(templatefile, vars, env, default_template=default_template), status=status, content_type=content_type)
     
     def _page_not_found(self, description=None, **kwargs):
         description = 'The requested URL "{{=url}}" was not found on the server.'
@@ -977,11 +957,6 @@ class Dispatcher(object):
             except BaseException, e:
                 log.exception(e)
             
-    def install_template_processors(self):
-        for v in settings.TEMPLATE_PROCESSORS.values():
-            for ext in v.get('file_exts', []):
-                self.template_processors[ext] = {'func':import_attr(v['processor']), 'args':v.get('args', {})}
-        
     def install_settings(self, s):
 #        settings = pyini.Ini()
         for v in s:
