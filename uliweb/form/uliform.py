@@ -232,7 +232,7 @@ class BaseField(object):
     def validate(self, data):
         if hasattr(data, 'stream'):
             data.file = data.stream
-            
+
         if hasattr(data, 'file'):
             if data.file:
                 v = data.filename
@@ -501,7 +501,7 @@ class CheckboxSelectField(SelectField):
 class FileField(BaseField):
     default_build = File
     
-    def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, upload_to=None, upload_to_sub=None, **kwargs):
+    def __init__(self, label='', upload_to=None, upload_to_sub=None, **kwargs):
         BaseField.__init__(self, label=label, **kwargs)
         self.upload_to = upload_to
         self.upload_to_sub = upload_to_sub
