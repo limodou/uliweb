@@ -1,9 +1,10 @@
 def startup_installed(sender):
     from uliweb.core import template
-    from tags import LinkNode, UseNode
+    from .tags import link, use, htmlmerge
     
-    template.register_node('link', LinkNode)
-    template.register_node('use', UseNode)
+    template.default_namespace['link'] = link
+    template.default_namespace['use'] = use
+    template.default_namespace['htmlmerge'] = htmlmerge
 
 def init_static_combine():
     """

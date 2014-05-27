@@ -459,7 +459,7 @@ class Dispatcher(object):
         
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_dirs = self.get_template_dirs()
-        Dispatcher.tmplate_loader = self.install_template_loader(Dispatcher.template_dirs)
+        Dispatcher.template_loader = self.install_template_loader(Dispatcher.template_dirs)
 
         #begin to start apps
         self.install_apps()

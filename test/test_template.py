@@ -253,6 +253,18 @@ def test_def():
     <BLANKLINE>
     """
 
+def test_def_multiple_lines():
+    """
+    >>> d = {}
+    >>> txt = '''{{def t(x):
+    ...     out.write(x)
+    ...     pass}}
+    ... {{t('ok')}}'''
+    >>> print (template(txt, d))
+    <BLANKLINE>
+    ok
+    """
+
 def test_begin_end_tags():
     """
     >>> d = {}
@@ -562,3 +574,4 @@ def test_print_blocks():
             main   (templates/b/parent.html)
             side   (templates/a/layout.html)
     """
+

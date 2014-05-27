@@ -1012,6 +1012,8 @@ class FindCommand(Command):
             help='Display blocks defined in a template, only available when searching template.'),
         make_option('--with-filename', dest='with_filename', action='store_true', 
             help='Display blocks defined in a template with template filename.'),
+        make_option('--source', dest='source', action='store_true',
+            help='Output generated python source code of template.'),
     )
     
     def handle(self, options, global_options, *args):
@@ -1019,7 +1021,8 @@ class FindCommand(Command):
         if options.url:
             self._find_url(options.url)
         elif options.template:
-            self._find_template(options.template, options.tree, options.blocks, options.with_filename)
+            self._find_template(options.template, options.tree,
+                    options.blocks, options.with_filename, options.source)
         elif options.static:
             self._find_static(global_options, options.static)
         elif options.model:
@@ -1042,13 +1045,12 @@ class FindCommand(Command):
         except NotFound:
             print 'Not Found'
 
-    def _find_template(self, template, tree, blocks, with_filename):
+    def _find_template(self, template, tree, blocks, with_filename, source):
         """
         If tree is true, then will display the track of template extend or include
         """
         from uliweb import application
-        from uliweb.core.template import Template, BaseBlockNode
-        
+
         def get_rel_filename(filename, path):
             f1 = os.path.splitdrive(filename)[1]
             f2 = os.path.splitdrive(path)[1]
@@ -1058,8 +1060,8 @@ class FindCommand(Command):
             else:
                 return f
         
-        filename = None
         template_file = None
+
         if not tree:
             files = application.template_loader.find_templates(template)
             if files:
@@ -1067,36 +1069,22 @@ class FindCommand(Command):
 
                 for x in files:
                     print x
+
+                if source:
+                    print
+                    print '---------------- source of %s ---------------' % template
+                    t = application.template_loader.load(template_file)
+                    if t:
+                        print t.code
+                        print
+
             else:
                 print 'Not Found'
         else:
             application.template_loader.print_tree(template)
                 
         if template_file and blocks:
-            print
-            print '-------------- Blocks --------------'
-            t = Template(open(template_file, 'rb').read(), vars={}, dirs=application.template_dirs)
-            t.set_filename(template)
-            t.get_parsed_code()
-            
-            path = os.getcwd()
-            
-            def p(node, tab=4):
-                for x in node.nodes:
-                    if isinstance(x, BaseBlockNode):
-                        if x.name in t.content.root.block_vars:
-                            x = t.content.root.block_vars[x.name][-1]
-                            _file = x.template_file
-                        else:
-                            _file = x.template_file
-                        
-                        f = get_rel_filename(_file, path)
-                        if with_filename:
-                            print ' '*tab + x.name, '  ('+f+')'
-                        else:
-                            print ' '*tab + x.name
-                        p(x, tab+4)
-            p(t.content)
+            application.template_loader.print_blocks(template, with_filename)
             
     def _find_static(self, global_options, static):
         from uliweb import get_app_dir

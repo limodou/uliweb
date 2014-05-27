@@ -634,6 +634,18 @@ except ImportError:
 _DEFAULT_AUTOESCAPE = "xhtml_escape"
 _UNSET = object()
 
+default_namespace = {
+    "escape": xhtml_escape,
+    "xhtml_escape": xhtml_escape,
+    "url_escape": url_escape,
+    "json_encode": json_encode,
+    "squeeze": squeeze,
+    "linkify": linkify,
+    "datetime": datetime,
+    "_tt_utf8": utf8,  # for internal use
+    "_tt_string_types": (unicode_type, bytes_type),
+}
+
 class Template(object):
     """A compiled template.
 
@@ -658,6 +670,7 @@ class Template(object):
         self._compile = _compile or compile
         self.debug = debug
         self.see = see
+        self.has_links = False
         if compress_whitespace is None:
             compress_whitespace = name.endswith(".html") or \
                 name.endswith(".js")
@@ -687,20 +700,12 @@ class Template(object):
     def generate(self, vars=None, env=None):
         """Generate this template with the given arguments."""
         namespace = {
-            "escape": xhtml_escape,
-            "xhtml_escape": xhtml_escape,
-            "url_escape": url_escape,
-            "json_encode": json_encode,
-            "squeeze": squeeze,
-            "linkify": linkify,
-            "datetime": datetime,
-            "_tt_utf8": utf8,  # for internal use
-            "_tt_string_types": (unicode_type, bytes_type),
             # __name__ and __loader__ allow the traceback mechanism to find
             # the generated source code.
             "__name__": self.name.replace('.', '_'),
             "__loader__": ObjectDict(get_source=lambda name: self.code),
         }
+        namespace.update(default_namespace)
         namespace.update(env or {})
         namespace.update(self.namespace)
         namespace.update(vars or {})
@@ -723,7 +728,7 @@ class Template(object):
                 ancestor.find_named_blocks(loader, named_blocks)
             writer = _CodeWriter(buffer, named_blocks, loader, ancestors[0].template,
                                  compress_whitespace)
-            ancestors[0].generate(writer)
+            ancestors[0].generate(writer, self.has_links)
             return buffer.getvalue()
         finally:
             buffer.close()
@@ -734,29 +739,37 @@ class Template(object):
             if isinstance(chunk, _ExtendsBlock):
                 if not loader:
                     raise ParseError("%s extends %s block found, but no "
-                                     "template loader" % (self.begin_tag, self.end_tag))
+                                    "template loader on file %s" % (self.begin_tag,
+                                    self.end_tag, self.filename))
                 template = loader.load(chunk.name, skip=self.filename,
                                     skip_original=self.name)
+                #process depends
                 self.depends.add(template.filename)
                 self.depends.update(template.depends)
                 if self.see:
                     self.see('extend', self.filename, template.filename)
+                #process has_links
+                if template.has_links:
+                    self.has_links = True
                 ancestors.extend(template._get_ancestors(loader))
         return ancestors
 
-from collections import OrderedDict
 from time import time
 
 class LRUTmplatesCacheDict(object):
     """ A dictionary-like object, supporting LRU caching semantics.
     """
+
+    __slots__ = ['max_size', 'check_modified_time', '__values',
+                 '__access_keys', '__modified_times']
+
     def __init__(self, max_size=None, check_modified_time=False):
         self.max_size = max_size
         self.check_modified_time = check_modified_time
 
         self.__values = {}
-        self.__access_times = OrderedDict()
-        self.__modified_times = OrderedDict()
+        self.__access_keys = []
+        self.__modified_times = {}
 
     def __len__(self):
         return len(self.__values)
@@ -766,7 +779,7 @@ class LRUTmplatesCacheDict(object):
         Clears the dict.
         """
         self.__values.clear()
-        self.__access_times.clear()
+        self.__access_keys = []
         self.__modified_times.clear()
 
     def __contains__(self, key):
@@ -786,10 +799,13 @@ class LRUTmplatesCacheDict(object):
         return True
 
     def __setitem__(self, key, value):
-        t = int(time())
         self.__delitem__(key)
         self.__values[key] = value
-        self.__access_times[key] = t
+        try:
+            pos = self.__access_keys.remove(key)
+        except ValueError:
+            pass
+        self.__access_keys.insert(0, key)
         if self.check_modified_time:
             self.__modified_times[key] = os.path.getmtime(key)
         self.cleanup()
@@ -803,10 +819,8 @@ class LRUTmplatesCacheDict(object):
             if mtime != self.__modified_times[key]:
                 self.__delitem__(key)
                 return None
-        t = int(time())
-        del self.__access_times[key]
-        self.__access_times[key] = t
-        self.cleanup()
+        self.__access_keys.remove(key)
+        self.__access_keys.insert(0, key)
         return v
 
     def __delitem__(self, key):
@@ -814,18 +828,15 @@ class LRUTmplatesCacheDict(object):
             del self.__values[key]
             if self.check_modified_time:
                 del self.__modified_times[key]
-            del self.__access_times[key]
+            self.__access_keys.remove(key)
 
     def cleanup(self):
         if not self.max_size: return
-        items = sorted([(y, x) for x, y in self.__access_times.items()])
-        #If we have more than self.max_size items, delete the oldest
-        while (len(self.__values) > self.max_size):
-            t, k = items[0]
-            self.__delitem__(k)
+        for i in range(len(self.__access_keys)-1, self.max_size, -1):
+            key = self.__access_keys.pop()
+            self.__delitem__(key)
 
     def keys(self):
-        self.cleanup()
         return self.__values.keys()
 
 class Loader(object):
@@ -1082,7 +1093,7 @@ class _File(_Node):
         self.body = body
         self.line = 0
 
-    def generate(self, writer):
+    def generate(self, writer, has_links):
         writer.write_line("def _tt_execute():", self.line)
         with writer.indent():
             writer.write_line("_tt_buffer = []", self.line)
@@ -1090,9 +1101,22 @@ class _File(_Node):
             writer.write_line("def _tt_write(t, escape=True):", self.line)
             writer.write_line("    if escape: _tt_append(xhtml_escape(t))", self.line)
             writer.write_line("    else: _tt_append(t)", self.line)
+            writer.write_line("    pass", self.line)
             writer.write_line("out_write = _tt_append", self.line)
+
+            if has_links:
+                writer.write_line("_tt_links = {'toplinks': [], 'bottomlinks': []}", self.line)
+                writer.write_line("def _tt_use(name):", self.line)
+                writer.write_line("    use(_tt_links, name)", self.line)
+                writer.write_line("    pass", self.line)
+                writer.write_line("def _tt_link(name, media=None, to='toplinks'):", self.line)
+                writer.write_line("    link(_tt_links, name, media, to)", self.line)
+                writer.write_line("    pass", self.line)
             self.body.generate(writer)
-            writer.write_line("return _tt_utf8('').join(_tt_buffer)", self.line)
+            if has_links:
+                writer.write_line("return htmlmerge(_tt_utf8('').join(_tt_buffer))", self.line)
+            else:
+                writer.write_line("return _tt_utf8('').join(_tt_buffer)", self.line)
 
     def each_child(self):
         return (self.body,)
@@ -1153,6 +1177,8 @@ class _IncludeBlock(_Node):
         self.template.depends.add(included.filename)
         if loader.see:
             loader.see('include', self.template.filename, included.filename)
+        if included.has_links:
+            self.template.has_links = True
         included.file.find_named_blocks(loader, named_blocks)
 
     def see_named_blocks(self, loader, named_blocks, see=None, indent=0):
@@ -1277,6 +1303,31 @@ class _Text(_Node):
         if value:
             writer.write_line('_tt_append(%r)' % utf8(value), self.line)
 
+class _Use(_Node):
+    def __init__(self, value, line, template):
+        self.value = value
+        self.line = line
+        self.template = template
+        self.template.has_links = True
+
+    def generate(self, writer):
+        value = self.value
+        if value:
+            writer.write_line('_tt_use(%s)' % value, self.line)
+
+class _Link(_Node):
+    def __init__(self, value, line, template):
+        self.value = value
+        self.line = line
+        self.template = template
+        self.template.has_links = True
+
+
+    def generate(self, writer):
+        value = self.value
+        if value:
+            writer.write_line('_tt_link(%s)' % value, self.line)
+
 
 class ParseError(Exception):
     """Raised for template syntax errors."""
@@ -1395,6 +1446,7 @@ def _format_code(code):
     format = "%%%dd  %%s\n" % len(repr(len(lines) + 1))
     return "".join([format % (i + 1, line) for (i, line) in enumerate(lines)])
 
+r_out_write = re.compile(r'out\.write|out.xml', re.DOTALL)
 
 def _parse(reader, template, in_block=None, in_loop=None,
            begin_tag=BEGIN_TAG, end_tag=END_TAG, debug=False, see=None):
@@ -1422,8 +1474,9 @@ def _parse(reader, template, in_block=None, in_loop=None,
             if curly == -1 or curly + _len_b == reader.remaining():
                 # EOF
                 if in_block:
-                    raise ParseError("Missing %s end %s block for %s" %
-                                     (begin_tag, end_tag, in_block))
+                    raise ParseError("Missing %s end %s block for %s on line %s:%d" %
+                                     (begin_tag, end_tag, in_block, template.filename,
+                                     reader.line))
                 body.chunks.append(_Text(reader.consume(), reader.line))
                 return body
             # If the first curly brace is not the start of a special token,
@@ -1434,10 +1487,10 @@ def _parse(reader, template, in_block=None, in_loop=None,
             # When there are more than 2 curlies in a row, use the
             # innermost ones.  This is useful when generating languages
             # like latex where curlies are also meaningful
-            if (curly + _len_b + 1< reader.remaining() and
-                    reader[curly + 2] == '{' and reader[curly + 3] == '{'):
-                curly += 1
-                continue
+            # if (curly + _len_b + 1< reader.remaining() and
+            #         reader[curly + 2] == '{' and reader[curly + 3] == '{'):
+            #     curly += 1
+            #     continue
             break
 
         # Append any text before the special token
@@ -1541,7 +1594,8 @@ def _parse(reader, template, in_block=None, in_loop=None,
                 raise ParseError("Extra %s end %s block on line %d" % (begin_tag, end_tag, line))
             return body
 
-        elif operator in ("extend", "extends", "include", "embed", "BEGIN_TAG", "END_TAG"):
+        elif operator in ("extend", "extends", "include", "embed",
+                          "BEGIN_TAG", "END_TAG", "use", "link"):
             if operator in ("extend", "extends"):
                 suffix = suffix.strip('"').strip("'")
                 if not suffix:
@@ -1552,6 +1606,10 @@ def _parse(reader, template, in_block=None, in_loop=None,
                 if not suffix:
                     raise ParseError("include missing file path on line %d" % line)
                 block = _IncludeBlock(suffix, reader, line, template)
+            elif operator == "use":
+                block = _Use(suffix, line, template)
+            elif operator == "link":
+                block = _Link(suffix, line, template)
             elif operator == "embed":
                 warnings.simplefilter('default')
                 warnings.warn("embed is not supported any more, just replace it with '<<'.", DeprecationWarning)
@@ -1563,7 +1621,7 @@ def _parse(reader, template, in_block=None, in_loop=None,
             body.chunks.append(block)
             continue
 
-        elif operator in ("apply", "block", "try", "if", "for", "while", "def"):
+        elif operator in ("apply", "block", "try", "if", "for", "while"):
             # parse inner body recursively
             if operator in ("for", "while"):
                 block_body = _parse(reader, template, operator, operator,
@@ -1579,30 +1637,43 @@ def _parse(reader, template, in_block=None, in_loop=None,
 
             if operator == "apply":
                 if not suffix:
-                    raise ParseError("apply missing method name on line %d" % line)
+                    raise ParseError("apply missing method name on line %s:%d" % (template.filename,
+                                  line))
                 block = _ApplyBlock(suffix, line, block_body)
             elif operator == "block":
                 if not suffix:
-                    raise ParseError("block missing name on line %d" % line)
+                    raise ParseError("block missing name on line %s:%d" % (template.filename, line))
                 block = _NamedBlock(suffix, block_body, template, line)
             else:
                 block = _ControlBlock(contents, line, block_body)
             body.chunks.append(block)
             continue
 
+        elif operator == 'def':
+            #if def is multiple lines, then just treats it as common statments
+            if operator == 'def' and '\n' in suffix:
+                for i, x in enumerate(contents.splitlines()):
+                    txt = r_out_write.sub('out_write', x)
+                    body.chunks.append(_Statement(txt, line+i))
+                    continue
+            else:
+                block_body = _parse(reader, template, operator, None,
+                        begin_tag, end_tag, debug=debug, see=see)
+                block = _ControlBlock(contents, line, block_body)
+                body.chunks.append(block)
+                continue
         elif operator in ("break", "continue"):
             if not in_loop:
-                raise ParseError("%s outside %s block" % (operator, set(["for", "while"])))
+                raise ParseError("%s outside %s block on line %s:%d" % (operator,
+                                    set(["for", "while"]), template.filename, line))
             body.chunks.append(_Statement(contents, line))
             continue
 
         else:
             #add multiple lines support
             for i, x in enumerate(contents.splitlines()):
-                x = x.replace('out.write', 'out_write')
-                body.chunks.append(_Statement(x, line+i))
-
-            # raise ParseError("unknown operator: %r" % operator)
+                txt = r_out_write.sub('out_write', x)
+                body.chunks.append(_Statement(txt, line+i))
 
 
 def template(text, vars=None, env=None, **kwargs):
