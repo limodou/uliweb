@@ -3,6 +3,8 @@ import re
 from uliweb.utils.common import log
 from uliweb.core.template import *
 from uliweb import functions
+import warnings
+import inspect
 
 r_links = re.compile('<link\s+.*?\s*href\s*=\s*"?(.*?)["\s>]|<script\s+.*?\s*src\s*=\s*"?(.*?)["\s>]', re.I)
 r_head = re.compile('(?i)<head>(.*?)</head>', re.DOTALL)
@@ -46,8 +48,9 @@ def find(plugin, *args, **kwargs):
     from uliweb import application as app, settings
     from uliweb.utils.common import is_pyfile_exist
 
-    if plugin in __use_cached__:
-        return __use_cached__[plugin]
+    key = (plugin, args, tuple(kwargs.items()))
+    if key in __use_cached__:
+        return __use_cached__[key]
 
     if plugin in __saved_template_plugins_modules__:
         mod = __saved_template_plugins_modules__[plugin]
@@ -102,7 +105,17 @@ def find(plugin, *args, **kwargs):
         v = None
         call = getattr(mod, 'call', None)
         if call:
-            v = call(app, {}, {}, *args, **kwargs)
+            para = inspect.getargspec(call)[0]
+            #test if the funtion is defined as old style
+            if ['app', 'var', 'env'] == para[:3]:
+                v = call(app, {}, {}, *args, **kwargs)
+                warnings.simplefilter('default')
+                warnings.warn("Tmplate plugs call function should be defined"
+                              " as call(*args, **kwargs) no (app, var, env) any more",
+                              DeprecationWarning)
+
+            else:
+                v = call(*args, **kwargs)
 
     toplinks = []
     bottomlinks = []
@@ -110,19 +123,19 @@ def find(plugin, *args, **kwargs):
         if 'depends' in v:
             for _t in v['depends']:
                 if isinstance(_t, str):
-                    t, b = use(env, _t)
+                    t, b = find(_t)
                 else:
                     d, kw = _t
-                    t, b = use(env, d, **kw)
+                    t, b = find(d, **kw)
                 toplinks.extend(t)
                 bottomlinks.extend(b)
         if 'toplinks' in v:
-            links = v[toplinks]
+            links = v['toplinks']
             if not isinstance(links, (tuple, list)):
                 links = [links]
             toplinks.extend(links)
         if 'bottomlinks' in v:
-            links = v[bottomlinks]
+            links = v['bottomlinks']
             if not isinstance(links, (tuple, list)):
                 links = [links]
             bottomlinks.extend(links)
@@ -136,7 +149,7 @@ def find(plugin, *args, **kwargs):
                 toplinks.extend(t)
                 bottomlinks.extend(b)
 
-    __use_cached__[plugin] = toplinks, bottomlinks
+    __use_cached__[key] = toplinks, bottomlinks
     return toplinks, bottomlinks
     
 class HtmlMerge(object):

@@ -34,7 +34,10 @@ def import_mod_attr(path):
         mod = __import__(module, fromlist=['*'])
         f = mod
         for x in func.split('.'):
-            f = getattr(f, x)
+            try:
+                f = getattr(f, x)
+            except:
+                raise AttributeError("Get %s attribute according %s error" % (x, path))
     else:
         f = path
         mod = inspect.getmodule(path)

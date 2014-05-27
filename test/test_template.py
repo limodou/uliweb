@@ -260,7 +260,7 @@ def test_def_multiple_lines():
     ...     out.write(x)
     ...     pass}}
     ... {{t('ok')}}'''
-    >>> print (template(txt, d))
+    >>> print (template(txt, d, multilines=True))
     <BLANKLINE>
     ok
     """
@@ -402,7 +402,7 @@ def test_error_1():
     ...     print (template("<html>{{= v </html>", d))
     ... except ParseError as e:
     ...     print (e)
-    Missing end expression }} on line 1
+    Missing end expression }} on line <string>:1
     """
 
 def test_default_template():
@@ -575,3 +575,110 @@ def test_print_blocks():
             side   (templates/a/layout.html)
     """
 
+def test_use_template_plugins():
+    """
+    >>> from uliweb.manage import make_simple_application
+    >>> app = make_simple_application(project_dir='templates/Test')
+    >>> from uliweb import application as app
+    >>> print (app.template_loader.load('index.html').generate())
+    <html>
+    <head>
+    <script type="text/javascript" src="/static/jquery.js"></script>
+    <script type="text/javascript" src="/static/jquery.utils.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/test.css"/>
+    </head>
+    <body>
+    <BLANKLINE>
+    <BLANKLINE>
+    <BLANKLINE>
+    </body>
+    </html>
+    <BLANKLINE>
+    """
+
+def test_use_config():
+    """
+    >>> from uliweb.manage import make_simple_application
+    >>> app = make_simple_application(project_dir='templates/Test')
+    >>> from uliweb import application as app
+    >>> print (app.template_loader.load('test1.html').generate())
+    <html>
+    <head>
+    <script type="text/javascript" src="/static/jquery.js"></script>
+    <script type="text/javascript" src="/static/jquery.utils.js"></script>
+    <link rel="stylesheet" type="text/css" href="/static/test.css"/>
+    <script type="text/javascript" src="/static/avalon/avalon.1.3.min.js"></script>
+    </head>
+    <body>
+    <BLANKLINE>
+    <BLANKLINE>
+    <BLANKLINE>
+    <BLANKLINE>
+    <BLANKLINE>
+    </body>
+    </html>
+    <BLANKLINE>
+    """
+
+def test_skip_extern():
+    """
+    >>> dirs = [os.path.join(path, 'templates', x) for x in ['b', 'a']]
+    >>> loader = Loader(dirs, skip_extern=True)
+    >>> d = {'name':'uliweb'}
+    >>> print (loader.load('parent.html').generate(d))
+    <BLANKLINE>
+    <BLANKLINE>
+    <BLANKLINE>
+    <BLANKLINE>
+    """
+
+def test_custom_node_1():
+    """
+    >>> class Simple(BaseNode):
+    ...     def generate(self, writer):
+    ...         writer.write_line('ok(%s)' % self.statement, self.line)
+    >>> register_node('simple', Simple)
+    >>> print (template_py('{{simple "uliweb", 2, 3}}'))
+    def _tt_execute():  # <string>:0
+        _tt_buffer = []  # <string>:0
+        _tt_append = _tt_buffer.append  # <string>:0
+        def _tt_write(t, escape=True):  # <string>:0
+            if escape:  # <string>:0
+                _tt_append(xhtml_escape(t))  # <string>:0
+            else:  # <string>:0
+                _tt_append(t)  # <string>:0
+                pass  # <string>:0
+            pass  # <string>:0
+        out_write = _tt_append  # <string>:0
+        ok("uliweb", 2, 3)  # <string>:1
+        return _tt_utf8('').join(_tt_buffer)  # <string>:0
+    <BLANKLINE>
+    """
+
+def test_custom_node_2():
+    """
+    >>> class BlockTest(BaseBlockNode):
+    ...     def generate(self, writer):
+    ...         writer.write_line("if %s:" % self.statement, self.line)
+    ...         with writer.indent():
+    ...             self.body.generate(writer)
+    ...             writer.write_line("pass", self.line)
+    >>> register_node('blocktest', BlockTest)
+    >>> print (template_py('{{blocktest True}}abc{{end}}'))
+    def _tt_execute():  # <string>:0
+        _tt_buffer = []  # <string>:0
+        _tt_append = _tt_buffer.append  # <string>:0
+        def _tt_write(t, escape=True):  # <string>:0
+            if escape:  # <string>:0
+                _tt_append(xhtml_escape(t))  # <string>:0
+            else:  # <string>:0
+                _tt_append(t)  # <string>:0
+                pass  # <string>:0
+            pass  # <string>:0
+        out_write = _tt_append  # <string>:0
+        if True:  # <string>:1
+            _tt_append('abc')  # <string>:1
+            pass  # <string>:1
+        return _tt_utf8('').join(_tt_buffer)  # <string>:0
+    <BLANKLINE>
+    """

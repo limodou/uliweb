@@ -1,11 +1,5 @@
 from rbac import *
 
-def prepare_default_env(sender, env):
-    from uliweb import functions
-    
-    env['has_permission'] = functions.has_permission
-    env['has_role'] = functions.has_role
-    
 def after_init_apps(sender):
     from uliweb import settings
     from rbac import register_role_method
@@ -19,7 +13,7 @@ def after_init_apps(sender):
 
 def startup_installed(sender):
     from uliweb.core import template
-    from tags import PermissionNode, RoleNode
+    from .tags import PermissionNode, RoleNode
     
     template.register_node('permission', PermissionNode)
     template.register_node('role', RoleNode)

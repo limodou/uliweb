@@ -1014,6 +1014,8 @@ class FindCommand(Command):
             help='Display blocks defined in a template with template filename.'),
         make_option('--source', dest='source', action='store_true',
             help='Output generated python source code of template.'),
+        make_option('--comment', dest='comment', action='store_true',
+            help='Output generated python source code of template and also output comment for each line.'),
     )
     
     def handle(self, options, global_options, *args):
@@ -1022,7 +1024,8 @@ class FindCommand(Command):
             self._find_url(options.url)
         elif options.template:
             self._find_template(options.template, options.tree,
-                    options.blocks, options.with_filename, options.source)
+                    options.blocks, options.with_filename,
+                    options.source, options.comment)
         elif options.static:
             self._find_static(global_options, options.static)
         elif options.model:
@@ -1045,11 +1048,13 @@ class FindCommand(Command):
         except NotFound:
             print 'Not Found'
 
-    def _find_template(self, template, tree, blocks, with_filename, source):
+    def _find_template(self, template, tree, blocks, with_filename,
+                   source, comment):
         """
         If tree is true, then will display the track of template extend or include
         """
         from uliweb import application
+        from uliweb.core.template import _format_code
 
         def get_rel_filename(filename, path):
             f1 = os.path.splitdrive(filename)[1]
@@ -1063,6 +1068,7 @@ class FindCommand(Command):
         template_file = None
 
         if not tree:
+            application.template_loader.comment = comment
             files = application.template_loader.find_templates(template)
             if files:
                 template_file = files[0]
@@ -1075,7 +1081,7 @@ class FindCommand(Command):
                     print '---------------- source of %s ---------------' % template
                     t = application.template_loader.load(template_file)
                     if t:
-                        print t.code
+                        print _format_code(t.code).rstrip()
                         print
 
             else:

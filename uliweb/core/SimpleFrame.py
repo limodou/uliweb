@@ -212,7 +212,39 @@ def get_url_adapter(_domain_name):
     if domain.get('domain', ''):
         adapter = url_map.bind(domain['host'], url_scheme=domain.get('scheme', 'http'))
     else:
-        adapter = url_map.bind_to_environ(request.environ)
+        try:
+            env = request.environ
+        except:
+            #this env if for testing only
+            env = {
+                'HTTP_ACCEPT': 'text/html,application/xhtml+xml,application/xml;'
+                               'q=0.9,*/*;q=0.8',
+                'HTTP_ACCEPT_CHARSET': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+                'HTTP_ACCEPT_ENCODING': 'gzip,deflate,sdch',
+                'HTTP_ACCEPT_LANGUAGE': 'uk,en-US;q=0.8,en;q=0.6',
+                'HTTP_CACHE_CONTROL': 'max-age=0',
+                'HTTP_CONNECTION': 'keep-alive',
+                # 'HTTP_HOST': 'localhost:8080',
+                'HTTP_USER_AGENT': 'Mozilla/5.0 (X11; Linux i686)',
+                # 'PATH_INFO': '/',
+                # 'QUERY_STRING': '',
+                'REMOTE_ADDR': '127.0.0.1',
+                'REQUEST_METHOD': 'GET',
+                'REQUEST_URI': '/',
+                'SCRIPT_NAME': '',
+                'SERVER_NAME': 'localhost',
+                'SERVER_PORT': '8080',
+                'SERVER_PROTOCOL': 'HTTP/1.1',
+                'wsgi.errors': None,
+                'wsgi.file_wrapper': None,
+                # 'wsgi.input': BytesIO(ntob('', 'utf-8')),
+                'wsgi.multiprocess': False,
+                'wsgi.multithread': False,
+                'wsgi.run_once': False,
+                'wsgi.url_scheme': 'http',
+                'wsgi.version': (1, 0),
+            }
+        adapter = url_map.bind_to_environ(env)
     return adapter
 
 def url_for(endpoint, **values):
@@ -601,14 +633,18 @@ class Dispatcher(object):
         args = settings.get_var('TEMPLATE')
         if self.debug:
             args['check_modified_time'] = True
+            args['log'] = log
         return Loader(dirs, **args)
 
     def template(self, filename, vars=None, env=None, default_template=None):
         vars = vars or {}
         env = env or self.get_view_env()
         
+        # t = self.template_loader.load(filename, default_template=default_template)
+        # return t.generate(vars, env)
+
         if self.debug:
-            def _compile(code, filename, action):
+            def _compile(code, filename, action, **kwargs):
                 env['__loader__'] = Loader(filename, self.template_loader)
                 try:
                     return compile(code, filename, 'exec')
