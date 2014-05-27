@@ -1,6 +1,11 @@
 Uliweb Change Log
 =====================
 
+0.3.1 Version
+-----------------
+
+* Add qqmail mail server backend support, thanks to Yubin Wang <harry198344 AT gmail.com>
+
 0.3 Version
 -----------------
 
