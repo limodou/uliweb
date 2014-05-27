@@ -331,7 +331,7 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
     if os.path.exists(local_inifile):
         x = pyini.Ini(local_inifile)
         if x:
-            installed_apps.extend(x.GLOBAL.get('INSTALLED_APPS', []))
+            installed_apps.extend(x.get('GLOBAL',{}).get('INSTALLED_APPS', []))
 
     installed_apps.extend(include_apps)
 
