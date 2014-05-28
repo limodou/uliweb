@@ -1012,6 +1012,10 @@ class FindCommand(Command):
             help='Display blocks defined in a template, only available when searching template.'),
         make_option('--with-filename', dest='with_filename', action='store_true', 
             help='Display blocks defined in a template with template filename.'),
+        make_option('--source', dest='source', action='store_true',
+            help='Output generated python source code of template.'),
+        make_option('--comment', dest='comment', action='store_true',
+            help='Output generated python source code of template and also output comment for each line.'),
     )
     
     def handle(self, options, global_options, *args):
@@ -1019,7 +1023,9 @@ class FindCommand(Command):
         if options.url:
             self._find_url(options.url)
         elif options.template:
-            self._find_template(options.template, options.tree, options.blocks, options.with_filename)
+            self._find_template(options.template, options.tree,
+                    options.blocks, options.with_filename,
+                    options.source, options.comment)
         elif options.static:
             self._find_static(global_options, options.static)
         elif options.model:
@@ -1042,13 +1048,14 @@ class FindCommand(Command):
         except NotFound:
             print 'Not Found'
 
-    def _find_template(self, template, tree, blocks, with_filename):
+    def _find_template(self, template, tree, blocks, with_filename,
+                   source, comment):
         """
         If tree is true, then will display the track of template extend or include
         """
         from uliweb import application
-        from uliweb.core.template import Template, BaseBlockNode
-        
+        from uliweb.core.template import _format_code
+
         def get_rel_filename(filename, path):
             f1 = os.path.splitdrive(filename)[1]
             f2 = os.path.splitdrive(path)[1]
@@ -1058,93 +1065,35 @@ class FindCommand(Command):
             else:
                 return f
         
-        filename = None
         template_file = None
-        if not tree:
-            for dir in application.template_dirs:
-                filename = os.path.join(dir, template)
-                if os.path.exists(filename):
-                    if not template_file:
-                        template_file = filename
-                    print filename.replace('\\', '/')
-        else:
-            tree_ids = {}
-            nodes = {}
-                    
-            def make_tree(alist):
-                parents = []
-                for p, c, prop in alist:
-                    _ids = tree_ids.setdefault(p, [])
-                    _ids.append(c)
-                    nodes[c] = {'id':c, 'prop':prop}
-                    parents.append(p)
-                
-                d = list(set(parents) - set(nodes.keys()))
-                for x in d:
-                    nodes[x] = {'id':x, 'prop':''}
-                return d
-                    
-            def print_tree(subs, cur=None, level=1, indent=4):
-                for x in subs:
-                    n = nodes[x]
-                    caption = ('(%s)' % n['prop']) if n['prop'] else ''
-                    if cur == n['id']:
-                        print '-'*(level*indent-1)+'>', '%s%s' % (caption, n['id'])
-                    else:
-                        print ' '*level*indent, '%s%s' % (caption, n['id'])
-                    print_tree(tree_ids.get(x, []), cur=cur, level=level+1, indent=indent)
-            
-            templates = []
-            path = os.getcwd()
-            for dir in application.template_dirs:
-                filename = os.path.join(dir, template)
-                if os.path.exists(filename):
-                    if not template_file:
-                        template_file = filename
-                    
-                    print get_rel_filename(filename, path)
-                    print
-                    print '-------------- Tree --------------'
-                    break
-            if filename:
-                def see(action, cur_filename, filename):
-                    #templates(get_rel_filename(filename, path), cur_filename, action)
-                    if action == 'extend':
-                        templates.append((get_rel_filename(filename, path), get_rel_filename(cur_filename, path), action))
-                    else:
-                        templates.append((get_rel_filename(cur_filename, path), get_rel_filename(filename, path), action))
-                    
-                t = Template(open(filename, 'rb').read(), vars={}, dirs=application.template_dirs, see=see)
-                t.set_filename(filename)
-                t.get_parsed_code()
 
-                print_tree(make_tree(templates), get_rel_filename(filename, path))
+        if not tree:
+            application.template_loader.comment = comment
+            files = application.template_loader.find_templates(template)
+            if files:
+                template_file = files[0]
+
+                for x in files:
+                    print x
+
+                if source:
+                    print
+                    print '---------------- source of %s ---------------' % template
+                    t = application.template_loader.load(template_file)
+                    if t and comment:
+                        print _format_code(t.code).rstrip()
+                        print
+                    else:
+                        print t.code
+                        print
+
+            else:
+                print 'Not Found'
+        else:
+            application.template_loader.print_tree(template)
                 
         if template_file and blocks:
-            print
-            print '-------------- Blocks --------------'
-            t = Template(open(template_file, 'rb').read(), vars={}, dirs=application.template_dirs)
-            t.set_filename(template)
-            t.get_parsed_code()
-            
-            path = os.getcwd()
-            
-            def p(node, tab=4):
-                for x in node.nodes:
-                    if isinstance(x, BaseBlockNode):
-                        if x.name in t.content.root.block_vars:
-                            x = t.content.root.block_vars[x.name][-1]
-                            _file = x.template_file
-                        else:
-                            _file = x.template_file
-                        
-                        f = get_rel_filename(_file, path)
-                        if with_filename:
-                            print ' '*tab + x.name, '  ('+f+')'
-                        else:
-                            print ' '*tab + x.name
-                        p(x, tab+4)
-            p(t.content)
+            application.template_loader.print_blocks(template, with_filename)
             
     def _find_static(self, global_options, static):
         from uliweb import get_app_dir

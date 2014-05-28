@@ -804,15 +804,9 @@ def main():
             if options.verbose:
                 print ('Working on %s') % filename
             if filename.endswith('.html'):
-                from uliweb.core import template
+                from uliweb.core.template import template_file_py
                 from cStringIO import StringIO
-                import re
-                re_include=re.compile('\{\{\s*include\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
-                re_extend=re.compile('\s*\{\{\s*extend\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
-                text = file(filename, 'rb').read()
-                text = re_include.sub('', text)
-                text = re_extend.sub('', text)
-                text = template.render_text(text)
+                text = template_file_py(filename, skip_extern=True)
                 fp = StringIO(text)
             else:
                 fp = open(filename)
@@ -852,6 +846,9 @@ def main():
 
 def extrace_files(files, outputfile, opts=None, vars=None):
     global _py_ext
+    import logging
+
+    log = logging.getLogger('pygettext')
     
     opts = opts or {}
     vars = vars or {}
@@ -901,13 +898,8 @@ def extrace_files(files, outputfile, opts=None, vars=None):
         if filename.endswith('.html'):
             from uliweb.core import template
             from cStringIO import StringIO
-            import re
-            re_include=re.compile('\{\{\s*include\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
-            re_extend=re.compile('\s*\{\{\s*extend\s+(?P<name>.+?)\s*\}\}',re.DOTALL)
-            text = file(filename, 'rb').read()
-            text = re_include.sub('', text)
-            text = re_extend.sub('', text)
-            text = template.Template(text, skip_error=True).parse()
+            from uliweb.core.template import template_file_py
+            text = template_file_py(filename, skip_extern=True, log=log)
             fp = StringIO(text)
             closep = 0
         else:

@@ -1,754 +1,1669 @@
-#! /usr/bin/env python
-#coding=utf-8
+#!/usr/bin/env python
+#
+# Copyright 2009 Facebook
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+# This version is modified by limodou, in order to compatiable with uliweb
+#
 
+from __future__ import absolute_import, division, print_function, with_statement
+
+import sys
+import datetime
+import linecache
+import os.path
 import re
-import os
-import StringIO
-import cgi
+import threading
+import shutil
+import warnings
 
-__templates_temp_dir__ = 'tmp/templates_temp'
-__options__ = {'use_temp_dir':False}
-__nodes__ = {}   #user defined nodes
+#################################
+# escape module
+#################################
+class ObjectDict(dict):
+    """Makes a dictionary behave like an object, with attribute-style access.
+    """
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name)
+
+    def __setattr__(self, name, value):
+        self[name] = value
+
+if type('') is not type(b''):
+    def u(s):
+        return s
+    bytes_type = bytes
+    unicode_type = str
+    basestring_type = str
+else:
+    def u(s):
+        return s.decode('unicode_escape')
+    bytes_type = str
+    unicode_type = unicode
+    basestring_type = basestring
+
+if sys.version_info > (3,):
+    exec("""
+def raise_exc_info(exc_info):
+    raise exc_info[1].with_traceback(exc_info[2])
+
+def exec_in(code, glob, loc=None):
+    if isinstance(code, str):
+        code = compile(code, '<string>', 'exec', dont_inherit=True)
+    exec(code, glob, loc)
+""")
+else:
+    exec("""
+def raise_exc_info(exc_info):
+    raise exc_info[0], exc_info[1], exc_info[2]
+
+def exec_in(code, glob, loc=None):
+    if isinstance(code, basestring):
+        # exec(string) inherits the caller's future imports; compile
+        # the string first to prevent that.
+        code = compile(code, '<string>', 'exec', dont_inherit=True)
+    exec code in glob, loc
+""")
+
+try:
+    from urllib.parse import parse_qs as _parse_qs  # py3
+except ImportError:
+    from urlparse import parse_qs as _parse_qs  # Python 2.6+
+
+try:
+    import htmlentitydefs  # py2
+except ImportError:
+    import html.entities as htmlentitydefs  # py3
+
+try:
+    import urllib.parse as urllib_parse  # py3
+except ImportError:
+    import urllib as urllib_parse  # py2
+
+import json
+
+try:
+    unichr
+except NameError:
+    unichr = chr
+
+# _XHTML_ESCAPE_RE = re.compile('[&<>"\']')
+# _XHTML_ESCAPE_DICT = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;',
+#                       '\'': '&#39;'}
+_XHTML_ESCAPE_RE = re.compile('[&<>]')
+_XHTML_ESCAPE_DICT = {'&': '&amp;', '<': '&lt;', '>': '&gt;'}
+
+
+def xhtml_escape(value):
+    """Escapes a string so it is valid within HTML or XML.
+
+    Escapes the characters ``<``, ``>``, ``"``, ``'``, and ``&``.
+    When used in attribute values the escaped strings must be enclosed
+    in quotes.
+
+    .. versionchanged:: 3.2
+
+       Added the single quote to the list of escaped characters.
+    """
+    return _XHTML_ESCAPE_RE.sub(lambda match: _XHTML_ESCAPE_DICT[match.group(0)],
+                                to_basestring(value))
+
+
+def xhtml_unescape(value):
+    """Un-escapes an XML-escaped string."""
+    return re.sub(r"&(#?)(\w+?);", _convert_entity, _unicode(value))
+
+
+# The fact that json_encode wraps json.dumps is an implementation detail.
+# Please see https://github.com/facebook/tornado/pull/706
+# before sending a pull request that adds **kwargs to this function.
+def json_encode(value):
+    """JSON-encodes the given Python object."""
+    # JSON permits but does not require forward slashes to be escaped.
+    # This is useful when json data is emitted in a <script> tag
+    # in HTML, as it prevents </script> tags from prematurely terminating
+    # the javscript.  Some json libraries do this escaping by default,
+    # although python's standard library does not, so we do it here.
+    # http://stackoverflow.com/questions/1580647/json-why-are-forward-slashes-escaped
+    return json.dumps(value).replace("</", "<\\/")
+
+
+def json_decode(value):
+    """Returns Python objects for the given JSON string."""
+    return json.loads(to_basestring(value))
+
+
+def squeeze(value):
+    """Replace all sequences of whitespace chars with a single space."""
+    return re.sub(r"[\x00-\x20]+", " ", value).strip()
+
+
+def url_escape(value, plus=True):
+    """Returns a URL-encoded version of the given value.
+
+    If ``plus`` is true (the default), spaces will be represented
+    as "+" instead of "%20".  This is appropriate for query strings
+    but not for the path component of a URL.  Note that this default
+    is the reverse of Python's urllib module.
+
+    .. versionadded:: 3.1
+        The ``plus`` argument
+    """
+    quote = urllib_parse.quote_plus if plus else urllib_parse.quote
+    return quote(utf8(value))
+
+
+# python 3 changed things around enough that we need two separate
+# implementations of url_unescape.  We also need our own implementation
+# of parse_qs since python 3's version insists on decoding everything.
+if sys.version_info[0] < 3:
+    def url_unescape(value, encoding='utf-8', plus=True):
+        """Decodes the given value from a URL.
+
+        The argument may be either a byte or unicode string.
+
+        If encoding is None, the result will be a byte string.  Otherwise,
+        the result is a unicode string in the specified encoding.
+
+        If ``plus`` is true (the default), plus signs will be interpreted
+        as spaces (literal plus signs must be represented as "%2B").  This
+        is appropriate for query strings and form-encoded values but not
+        for the path component of a URL.  Note that this default is the
+        reverse of Python's urllib module.
+
+        .. versionadded:: 3.1
+           The ``plus`` argument
+        """
+        unquote = (urllib_parse.unquote_plus if plus else urllib_parse.unquote)
+        if encoding is None:
+            return unquote(utf8(value))
+        else:
+            return unicode_type(unquote(utf8(value)), encoding)
+
+    parse_qs_bytes = _parse_qs
+else:
+    def url_unescape(value, encoding='utf-8', plus=True):
+        """Decodes the given value from a URL.
+
+        The argument may be either a byte or unicode string.
+
+        If encoding is None, the result will be a byte string.  Otherwise,
+        the result is a unicode string in the specified encoding.
+
+        If ``plus`` is true (the default), plus signs will be interpreted
+        as spaces (literal plus signs must be represented as "%2B").  This
+        is appropriate for query strings and form-encoded values but not
+        for the path component of a URL.  Note that this default is the
+        reverse of Python's urllib module.
+
+        .. versionadded:: 3.1
+           The ``plus`` argument
+        """
+        if encoding is None:
+            if plus:
+                # unquote_to_bytes doesn't have a _plus variant
+                value = to_basestring(value).replace('+', ' ')
+            return urllib_parse.unquote_to_bytes(value)
+        else:
+            unquote = (urllib_parse.unquote_plus if plus
+                       else urllib_parse.unquote)
+            return unquote(to_basestring(value), encoding=encoding)
+
+    def parse_qs_bytes(qs, keep_blank_values=False, strict_parsing=False):
+        """Parses a query string like urlparse.parse_qs, but returns the
+        values as byte strings.
+
+        Keys still become type str (interpreted as latin1 in python3!)
+        because it's too painful to keep them as byte strings in
+        python3 and in practice they're nearly always ascii anyway.
+        """
+        # This is gross, but python3 doesn't give us another way.
+        # Latin1 is the universal donor of character encodings.
+        result = _parse_qs(qs, keep_blank_values, strict_parsing,
+                           encoding='latin1', errors='strict')
+        encoded = {}
+        for k, v in result.items():
+            encoded[k] = [i.encode('latin1') for i in v]
+        return encoded
+
+
+_UTF8_TYPES = (bytes_type, type(None))
+
+
+def utf8(value):
+    """Converts a string argument to a byte string.
+
+    If the argument is already a byte string or None, it is returned unchanged.
+    Otherwise it must be a unicode string and is encoded as utf8.
+    """
+    if isinstance(value, _UTF8_TYPES):
+        return value
+    elif isinstance(value, unicode_type):
+        return value.encode("utf-8")
+    else:
+        return str(value)
+
+_TO_UNICODE_TYPES = (unicode_type, type(None))
+
+
+def to_unicode(value):
+    """Converts a string argument to a unicode string.
+
+    If the argument is already a unicode string or None, it is returned
+    unchanged.  Otherwise it must be a byte string and is decoded as utf8.
+    """
+    if isinstance(value, _TO_UNICODE_TYPES):
+        return value
+    if not isinstance(value, bytes_type):
+        raise TypeError(
+            "Expected bytes, unicode, or None; got %r" % type(value)
+        )
+    return value.decode("utf-8")
+
+# to_unicode was previously named _unicode not because it was private,
+# but to avoid conflicts with the built-in unicode() function/type
+_unicode = to_unicode
+
+# When dealing with the standard library across python 2 and 3 it is
+# sometimes useful to have a direct conversion to the native string type
+if str is unicode_type:
+    native_str = to_unicode
+else:
+    native_str = utf8
+
+_BASESTRING_TYPES = (basestring_type, type(None))
+
+
+def to_basestring(value):
+    """Converts a string argument to a subclass of basestring.
+
+    In python2, byte and unicode strings are mostly interchangeable,
+    so functions that deal with a user-supplied argument in combination
+    with ascii string constants can use either and should return the type
+    the user supplied.  In python3, the two types are not interchangeable,
+    so this method is needed to convert byte strings to unicode.
+    """
+    if isinstance(value, _BASESTRING_TYPES):
+        return value
+    elif isinstance(value, unicode_type):
+        return value.decode("utf-8")
+    else:
+        return str(value)
+
+
+def recursive_unicode(obj):
+    """Walks a simple data structure, converting byte strings to unicode.
+
+    Supports lists, tuples, and dictionaries.
+    """
+    if isinstance(obj, dict):
+        return dict((recursive_unicode(k), recursive_unicode(v)) for (k, v) in obj.items())
+    elif isinstance(obj, list):
+        return list(recursive_unicode(i) for i in obj)
+    elif isinstance(obj, tuple):
+        return tuple(recursive_unicode(i) for i in obj)
+    elif isinstance(obj, bytes_type):
+        return to_unicode(obj)
+    else:
+        return obj
+
+# I originally used the regex from
+# http://daringfireball.net/2010/07/improved_regex_for_matching_urls
+# but it gets all exponential on certain patterns (such as too many trailing
+# dots), causing the regex matcher to never return.
+# This regex should avoid those problems.
+# Use to_unicode instead of tornado.util.u - we don't want backslashes getting
+# processed as escapes.
+_URL_RE = re.compile(to_unicode(r"""\b((?:([\w-]+):(/{1,3})|www[.])(?:(?:(?:[^\s&()]|&amp;|&quot;)*(?:[^!"#$%&'()*+,.:;<=>?@\[\]^`{|}~\s]))|(?:\((?:[^\s&()]|&amp;|&quot;)*\)))+)"""))
+
+
+def linkify(text, shorten=False, extra_params="",
+            require_protocol=False, permitted_protocols=["http", "https"]):
+    """Converts plain text into HTML with links.
+
+    For example: ``linkify("Hello http://tornadoweb.org!")`` would return
+    ``Hello <a href="http://tornadoweb.org">http://tornadoweb.org</a>!``
+
+    Parameters:
+
+    * ``shorten``: Long urls will be shortened for display.
+
+    * ``extra_params``: Extra text to include in the link tag, or a callable
+        taking the link as an argument and returning the extra text
+        e.g. ``linkify(text, extra_params='rel="nofollow" class="external"')``,
+        or::
+
+            def extra_params_cb(url):
+                if url.startswith("http://example.com"):
+                    return 'class="internal"'
+                else:
+                    return 'class="external" rel="nofollow"'
+            linkify(text, extra_params=extra_params_cb)
+
+    * ``require_protocol``: Only linkify urls which include a protocol. If
+        this is False, urls such as www.facebook.com will also be linkified.
+
+    * ``permitted_protocols``: List (or set) of protocols which should be
+        linkified, e.g. ``linkify(text, permitted_protocols=["http", "ftp",
+        "mailto"])``. It is very unsafe to include protocols such as
+        ``javascript``.
+    """
+    if extra_params and not callable(extra_params):
+        extra_params = " " + extra_params.strip()
+
+    def make_link(m):
+        url = m.group(1)
+        proto = m.group(2)
+        if require_protocol and not proto:
+            return url  # not protocol, no linkify
+
+        if proto and proto not in permitted_protocols:
+            return url  # bad protocol, no linkify
+
+        href = m.group(1)
+        if not proto:
+            href = "http://" + href   # no proto specified, use http
+
+        if callable(extra_params):
+            params = " " + extra_params(href).strip()
+        else:
+            params = extra_params
+
+        # clip long urls. max_len is just an approximation
+        max_len = 30
+        if shorten and len(url) > max_len:
+            before_clip = url
+            if proto:
+                proto_len = len(proto) + 1 + len(m.group(3) or "")  # +1 for :
+            else:
+                proto_len = 0
+
+            parts = url[proto_len:].split("/")
+            if len(parts) > 1:
+                # Grab the whole host part plus the first bit of the path
+                # The path is usually not that interesting once shortened
+                # (no more slug, etc), so it really just provides a little
+                # extra indication of shortening.
+                url = url[:proto_len] + parts[0] + "/" + \
+                    parts[1][:8].split('?')[0].split('.')[0]
+
+            if len(url) > max_len * 1.5:  # still too long
+                url = url[:max_len]
+
+            if url != before_clip:
+                amp = url.rfind('&')
+                # avoid splitting html char entities
+                if amp > max_len - 5:
+                    url = url[:amp]
+                url += "..."
+
+                if len(url) >= len(before_clip):
+                    url = before_clip
+                else:
+                    # full url is visible on mouse-over (for those who don't
+                    # have a status bar, such as Safari by default)
+                    params += ' title="%s"' % href
+
+        return u('<a href="%s"%s>%s</a>') % (href, params, url)
+
+    # First HTML-escape so that our strings are all safe.
+    # The regex is modified to avoid character entites other than &amp; so
+    # that we won't pick up &quot;, etc.
+    text = _unicode(xhtml_escape(text))
+    return _URL_RE.sub(make_link, text)
+
+
+def _convert_entity(m):
+    if m.group(1) == "#":
+        try:
+            return unichr(int(m.group(2)))
+        except ValueError:
+            return "&#%s;" % m.group(2)
+    try:
+        return _HTML_UNICODE_MAP[m.group(2)]
+    except KeyError:
+        return "&%s;" % m.group(2)
+
+
+def _build_unicode_map():
+    unicode_map = {}
+    for name, value in htmlentitydefs.name2codepoint.items():
+        unicode_map[name] = unichr(value)
+    return unicode_map
+
+_HTML_UNICODE_MAP = _build_unicode_map()
+
+#############################
+# template module
+#############################
 
 BEGIN_TAG = '{{'
 END_TAG = '}}'
-DEBUG = False
 
-class TemplateException(Exception): pass
-class ContextPopException(TemplateException):
-    "pop() has been called more times than push()"
-    pass
+try:
+    from cStringIO import StringIO  # py2
+except ImportError:
+    from io import StringIO  # py3
 
-def use_tempdir(dir=''):
-    global __options__, __templates_temp_dir__
-    
-    if dir:
-        __templates_temp_dir__ = dir
-        __options__['use_temp_dir'] = True
-        if not os.path.exists(__templates_temp_dir__):
-            os.makedirs(__templates_temp_dir__)
+_DEFAULT_AUTOESCAPE = "xhtml_escape"
+_UNSET = object()
 
-def set_options(**options):
+__custom_nodes__ = {}
+
+default_namespace = {
+    "escape": xhtml_escape,
+    "xhtml_escape": xhtml_escape,
+    "url_escape": url_escape,
+    "json_encode": json_encode,
+    "squeeze": squeeze,
+    "linkify": linkify,
+    "datetime": datetime,
+    "_tt_utf8": utf8,  # for internal use
+    "_tt_string_types": (unicode_type, bytes_type),
+}
+
+def register_node(name, node):
+    global __custom_nodes__
+
+    __custom_nodes__[name] = node
+
+def reindent(text, filename):
+    new_lines=[]
+    k=0
+    c=0
+    for n, raw_line in enumerate(text.splitlines()):
+        line=raw_line.strip()
+        if not line or line[0]=='#':
+            new_lines.append(line)
+            continue
+
+        line3 = line[:3]
+        line4 = line[:4]
+        line5 = line[:5]
+        line6 = line[:6]
+        line7 = line[:7]
+        if line3=='if ' or line4=='def ' or line4=='for ' or\
+            line6=='while ' or line6=='class ' or line5=='with ':
+            new_lines.append('    '*k+line)
+            k += 1
+            continue
+        elif line5=='elif ' or line5=='else:' or    \
+            line7=='except:' or line7=='except ' or \
+            line7=='finally:':
+                c = k-1
+                if c<0:
+                    # print (_format_code(text))
+                    raise ParseError("Extra pass founded on line %s:%d" % (filename, n))
+                new_lines.append('    '*c+line)
+                continue
+        else:
+            new_lines.append('    '*k+line)
+        if line=='pass' or line5=='pass ':
+            k-=1
+        if k<0: k = 0
+    text='\n'.join(new_lines)
+    return text
+
+class Template(object):
+    """A compiled template.
+
+    We compile into Python from the given template_string. You can generate
+    the template from variables with generate().
     """
-    default use_temp_dir=False
-    """
-    __options__.update(options)
+    # note that the constructor's signature is not extracted with
+    # autodoc because _UNSET looks like garbage.  When changing
+    # this signature update website/sphinx/template.rst too.
+    def __init__(self, template_string,
+                 begin_tag=BEGIN_TAG, end_tag=END_TAG,
+                 name="<string>", loader=None,
+                 compress_whitespace=None, filename=None,
+                 _compile=None, debug=False, see=None,
+                 skip_extern=False, log=None, multilines=False,
+                 comment=True):
+        """
+        :param filename: used to store the real filename
+        """
+        self.name = name
+        self.begin_tag = begin_tag
+        self.end_tag = end_tag
+        self.filename = filename or self.name
+        self._compile = _compile or compile
+        self.debug = debug
+        self.see = see
+        self.has_links = False
+        self.skip_extern = skip_extern
+        self.log = log
+        self.multilines = multilines
+        self.comment = comment
+        if compress_whitespace is None:
+            compress_whitespace = name.endswith(".html") or \
+                name.endswith(".js")
+        self.autoescape = None
+        self.namespace = loader.namespace if loader else {}
+        self.depends = set() #saving depends filenames such as extend, include
+        reader = _TemplateReader(name, native_str(template_string))
+        self.file = _File(self, _parse(reader, self, begin_tag=self.begin_tag,
+                                       end_tag=self.end_tag, debug=self.debug,
+                                       see=self.see))
+        self.code = self._generate_python(loader, compress_whitespace)
+        self.loader = loader
+        try:
+            # Under python2.5, the fake filename used here must match
+            # the module name used in __name__ below.
+            # The dont_inherit flag prevents template.py's future imports
+            # from being applied to the generated code.
+            self.compiled = self._compile(
+                to_unicode(self.code),
+                # "%s.generated.py" % self.name,
+                self.name,
+                "exec", dont_inherit=True)
+        except Exception:
+            formatted_code = _format_code(self.code).rstrip()
+            if self.log:
+                self.log.error("%s code:\n%s", self.name, formatted_code)
+            raise
 
-def get_temp_template(filename):
-    if __options__['use_temp_dir']:
+    def generate(self, vars=None, env=None):
+        """Generate this template with the given arguments."""
+        def defined(v, default=None):
+            _v = default
+            if v in vars:
+                _v = vars[v]
+            elif v in env:
+                _v = env[v]
+            return _v
+
+        namespace = {
+            # __name__ and __loader__ allow the traceback mechanism to find
+            # the generated source code.
+            "defined": defined,
+            "__name__": self.filename,
+            "__loader__": ObjectDict(get_source=lambda name: self.code),
+        }
+        namespace.update(default_namespace)
+        namespace.update(env or {})
+        namespace.update(self.namespace)
+        namespace.update(vars or {})
+        namespace['_vars'] = vars
+        # print (namespace.keys())
+        exec_in(self.compiled, namespace)
+        execute = namespace["_tt_execute"]
+        # Clear the traceback module's cache of source data now that
+        # we've generated a new template (mainly for this module's
+        # unittests, where different tests reuse the same name).
+        linecache.clearcache()
+        return execute()
+
+    def _generate_python(self, loader, compress_whitespace):
+        buffer = StringIO()
+        try:
+            # named_blocks maps from names to _NamedBlock objects
+            named_blocks = {}
+            ancestors = self._get_ancestors(loader)
+            ancestors.reverse()
+            for ancestor in ancestors:
+                ancestor.find_named_blocks(loader, named_blocks)
+            writer = _CodeWriter(buffer, named_blocks, loader, ancestors[0].template,
+                                 compress_whitespace, comment=self.comment)
+            ancestors[0].generate(writer, self.has_links)
+            code =  buffer.getvalue()
+            if self.multilines:
+                return reindent(code, self.filename)
+            else:
+                return code
+        finally:
+            buffer.close()
+
+    def _get_ancestors(self, loader):
+        ancestors = [self.file]
+        for chunk in self.file.body.chunks:
+            if isinstance(chunk, _ExtendsBlock):
+                if not loader:
+                    raise ParseError("%s extends %s block found, but no "
+                                    "template loader on file %s" % (self.begin_tag,
+                                    self.end_tag, self.filename))
+                template = loader.load(chunk.name, skip=self.filename,
+                                    skip_original=self.name)
+                #process depends
+                self.depends.add(template.filename)
+                self.depends.update(template.depends)
+                if self.see:
+                    self.see('extend', self.filename, template.filename)
+                #process has_links
+                if template.has_links:
+                    self.has_links = True
+                ancestors.extend(template._get_ancestors(loader))
+        return ancestors
+
+from time import time
+
+class LRUTmplatesCacheDict(object):
+    """ A dictionary-like object, supporting LRU caching semantics.
+    """
+
+    __slots__ = ['max_size', 'check_modified_time', '__values',
+                 '__access_keys', '__modified_times']
+
+    def __init__(self, max_size=None, check_modified_time=False):
+        self.max_size = max_size
+        self.check_modified_time = check_modified_time
+
+        self.__values = {}
+        self.__access_keys = []
+        self.__modified_times = {}
+
+    def __len__(self):
+        return len(self.__values)
+
+    def clear(self):
+        """
+        Clears the dict.
+        """
+        self.__values.clear()
+        self.__access_keys = []
+        self.__modified_times.clear()
+
+    def __contains__(self, key):
+        """
+        This method should almost NEVER be used. The reason is that between the time
+        has_key is called, and the key is accessed, the key might vanish.
+
+        """
+        v = self.__values.get(key, None)
+        if not v:
+            return False
+        if self.check_modified_time:
+            mtime = os.path.getmtime(key)
+            if mtime != self.__modified_times[key]:
+                self.__delitem__(key)
+                return False
+        return True
+
+    def __setitem__(self, key, value):
+        self.__delitem__(key)
+        self.__values[key] = value
+        try:
+            pos = self.__access_keys.remove(key)
+        except ValueError:
+            pass
+        self.__access_keys.insert(0, key)
+        if self.check_modified_time:
+            self.__modified_times[key] = os.path.getmtime(key)
+        self.cleanup()
+
+    def __getitem__(self, key):
+        v = self.__values.get(key, None)
+        if not v:
+            return None
+        if self.check_modified_time:
+            mtime = os.path.getmtime(key)
+            if mtime != self.__modified_times[key]:
+                self.__delitem__(key)
+                return None
+        self.__access_keys.remove(key)
+        self.__access_keys.insert(0, key)
+        return v
+
+    def __delitem__(self, key):
+        if key in self.__values:
+            del self.__values[key]
+            if self.check_modified_time:
+                del self.__modified_times[key]
+            self.__access_keys.remove(key)
+
+    def cleanup(self):
+        if not self.max_size: return
+        for i in range(len(self.__access_keys)-1, self.max_size, -1):
+            key = self.__access_keys.pop()
+            self.__delitem__(key)
+
+    def keys(self):
+        return self.__values.keys()
+
+class Loader(object):
+    """A template loader that loads from a single root directory.
+    """
+    def __init__(self, dirs, namespace=None, cache=True, use_tmp=False,
+                 tmp_dir='tmp/templates_temp', begin_tag=BEGIN_TAG,
+                 end_tag=END_TAG, debug=False, see=None, max_size=None,
+                 _compile=None, check_modified_time=False, skip_extern=False,
+                 log=None, multilines=False, comment=True):
+        self.dirs = dirs
+        self.namespace = namespace or {}
+        self.cache = cache
+        self.use_tmp = use_tmp
+        self.tmp_dir = tmp_dir
+        self.check_modified_time = check_modified_time
+        self.templates = LRUTmplatesCacheDict(max_size=max_size,
+                        check_modified_time=check_modified_time)
+        self.begin_tag = begin_tag
+        self.end_tag = end_tag
+        self.debug = debug
+        self.see = see
+        self._compile = compile
+        self.lock = threading.RLock()
+        self.skip_extern = skip_extern
+        self.log = log
+        self.multilines = multilines
+        self.comment = comment
+
+        #init tmp_dir
+        if self.cache and self.tmp_dir:
+            if not os.path.exists(self.tmp_dir):
+                os.makedirs(self.tmp_dir)
+
+
+    def reset(self):
+        """Resets the cache of compiled templates."""
+        with self.lock:
+            if self.cache:
+                if self.use_tmp:
+                    shutil.rmtree(self.tmp_dir, ignore_errors=True)
+                else:
+                    self.templates = {}
+
+    def load(self, name, skip='', skip_original='', default_template=None):
+        """Loads a template."""
+        filename = self.resolve_path(name, skip=skip, skip_original=skip_original,
+                                     default_template=default_template)
+
+        if not filename:
+            raise ParseError("Can't find template %s." % name)
+
+        with self.lock:
+            if self.cache:
+                if not self.use_tmp:
+                    if filename in self.templates:
+                        t = self.templates[filename]
+                        check = self.check_expiration(t)
+                        if not check:
+                            return t
+                else:
+                    #get cached file from disk
+                    pass
+            t = self._create_template(name, filename)
+            if self.cache:
+                if not self.use_tmp:
+                    self.templates[filename] = t
+                else:
+                    #save cached file to disk
+                    pass
+
+            return t
+
+    def resolve_path(self, filename, skip='', skip_original='',
+                     default_template=None):
+        """
+        Fetch the template filename according dirs
+        :para skip: if the searched filename equals skip, then using the one before.
+        """
+        def _file(filename, dirs):
+            for d in dirs:
+                _f = os.path.normpath(os.path.join(d, filename))
+                if os.path.exists(_f):
+                    yield _f
+            raise StopIteration
+
+        filename = os.path.normpath(filename)
+        skip = os.path.normpath(skip)
+        skip_original = os.path.normpath(skip_original)
+
+        if os.path.exists(filename):
+            return filename
+
+        if filename and self.dirs:
+            _files = _file(filename, self.dirs)
+            if skip_original == filename:
+                for f in _files:
+                    if f == skip:
+                        break
+
+            for f in _files:
+                if f != skip:
+                    return f
+                else:
+                    continue
+
+        if default_template:
+            if not isinstance(default_template, (tuple, list)):
+                default_template = [default_template]
+            for x in default_template:
+                filename = self.resolve_path(x)
+                if filename:
+                    return filename
+
+    def _create_template(self, name, filename, _compile=None, see=None):
+        if not os.path.exists(filename):
+            raise ParseError("The file %s is not existed." % filename)
+
+        with open(filename, "rb") as f:
+            template = Template(f.read(), name=name, loader=self,
+                                begin_tag=self.begin_tag, end_tag=self.end_tag,
+                                debug=self.debug, see=self.see,
+                                filename=filename, _compile=self._compile,
+                                skip_extern=self.skip_extern, log=self.log,
+                                multilines=self.multilines,
+                                comment=self.comment)
+        return template
+
+    def _get_temp_template(self, filename):
         f, filename = os.path.splitdrive(filename)
         filename = filename.replace('\\', '_')
         filename = filename.replace('/', '_')
         f, ext = os.path.splitext(filename)
         filename = f + '.py'
-        return os.path.normpath(os.path.join(__templates_temp_dir__, filename))
-    return filename
+        return os.path.normpath(os.path.join(self.tmp_dir, filename))
 
-def register_node(name, node):
-    assert issubclass(node, Node)
-    __nodes__[name] = node
+    def find_templates(self, filename):
+        files = []
+        if os.path.exists(filename):
+            return [filename]
 
-def reindent(text):
-    lines=text.split('\n')
-    new_lines=[]
-    credit=k=0
-    for raw_line in lines:
-        line=raw_line.strip()
-        if not line or line[0]=='#':
-            new_lines.append(line)
-            continue
-        if line[:5]=='elif ' or line[:5]=='else:' or    \
-            line[:7]=='except:' or line[:7]=='except ' or \
-            line[:7]=='finally:' or line[:5]=='with ':
-                k=k+credit-1
-        if k<0: k=0
-        new_lines.append('    '*k+line)
-        credit=0
-        if line=='pass' or line[:5]=='pass ':
-            credit=0
-            k-=1
-#        if line=='return' or line[:7]=='return ' or \
-#            line=='continue' or line[:9]=='continue ' or \
-#            line=='break' or line[:6]=='break':
-#            credit=1
-#            k-=1
-        if line[-1:]==':' or line[:3]=='if ':
-            k+=1
-    text='\n'.join(new_lines)
-    return text
+        for dir in self.dirs:
+            _filename = os.path.join(dir, filename)
+            if os.path.exists(_filename):
+                _filename = _filename.replace('\\', '/')
+                files.append(_filename)
+        return files
 
-def get_templatefile(filename, dirs, default_template=None, skip='', skip_original=''):
-    """
-    Fetch the template filename according dirs
-    :para skip: if the searched filename equals skip, then using the one before.
-    """
-    def _file(filename, dirs):
-        for d in dirs:
-            _f = os.path.normpath(os.path.join(d, filename))
-            if os.path.exists(_f):
-                yield _f
-        raise StopIteration
-    
-    filename = os.path.normpath(filename)
-    skip = os.path.normpath(skip)
-    skip_original = os.path.normpath(skip_original)
-    
-    if os.path.exists(filename):
-        return filename
-    
-    if filename and dirs:
-        _files = _file(filename, dirs)
-        if skip_original == filename:
-            for f in _files:
-                if f == skip:
-                    break
-                
-        for f in _files:
-            if f != skip:
+    def check_expiration(self, template):
+        for f in template.depends:
+            if f not in self.templates:
                 return f
-            else:
-                continue
-            
-    if default_template:
-        if isinstance(default_template, (list, tuple)):
-            for i in default_template:
-                f = get_templatefile(i, dirs)
-                if f:
-                    return f
+            # t = self.load(f)
+            # x = self.check_expiration(t)
+            # if x:
+            #     return x
+
+        return False
+
+    def _get_rel_filename(self, filename, path):
+        f1 = os.path.splitdrive(filename)[1]
+        f2 = os.path.splitdrive(path)[1]
+        f = os.path.relpath(f1, f2).replace('\\', '/')
+        if f.startswith('..'):
+            return filename.replace('\\', '/')
         else:
-            return get_templatefile(default_template, dirs)
+            return f
 
-def parse_arguments(text, key='with'):
-    r = re.compile(r'\s+%s\s+' % key)
-    k = re.compile(r'^\s*([\w][a-zA-Z_0-9]*\s*)=\s*(.*)')
-    b = r.split(text)
-    if len(b) == 1:
-        name, args, kwargs = b[0], (), {}
-    else:
-        name = b[0]
-        s = b[1].split(',')
-        args = []
-        kwargs = {}
-        for x in s:
-            ret = k.search(x)
-            if ret:
-                kwargs[ret.group(1)] = ret.group(2)
-            else:
-                args.append(x)
-                
-    return name, args, kwargs
+    def print_tree(self, filename, path=None):
+        tree_ids = {}
+        nodes = {}
 
-def eval_vars(vs, vars, env):
-    if isinstance(vs, (tuple, list)):
-        return [eval_vars(x, vars, env) for x in vs]
-    elif isinstance(vs, dict):
-        return dict([(x, eval_vars(y, vars, env)) for x, y in vs.iteritems()])
-    else:
-        return eval(vs, env, vars)
+        def make_tree(alist):
+            parents = []
+            for p, c, prop in alist:
+                _ids = tree_ids.setdefault(p, [])
+                _ids.append(c)
+                nodes[c] = {'id':c, 'prop':prop}
+                parents.append(p)
 
-def get_tag(begin_tag, end_tag):
-    r = (
-        '(' + re.escape(begin_tag) + '##.*?##' + re.escape(end_tag) + '|' +
-            re.escape(begin_tag) + '.*?' + re.escape(end_tag) + 
-        ')')
-    return re.compile(r, re.DOTALL|re.M)
+            d = list(set(parents) - set(nodes.keys()))
+            for x in d:
+                nodes[x] = {'id':x, 'prop':''}
+            return d
 
-r_tag = re.compile('^#uliweb-template-tag:(.+?),(.+?)(:\r|\n|\r\n)')
-
-class Node(object):
-    block = 0
-    var = False
-    def __init__(self, value=None, content=None):
-        self.value = value
-        self.content = content
-        
-    def __str__(self):
-        if self.value:
-            return self.value
-        else:
-            return ''
-        
-    def __repr__(self):
-        return self.__str__()
-    
-class BaseBlockNode(Node):
-    def __init__(self, name='', content=None):
-        self.nodes = []
-        self.name = name
-        self.content = content
-        self.block = 1
-        
-    def add(self, node):
-        self.nodes.append(node)
-
-    def end(self):
-        pass
-    
-    def __repr__(self):
-        s = ['{{BaseBlockNode %s}}' % self.name]
-        for x in self.nodes:
-            s.append(repr(x))
-        s.append('{{end}}')
-        return ''.join(s)
-    
-    def __str__(self):
-        return self.render()
-    
-    def render(self):
-        s = []
-        for x in self.nodes:
-            s.append(str(x))
-        return ''.join(s)
-    
-class BlockNode(BaseBlockNode):
-    def add(self, node):
-        self.nodes.append(node)
-        if isinstance(node, BlockNode):
-            v = self.content.root.block_vars.setdefault(node.name, [])
-            v.append(node)
-        
-    def merge(self, content):
-        self.nodes.extend(content.nodes)
-    
-    def render(self, top=True):
-        """
-        Top: if output the toppest block node
-        """
-        if top and self.name in self.content.root.block_vars and self is not self.content.root.block_vars[self.name][-1]:
-            return self.content.root.block_vars[self.name][-1].render(False)
-        
-        s = []
-        for x in self.nodes:
-            if isinstance(x, BlockNode):
-                if x.name in self.content.root.block_vars:
-                    s.append(str(self.content.root.block_vars[x.name][-1]))
+        def print_tree(subs, cur=None, level=1, indent=4):
+            for x in subs:
+                n = nodes[x]
+                caption = ('(%s)' % n['prop']) if n['prop'] else ''
+                if cur == n['id']:
+                    print ('-'*(level*indent-1)+'>', '%s%s' % (caption, n['id']))
                 else:
-                    s.append(str(x))
+                    print (' '*level*indent, '%s%s' % (caption, n['id']))
+                print_tree(tree_ids.get(x, []), cur=cur, level=level+1, indent=indent)
+
+        _filename = ''
+        templates = []
+        path = path or os.getcwd()
+        for p in self.dirs:
+            _filename = os.path.join(p, filename)
+            if os.path.exists(_filename):
+                print (self._get_rel_filename(_filename, path))
+                print ()
+                print ('-------------- Tree --------------')
+
+                break
+        if _filename:
+            def see(action, cur_filename, filename):
+                #templates(get_rel_filename(filename, path), cur_filename, action)
+                if action == 'extend':
+                    x = (self._get_rel_filename(filename, path), self._get_rel_filename(cur_filename, path), action)
+                else:
+                    x = (self._get_rel_filename(cur_filename, path), self._get_rel_filename(filename, path), action)
+                if not x in templates:
+                    templates.append(x)
+            self.see = see
+            self.cache = False
+            t = self.load(filename)
+
+            print_tree(make_tree(templates), self._get_rel_filename(_filename, path))
+
+    def print_blocks(self, filename, with_filename=True, path=None):
+        print ('-------------- Blocks --------------')
+        t = self.load(filename)
+
+        path = path or os.getcwd()
+        blocks = {}
+        block_names = []
+
+        def see(name, filename, indent=0):
+            if name not in blocks:
+                block_names.append(name)
+                blocks[name] = {'filename':filename, 'indent':indent}
             else:
-                s.append(str(x))
-        if DEBUG:
-            s.insert(0, 'out.write("<!-- BLOCK %s (%s) -->\\n", escape=False)\n' % (self.name, self.template_file.replace('\\', '/')))
-            s.append('out.write("<!-- END %s -->\\n", escape=False)\n' % self.name)
-        return ''.join(s)
-        
-class SuperNode(Node):
-    def __init__(self, parent, content):
-        self.parent = parent
-        self.content = content
-        
-    def __str__(self):
-        for i, v in enumerate(self.content.root.block_vars[self.parent.name]):
-            if self.parent is v:
-                if i > 0:
-                    return self.content.root.block_vars[self.parent.name][i-1].render(False)
-        return ''
-    
-    def __repr__(self):
-        return '{{super}}'
+                blocks[name]['filename'] = filename
 
-class Content(BaseBlockNode):
-    def __init__(self, root=None):
-        self.nodes = []
-        self.block_vars = {}
-        self.begin = []
-        self.end = []
-        self.root = root or self
-        
-    def add(self, node):
-        self.nodes.append(node)
-        if isinstance(node, BlockNode):
-            if node.name:
-                v = self.block_vars.setdefault(node.name, [])
-                v.append(node)
-        
-    def merge(self, content):
-        self.nodes.extend(content.nodes)
-        for k, v in content.block_vars.items():
-            d = self.block_vars.setdefault(k, [])
-            d.extend(v)
-        content.root = self.root
-        
-    def clear_content(self):
-        self.nodes = []
-    
-    def __str__(self):
-        s = self.begin[:]
-        for x in self.nodes:
-            s.append(str(x))
-        s.extend(self.end)
-        return ''.join(s)
-    
-    def __repr__(self):
-        s = []
-        for x in self.nodes:
-            s.append(repr(x))
-        return ''.join(s)
+        named_blocks = {}
+        ancestors = t._get_ancestors(self)
+        ancestors.reverse()
+        for ancestor in ancestors:
+            ancestor.see_named_blocks(self, named_blocks, see, 0)
 
-class Context(object):
-    "A stack container for variable context"
-    def __init__(self, dict_=None):
-        dict_ = dict_ or {}
-        self.dicts = [dict_]
-        self.dirty = True
-        self.result = None
+        for name in block_names:
+            filename, indent = blocks[name]['filename'], blocks[name]['indent']
+            f = self._get_rel_filename(filename, path)
+            if with_filename:
+                print ('    '*indent + name, '  ('+f+')')
+            else:
+                print ('    '*indent + name)
 
-    def __repr__(self):
-        return repr(self.dicts)
 
-    def __iter__(self):
-        for d in self.dicts:
-            yield d
+class _Node(object):
+    def each_child(self):
+        return ()
 
-    def push(self):
-        d = {}
-        self.dicts = [d] + self.dicts
-        self.dirty = True
-        return d
+    def generate(self, writer):
+        raise NotImplementedError()
 
-    def pop(self):
-        if len(self.dicts) == 1:
-            raise ContextPopException
-        return self.dicts.pop(0)
-        self.dirty = True
+    def find_named_blocks(self, loader, named_blocks):
+        for child in self.each_child():
+            child.find_named_blocks(loader, named_blocks)
 
-    def __setitem__(self, key, value):
-        "Set a variable in the current context"
-        self.dicts[0][key] = value
-        self.dirty = True
+    def see_named_blocks(self, loader, named_blocks, see=None, indent=0):
+        for child in self.each_child():
+            child.see_named_blocks(loader, named_blocks, see, indent)
+
+class _File(_Node):
+    def __init__(self, template, body):
+        self.template = template
+        self.body = body
+        self.line = 0
+
+    def generate(self, writer, has_links):
+        writer.write_line("def _tt_execute():", self.line)
+        with writer.indent():
+            writer.write_line("_tt_buffer = []", self.line)
+            writer.write_line("_tt_append = _tt_buffer.append", self.line)
+            writer.write_line("def _tt_write(t, escape=True):", self.line)
+            writer.write_line("    if escape:", self.line)
+            writer.write_line("        _tt_append(xhtml_escape(t))", self.line)
+            writer.write_line("    else:", self.line)
+            writer.write_line("        _tt_append(t)", self.line)
+            writer.write_line("        pass", self.line)
+            writer.write_line("    pass", self.line)
+            writer.write_line("out_write = _tt_append", self.line)
+
+            if has_links:
+                writer.write_line("_tt_links = {'toplinks': [], 'bottomlinks': []}", self.line)
+                writer.write_line("def _tt_use(name, *args, **kwargs):", self.line)
+                writer.write_line("    use(_tt_links, name, *args, **kwargs)", self.line)
+                writer.write_line("    pass", self.line)
+                writer.write_line("def _tt_link(name, media=None, to='toplinks'):", self.line)
+                writer.write_line("    link(_tt_links, name, media, to)", self.line)
+                writer.write_line("    pass", self.line)
+            self.body.generate(writer)
+            if has_links:
+                writer.write_line("return htmlmerge(_tt_utf8('').join(_tt_buffer), _tt_links)", self.line)
+            else:
+                writer.write_line("return _tt_utf8('').join(_tt_buffer)", self.line)
+
+    def each_child(self):
+        return (self.body,)
+
+
+class _ChunkList(_Node):
+    def __init__(self, chunks):
+        self.chunks = chunks
+
+    def generate(self, writer):
+        for chunk in self.chunks:
+            chunk.generate(writer)
+
+    def each_child(self):
+        return self.chunks
+
+
+class _NamedBlock(_Node):
+    def __init__(self, name, body, template, line):
+        self.name = name
+        self.body = body
+        self.template = template
+        self.line = line
+
+    def each_child(self):
+        return (self.body,)
+
+    def generate(self, writer):
+        block = writer.named_blocks[self.name]
+        with writer.include(block.template, self.line):
+            block.body.generate(writer)
+
+    def find_named_blocks(self, loader, named_blocks):
+        named_blocks[self.name] = self
+        _Node.find_named_blocks(self, loader, named_blocks)
+
+    def see_named_blocks(self, loader, named_blocks, see=None, indent=0):
+        named_blocks[self.name] = self
+        if see:
+            see(self.name, self.template.filename, indent+1)
+        _Node.see_named_blocks(self, loader, named_blocks, see, indent+1)
+
+
+class _ExtendsBlock(_Node):
+    def __init__(self, name):
+        self.name = name
+
+
+class _IncludeBlock(_Node):
+    def __init__(self, name, reader, line, template):
+        self.name = name
+        self.template_name = reader.name
+        self.line = line
+        self.template = template
+
+    def find_named_blocks(self, loader, named_blocks):
+        included = loader.load(self.name, self.template_name)
+        self.template.depends.add(included.filename)
+        if loader.see:
+            loader.see('include', self.template.filename, included.filename)
+        if included.has_links:
+            self.template.has_links = True
+        included.file.find_named_blocks(loader, named_blocks)
+
+    def see_named_blocks(self, loader, named_blocks, see=None, indent=0):
+        included = loader.load(self.name, self.template_name)
+        self.template.depends.add(included.filename)
+        if loader.see:
+            loader.see('include', self.template.filename, included.filename)
+        included.file.see_named_blocks(loader, named_blocks, see, indent)
+
+    def generate(self, writer):
+        included = writer.loader.load(self.name, self.template_name)
+        with writer.include(included, self.line):
+            included.file.body.generate(writer)
+
+
+class _ApplyBlock(_Node):
+    def __init__(self, method, line, body=None):
+        self.method = method
+        self.line = line
+        self.body = body
+
+    def each_child(self):
+        return (self.body,)
+
+    def generate(self, writer):
+        method_name = "_tt_apply%d" % writer.apply_counter
+        writer.apply_counter += 1
+        writer.write_line("def %s():" % method_name, self.line)
+        with writer.indent():
+            writer.write_line("_tt_buffer = []", self.line)
+            writer.write_line("_tt_append = _tt_buffer.append", self.line)
+            writer.write_line("def _tt_write(t, escape=True):", self.line)
+            writer.write_line("    if escape:", self.line)
+            writer.write_line("         _tt_append(xhtml_escape(t))", self.line)
+            writer.write_line("    else: _tt_append(t)", self.line)
+            writer.write_line("        _tt_append(t)", self.line)
+            writer.write_line("        pass", self.line)
+            writer.write_line("    pass", self.line)
+            self.body.generate(writer)
+            writer.write_line("return _tt_utf8('').join(_tt_buffer)", self.line)
+        writer.write_line("_tt_append(_tt_utf8(%s(%s())))" % (
+            self.method, method_name), self.line)
+
+class _ControlBlock(_Node):
+    def __init__(self, statement, line, body=None):
+        self.statement = statement
+        self.line = line
+        self.body = body
+
+    def each_child(self):
+        return (self.body,)
+
+    def generate(self, writer):
+        # writer.write_line("%s:" % self.statement, self.line)
+        #in uliewb, ':' will be added by user
+        writer.write_line("%s" % self.statement, self.line)
+        with writer.indent():
+            self.body.generate(writer)
+            # Just in case the body was empty
+            writer.write_line("pass", self.line)
+
+class BaseBlockNode(_ControlBlock):
+    pass
+
+class _IntermediateControlBlock(_Node):
+    def __init__(self, statement, line):
+        self.statement = statement
+        self.line = line
+
+    def generate(self, writer):
+        # In case the previous block was empty
+        writer.write_line("pass", self.line)
+        #writer.write_line("%s:" % self.statement, self.line, writer.indent_size() - 1)
+        #in uliewb, ':' will be added by user
+        writer.write_line("%s" % self.statement, self.line, writer.indent_size() - 1)
+
+
+class _Statement(_Node):
+    def __init__(self, statement, line):
+        self.statement = statement
+        self.line = line
+
+    def generate(self, writer):
+        writer.write_line(self.statement, self.line)
+
+class BaseNode(_Statement):
+    pass
+
+class _Expression(_Node):
+    def __init__(self, expression, line, raw=False):
+        self.expression = expression
+        self.line = line
+        self.raw = raw
+
+    def generate(self, writer):
+        writer.write_line("_tt_tmp = %s" % self.expression, self.line)
+        writer.write_line("if isinstance(_tt_tmp, _tt_string_types):", self.line)
+        writer.write_line("    _tt_tmp = _tt_utf8(_tt_tmp)", self.line)
+        writer.write_line("else:", self.line)
+        writer.write_line("    _tt_tmp = _tt_utf8(str(_tt_tmp))", self.line)
+        writer.write_line("    pass", self.line)
+        if not self.raw and writer.current_template.autoescape is not None:
+            # In python3 functions like xhtml_escape return unicode,
+            # so we have to convert to utf8 again.
+            writer.write_line("_tt_tmp = _tt_utf8(%s(_tt_tmp))" %
+                              writer.current_template.autoescape, self.line)
+        writer.write_line("_tt_append(_tt_tmp)", self.line)
+
+
+class _Module(_Expression):
+    def __init__(self, expression, line):
+        super(_Module, self).__init__("_tt_modules." + expression, line,
+                                      raw=True)
+
+
+class _Text(_Node):
+    def __init__(self, value, line):
+        self.value = value
+        self.line = line
+
+    def generate(self, writer):
+        value = self.value
+
+        # Compress lots of white space to a single character. If the whitespace
+        # breaks a line, have it continue to break a line, but just with a
+        # single \n character
+        if writer.compress_whitespace and "<pre>" not in value:
+            value = re.sub(r"([\t ]+)", " ", value)
+            value = re.sub(r"(\s*\n\s*)", "\n", value)
+
+        if value:
+            writer.write_line('_tt_append(%r)' % utf8(value), self.line)
+
+class _Use(_Node):
+    def __init__(self, value, line, template):
+        self.value = value
+        self.line = line
+        self.template = template
+        self.template.has_links = True
+
+    def generate(self, writer):
+        value = self.value
+        if value:
+            writer.write_line('_tt_use(%s)' % value, self.line)
+
+class _Link(_Node):
+    def __init__(self, value, line, template):
+        self.value = value
+        self.line = line
+        self.template = template
+        self.template.has_links = True
+
+
+    def generate(self, writer):
+        value = self.value
+        if value:
+            writer.write_line('_tt_link(%s)' % value, self.line)
+
+
+class ParseError(Exception):
+    """Raised for template syntax errors."""
+    pass
+
+
+class _CodeWriter(object):
+    def __init__(self, file, named_blocks, loader, current_template,
+                 compress_whitespace, comment=False):
+        self.file = file
+        self.named_blocks = named_blocks
+        self.loader = loader
+        self.current_template = current_template
+        self.compress_whitespace = compress_whitespace
+        self.apply_counter = 0
+        self.include_stack = []
+        self._indent = 0
+        self.comment = comment
+
+    def indent_size(self):
+        return self._indent
+
+    def indent(self):
+        class Indenter(object):
+            def __enter__(_):
+                self._indent += 1
+                return self
+
+            def __exit__(_, *args):
+                assert self._indent > 0
+                self._indent -= 1
+
+        return Indenter()
+
+    def include(self, template, line):
+        self.include_stack.append((self.current_template, line))
+        self.current_template = template
+
+        class IncludeTemplate(object):
+            def __enter__(_):
+                return self
+
+            def __exit__(_, *args):
+                self.current_template = self.include_stack.pop()[0]
+
+        return IncludeTemplate()
+
+    def write_line(self, line, line_number, indent=None):
+        if indent is None:
+            indent = self._indent
+        if self.comment:
+            line_comment = '  # %s:%d' % (self.current_template.name, line_number)
+            if self.include_stack:
+                ancestors = ["%s:%d" % (tmpl.name, lineno)
+                             for (tmpl, lineno) in self.include_stack]
+                line_comment += ' (via %s)' % ', '.join(reversed(ancestors))
+        else:
+            line_comment = ''
+        print("    " * indent + line + line_comment, file=self.file)
+
+
+class _TemplateReader(object):
+    def __init__(self, name, text):
+        self.name = name
+        self.text = text
+        self.line = 1
+        self.pos = 0
+
+    def find(self, needle, start=0, end=None):
+        assert start >= 0, start
+        pos = self.pos
+        start += pos
+        if end is None:
+            index = self.text.find(needle, start)
+        else:
+            end += pos
+            assert end >= start
+            index = self.text.find(needle, start, end)
+        if index != -1:
+            index -= pos
+        return index
+
+    def consume(self, count=None):
+        if count is None:
+            count = len(self.text) - self.pos
+        newpos = self.pos + count
+        self.line += self.text.count("\n", self.pos, newpos)
+        s = self.text[self.pos:newpos]
+        self.pos = newpos
+        return s
+
+    def remaining(self):
+        return len(self.text) - self.pos
+
+    def __len__(self):
+        return self.remaining()
 
     def __getitem__(self, key):
-        "Get a variable's value, starting at the current context and going upward"
-        for d in self.dicts:
-            if key in d:
-                return d[key]
-        raise KeyError(key)
-
-    def __delitem__(self, key):
-        "Delete a variable from the current context"
-        del self.dicts[0][key]
-        self.dirty = True
-
-    def has_key(self, key):
-        for d in self.dicts:
-            if key in d:
-                return True
-        return False
-
-    __contains__ = has_key
-
-    def get(self, key, otherwise=None):
-        for d in self.dicts:
-            if key in d:
-                return d[key]
-        return otherwise
-
-    def update(self, other_dict):
-        "Like dict.update(). Pushes an entire dictionary's keys and values onto the context."
-        if not hasattr(other_dict, '__getitem__'): 
-            raise TypeError('other_dict must be a mapping (dictionary-like) object.')
-        self.dicts[0].update(other_dict)
-#        self.dicts = [other_dict] + self.dicts
-        self.dirty = True
-        return other_dict
-    
-    def to_dict(self):
-        if not self.dirty:
-            return self.result
-        else:
-            d = {}
-            for i in reversed(self.dicts):
-                d.update(i)
-            self.result = d
-            self.dirty = False
-        return d
-        
-__nodes__['block'] = BlockNode
-
-class Out(object):
-    encoding = 'utf-8'
-    
-    def __init__(self):
-        self.buf = StringIO.StringIO()
-        
-    def _str(self, text):
-        if not isinstance(text, (str, unicode)):
-            text = str(text)
-        if isinstance(text, unicode):
-            return text.encode(self.encoding)
-        else:
-            return text
-
-    def write(self, text, escape=True):
-        s = self._str(text)
-        if escape:
-            self.buf.write(cgi.escape(s))
-        else:
-            self.buf.write(s)
-            
-    def xml(self, text):
-        self.write(self._str(text), escape=False)
-        
-#    def json(self, text):
-#        from datawrap import dumps
-#        self.write(dumps(text))
-#
-    def getvalue(self):
-        return self.buf.getvalue()
-
-class Template(object):
-    def __init__(self, text='', vars=None, env=None, dirs=None, 
-        default_template=None, use_temp=False, compile=None, skip_error=False, 
-        encoding='utf-8', begin_tag=None, end_tag=None, see=None):
-        self.text = text
-        self.filename = None
-        self.vars = vars or {}
-        if not isinstance(env, Context):
-            env = Context(env)
-        self.env = env
-        self.dirs = dirs or '.'
-        self.default_template = default_template
-        self.use_temp = use_temp
-        self.compile = compile
-        self.writer = 'out.write'
-        self.content = Content()
-        self.stack = [self.content]
-        self.depend_files = []  #used for template dump file check
-        self.callbacks = []
-        self.exec_env = {}
-        self.root = self
-        self.skip_error = skip_error
-        self.encoding = encoding
-        self.begin_tag = begin_tag or BEGIN_TAG
-        self.end_tag = end_tag or END_TAG
-        self.see = see #will used to track the derive relation of templates
-        
-        for k, v in __nodes__.iteritems():
-            if hasattr(v, 'init'):
-                v.init(self)
-        
-    def add_callback(self, callback):
-        if not callback in self.root.callbacks:
-            self.root.callbacks.append(callback)
-            
-    def add_exec_env(self, name, obj):
-        self.root.exec_env[name] = obj
-        
-    def add_root(self, root):
-        self.root = root
-        
-    def set_filename(self, filename):
-        fname = get_templatefile(filename, self.dirs, self.default_template)
-        if not fname:
-            raise TemplateException, "Can't find the template %s" % filename
-        self.filename = fname
-        self.original_filename = filename
-        
-    def _get_parameters(self, value):
-        def _f(*args, **kwargs):
-            return args, kwargs
-        d = self.env.to_dict()
-        d['_f'] = _f
-        try:
-            args, kwargs = eval("_f(%s)" % value, d, self.vars)
-        except:
-            if self.skip_error:
-                return (None,), {}
+        if type(key) is slice:
+            size = len(self)
+            start, stop, step = key.indices(size)
+            if start is None:
+                start = self.pos
             else:
-                raise
-        return args, kwargs
-    
-    def parse(self):
-        text = self.text
-        extend = None  #if need to process extend node
-        for i in get_tag(self.begin_tag, self.end_tag).split(text):
-            if i:
-                if len(self.stack) == 0:
-                    raise TemplateException, "The 'end' tag is unmatched, please check if you have more '{{end}}'"
-                top = self.stack[-1]
-                #process multiline comment
-                if i.startswith(self.begin_tag+'##'):
-                    continue
-                in_tag = i.startswith(self.begin_tag)
-                if in_tag:
-                    line = i[2:-2].strip()
-                    if not line:
-                        continue
-                    elif line.startswith('='):
-                        name, value = '=', line[1:].strip()
-                    elif line.startswith('<<'):
-                        name, value = '<<', line[2:].strip()
-                    else:
-                        v = line.split(' ', 1)
-                        if len(v) == 1:
-                            name, value = v[0], ''
-                        else:
-                            name, value = v
-                    if name in __nodes__:
-                        node_cls = __nodes__[name]
-                        #this will pass top template instance and top content instance to node_cls
-                        node = node_cls(value.strip(), self.content)
-                        if node.block:
-                            node.template_file = self.filename
-                            top.add(node)
-                            self.stack.append(node)
-                        else:
-                            buf = str(node)
-                            if buf:
-                                top.add(buf)
-                    elif name == 'super':
-                        t = self.stack[-1]
-                        if isinstance(t, BaseBlockNode):
-                            node = SuperNode(t, self.content)
-                            top.add(node)
-                    elif name == 'end':
-                        #add block.end process
-                        #if end() return something, it'll be append to top node
-                        t = self.stack.pop()
-                        top = self.stack[-1]
-                        if t.block and hasattr(t, 'end'):
-                            buf = t.end()
-                            if buf:
-                                top.add(buf)
-                    elif name == '=':
-                        buf = "%s(%s)\n" % (self.writer, value)
-                        top.add(buf)
-                    elif name == 'BEGIN_TAG':
-                        buf = "%s('{{')\n" % self.writer
-                        top.add(buf)
-                    elif name == 'END_TAG':
-                        buf = "%s('}}')\n" % self.writer
-                        top.add(buf)
-                    elif name == '<<':
-                        buf = "%s(%s, escape=False)\n" % (self.writer, value)
-                        top.add(buf)
-#                    elif name == 'T=':
-#                        if not self._parse_template(top, value):
-#                            buf = "%s(%s)\n" % (self.writer, value)
-#                            top.add(buf)
-#                    elif name == 'T<<':
-#                        if not self._parse_template(top, value):
-#                            buf = "%s(%s, escape=False)\n" % (self.writer, value)
-#                            top.add(buf)
-                    elif name == 'include':
-                        self._parse_include(top, value)
-                    elif name == 'embed':
-                        self._parse_text(top, value)
-                    elif name == 'extend':
-                        extend = value
-                    else:
-                        if line and in_tag:
-                            top.add(line+'\n')
+                start += self.pos
+            if stop is not None:
+                stop += self.pos
+            return self.text[slice(start, stop, step)]
+        elif key < 0:
+            return self.text[key]
+        else:
+            return self.text[self.pos + key]
+
+    def __str__(self):
+        return self.text[self.pos:]
+
+
+def _format_code(code):
+    lines = code.splitlines()
+    format = "%%%dd  %%s\n" % len(repr(len(lines) + 1))
+    return "".join([format % (i + 1, line) for (i, line) in enumerate(lines)])
+
+r_out_write = re.compile(r'out\.write', re.DOTALL)
+r_out_xml = re.compile(r'out\.xml', re.DOTALL)
+
+def _parse(reader, template, in_block=None, in_loop=None,
+           begin_tag=BEGIN_TAG, end_tag=END_TAG, debug=False, see=None):
+    body = _ChunkList([])
+    _len_b = len(begin_tag)
+    _len_e = len(end_tag)
+    comment_end = '##%s' % end_tag
+    _len_comment = len(comment_end)
+    filename = template.filename
+
+    # Find begin and tag definition
+    if reader.find('#uliweb-template-tag:') > -1:
+        pos = reader.find('\n', 21)
+        tag_head = reader.consume(26)[21:]
+        begin_tag, end_tag = [x.strip() for x in tag_head.split(',')][:2]
+        _len_b = len(begin_tag)
+        _len_e = len(end_tag)
+        comment_end = '##%s' % end_tag
+        _len_comment = len(comment_end)
+
+    while True:
+        # Find next template directive
+        curly = 0
+        while True:
+            curly = reader.find(begin_tag, curly)
+            if curly == -1 or curly + _len_b == reader.remaining():
+                # EOF
+                if in_block:
+                    raise ParseError("Missing %s end %s block for %s on line %s:%d" %
+                                     (begin_tag, end_tag, in_block, filename,
+                                     reader.line))
+                body.chunks.append(_Text(reader.consume(), reader.line))
+                return body
+            # If the first curly brace is not the start of a special token,
+            # start searching from the character after it
+            # if reader[curly + _len_b] not in ("{",):
+            #     curly += _len_b
+            #     continue
+            # When there are more than 2 curlies in a row, use the
+            # innermost ones.  This is useful when generating languages
+            # like latex where curlies are also meaningful
+            # if (curly + _len_b + 1< reader.remaining() and
+            #         reader[curly + 2] == '{' and reader[curly + 3] == '{'):
+            #     curly += 1
+            #     continue
+            break
+
+        # Append any text before the special token
+        if curly > 0:
+            cons = reader.consume(curly)
+            body.chunks.append(_Text(cons, reader.line))
+
+        start_brace = reader.consume(_len_b)
+        line = reader.line
+
+        # Template directives may be escaped as "{{!" or "{%!".
+        # In this case output the braces and consume the "!".
+        # This is especially useful in conjunction with jquery templates,
+        # which also use double braces.
+        # if reader.remaining() and reader[0] == "!":
+        #     reader.consume(1)
+        #     body.chunks.append(_Text(start_brace, line))
+        #     continue
+
+        # Multiple comment
+        # if start_brace == "{{##":
+        if reader[:2] == '##':
+            end = reader.find(comment_end)
+            if end == -1:
+                raise ParseError("Missing end expression #} on line %s:%d" % (
+                    filename, line))
+            contents = reader.consume(end).strip()
+            reader.consume(_len_comment)
+            continue
+
+        # Single comment
+        # if start_brace == "{{#":
+        if reader[0] == '#':
+            end = reader.find(end_tag)
+            if end == -1:
+                raise ParseError("Missing end expression #} on line %s:%d" % (
+                    filename, line))
+            contents = reader.consume(end).strip()
+            reader.consume(_len_b)
+            continue
+
+        # Expression
+        # if start_brace == "{{":
+        if reader[0] == "=":
+            reader.consume(1)
+            end = reader.find(end_tag)
+            if end == -1:
+                raise ParseError("Missing end expression %s on line %s:%d" % (
+                    end_tag, filename, line))
+            contents = reader.consume(end).strip()
+            reader.consume(_len_e)
+            if not contents:
+                raise ParseError("Empty expression on line %s:%d" % (
+                        filename, line))
+            body.chunks.append(_Expression('escape(%s)' % contents, line))
+            continue
+
+        # Escape expression
+        # if start_brace == '{{<<'
+        if reader[:2] == "<<":
+            reader.consume(2)
+            end = reader.find(end_tag)
+            if end == -1:
+                raise ParseError("Missing end expression %s on line %s:%d" % (
+                    end_tag, filename, line))
+            contents = reader.consume(end).strip()
+            reader.consume(_len_e)
+            if not contents:
+                raise ParseError("Empty expression on line %s:%d" % (
+                    filename, line))
+            body.chunks.append(_Expression(contents, line))
+            continue
+
+        # Block
+        assert start_brace == begin_tag, start_brace
+        end = reader.find(end_tag)
+        if end == -1:
+            raise ParseError("Missing end block %s on line %s:%d" % (end_tag,
+                                                 filename, line))
+        contents = reader.consume(end).strip()
+        reader.consume(_len_e)
+        if not contents:
+            raise ParseError("Empty block tag (%s %s) on line %s:%d" % (begin_tag,
+                                            end_tag, filename, line))
+
+        operator, space, suffix = contents.partition(" ")
+        suffix = suffix.strip()
+
+        #just skip super
+        if operator == 'super':
+            warnings.simplefilter('default')
+            warnings.warn("Super is not supported on line %s:%d." % (
+                    filename, line
+            ), DeprecationWarning)
+            continue
+
+        #multilines supports
+        x_operator = operator.rstrip(':')
+        if template.multilines and x_operator in ['else', 'elif', 'except',
+              'finally', 'pass', 'try', 'if', 'for', 'while', 'break',
+              'continue', 'def']:
+            for i, x in enumerate(contents.splitlines()):
+                txt = r_out_write.sub('_tt_write', x)
+                txt = r_out_xml.sub('out_write', txt)
+                body.chunks.append(_Statement(txt, line+i))
+            continue
+
+        # Intermediate ("else", "elif", etc) blocks
+        intermediate_blocks = {
+            "else": set(["if", "for", "while", "try"]),
+            "elif": set(["if"]),
+            "except": set(["try"]),
+            "finally": set(["try"]),
+        }
+        allowed_parents = intermediate_blocks.get(x_operator)
+        if allowed_parents is not None:
+            if not in_block:
+                raise ParseError("%s outside %s block on line %s:%d" %
+                                (operator, allowed_parents, filename, line))
+            if in_block not in allowed_parents:
+                raise ParseError("%s block cannot be attached to %s block on line %s:%d" % (
+                    operator, in_block, filename, line))
+            body.chunks.append(_IntermediateControlBlock(contents, line))
+            continue
+
+        # End tag
+        elif operator in ("end", 'pass'):
+            if not in_block:
+                raise ParseError("Extra %s end %s block on line %s:%d" % (begin_tag,
+                                  end_tag, filename, line))
+            return body
+
+        elif operator in ("extend", "extends", "include", "embed",
+                          "BEGIN_TAG", "END_TAG", "use", "link"):
+            if operator in ("extend", "extends"):
+                if template.skip_extern: continue
+                suffix = suffix.strip('"').strip("'")
+                if not suffix:
+                    raise ParseError("extends missing file path on line %s:%d" % (
+                        filename, line))
+                block = _ExtendsBlock(suffix)
+            elif operator == "include":
+                if template.skip_extern: continue
+                suffix = suffix.strip('"').strip("'")
+                if not suffix:
+                    raise ParseError("include missing file path on line %s:%d" %
+                                     (filename, line))
+                block = _IncludeBlock(suffix, reader, line, template)
+            elif operator == "use":
+                block = _Use(suffix, line, template)
+            elif operator == "link":
+                block = _Link(suffix, line, template)
+            elif operator == "embed":
+                warnings.simplefilter('default')
+                warnings.warn("embed is not supported any more, just replace it with '<<'.", DeprecationWarning)
+                block = _Expression(suffix, line)
+            elif operator == "BEGIN_TAG":
+                block = _Text(begin_tag, line)
+            elif operator == "END_TAG":
+                block = _Text(end_tag, line)
+            body.chunks.append(block)
+            continue
+
+        elif operator in ("apply", "block", "try", "if", "for", "while"):
+            # parse inner body recursively
+            if operator in ("for", "while"):
+                block_body = _parse(reader, template, operator, operator,
+                                    begin_tag, end_tag, debug=debug, see=see)
+            elif operator == "apply":
+                # apply creates a nested function so syntactically it's not
+                # in the loop.
+                block_body = _parse(reader, template, operator, None,
+                                    begin_tag, end_tag, debug=debug, see=see)
+            else:
+                block_body = _parse(reader, template, operator, in_loop,
+                                    begin_tag, end_tag, debug=debug, see=see)
+
+            if operator == "apply":
+                if not suffix:
+                    raise ParseError("apply missing method name on line %s:%d" % (filename,
+                                  line))
+                block = _ApplyBlock(suffix, line, block_body)
+            elif operator == "block":
+                if not suffix:
+                    raise ParseError("block missing name on line %s:%d" % (filename, line))
+                block = _NamedBlock(suffix, block_body, template, line)
+            else:
+                block = _ControlBlock(contents, line, block_body)
+            body.chunks.append(block)
+            continue
+
+        elif operator == 'def':
+            block_body = _parse(reader, template, operator, None,
+                    begin_tag, end_tag, debug=debug, see=see)
+            block = _ControlBlock(contents, line, block_body)
+            body.chunks.append(block)
+            continue
+
+        elif operator in ("break", "continue"):
+            if not in_loop:
+                raise ParseError("%s outside %s block on line %s:%d" % (operator,
+                                    set(["for", "while"]), filename, line))
+            body.chunks.append(_Statement(contents, line))
+            continue
+
+        else:
+            #check custom nodes
+            if operator in __custom_nodes__:
+                if template.skip_extern: continue
+
+                NodeCls = __custom_nodes__[operator]
+                if issubclass(NodeCls, BaseNode):
+                    body.chunks.append(NodeCls(suffix, line))
+                elif issubclass(NodeCls, BaseBlockNode):
+                    block_body = _parse(reader, template, operator, in_block,
+                            begin_tag, end_tag, debug=debug, see=see)
+                    block = NodeCls(suffix, line, block_body)
+                    body.chunks.append(block)
                 else:
-                    buf = "%s(%r, escape=False)\n" % (self.writer, i)
-                    top.add(buf)
-                    
-        if extend:
-            self._parse_extend(extend)
-        if self.encoding:
-            pre = '#coding=%s\n' % self.encoding
-        else:
-            pre = ''
-        return reindent(pre + str(self.content))
-    
-    def _parse_template(self, content, var):
-        if var in self.vars:
-            v = self.vars[var]
-        else:
-            return False
-        
-        #add v.__template__ support
-        if hasattr(v, '__template__'):
-            text = str(v.__template__(var))
-            if text:
-                t = Template(text, self.vars, self.env, self.dirs)
-                t.parse()
-                t.add_root(self)
-                content.merge(t.content)
-                return True
-        
-        return False
-
-    def _parse_text(self, content, var):
-        try:
-            text = str(eval(var, self.env.to_dict(), self.vars))
-        except:
-            if self.skip_error:
-                text = ''
+                    raise ParseError("Not support this custom node type %s on line %s:%d" %
+                                     (NodeCls.__name__, filename, line)
+                    )
             else:
-                raise
-        if text:
-            t = Template(text, self.vars, self.env, self.dirs)
-            t.parse()
-            t.add_root(self)
-            content.merge(t.content)
-    
-    def _parse_include(self, content, value):
-        self.env.push()
-        try:
-            args, kwargs = self._get_parameters(value)
-            filename = args[0]
-            self.env.update(kwargs)
-            fname = get_templatefile(filename, self.dirs, skip=self.filename, skip_original=self.original_filename)
-            if not fname:
-                raise TemplateException, "Can't find the template %s" % filename
-            
-            self.depend_files.append(fname)
-            
-            #track template tree
-            if self.see:
-                self.see('include', self.filename, fname)
-                
-            f = open(fname, 'rb')
-            text, begin_tag, end_tag = self.get_text(f.read(), inherit_tags=False)
-            f.close()
-            t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag, see=self.see)
-            t.set_filename(fname)
-            t.add_root(self)
-            t.parse()
-            content.merge(t.content)
-        finally:
-            self.env.pop()
-        
-    def _parse_extend(self, value):
-        """
-        If the extend template is the same name with current file, so it
-        means that it should use parent template
-        """
-        self.env.push()
-        try:
-            args, kwargs = self._get_parameters(value)
-            filename = args[0]
-            self.env.update(kwargs)
-            fname = get_templatefile(filename, self.dirs, skip=self.filename, skip_original=self.original_filename)
-            if not fname:
-                raise TemplateException, "Can't find the template %s" % filename
-            
-            self.depend_files.append(fname)
-            
-            #track template tree
-            if self.see:
-                self.see('extend', self.filename, fname)
-            
-            f = open(fname, 'rb')
-            text, begin_tag, end_tag = self.get_text(f.read(), inherit_tags=False)
-            f.close()
-            t = Template(text, self.vars, self.env, self.dirs, begin_tag=begin_tag, end_tag=end_tag, see=self.see)
-            t.set_filename(fname)
-            t.add_root(self)
-            t.parse()
-            self.content.clear_content()
-            t.content.merge(self.content)
-            self.content = t.content
-        finally:
-            self.env.pop()
-            
-    def get_parsed_code(self):
-        if self.use_temp:
-            f = get_temp_template(self.filename)
-            if os.path.exists(f):
-                fin = file(f, 'r')
-                modified = False
-                files = [self.filename]
-                line = fin.readline()
-                if line.startswith('#uliweb-template-files:'):
-                    files.extend(line[1:].split())
-                else:
-                    fin.seek(0)
-                
-                for x in files:
-                    if os.path.getmtime(x) > os.path.getmtime(f):
-                        modified = True
-                        break
-                    
-                if not modified:
-                    text = fin.read()
-                    fin.close()
-                    return True, f, text
-        
-        if self.filename and not self.text:
-            self.text, self.begin_tag, self.end_tag = self.get_text(file(self.filename, 'rb').read())
-        return False, self.filename, self.parse()
-        
-    def get_text(self, text, inherit_tags=True):
-        """
-        Detect template tag definition in the text
-        If inherit_tags is True, then use current begin and end tag string, 
-        or use default tag string
-        """
-        b = r_tag.search(text)
-        if b:
-            begin_tag, end_tag = b.group(1), b.group(2)
-            text = text[b.end():]
-        else:
-            if inherit_tags:
-                begin_tag = self.begin_tag
-                end_tag = self.end_tag
-            else:
-                begin_tag = BEGIN_TAG
-                end_tag = END_TAG
-        return text, begin_tag, end_tag
-    
-    def __call__(self):
-        use_temp_flag, filename, code = self.get_parsed_code()
-        
-        if not use_temp_flag and self.use_temp:
-            f = get_temp_template(filename)
-            try:
-                fo = file(f, 'wb')
-                fo.write('#uliweb-template-files:%s\n' % ' '.join(self.depend_files))
-                fo.write(code)
-                fo.close()
-            except:
-                pass
-        
-        return self._run(code, filename or 'template')
-        
-    def _run(self, code, filename):
-        def f(_vars, _env):
-            def defined(v, default=None):
-                _v = default
-                if v in _vars:
-                    _v = _vars[v]
-                elif v in _env:
-                    _v = _env[v]
-                return _v
-            return defined
+                #add multiple lines support
+                for i, x in enumerate(contents.splitlines()):
+                    txt = r_out_write.sub('_tt_write', x)
+                    txt = r_out_xml.sub('out_write', txt)
+                    body.chunks.append(_Statement(txt, line+i))
 
-        e = {}
-        if isinstance(self.env, Context):
-            new_e = self.env.to_dict()
-        else:
-            new_e = self.env
-        e.update(new_e)
-        e.update(self.vars)
-        out = Out()
-        e['out'] = out
-        e['Out'] = Out
-        e['xml'] = out.xml
-        e['_vars'] = self.vars
-        e['defined'] = f(self.vars, self.env)
-        e['_env'] = e
-        
-        e.update(self.exec_env)
-        
-        if isinstance(code, (str, unicode)):
-            if self.compile:
-                code = self.compile(code, filename, 'exec', e)
-            else:
-                code = compile(code, filename, 'exec')
-        exec code in e
-        text = out.getvalue()
-        
-        for f in self.callbacks:
-            text = f(text, self, self.vars, e)
 
-        return text
-    
-def template_file(filename, vars=None, env=None, dirs=None, default_template=None, compile=None, **kwargs):
-    t = Template('', vars, env, dirs, default_template, use_temp=__options__['use_temp_dir'], compile=compile, **kwargs)
-    t.set_filename(filename)
-    return t()
+def template(text, vars=None, env=None, **kwargs):
+    t = Template(text, **kwargs)
+    return t.generate(vars, env)
 
-def template(text, vars=None, env=None, dirs=None, default_template=None, **kwargs):
-    t = Template(text, vars, env, dirs, default_template, **kwargs)
-    return t()
+def template_py(text, **kwargs):
+    t = Template(text, **kwargs)
+    return t.code
+
+def template_file(filename, vars=None, env=None, dirs=None, loader=None, **kwargs):
+    if not loader:
+        loader = Loader(dirs)
+    return loader.load(filename).generate(vars, env)
+
+def template_file_py(filename, dirs=None, loader=None, **kwargs):
+    if not loader:
+        loader = Loader(dirs, **kwargs)
+    return loader.load(filename).code

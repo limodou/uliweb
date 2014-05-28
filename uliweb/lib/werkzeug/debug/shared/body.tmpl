@@ -29,7 +29,9 @@
           <h3 class="fn"><em>{{=frame['function']}}</em> in <tt>{{=frame['filename']}}</tt></h3>
           <a class="locals" href="javascript:toggleFrameVars({{=num}})">[inspect]</a>
           {{if evalex:}}<a class="eval" href="javascript:toggleInterpreter({{=num}})">[console]</a>{{pass}}
+          <div class="codetable">
           {{<<code_table(frame)}}
+          </div>
           {{<<var_table(frame['vars'])}}
           {{if evalex:}}
             <form class="exec_code" action="">

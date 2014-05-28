@@ -210,6 +210,8 @@ def get_frame_info(tb, context_lines=7, simple=False):
     function = tb.tb_frame.f_code.co_name
     variables = tb.tb_frame.f_locals
 
+    files = {}
+
     # get filename
     if simple:
         fn = tb.tb_frame.f_code.co_filename
@@ -221,34 +223,29 @@ def get_frame_info(tb, context_lines=7, simple=False):
         if fn[-4:] in ('.pyc', '.pyo'):
             fn = fn[:-1]
 
-    # module name
-    modname = tb.tb_frame.f_globals.get('__name__')
-
+    #if filename is existed, then just read the file
     # get loader
-    loader = tb.tb_frame.f_globals.get('__loader__')
-    if not loader:
-        loader = tb.tb_frame.f_locals.get('__loader__')
-        
-        b = tb.tb_frame
-        while not loader:
-            b = b.f_back
-            if not b:
-                break
-            loader = b.f_locals.get('__loader__')
+    loader = None
+    if not os.path.exists(fn):
+        loader = tb.tb_frame.f_globals.get('__loader__')
+        while not loader and tb:
+            tb = tb.tb_next
+            loader = tb.tb_frame.f_globals.get('__loader__')
 
-    exc_type, exc_value, exc_info = sys.exc_info()
-    
+
     # sourcecode
     source = ''
     pre_context, post_context = [], []
     context_line = raw_context_line = context_lineno = None
     try:
-        if not loader is None and hasattr(loader, 'test') and loader.test(fn):
-            source = ''
-            if hasattr(loader, 'get_source'):
-                fn, lineno, source = loader.get_source(exc_type, exc_value, exc_info, tb)
+        if loader:
+            source = loader.get_source(fn)
         else:
-            source = file(fn).read()
+            if not fn in files:
+                source = open(fn).read()
+                files[fn] = source
+            else:
+                source = files[fn]
     except:
         pass
     else:
@@ -264,7 +261,7 @@ def get_frame_info(tb, context_lines=7, simple=False):
                 context_line = parsed_source[lineno - 1]
                 pre_context = parsed_source[lbound:lineno - 1]
                 post_context = parsed_source[lineno:ubound]
-            except IndexError, e:
+            except IndexError as e:
                 pass
             context_lineno = lbound
 
