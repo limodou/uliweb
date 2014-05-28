@@ -43,9 +43,14 @@ class Role(Model):
     def __unicode__(self):
         return self.name
     
+    def usergroups_has_user(self,user):
+        for usergroup in list(self.usergroups.all()):
+            if usergroup.users.has(user):
+                return usergroup
+        return False
+    
 class Role_Perm_Rel(Model):
     role = Reference('role')
     permission = Reference('permission')
     props = Field(PICKLE)
-    
     

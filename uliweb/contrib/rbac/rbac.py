@@ -71,6 +71,10 @@ def has_role(user, *roles, **kwargs):
         flag = role.users.has(user)
         if flag:
             return role
+        
+        flag = role.usergroups_has_user(user)
+        if flag:
+            return role
     return False
 
 def has_permission(user, *permissions, **role_kwargs):
