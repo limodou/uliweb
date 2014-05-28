@@ -533,7 +533,7 @@ class Template(object):
                  compress_whitespace=None, filename=None,
                  _compile=None, debug=False, see=None,
                  skip_extern=False, log=None, multilines=False,
-                 comment=False):
+                 comment=True):
         """
         :param filename: used to store the real filename
         """
@@ -599,6 +599,7 @@ class Template(object):
         namespace.update(self.namespace)
         namespace.update(vars or {})
         namespace['_vars'] = vars
+        # print (namespace.keys())
         exec_in(self.compiled, namespace)
         execute = namespace["_tt_execute"]
         # Clear the traceback module's cache of source data now that
@@ -740,7 +741,7 @@ class Loader(object):
                  tmp_dir='tmp/templates_temp', begin_tag=BEGIN_TAG,
                  end_tag=END_TAG, debug=False, see=None, max_size=None,
                  _compile=None, check_modified_time=False, skip_extern=False,
-                 log=None, multilines=False, comment=False):
+                 log=None, multilines=False, comment=True):
         self.dirs = dirs
         self.namespace = namespace or {}
         self.cache = cache

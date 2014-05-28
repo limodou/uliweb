@@ -454,7 +454,9 @@ class Dispatcher(object):
         Dispatcher.modules = self.collect_modules()
 
         self.install_settings(self.modules['settings'])
-        
+
+        self.debug = settings.GLOBAL.get('DEBUG', False)
+
         #process global_objects
         self.install_global_objects()
         
@@ -488,7 +490,6 @@ class Dispatcher(object):
         #process middlewares
         Dispatcher.middlewares = self.install_middlewares()
         
-        self.debug = settings.GLOBAL.get('DEBUG', False)
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
         Dispatcher.default_template = pkg.resource_filename('uliweb.core', 'default.html')
         
@@ -616,6 +617,7 @@ class Dispatcher(object):
     def install_template_loader(self, dirs):
         Loader = import_attr(settings.get_var('TEMPLATE_PROCESSOR/loader'))
         args = settings.get_var('TEMPLATE')
+
         if self.debug:
             args['check_modified_time'] = True
             args['log'] = log
