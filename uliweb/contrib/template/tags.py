@@ -111,7 +111,7 @@ def find(plugin, *args, **kwargs):
             if ['app', 'var', 'env'] == para[:3]:
                 warnings.simplefilter('default')
                 warnings.warn("Tmplate plugs call function should be defined"
-                              " as call(*args, **kwargs) no (app, var, env) any more",
+                              " as call(*args, **kwargs) not need (app, var, env) any more",
                               DeprecationWarning)
                 v = call(app, {}, {}, *args, **kwargs)
 

@@ -568,7 +568,8 @@ class Template(object):
             # from being applied to the generated code.
             self.compiled = self._compile(
                 to_unicode(self.code),
-                "%s.generated.py" % self.name,
+                # "%s.generated.py" % self.name,
+                self.name,
                 "exec", dont_inherit=True)
         except Exception:
             formatted_code = _format_code(self.code).rstrip()
@@ -597,6 +598,7 @@ class Template(object):
         namespace.update(env or {})
         namespace.update(self.namespace)
         namespace.update(vars or {})
+        namespace['_vars'] = vars
         exec_in(self.compiled, namespace)
         execute = namespace["_tt_execute"]
         # Clear the traceback module's cache of source data now that
@@ -836,7 +838,12 @@ class Loader(object):
                     continue
 
         if default_template:
-            return self.resolve_path(default_template)
+            if not isinstance(default_template, (tuple, list)):
+                default_template = [default_template]
+            for x in default_template:
+                filename = self.resolve_path(x)
+                if filename:
+                    return filename
 
     def _create_template(self, name, filename, _compile=None, see=None):
         if not os.path.exists(filename):

@@ -421,21 +421,6 @@ def get_settings(project_dir, include_apps=None, settings_file='settings.ini',
 def is_in_web():
     return getattr(local, 'in_web', False)
 
-class Loader(object):
-    def __init__(self, filename, template_loader):
-        self.filename = filename
-        self.loader = template_loader
-
-    def get_source(self, exc_type, exc_value, exc_info, tb):
-        code = self.loader.load(self.filename).code
-        if exc_type is SyntaxError:
-            import re
-            r = re.search(r'line (\d+)', str(exc_value))
-            lineno = int(r.group(1))
-        else:
-            lineno = tb.tb_frame.f_lineno
-        return self.filename, lineno, code
-    
 class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, 
@@ -640,25 +625,9 @@ class Dispatcher(object):
         vars = vars or {}
         env = env or self.get_view_env()
         
-        # t = self.template_loader.load(filename, default_template=default_template)
-        # return t.generate(vars, env)
+        t = self.template_loader.load(filename, default_template=default_template)
+        return t.generate(vars, env)
 
-        if self.debug:
-            def _compile(code, filename, action, **kwargs):
-                env['__loader__'] = Loader(filename, self.template_loader)
-                try:
-                    return compile(code, filename, 'exec')
-                except:
-#                    file('out.html', 'w').write(code)
-                    raise
-
-            self.template_loader._compile = _compile
-            t = self.template_loader.load(filename, default_template=default_template)
-            return t.generate(vars, env)
-        else:
-            t = self.template_loader.load(filename, default_template=default_template)
-            return t.generate(vars, env)
-    
     def render(self, templatefile, vars, env=None, default_template=None, content_type='text/html', status=200):
         return Response(self.template(templatefile, vars, env, default_template=default_template), status=status, content_type=content_type)
     
