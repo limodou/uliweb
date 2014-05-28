@@ -83,4 +83,4 @@ class UserGroup(Model):
     
     @classmethod
     def OnInit(cls):
-        Index('usergroup_idx', cls.c.parent, cls.c.name, unique=True)
+        Index('usergroup_idx', cls.c.parent, cls.c.name)

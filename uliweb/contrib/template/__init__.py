@@ -1,16 +1,10 @@
 def startup_installed(sender):
     from uliweb.core import template
-    from tags import LinkNode, UseNode
+    from .tags import link, use, htmlmerge
     
-    if sender.settings.TEMPLATE.USE_TEMPLATE_TEMP_DIR:
-        template.use_tempdir(sender.settings.TEMPLATE.TEMPLATE_TEMP_DIR)
-        
-    template.DEBUG = sender.settings.GLOBAL.get('DEBUG_TEMPLATE', False)
-    template.register_node('link', LinkNode)
-    template.register_node('use', UseNode)
-    
-    template.BEGIN_TAG = sender.settings.TEMPLATE.BEGIN_TAG
-    template.END_TAG = sender.settings.TEMPLATE.END_TAG
+    template.default_namespace['link'] = link
+    template.default_namespace['use'] = use
+    template.default_namespace['htmlmerge'] = htmlmerge
 
 def init_static_combine():
     """

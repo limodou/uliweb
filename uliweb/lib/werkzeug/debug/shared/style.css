@@ -118,8 +118,14 @@ div.frame {
     margin: 0 2em 0 1em;
 }
 
-table.code {
+div.frame .codetable{
     margin: 0.4em 0 0 0.5em;
+    overflow:auto;
+    border-left: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+    border-collapse: collapse;
+}
+table.code {
     background-color: #eee;
     width: 100%;
     font-family: monospace;
