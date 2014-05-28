@@ -48,7 +48,7 @@ def find(plugin, *args, **kwargs):
     from uliweb import application as app, settings
     from uliweb.utils.common import is_pyfile_exist
 
-    key = (plugin, args, tuple(kwargs.items()))
+    key = (plugin, repr(args) + repr(sorted(kwargs.items())))
     if key in __use_cached__:
         return __use_cached__[key]
 
@@ -104,15 +104,16 @@ def find(plugin, *args, **kwargs):
     else:
         v = None
         call = getattr(mod, 'call', None)
+        call.__name__ = call.__module__
         if call:
             para = inspect.getargspec(call)[0]
             #test if the funtion is defined as old style
             if ['app', 'var', 'env'] == para[:3]:
-                v = call(app, {}, {}, *args, **kwargs)
                 warnings.simplefilter('default')
                 warnings.warn("Tmplate plugs call function should be defined"
                               " as call(*args, **kwargs) no (app, var, env) any more",
                               DeprecationWarning)
+                v = call(app, {}, {}, *args, **kwargs)
 
             else:
                 v = call(*args, **kwargs)

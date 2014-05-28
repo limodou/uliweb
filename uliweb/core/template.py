@@ -578,9 +578,18 @@ class Template(object):
 
     def generate(self, vars=None, env=None):
         """Generate this template with the given arguments."""
+        def defined(v, default=None):
+            _v = default
+            if v in vars:
+                _v = vars[v]
+            elif v in env:
+                _v = env[v]
+            return _v
+
         namespace = {
             # __name__ and __loader__ allow the traceback mechanism to find
             # the generated source code.
+            "defined": defined,
             "__name__": self.filename,
             "__loader__": ObjectDict(get_source=lambda name: self.code),
         }

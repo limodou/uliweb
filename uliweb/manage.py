@@ -1080,8 +1080,11 @@ class FindCommand(Command):
                     print
                     print '---------------- source of %s ---------------' % template
                     t = application.template_loader.load(template_file)
-                    if t:
+                    if t and comment:
                         print _format_code(t.code).rstrip()
+                        print
+                    else:
+                        print t.code
                         print
 
             else:
