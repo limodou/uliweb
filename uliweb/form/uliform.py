@@ -424,7 +424,7 @@ class IntField(BaseField):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
 
     def to_python(self, data):
-        return int(data)
+        return int(float(data))
 
     def to_html(self, data):
         if data is None:
