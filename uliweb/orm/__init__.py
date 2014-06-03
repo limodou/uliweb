@@ -1253,10 +1253,12 @@ class TextProperty(Property):
     field_class = Text
     data_type = unicode
     
-    def __init__(self, verbose_name=None, default='', **kwds):
+    def __init__(self, verbose_name=None, default=u'', **kwds):
         super(TextProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
     
     def convert(self, value):
+        if not value:
+            return u''
         if isinstance(value, str):
             return unicode(value, __default_encoding__)
         else:
@@ -1273,6 +1275,8 @@ class BlobProperty(Property):
         return repr(value)
     
     def convert(self, value):
+        if not value:
+            return ''
         return value
     
 class PickleProperty(BlobProperty):

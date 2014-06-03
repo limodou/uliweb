@@ -1669,6 +1669,11 @@ def test_generic_relation():
     [u'python', u'linux']
     >>> print [x.name for x in Tag.content_object.filter(('article', a.id))]
     [u'python', u'linux']
+    >>> c = Article(title="perl", content=None)
+    >>> c.save()
+    True
+    >>> Article.get(Article.c.title=='perl') # doctest:+ELLIPSIS
+    <Article {'title':u'perl','content':u'','tags':<uliweb.orm.Result...>,'id':3}>
     """
     
 def test_camel_case_tablename():
