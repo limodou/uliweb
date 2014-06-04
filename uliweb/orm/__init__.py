@@ -2932,7 +2932,7 @@ class Model(object):
                             if version_field is None:
                                 raise KindError("version_fieldname %s is not existed in Model %s" % (version_fieldname, self.__class__.__name__))
                             _version_value = getattr(self, version_fieldname, 0)
-                            setattr(self, version_fieldname, _version_value+1)
+                            # setattr(self, version_fieldname, _version_value+1)
                             d[version_fieldname] = _version_value+1
                             _cond = (version_field == _version_value) & _cond
                             
@@ -2945,7 +2945,9 @@ class Model(object):
                             if result.rowcount != 1:
                                 _saved = False
                                 if version_exception:
-                                    raise SaveError("The record has been saved by others, current version is %d" % _version_value)
+                                    raise SaveError("The record %s:%d has been saved by others, current version is %d" % (self.tablename, self.id, _version_value))
+                            else:
+                                setattr(self, version_fieldname, d[version_fieldname])
                       
                     if _manytomany:
                         for k, v in _manytomany.items():
