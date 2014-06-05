@@ -150,10 +150,6 @@ def generate_dot(tables, apps, **kwargs):
             for k, field in M._fields_list:
                 add_attributes(field)
 
-            if M._manytomany:
-                for k, field in M._manytomany.iteritems():
-                    add_attributes(field)
-
             # relations
             def add_relation(field, extras="", rel=''):
                 label = "%s(%s)" % (field.property_name, rel)

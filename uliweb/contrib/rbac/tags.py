@@ -15,4 +15,3 @@ class RoleNode(BaseBlockNode):
         with writer.indent():
             self.body.generate(writer)
             writer.write_line("pass", self.line)
-    
