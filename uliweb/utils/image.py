@@ -23,7 +23,7 @@ def _image_save(img, filename, encoder, **kwargs):
     try:
         img.save(filename, encoder, **kwargs)
     except IOError:
-        PIL.ImageFile.MAXBLOCK = img.size[0] * img.size[1]
+        PIL.ImageFile.MAXBLOCK = img.size[0] * img.size[1] * 4
         img.save(filename, encoder, **kwargs)
 
 def resize_image(fobj, size=(50, 50), quality=None):
