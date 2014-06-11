@@ -16,7 +16,16 @@ def fix_filename(filename, suffix=''):
         return f+suffix+ext
     else:
         return filename
-        
+
+def _image_save(img, filename, encoder, **kwargs):
+    import PIL
+
+    try:
+        img.save(filename, encoder, **kwargs)
+    except IOError:
+        PIL.ImageFile.MAXBLOCK = img.size[0] * img.size[1]
+        img.save(filename, encoder, **kwargs)
+
 def resize_image(fobj, size=(50, 50), quality=None):
     from PIL import Image
     from StringIO import StringIO
@@ -26,7 +35,7 @@ def resize_image(fobj, size=(50, 50), quality=None):
         image = image.convert('RGB')
     image = image.resize(size, Image.ANTIALIAS)
     o = StringIO()
-    image.save(o, "JPEG", quality=quality or QUALITY)
+    _image_save(image, o, "JPEG", quality=quality or QUALITY)
     o.seek(0)
     return o
 
@@ -54,7 +63,7 @@ def thumbnail_image(realfile, filename, size=(200, 75), suffix=True, quality=Non
         ofile = file + ".thumbnail" + ext
     else:
         ofile = realfile
-    im.save(ofile, format, quality=quality or QUALITY)
+    _image_save(im, ofile, format, quality=quality or QUALITY)
     file1, ext1 = os.path.splitext(filename)
     if suffix:
         ofile1 = file1 + ".thumbnail" + ext
@@ -103,5 +112,5 @@ def crop_resize(fobj, outfile, x, y, w, h, size=(50, 50), quality=None):
         rm = r.resize(size, Image.ANTIALIAS)
     else:
         rm = r
-    rm.save(outfile, "JPEG", quality=quality or QUALITY)
+    _image_save(rm, outfile, "JPEG", quality=quality or QUALITY)
     
