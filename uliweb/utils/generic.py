@@ -673,7 +673,7 @@ class AddView(object):
         self.form_args = form_args or {}
         self.static_fields = static_fields or []
         self.hidden_fields = hidden_fields or []
-        self.save = save or self.default_save
+        self._save = save or self.save
         self.pre_save = pre_save
         self.post_save = post_save
         self.post_created_form = post_created_form
@@ -837,7 +837,7 @@ class AddView(object):
             self.pre_save(d)
             
         files = self.process_files(d, edit=False)
-        obj = self.save(d)
+        obj = self._save(d)
         
         if self.post_save:
             self.post_save(obj, d)
@@ -952,7 +952,7 @@ class AddView(object):
             self.form.bind(data)
             return self.display(json_result)
         
-    def default_save(self, data):
+    def save(self, data):
         obj = self.model(**data)
         obj.save(version=self.version, version_fieldname=self.version_fieldname,
                         version_exception=self.version_exception)
@@ -1004,7 +1004,7 @@ class EditView(AddView):
             self.pre_save(self.obj, d)
         #process file field
         r = self.process_files(d, edit=True, obj=self.obj)
-        r = self.save(self.obj, d) or r
+        r = self._save(self.obj, d) or r
         if self.post_save:
             r = self.post_save(self.obj, d) or r
         
@@ -1058,7 +1058,7 @@ class EditView(AddView):
             self.form.bind(d)
             return self.display(json_result)
         
-    def default_save(self, obj, data):
+    def save(self, obj, data):
         obj.update(**data)
         r = obj.save(version=self.version, version_fieldname=self.version_fieldname,
                         version_exception=self.version_exception)
