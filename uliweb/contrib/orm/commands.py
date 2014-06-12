@@ -218,7 +218,6 @@ class SQLCommandMixin(object):
         make_option('--engine', dest='engine', default='default',
             help='Select database engine.'),
     ]
-    has_options = True
 
 class SyncdbCommand(SQLCommandMixin, Command):
     name = 'syncdb'
@@ -258,12 +257,16 @@ class ResetCommand(SQLCommandMixin, Command):
             message = """This command will drop all tables of app [%s], are you sure to reset""" % ','.join(args)
         else:
             message = """This command will drop whole database, are you sure to reset"""
-        get_answer(message)
-        
+
+        ans = 'Y' if global_options.yes else get_answer(message)
+
+        if ans!='Y':
+            return
+
         engine = get_engine(options, global_options)
-        
-        tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
-            engine_name=options.engine, settings_file=global_options.settings, 
+
+        tables = get_sorted_tables(get_tables(global_options.apps_dir, args,
+            engine_name=options.engine, settings_file=global_options.settings,
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
@@ -288,13 +291,17 @@ class ResetTableCommand(SQLCommandMixin, Command):
             sys.exit(1)
 
         message = """This command will drop all tables [%s], are you sure to reset""" % ','.join(args)
-        get_answer(message)
-        
+
+        ans = 'Y' if global_options.yes else get_answer(message)
+
+        if ans!='Y':
+            return
+
         engine = get_engine(options, global_options)
-        
-        tables = get_sorted_tables(get_tables(global_options.apps_dir, 
-            tables=args, engine_name=options.engine, 
-            settings_file=global_options.settings, 
+
+        tables = get_sorted_tables(get_tables(global_options.apps_dir,
+            tables=args, engine_name=options.engine,
+            settings_file=global_options.settings,
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
@@ -319,13 +326,17 @@ class DropTableCommand(SQLCommandMixin, Command):
             sys.exit(1)
 
         message = """This command will drop all tables [%s], are you sure to drop""" % ','.join(args)
-        get_answer(message)
-        
+
+        ans = 'Y' if global_options.yes else get_answer(message)
+
+        if ans!='Y':
+            return
+
         engine = get_engine(options, global_options)
-        
-        tables = get_sorted_tables(get_tables(global_options.apps_dir, 
-            tables=args, engine_name=options.engine, 
-            settings_file=global_options.settings, 
+
+        tables = get_sorted_tables(get_tables(global_options.apps_dir,
+            tables=args, engine_name=options.engine,
+            settings_file=global_options.settings,
             local_settings_file=global_options.local_settings))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
@@ -396,12 +407,11 @@ class DumpCommand(SQLCommandMixin, Command):
         make_option('-z', dest='zipfile', 
             help='Compress table files into a zip file.'),
     )
-    has_options = True
     check_apps = True
     
     def handle(self, options, global_options, *args):
         from zipfile import ZipFile, ZIP_DEFLATED
-        from StringIO import StringIO
+        from cStringIO import StringIO
 
         output_dir = os.path.join(options.output_dir, options.engine)
         if not os.path.exists(output_dir):
@@ -462,11 +472,10 @@ class DumpTableCommand(SQLCommandMixin, Command):
         make_option('-z', dest='zipfile', 
             help='Compress table files into a zip file.'),
    )
-    has_options = True
-    
+
     def handle(self, options, global_options, *args):
         from zipfile import ZipFile, ZIP_DEFLATED
-        from StringIO import StringIO
+        from cStringIO import StringIO
         
         output_dir = os.path.join(options.output_dir, options.engine)
         if not os.path.exists(output_dir):
@@ -529,8 +538,7 @@ class DumpTableFileCommand(SQLCommandMixin, Command):
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
     )
-    has_options = True
-    
+
     def handle(self, options, global_options, *args):
         
         engine = get_engine(options, global_options)
@@ -574,7 +582,6 @@ class LoadCommand(SQLCommandMixin, Command):
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
     )
-    has_options = True
     check_apps = True
     
     def handle(self, options, global_options, *args):
@@ -587,7 +594,10 @@ are you sure to load data""" % (options.engine, ','.join(args))
             message = """This command will delete whole database [%s] before loading, 
 are you sure to load data""" % options.engine
 
-        get_answer(message)
+        ans = 'Y' if global_options.yes else get_answer(message)
+
+        if ans != 'Y':
+            return
 
         path = os.path.join(options.dir, options.engine)
         if not os.path.exists(path):
@@ -616,8 +626,8 @@ are you sure to load data""" % options.engine
                 else:
                     format = None
                 t = load_table(t, filename, engine, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding, bulk=int(options.bulk),
-                    engine_name=engine.engine_name)
+                    format=format, encoding=options.encoding,
+                    bulk=int(options.bulk), engine_name=engine.engine_name)
                 orm.Commit()
                 if global_options.verbose:
                     print t
@@ -642,8 +652,7 @@ class LoadTableCommand(SQLCommandMixin, Command):
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
     )
-    has_options = True
-    
+
     def handle(self, options, global_options, *args):
         from uliweb import orm
         
@@ -654,7 +663,7 @@ are you sure to load data""" % (options.engine, ','.join(args))
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
-        ans = get_answer(message, answers='Yn', quit='q')
+        ans = 'Y' if global_options.yes else get_answer(message, quit='q')
 
         path = os.path.join(options.dir, options.engine)
         if not os.path.exists(path):
@@ -707,8 +716,7 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
     )
-    has_options = True
-    
+
     def handle(self, options, global_options, *args):
         from uliweb import orm
         
@@ -722,7 +730,7 @@ class LoadTableFileCommand(SQLCommandMixin, Command):
             print "Failed! You should pass one or more tables name."
             sys.exit(1)
 
-        ans = get_answer(message, answers='Yn', quit='q')
+        ans = 'Y' if global_options.yes else get_answer(message, quit='q')
 
         engine = get_engine(options, global_options)
 
@@ -837,8 +845,7 @@ class ValidatedbCommand(SQLCommandMixin, Command):
             help='Print traceback when validating failed.'),
     )
     check_apps = True
-    has_options = True
-    
+
     def handle(self, options, global_options, *args):
         
         engine = get_engine(options, global_options)

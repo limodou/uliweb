@@ -32,7 +32,6 @@ class GenericCommand(Command):
     help = 'Create a scaffold for an generic(CRUD) admin interface.'
     args = ''
     check_apps_dirs = False
-    has_options = True
     check_apps = False
     
     def handle(self, options, global_options, *args):

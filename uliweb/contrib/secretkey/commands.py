@@ -9,8 +9,7 @@ class MakeKeyCommand(Command):
         make_option('-o', dest="output", 
             help='Output key file name.'),
     )
-    has_options = True
-    
+
     def handle(self, options, global_options, *args):
         from random import choice
         from uliweb.core.SimpleFrame import get_settings
@@ -21,8 +20,9 @@ class MakeKeyCommand(Command):
         output = options.output or settings.SECRETKEY.SECRET_FILE
         keyfile = os.path.join(global_options.project, output)
         if os.path.exists(keyfile):
-            ans = get_answer('The file %s is already existed, do you want to overwrite' % keyfile)
-            if ans == 'n':
+            message = 'The file %s is already existed, do you want to overwrite' % keyfile
+            ans = 'Y' if global_options.yes else get_answer(message)
+            if ans != 'Y':
                 return
         print 'Creating secretkey file %s...' % keyfile,
         f = open(keyfile, 'wb')

@@ -10,7 +10,6 @@ class DemoCommand(Command):
     help = ''
     args = ''
     check_apps_dirs = True
-    has_options = False
     check_apps = False
     
     def handle(self, options, global_options, *args):
