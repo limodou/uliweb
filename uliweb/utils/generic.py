@@ -562,12 +562,19 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                         _ids = prop.get_value_for_datastore(obj, cached=True)
                         for _id in _ids:
                             _v = functions.get_cached_object(prop.reference_class, _id)
+                            if not _v:
+                                log = logging.getLogger('uliweb.app')
+                                log.debug("Can't find object %s:%d" % (prop.reference_class.__name__, _id))
+                                _v = _id
                             query.append(_v)
                     else:
                         query = getattr(obj, prop.property_name).all()
                         
                 for x in query:
-                    s.append(get_obj_url(x))
+                    if isinstance(x, orm.Model):
+                        s.append(get_obj_url(x))
+                    else:
+                        s.append(str(x))
                 display = ' '.join(s)
             elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOne):
                 try:
