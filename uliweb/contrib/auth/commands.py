@@ -43,8 +43,7 @@ class CreateSuperUserCommand(SQLCommandMixin, Command):
 class EncryptPasswordCommand(Command):
     name = 'encryptpassword'
     help = 'Encrypt password.'
-    has_options = False
-    
+
     def handle(self, options, global_options, *args):
         from uliweb import functions
         from uliweb.core.SimpleFrame import get_settings, __global__

@@ -594,19 +594,27 @@ def get_caller(skip=None):
     """
     import inspect
     from fnmatch import fnmatch
-    
-    stack = inspect.stack()
+
+    try:
+        stack = inspect.stack()
+    except:
+        stack = [None, inspect.currentframe()]
     if len(stack) > 1:
         stack.pop(0)
-        if not isinstance(skip, (list, tuple)):
+        if skip and not isinstance(skip, (list, tuple)):
             skip = [skip]
+        else:
+            skip = []
         ptn = [os.path.splitext(s.replace('\\', '/'))[0] for s in skip]
         for frame in stack:
             #see doc: inspect
             #the frame object, the filename, the line number of the current line, 
             #the function name, a list of lines of context from the source code, 
             #and the index of the current line within that list
-            filename, funcname, lineno = frame[1], frame[3], frame[2] 
+            if isinstance(frame, tuple):
+                filename, funcname, lineno = frame[1], frame[3], frame[2]
+            else:
+                filename, funcname, lineno = frame.f_code.co_filename, frame.f_code.co_name, frame.f_lineno
             del frame
             found = False
             for k in ptn:

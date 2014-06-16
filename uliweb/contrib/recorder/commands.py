@@ -107,7 +107,6 @@ class PrintCommand(Command):
         make_option('--template_row', dest='template_row', default='recorder_row.tpl',
             help='Easy rocord fo recorder output template file. Default is recorder_row.tpl.'),
     )
-    has_options = True
 
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import pkg
@@ -122,7 +121,8 @@ class PrintCommand(Command):
 
         if args:
             if os.path.exists(args[0]):
-                ans = get_answer("Ths file %s is already exists, do you want to overwrite it?" % args[0])
+                message = "Ths file %s is already exists, do you want to overwrite it?" % args[0]
+                ans = 'Y' if global_options.yes else get_answer(message)
                 if ans != 'Y':
                     return
                 

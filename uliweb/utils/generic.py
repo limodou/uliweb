@@ -552,7 +552,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                     if prop.reference_fieldname == 'id':
                         query = []
                         for _id in old_value:
-                            _v = functions.get_object(prop.reference_class, _id, use_local=True)
+                            _v = functions.get_cached_object(prop.reference_class, _id)
                             query.append(_v)
                     else:
                         query = prop.reference_class.filter(prop.reference_class.c[prop.reversed_fieldname].in_(old_value))
@@ -561,31 +561,38 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                         query = []
                         _ids = prop.get_value_for_datastore(obj, cached=True)
                         for _id in _ids:
-                            _v = functions.get_object(prop.reference_class, _id, use_local=True)
+                            _v = functions.get_cached_object(prop.reference_class, _id)
+                            if not _v:
+                                log = logging.getLogger('uliweb.app')
+                                log.debug("Can't find object %s:%d" % (prop.reference_class.__name__, _id))
+                                _v = _id
                             query.append(_v)
                     else:
                         query = getattr(obj, prop.property_name).all()
                         
                 for x in query:
-                    s.append(get_obj_url(x))
+                    if isinstance(x, orm.Model):
+                        s.append(get_obj_url(x))
+                    else:
+                        s.append(str(x))
                 display = ' '.join(s)
             elif isinstance(prop, orm.ReferenceProperty) or isinstance(prop, orm.OneToOne):
                 try:
                     if old_value is not __default_value__:
                         d = prop.reference_class.c[prop.reference_fieldname]
                         if prop.reference_fieldname == 'id':
-                            v = functions.get_object(prop.reference_class, old_value, use_local=True)
+                            v = functions.get_cached_object(prop.reference_class, old_value)
                         else:
                             v = prop.reference_class.get(d==old_value)
                     if not isinstance(obj, Model):
                         d = prop.reference_class.c[prop.reference_fieldname]
                         if prop.reference_fieldname == 'id':
-                            v = functions.get_object(prop.reference_class, value, use_local=True)
+                            v = functions.get_cached_object(prop.reference_class, value)
                         else:
                             v = prop.reference_class.get(d==value)
                     else:
                         if prop.reference_fieldname == 'id':
-                            v = functions.get_object(prop.reference_class, obj.get_datastore_value(prop.property_name), use_local=True)
+                            v = functions.get_cached_object(prop.reference_class, obj.get_datastore_value(prop.property_name))
                         else:
                             v = getattr(obj, prop.property_name)
                 except orm.Error:
@@ -673,7 +680,7 @@ class AddView(object):
         self.form_args = form_args or {}
         self.static_fields = static_fields or []
         self.hidden_fields = hidden_fields or []
-        self.save = save or self.default_save
+        self._save = save or self.save
         self.pre_save = pre_save
         self.post_save = post_save
         self.post_created_form = post_created_form
@@ -837,7 +844,7 @@ class AddView(object):
             self.pre_save(d)
             
         files = self.process_files(d, edit=False)
-        obj = self.save(d)
+        obj = self._save(d)
         
         if self.post_save:
             self.post_save(obj, d)
@@ -952,7 +959,7 @@ class AddView(object):
             self.form.bind(data)
             return self.display(json_result)
         
-    def default_save(self, data):
+    def save(self, data):
         obj = self.model(**data)
         obj.save(version=self.version, version_fieldname=self.version_fieldname,
                         version_exception=self.version_exception)
@@ -1004,7 +1011,7 @@ class EditView(AddView):
             self.pre_save(self.obj, d)
         #process file field
         r = self.process_files(d, edit=True, obj=self.obj)
-        r = self.save(self.obj, d) or r
+        r = self._save(self.obj, d) or r
         if self.post_save:
             r = self.post_save(self.obj, d) or r
         
@@ -1058,7 +1065,7 @@ class EditView(AddView):
             self.form.bind(d)
             return self.display(json_result)
         
-    def default_save(self, obj, data):
+    def save(self, obj, data):
         obj.update(**data)
         r = obj.save(version=self.version, version_fieldname=self.version_fieldname,
                         version_exception=self.version_exception)

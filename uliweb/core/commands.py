@@ -87,7 +87,6 @@ class Command(object):
     help = ''
     args = ''
     check_apps_dirs = True
-    has_options = False
     check_apps = False
 
     def create_parser(self, prog_name, subcommand):
@@ -110,7 +109,7 @@ class Command(object):
         default from the attribute ``self.help``.
     
         """
-        if self.has_options:
+        if len(self.option_list) > 0:
             usage = '%%prog %s [options] %s' % (subcommand, self.args)
         else:
             usage = '%%prog %s %s' % (subcommand, self.args)
@@ -338,6 +337,8 @@ class ApplicationCommandManager(CommandManager):
             help='Output the result in verbose mode.'),
         make_option('-s', '--settings', dest='settings', default='',
             help='Settings file name. Default is "settings.ini".'),
+        make_option('-y', '--yes', dest='yes', action='store_true',
+            help='Automatic yes to prompt.'),
         make_option('-L', '--local_settings', dest='local_settings', default='',
             help='Local settings file name. Default is "local_settings.ini".'),
         make_option('--project', default='.', dest='project',

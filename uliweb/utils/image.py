@@ -16,7 +16,7 @@ def fix_filename(filename, suffix=''):
         return f+suffix+ext
     else:
         return filename
-        
+
 def resize_image(fobj, size=(50, 50), quality=None):
     from PIL import Image
     from StringIO import StringIO

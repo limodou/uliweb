@@ -1,10 +1,13 @@
 Uliweb Change Log
 =====================
 
-0.3.1 Version
+0.4 Version
 -----------------
 
 * Add qqmail mail server backend support, thanks to Yubin Wang <harry198344 AT gmail.com>
+* Add yes option, remove --force of makeapp,makeproject command
+* Refactor template with tornado
+* Remove has_options attribute in Command class
 
 0.3 Version
 -----------------

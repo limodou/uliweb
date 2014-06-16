@@ -171,11 +171,6 @@ class MakeAppCommand(Command):
     name = 'makeapp'
     args = 'appname'
     help = 'Create a new app according the appname parameter.'
-    option_list = (
-        make_option('-f', action='store_true', dest="force", 
-            help='Force to create app directory.'),
-    )
-    has_options = True
     check_apps_dirs = False
     
     def handle(self, options, global_options, *args):
@@ -198,7 +193,7 @@ class MakeAppCommand(Command):
                 path = app_path
             
             if os.path.exists(path):
-                if options.force:
+                if global_options.yes:
                     ans = 'y'
                 while ans not in ('y', 'n'):
                     ans = raw_input('The app directory has been existed, do you want to overwrite it?(y/n)[n]')
@@ -235,11 +230,6 @@ class MakeProjectCommand(Command):
     name = 'makeproject'
     help = 'Create a new project directory according the project name'
     args = 'project_name'
-    option_list = (
-        make_option('-f', action='store_true', dest="force", 
-            help='Force to create project directory.'),
-    )
-    has_options = True
     check_apps_dirs = False
 
     def handle(self, options, global_options, *args):
@@ -255,7 +245,7 @@ class MakeProjectCommand(Command):
         
         ans = '-1'
         if os.path.exists(project_name):
-            if options.force:
+            if global_options.yes:
                 ans = 'y'
             while ans not in ('y', 'n'):
                 ans = raw_input('The project directory has been existed, do you want to overwrite it?(y/n)[n]')
@@ -393,8 +383,7 @@ class ExportStaticCommand(Command):
         make_option('--auto', action='store_true', dest='auto', default=False,
             help='Enable javascript and css both compress process.'),
     )
-    has_options = True
-    
+
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import copy_dir_with_check
         from uliweb import settings
@@ -492,7 +481,6 @@ class ExportCommand(Command):
         make_option('-d', dest='outputdir',  
             help='Output directory of exported files.'),
     )
-    has_options = True
 
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import extract_dirs
@@ -568,8 +556,7 @@ class CallCommand(Command):
         make_option('--gevent', action='store_true', default=False, dest='gevent',
             help='Apply gevent monkey patch before execute the script.'),
     )
-    has_options = True
-    
+
     def handle(self, options, global_options, *args):
         from uliweb.utils.common import is_pyfile_exist
         from uliweb.core.SimpleFrame import get_app_dir
@@ -686,7 +673,6 @@ class RunserverCommand(Command):
     name = 'runserver'
     help = 'Start a new development server.'
     args = ''
-    has_options = True
     option_list = (
         make_option('-h', dest='hostname', default='localhost',
             help='Hostname or IP.'),
@@ -934,7 +920,6 @@ class ShellCommand(Command):
     help = 'Create a new interactive python shell environment.'
     args = '<filename>'
     check_apps_dirs = True
-    has_options = True
 #    option_list = (
 #        make_option('-i', dest='ipython', default=False, action='store_true',
 #            help='Using ipython if exists.'),
@@ -994,7 +979,6 @@ class FindCommand(Command):
     help = 'Find objects in uliweb, such as: view, template, static file etc.'
     args = ''
     check_apps_dirs = True
-    has_options = True
     option_list = (
         make_option('-t', '--template', dest='template', 
             help='Find template file path according template filename.'),

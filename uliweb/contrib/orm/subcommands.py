@@ -52,8 +52,7 @@ class RevisionCommand(SQLCommand, Command):
         make_option('-f', '--force', dest='force', action='store_true', default=False, help="Directly diff without check last unfinished version."),
     )
     check_apps = True
-    has_options = True
-    
+
     def handle(self, options, global_options, *args):
         from alembic.config import Config
         from uliweb.orm import engine_manager
@@ -85,8 +84,7 @@ class DiffCommand(RevisionCommand):
     name = 'diff'
     help = 'Create a new revision file with autogeneration.'
     check_apps = True
-    has_options = True
-    
+
     def do(self, config, args, options, global_options):
         self.run('revision', config, message=options.message, autogenerate=True, skip=options.force)
     
@@ -94,8 +92,7 @@ class CurrentCommand(RevisionCommand):
     name = 'current'
     help = 'Display the current revision for each database.'
     check_apps = True
-    has_options = True
-    
+
     def do(self, config, args, options, global_options):
         self.run('current', config)
 
@@ -108,8 +105,7 @@ class UpgradeCommand(RevisionCommand):
         make_option('--tag', dest='tag', help="Arbitrary 'tag' name - can be used by custom env.py scripts."),
     )
     check_apps = True
-    has_options = True
-    
+
     def do(self, config, args, options, global_options):
         if not args:
             revision = 'head'
