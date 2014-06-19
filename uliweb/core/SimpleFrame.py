@@ -313,7 +313,7 @@ def get_local_cache(key, creator=None):
     if value:
         local.local_cache[key] = value
     return value
-    
+
 def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_settings_file='local_settings.ini'):
     include_apps = include_apps or []
     inifile = norm_path(os.path.join(apps_dir, settings_file))
@@ -323,13 +323,13 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
     if not os.path.exists(apps_dir):
         return apps
     if os.path.exists(inifile):
-        x = pyini.Ini(inifile)
+        x = pyini.Ini(inifile, basepath=apps_dir)
         if x:
             installed_apps.extend(x.GLOBAL.get('INSTALLED_APPS', []))
 
     local_inifile = norm_path(os.path.join(apps_dir, local_settings_file))
     if os.path.exists(local_inifile):
-        x = pyini.Ini(local_inifile)
+        x = pyini.Ini(local_inifile, basepath=apps_dir)
         if x and x.get('GLOBAL'):
             installed_apps.extend(x.GLOBAL.get('INSTALLED_APPS', []))
 
@@ -375,7 +375,7 @@ def get_settings(project_dir, include_apps=None, settings_file='settings.ini',
     settings = collect_settings(project_dir, include_apps, settings_file,
         local_settings_file, default_settings)
 
-    x = pyini.Ini(lazy=True)
+    x = pyini.Ini(lazy=True, basepath=os.path.join(project_dir, 'apps'))
     for v in settings:
         x.read(v)
     x.update(default_settings or {})
@@ -983,6 +983,7 @@ class Dispatcher(object):
                 self.template_processors[ext] = {'func':import_attr(v['processor']), 'args':v.get('args', {})}
         
     def install_settings(self, s):
+        settings.set_basepath(self.apps_dir)
 #        settings = pyini.Ini()
         for v in s:
             settings.read(v)
