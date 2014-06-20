@@ -3308,7 +3308,7 @@ class Model(object):
             if obj:
                 return obj
 
-        if condition:
+        if condition is not None:
             _cond = condition
         else:
             if isinstance(id, (int, long)):
@@ -3317,7 +3317,7 @@ class Model(object):
                 _cond = cls.c.id==int(id)
             else:
                 _cond = id
-        
+
         #if there is no cached object, then just fetch from database
         obj = cls.filter(_cond, **kwargs).fields(*(fields or [])).one()
         
