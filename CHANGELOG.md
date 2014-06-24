@@ -12,6 +12,7 @@ Uliweb Change Log
 * Add yes option, remove --force of makeapp,makeproject command
 * Remove has_options attribute in Command class
 * Fix include in ini bug
+* Add sqlshell command
 
 0.3 Version
 -----------------

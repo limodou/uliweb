@@ -836,6 +836,58 @@ class SqlHtmlCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings)
         print generate_html(tables, apps)
     
+class SqlShellCommand(SQLCommandMixin, Command):
+    name = 'sqlshell'
+    args = ''
+    help = "Enter database shell, support sqlite, mysql, postgresql."
+    check_apps = True
+
+    def handle(self, options, global_options, *args):
+        from uliweb import settings
+        from urlparse import urlparse
+        from uliweb.orm import engine_manager
+
+        engine = get_engine(options, global_options)
+        if options.engine not in engine_manager:
+            print "Error: Can't found engine name in connections"
+            sys.exit(1)
+
+        conn = engine_manager[options.engine].options.connection_string
+        scheme, netloc, path, params, query, fragment = urlparse(conn)
+        if '+' in scheme:
+            _type = scheme.split('+')[0]
+        else:
+            _type = scheme
+        if netloc:
+            u, v = netloc.split('@', 1)
+            user, password = u.split(':')
+            x = v.split(':', 1)
+            if len(x) == 1:
+                host = v
+                port = None
+            else:
+                host = v[0]
+                port = v[1]
+        else:
+            user = password = host = port = ''
+
+        database = path.lstrip('/')
+        if _type == 'mysql':
+            if port:
+                p = '-P %s' % port
+            else:
+                p = ''
+            cmd = 'mysql -u %s -p%s %s -h%s %s' % (user, password, database, host, p)
+        elif _type == 'sqlite':
+            cmd = 'sqlite %s' % database
+        elif _type == 'postgresql':
+            if port:
+                p = '-p %s' % port
+            else:
+                p = ''
+            cmd = 'psql -U %s -W%s -d %s -h %s %s' % (user, password, database, host, p)
+        os.system(cmd)
+
 class ValidatedbCommand(SQLCommandMixin, Command):
     name = 'validatedb'
     args = '<appname, appname, ...>'
