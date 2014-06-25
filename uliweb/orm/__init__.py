@@ -24,6 +24,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'begin_sql_monitor', 'close_sql_monitor', 'set_model_config', 'text',
     'get_object', 'get_cached_object',
     'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
+    'NotFound',
     ]
 
 __auto_create__ = False
