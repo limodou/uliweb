@@ -1770,8 +1770,10 @@ class Result(object):
         self.result = None
         self.default_query_flag = True
         self._group_by = None
+        self._having = None
         self.distinct_field = None
         self._values_flag = False
+        self._join = []
         self.connection = model.get_connection()
         
     def do_(self, query):
@@ -1837,7 +1839,25 @@ class Result(object):
     
     def all(self):
         return self
-    
+
+    def join(self, model, cond, isouter=False):
+        _join = None
+        model = get_model(model)
+        if issubclass(model, Model):
+            # if cond is None:
+            #     for prop in Model.proterties:
+            #         if isinstance(prop, ReferenceProperty) and prop.reference_class is self.model:
+            #             _right = prop.reference_class
+            #             _join = self.model.table.join(_right.table,
+            #                                           _right.c[prop.reference_fieldname])
+            #             break
+            # else:
+            _join = self.model.table.join(model.table, cond, isouter=isouter)
+            self._join.append(_join)
+        else:
+            raise BadValueError("Only Model support in this function.")
+        return self
+
     def get(self, condition=None):
         if isinstance(condition, (int, long)):
             return self.filter(self.model.c.id==condition).one()
@@ -1880,7 +1900,11 @@ class Result(object):
     def group_by(self, *args):
         self._group_by = args
         return self
-    
+
+    def having(self, *args):
+        self._having = args
+        return self
+
     def fields(self, *args, **kwargs):
         if args:
             args = flat_list(args)
@@ -1973,14 +1997,19 @@ class Result(object):
             _f = getattr(self.model, 'default_query', None)
             if _f:
                 _f(self)
+        from_ = self._join
+        from_.append(self.model.table)
         if self.condition is not None:
-            query = select(columns, self.condition, from_obj=[self.model.table], **self.kwargs)
+            query = select(columns, self.condition, from_obj=from_, **self.kwargs)
         else:
-            query = select(columns, from_obj=[self.model.table], **self.kwargs)
+            query = select(columns, from_obj=from_, **self.kwargs)
+
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)
         if self._group_by:
             query = query.group_by(*self._group_by)
+            if self._having:
+                query = query.having(*self._having)
         return query
     
     def load(self, values):
@@ -2040,6 +2069,8 @@ class ReverseResult(Result):
         self.result = None
         self.default_query_flag = True
         self._group_by = None
+        self._having = None
+        self._join = []
         self.distinct_field = None
         self._values_flag = False
         self.connection = model.get_connection()
@@ -2095,6 +2126,8 @@ class ManyResult(Result):
         self.through_model = through_model
         self.default_query_flag = True
         self._group_by = None
+        self._having = None
+        self._join = []
         self.distinct_field = None
         self._values_flag = False
         self.connection = self.modela.get_connection()
@@ -2299,6 +2332,8 @@ class ManyResult(Result):
             query = getattr(query, func)(*args, **kwargs)
         if self._group_by:
             query = query.group_by(*self._group_by)
+            if self._having:
+                query = query.having(*self._having)
         return query
     
     def one(self):

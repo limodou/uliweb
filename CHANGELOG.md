@@ -13,6 +13,7 @@ Uliweb Change Log
 * Remove has_options attribute in Command class
 * Fix include in ini bug
 * Add sqlshell command
+* Add having and join support to ORM
 
 0.3 Version
 -----------------
