@@ -19,5 +19,5 @@ if __name__ == '__main__':
     test(c, log, counter)
     
     print
-    print 'Total cases is %d, %d passed, %d failed' % (counter.totle, 
+    print 'Total cases is %d, %d passed, %d failed' % (counter.total,
         counter.passed, counter.failed)
