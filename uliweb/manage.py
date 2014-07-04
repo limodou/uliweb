@@ -1101,7 +1101,7 @@ class FindCommand(Command):
         from uliweb import settings
         from uliweb.core.SimpleFrame import collect_settings
         from uliweb.utils.pyini import Ini
-        
+
         print '------ Combined value of [%s] ------' % option
         print settings.get_var(option)
 
@@ -1109,10 +1109,10 @@ class FindCommand(Command):
         sec_flag = '/' not in option
         if not sec_flag:
             section, key = option.split('/')
-            
+
         for f in collect_settings(global_options.project, settings_file=global_options.settings,
             local_settings_file=global_options.local_settings):
-            x = Ini(f, raw=True)
+            x = Ini(f, raw=True, basepath=global_options.apps_dir)
             if sec_flag:
                 if option in x:
                     print x[option]

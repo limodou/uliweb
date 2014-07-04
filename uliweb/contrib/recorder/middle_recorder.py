@@ -1,6 +1,8 @@
 from uliweb import Middleware
 from uliweb.utils.common import request_url
+from logging import getLogger
 
+log = getLogger(__name__.rsplit('.')[0])
 class RecorderrMiddle(Middleware):
     ORDER = 600
     
@@ -44,6 +46,12 @@ class RecorderrMiddle(Middleware):
             user_id = request.user.id
         else:
             user_id = None
+        max_content_length = settings.get_var('ULIWEBRECORDER/max_content_length')
+        if len(response_data) > max_content_length:
+            msg = "Content length is great than %d so it will be omitted." % max_content_length
+            log.info(msg)
+            response_data = msg
+            response_data_is_text = True
         recorder = R(method=request.method,
             url=request_url(request),
             post_data_is_text=post_data_is_text,

@@ -384,11 +384,11 @@ class Section(SortedDict):
         buf = StringIO.StringIO()
         self.dumps(buf)
         return buf.getvalue()
-    
+
 class Ini(SortedDict):
-    def __init__(self, inifile='', commentchar=None, encoding=None, 
+    def __init__(self, inifile='', commentchar=None, encoding=None,
         env=None, convertors=None, lazy=False, writable=False, raw=False,
-        import_env=True):
+        import_env=True, basepath='.'):
         """
         lazy is used to parse first but not deal at time, and only when 
         the user invoke finish() function, it'll parse the data.
@@ -397,6 +397,7 @@ class Ini(SortedDict):
         """
         super(Ini, self).__init__()
         self._inifile = inifile
+        self._basepath = basepath
         self._commentchar = commentchar or __default_env__.get('commentchar', '#')
         self._encoding = encoding or __default_env__.get('encoding', 'utf-8')
         self._env = __default_env__.get('env', {}).copy()
@@ -425,6 +426,9 @@ class Ini(SortedDict):
         
     def get_filename(self):
         return self._inifile
+
+    def set_basepath(self, basepath):
+        self._basepath = basepath
     
     filename = property(get_filename, set_filename)
     
@@ -482,10 +486,13 @@ class Ini(SortedDict):
                     #process include notation
                     if sec_name.startswith('include:'):
                         _filename = sec_name[8:].strip()
-                        _filename = os.path.abspath(_filename)
-                        if os.path.exists(_filename):
+                        _file = os.path.join(self._basepath, _filename)
+                        if os.path.exists(_file):
                             old_encoding = self._encoding
-                            self.read(_filename)
+                            old_filename = self.filename
+                            self.set_filename(_file)
+                            self.read(_file, filename=_file)
+                            self.set_filename(old_filename)
                             self._encoding = old_encoding
                         else:
                             import warnings
@@ -538,7 +545,6 @@ class Ini(SortedDict):
                                 v = eval_value(value, self.env(), self[sec_name], self._encoding, self._import_env)
                             except Exception as e:
                                 print_exc()
-                                print dict(self)
                                 raise Exception("Converting value (%s) error in %s:%d:%s" % (value, filename or self._inifile, lineno, line))
                     section.add(keyname, v, comments, replace=replace_flag)
                     comments = []

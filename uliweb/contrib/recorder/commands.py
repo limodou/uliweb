@@ -127,7 +127,7 @@ class PrintCommand(Command):
                     return
                 
             out = open(args[0], 'w')
-            relpath = os.path.normpath(os.path.relpath(os.path.dirname(args[0]), '.')).replace('\\', '/')
+            relpath = os.path.normpath(os.path.relpath(os.path.dirname(args[0]) or './', '.')).replace('\\', '/')
         else:
             out = sys.stdout
             relpath = '.'

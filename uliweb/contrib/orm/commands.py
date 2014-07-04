@@ -43,7 +43,8 @@ def reflect_table(engine, tablename):
     return table
 
 def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
-    settings_file='settings.ini', local_settings_file='local_settings.ini'):
+    settings_file='settings.ini', local_settings_file='local_settings.ini',
+    all=False):
     from uliweb.core.SimpleFrame import get_apps, get_app_dir
     from uliweb import orm
     from StringIO import StringIO
@@ -64,28 +65,40 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
     except:
         print "Problems to models like:", list(set(old_models) ^ set(orm.__models__.keys()))
         raise
-    
+
+    all_meta = MetaData()
+    all_meta.reflect(bind=engine.engine)
+    meta = engine.metadata
+
     if apps:
         t = {}
-        for tablename, m in engine.metadata.tables.items():
-            if hasattr(m, '__appname__') and m.__appname__ in apps:
-                table = engine.metadata.tables[tablename]
-                table.__appname__ = m.__appname__
-                t[tables_map.get(tablename, tablename)] = table
+        for tablename, m in all_meta.tables.items():
+            if tablename in meta.tables:
+                m = meta.tables[tablename]
+                if hasattr(m, '__appname__') and m.__appname__ in apps:
+                    t[tables_map.get(tablename, tablename)] = m
     elif tables:
         t = {}
         for tablename in tables:
-            if tablename in engine.metadata.tables:
-                table = engine.metadata.tables[tablename]
-                table.__appname__ = engine.metadata.tables[tablename].__appname__
+            if tablename in all_meta.tables:
+                if tablename in meta.tables:
+                    table = meta.tables[tablename]
+                else:
+                    table = all_meta.tables[tablename]
+                    table.__appname__ = 'UNKNOWN'
                 t[tables_map.get(tablename, tablename)] = table
             else:
                 print "Table [%s] can't be found, it'll be skipped." % tablename
     else:
         t = {}
-        for tablename, m in engine.metadata.tables.items():
-            table = engine.metadata.tables[tablename]
-            table.__appname__ = m.__appname__
+        if not all:
+            all_meta = engine.metadata
+        for tablename, m in all_meta.tables.items():
+            if tablename in meta:
+                table = meta.tables[tablename]
+            else:
+                table = all_meta.tables[tablename]
+                table.__appname__ = 'UNKNOWN'
             t[tables_map.get(tablename, tablename)] = table
      
     return t
@@ -406,6 +419,8 @@ class DumpCommand(SQLCommandMixin, Command):
             help='Character encoding used in text file. Default is "utf-8".'),
         make_option('-z', dest='zipfile', 
             help='Compress table files into a zip file.'),
+        make_option('-p', '--project', dest='all', default=True, action='store_false',
+            help='Process all tables defined in engine include tables which are not defined in current application.'),
     )
     check_apps = True
     
@@ -428,7 +443,7 @@ class DumpCommand(SQLCommandMixin, Command):
         tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
             engine_name=options.engine, 
             settings_file=global_options.settings, 
-            local_settings_file=global_options.local_settings))
+            local_settings_file=global_options.local_settings, all=options.all))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
             if global_options.verbose:
@@ -581,6 +596,8 @@ class LoadCommand(SQLCommandMixin, Command):
             help='delimiter character used in text file. Default is ",".'),
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
+        make_option('-p', '--project', dest='all', default=True, action='store_false',
+            help='Process all tables defined in engine include tables which are not defined in current application.'),
     )
     check_apps = True
     
@@ -608,10 +625,10 @@ are you sure to load data""" % options.engine
         tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
             engine_name=options.engine, 
             settings_file=global_options.settings, 
-            local_settings_file=global_options.local_settings))
+            local_settings_file=global_options.local_settings, all=options.all))
         _len = len(tables)
         for i, (name, t) in enumerate(tables):
-            if t.__mapping_only__:
+            if hasattr(t, '__mapping_only__') and t.__mapping_only__:
                 if global_options.verbose:
                     msg = 'SKIPPED(Mapping Table)'
                     print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
@@ -836,6 +853,58 @@ class SqlHtmlCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings)
         print generate_html(tables, apps)
     
+class SqlShellCommand(SQLCommandMixin, Command):
+    name = 'sqlshell'
+    args = ''
+    help = "Enter database shell, support sqlite, mysql, postgresql."
+    check_apps = True
+
+    def handle(self, options, global_options, *args):
+        from uliweb import settings
+        from urlparse import urlparse
+        from uliweb.orm import engine_manager
+
+        engine = get_engine(options, global_options)
+        if options.engine not in engine_manager:
+            print "Error: Can't found engine name in connections"
+            sys.exit(1)
+
+        conn = engine_manager[options.engine].options.connection_string
+        scheme, netloc, path, params, query, fragment = urlparse(conn)
+        if '+' in scheme:
+            _type = scheme.split('+')[0]
+        else:
+            _type = scheme
+        if netloc:
+            u, v = netloc.split('@', 1)
+            user, password = u.split(':')
+            x = v.split(':', 1)
+            if len(x) == 1:
+                host = v
+                port = None
+            else:
+                host = v[0]
+                port = v[1]
+        else:
+            user = password = host = port = ''
+
+        database = path.lstrip('/')
+        if _type == 'mysql':
+            if port:
+                p = '-P %s' % port
+            else:
+                p = ''
+            cmd = 'mysql -u %s -p%s %s -h%s %s' % (user, password, database, host, p)
+        elif _type == 'sqlite':
+            cmd = 'sqlite %s' % database
+        elif _type == 'postgresql':
+            if port:
+                p = '-p %s' % port
+            else:
+                p = ''
+            cmd = 'psql -U %s -W%s -d %s -h %s %s' % (user, password, database, host, p)
+        os.system(cmd)
+
 class ValidatedbCommand(SQLCommandMixin, Command):
     name = 'validatedb'
     args = '<appname, appname, ...>'

@@ -1,1 +1,1 @@
-c.test_url('{{=row.url}}', data={{=row.post_data}}, method='{{=row.method}}', ok_test={{=row.status_code}}, log=log, counter=counter)
+c.test_url('{{<<row.url}}', data={{<<row.post_data}}, method='{{=row.method}}', ok_test={{=row.status_code}}, log=log, counter=counter)

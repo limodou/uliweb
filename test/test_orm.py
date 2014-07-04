@@ -2279,32 +2279,72 @@ def test_get_object():
     <Test {'username':u'limodou','year':0,'id':1}>
     """
 
-#db = get_connection('sqlite://')
-#db.echo = False
-#db.metadata.drop_all()
-#class User(Model):
-#    username = Field(CHAR, max_length=20)
-#    year = Field(int)
-#class Group(Model):
-#    name = Field(str, max_length=20)
-#    users = ManyToMany(User)
-#a = User(username='limodou', year=5)
-#a.save()
+def test_group_by_and_having():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> from sqlalchemy.sql import func
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    >>> u = User(username='python')
+    >>> u.save()
+    True
+    >>> u = User(username='python')
+    >>> u.save()
+    True
+    >>> list(u.all().group_by(User.c.username))
+    [<User {'username':u'python','id':2}>]
+    >>> list(u.all().group_by(User.c.username).having(func.count('*')>0))
+    [<User {'username':u'python','id':2}>]
+    """
+
+def test_join():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     user = Reference(User)
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='user', year=10)
+    >>> b.save()
+    True
+    >>> c = User(username='abc', year=20)
+    >>> c.save()
+    True
+    >>> g1 = Group(name='python', user=a)
+    >>> g1.save()
+    True
+    >>> list(User.all().join(Group, User.c.id==Group.c.user))
+    [<User {'username':u'limodou','year':5,'id':1}>]
+    """
+
+# db = get_connection('sqlite://')
+# db.echo = False
+# db.metadata.drop_all()
+# class User(Model):
+#     username = Field(CHAR, max_length=20)
+#     year = Field(int)
+# class Group(Model):
+#     name = Field(str, max_length=20)
+#     user = Reference(User)
+# a = User(username='limodou', year=5)
+# a.save()
 #
-#b = User(username='user', year=10)
-#b.save()
+# b = User(username='user', year=10)
+# b.save()
 #
-#c = User(username='abc', year=20)
-#c.save()
+# c = User(username='abc', year=20)
+# c.save()
 #
-#g1 = Group(name='python', users=[a.id, b.id])
-#g1.save()
-#print g1._users_
+# g1 = Group(name='python', user=a)
+# g1.save()
 #
-#x = {'users': '', 'id': '1', 'name': 'python'}
-#g3 = Group.load(x, from_dump=True)
-#print g3._users_
-#
-#x = {'users': '1,2', 'id': '1', 'name': 'python'}
-#g4 = Group.load(x, from_dump=True)
-#print g4._users_
+# print list(User.all().join(Group, User.c.id==Group.c.user))

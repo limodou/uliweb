@@ -3,11 +3,21 @@ Uliweb Change Log
 
 0.4 Version
 -----------------
+* Refactor template with tornado
+
+0.3.1 Version
+-----------------
 
 * Add qqmail mail server backend support, thanks to Yubin Wang <harry198344 AT gmail.com>
-* Add yes option, remove --force of makeapp,makeproject command
-* Refactor template with tornado
-* Remove has_options attribute in Command class
+* Add `yes` option, remove `--force` of makeapp,makeproject command
+* Remove `has_options` attribute in Command class
+* Fix `include` bug in ini
+* Fix condition test bug of orm.get()
+* Add `sqlshell` command
+* Add `having` and `join` support to ORM
+* Add whole database dump and load support #33
+* Add NotFound to __all__ of orm
+* Fix recorder bug
 
 0.3 Version
 -----------------
