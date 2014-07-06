@@ -23,7 +23,7 @@ def get_engine(options, global_options):
     #below setting will be executed after Dispatcher started
     #set_auto_set_model(True)
     engine_name = options.engine
-    engine = get_connection(engine_name=engine_name)
+    engine = get_connection(engine_name)
     engine.engine_name = engine_name
     if global_options.verbose:
         print_engine(engine)
@@ -266,17 +266,17 @@ class ResetCommand(SQLCommandMixin, Command):
     
     def handle(self, options, global_options, *args):
 
+        engine = get_engine(options, global_options)
+
         if args:
             message = """This command will drop all tables of app [%s], are you sure to reset""" % ','.join(args)
         else:
-            message = """This command will drop whole database, are you sure to reset"""
+            message = """This command will drop whole database [%s], are you sure to reset""" % engine.engine_name
 
         ans = 'Y' if global_options.yes else get_answer(message)
 
         if ans!='Y':
             return
-
-        engine = get_engine(options, global_options)
 
         tables = get_sorted_tables(get_tables(global_options.apps_dir, args,
             engine_name=options.engine, settings_file=global_options.settings,

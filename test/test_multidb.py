@@ -138,7 +138,7 @@ def test_local_cache():
     >>> get_cached_object('blog', 1) # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
     <BLANKLINE>
     ===>>>>> [default] (...)
-    SELECT blog.title, blog.content, blog.id FROM blog WHERE blog.id = 1 ... LIMIT 1 OFFSET 0;
+    SELECT blog.title, blog.content, blog.id FROM blog WHERE blog.id = 1 LIMIT 1 OFFSET 0;
     ===<<<<< time used ...s
     <BLANKLINE>
     <Blog {'title':u'1','content':u'1','id':1}>

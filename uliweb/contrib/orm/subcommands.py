@@ -35,7 +35,7 @@ class InitCommand(SQLCommand, Command):
             f.write(text)
             
         #drop old alembic_version table
-        db = get_connection(engine_name=options.engine)
+        db = get_connection(options.engine)
         metadata = MetaData(db)
         if db.dialect.has_table(db.connect(), 'alembic_version'):
             version = Table('alembic_version', metadata, autoload=True) 

@@ -75,7 +75,7 @@ def run_migrations_online():
     name = config.get_main_option("engine_name")
     make_simple_application(project_dir='.')
     target_metadata = orm.get_metadata(name)
-    connection = orm.get_connection(engine_name=name).connect()
+    connection = orm.get_connection(name).connect()
 #    connection = engine.connect()
     
     context.configure(

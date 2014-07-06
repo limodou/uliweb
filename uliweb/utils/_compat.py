@@ -54,7 +54,7 @@ if not PY2:
         else:
             return str(s)
 
-    def b(s):
+    def b(s, encoding='utf8'):
         if isinstance(s, bytes):
             return s
         else:
@@ -172,7 +172,14 @@ modules_mapping = {
     'http.cookies':'Cookie',
     'http.cookiejar':'cookielib',
 
-    'urllib.parse':['urlparse', 'urllib'],
+    'urllib.parse':{'urlparse':['ParseResult', 'SplitResult',
+                                'parse_qs', 'parse_qsl',
+                                'urldefrag', 'urljoin',
+                                'urlparse', 'urlsplit',
+                                'urlunparse', 'urlunsplit'],
+                    'urllib':['quote', 'quote_plus',
+                              'unquote', 'unquote_plus',
+                              'urlencode', 'splitquery']},
 
         # from urlparse import (ParseResult, SplitResult, parse_qs, parse_qsl,
         #           urldefrag, urljoin, urlparse, urlsplit,
@@ -184,7 +191,35 @@ modules_mapping = {
         #             urlencode,
         #             splitquery)
 
-    'urllib.request':['urllib', 'urllib2', 'urlparse'],
+    'urllib.request':{'urllib':['pathname2url',
+                                'url2pathname',
+                                'getproxies',
+                                'urlretrieve',
+                                'urlcleanup',
+                                'URLopener',
+                                'FancyURLopener',
+                                'proxy_bypass'],
+                      'urllib2':['AbstractBasicAuthHandler',
+                                 'AbstractDigestAuthHandler',
+                                 'BaseHandler', 'CacheFTPHandler',
+                                 'FileHandler', 'FTPHandler',
+                                 'HTTPBasicAuthHandler',
+                                 'HTTPCookieProcessor',
+                                 'HTTPDefaultErrorHandler',
+                                 'HTTPDigestAuthHandler',
+                                 'HTTPErrorProcessor', 'HTTPHandler',
+                                 'HTTPPasswordMgr',
+                                 'HTTPPasswordMgrWithDefaultRealm',
+                                 'HTTPRedirectHandler', 'HTTPSHandler',
+                                 'URLError', 'build_opener',
+                                 'install_opener', 'OpenerDirector',
+                                 'ProxyBasicAuthHandler',
+                                 'ProxyDigestAuthHandler',
+                                 'ProxyHandler', 'Request',
+                                 'UnknownHandler', 'urlopen'],
+                      'urlparse':['urldefrag','urljoin', 'urlparse',
+                                  'urlunparse', 'urlsplit', 'urlunsplit',
+                                  'parse_qs', 'parse_q']},
 
         # from urllib import (pathname2url,
         #                     url2pathname,
@@ -232,10 +267,11 @@ modules_mapping = {
         #                  urlsplit,
         #                  urlunsplit,
         #                  parse_qs,
-        #                  parse_q"
+        #                  parse_q
         #                 )
 
-    'urllib.error':['urllib', 'urllib2'],
+    'urllib.error':{'urllib':['ContentTooShortError'],
+                    'urllib2':['URLError', 'HTTPError']},
 
         # from urllib import ContentTooShortError
         # from urllib2 import URLError, HTTPError
@@ -243,35 +279,55 @@ modules_mapping = {
     'xmlrpc.client':'xmlrpclib',
     'xmlrpc.server':'xmlrpclib',
 }
-def import_(module, objects=None, via=None):
+for k, v in modules_mapping.items():
+    if isinstance(v, dict):
+        x = {}
+        for m, attrs in v.items():
+            for a in attrs:
+                x[a] = m
+        modules_mapping[k] = x
+
+def import_(module, objects=None, py2=None):
     """
     :param module: py3 compatiable module path
     :param objects: objects want to imported, it should be a list
     :param via: for some py2 module, you should give the import path according the
         objects which you want to imported
     :return: object or module
+
+    Usage:
+        import_('urllib.parse', 'urlparse')
+        import_('urllib.parse', ['urlparse', 'urljoin'])
+        import_('urllib.parse', py2='urllib2')
     """
-    if PY3:
+    if not PY2:
         mod = __import__(module, fromlist=['*'])
     else:
         path = modules_mapping.get(module)
         if not path:
             raise Exception("Can't find the module %s in mappings." % module)
-        if isinstance(path, list):
-            if not via:
-                raise Exception("You should give a via parameter to enable import from py2.")
-            path = via
-        mod = __import__(path, fromlist=['*'])
 
-    if objects:
-        if not isinstance(objects, (list, tuple)):
-            raise Exception("objects parameter should be a list or tuple.")
-        r = []
-        for x in objects:
-            r.append(getattr(mod, x))
-        if len(r) > 1:
-            return tuple(r)
+        if objects:
+            if not isinstance(objects, (list, tuple)):
+                objects = [objects]
+
+            r = []
+            for x in objects:
+                m = path.get(x)
+                if not m:
+                    raise Exception("Can't find the object %s in %s." % (x, path))
+                mod = __import__(m, fromlist=['*'])
+                r.append(getattr(mod, x))
+            if len(r) > 1:
+                return tuple(r)
+            else:
+                return r[0]
+
         else:
-            return r[0]
-    else:
-        return mod
+            if isinstance(path, (dict, list)):
+                if not py2:
+                    raise Exception("You should give py2 parameter to enable import from py2.")
+                path = py2
+            mod = __import__(path, fromlist=['*'])
+
+            return mod

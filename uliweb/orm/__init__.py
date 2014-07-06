@@ -309,7 +309,11 @@ class Session(object):
         self._conn = None
         self._trans = None
         self.local_cache = {}
-       
+
+    def __str__(self):
+        return '<Session engine_name:%s, auto_transaction=%r, auto_close=%r>' % (
+            self.engine_name, self.auto_transaction, self.auto_close)
+
     @property
     def need_transaction(self):
         from uliweb import is_in_web
@@ -404,7 +408,7 @@ class Session(object):
             self.local_cache[key] = value
         return value
         
-def get_connection(connection='', engine_name='default', connection_type='long', **args):
+def get_connection(connection='', connection_type='long', **args):
     """
     Creating an NamedEngine or just return existed engine instance
 
@@ -506,7 +510,7 @@ def do_(query, ec=None, args=None):
     """
     from time import time
     from uliweb.utils.common import get_caller
-    
+
     conn = get_session(ec)
     b = time()
     result = conn.execute(query, *(args or ()))

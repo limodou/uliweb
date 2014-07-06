@@ -2,6 +2,7 @@
 # Author: Limodou@gmail.com
 # License: BSD
 ####################################################################
+from __future__ import print_function, absolute_import
 
 import os, sys
 import cgi
@@ -13,19 +14,20 @@ from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, BadRequest
 from werkzeug.routing import Map
 
-import template
-from js import json_dumps
-import dispatch
+from . import template
+from .js import json_dumps
+from . import dispatch
 from uliweb.utils.storage import Storage
 from uliweb.utils.common import (pkg, log, import_attr, 
     myimport, wraps, norm_path)
+from uliweb.utils._compat import string_types
 import uliweb.utils.pyini as pyini
 from uliweb.i18n import gettext_lazy, i18n_ini_convertor
 from uliweb.utils.localproxy import LocalProxy, Global
 from uliweb import UliwebError
 
 #from rules import Mapping, add_rule
-import rules
+from . import rules
 
 try:
     set
@@ -279,7 +281,7 @@ def get_app_dir(app):
         p = app.split('.')
         try:
             path = pkg.resource_filename(p[0], '')
-        except ImportError, e:
+        except ImportError as e:
             log.error("Can't import app %s" % p[0])
             log.exception(e)
             path = ''
@@ -587,7 +589,8 @@ class Dispatcher(object):
                 log.addHandler(_handler)
                 
     def process_domains(self, settings):
-        from urlparse import urlparse
+        from uliweb.utils._compat import import_
+        urlparse = import_('urllib.parse', 'urlparse')
 
         Dispatcher.domains = {}
         
@@ -688,7 +691,7 @@ class Dispatcher(object):
         request.rule = rule
         #get handler
         _klass = None
-        if isinstance(endpoint, (str, unicode)):
+        if isinstance(endpoint, string_types):
             mod, handler = safe_import(endpoint)
             if inspect.ismethod(handler):
                 if not handler.im_self:    #instance method
@@ -831,7 +834,7 @@ class Dispatcher(object):
             else:
                 d = None
             response.write(self.template(tmpfile, result, env, default_template=d))
-        elif isinstance(result, (str, unicode)):
+        elif isinstance(result, string_types):
             response.write(result)
         elif isinstance(result, (Response, BaseResponse)):
             response = result
@@ -939,7 +942,7 @@ class Dispatcher(object):
         for v in views:
             try:
                 myimport(v)
-            except Exception, e:
+            except Exception as e:
                 log.exception(e)
          
     def init_urls(self):
@@ -959,9 +962,9 @@ class Dispatcher(object):
         for p in self.apps:
             try:
                 myimport(p)
-            except ImportError, e:
+            except ImportError as e:
                 pass
-            except BaseException, e:
+            except BaseException as e:
                 log.exception(e)
             
     def install_settings(self, s):
@@ -1006,7 +1009,7 @@ class Dispatcher(object):
                         dispatch.bind(args[0], **args[2])(args[1])
                 else:
                     is_wrong = True
-            elif isinstance(args, (str, unicode)):
+            elif isinstance(args, string_types):
                 dispatch.bind(args)(bind_name)
             else:
                 is_wrong = True
@@ -1034,7 +1037,7 @@ class Dispatcher(object):
                         expose(args[0], name=name, **args[2])(args[1])
                 else:
                     is_wrong = True
-            elif isinstance(args, (str, unicode)):
+            elif isinstance(args, string_types):
                 expose(args)(name)
             else:
                 is_wrong = True
@@ -1070,7 +1073,7 @@ class Dispatcher(object):
                 order = getattr(cls, 'ORDER', 500)
             m.append((order, cls))
         
-        m.sort(cmp=lambda x, y: cmp(x[0], y[0]))
+        m.sort()
             
         return [x[1] for x in m]
     
@@ -1161,7 +1164,7 @@ class Dispatcher(object):
                                 response = e.get_response()
                         if post_call:
                             response = post_call(req, response)
-                    except Exception, e:
+                    except Exception as e:
                         for cls in reversed(middlewares):
                             if hasattr(cls, 'process_exception'):
                                 ins = _inss.get(cls)
@@ -1192,13 +1195,13 @@ class Dispatcher(object):
                 
             #endif
             
-        except HTTPError, e:
+        except HTTPError as e:
             response = self.render(e.errorpage, Storage(e.errors))
-        except NotFound, e:
+        except NotFound as e:
             response = self.not_found(e)
-        except HTTPException, e:
+        except HTTPException as e:
             response = e
-        except Exception, e:
+        except Exception as e:
             if not self.settings.get_var('GLOBAL/DEBUG'):
                 response = self.internal_error(e)
             else:
