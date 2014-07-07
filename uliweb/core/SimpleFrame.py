@@ -423,6 +423,98 @@ def get_settings(project_dir, include_apps=None, settings_file='settings.ini',
 def is_in_web():
     return getattr(local, 'in_web', False)
 
+class DispatcherHandler(object):
+    def __init__(self, application):
+        self.application = application
+
+    def open(self, *args, **kw):
+        return self.application.open(*args, **kw)
+
+    def get(self, *args, **kw):
+        """Like open but method is enforced to GET."""
+        kw['method'] = 'GET'
+        return self.open(*args, **kw)
+
+    def patch(self, *args, **kw):
+        """Like open but method is enforced to PATCH."""
+        kw['method'] = 'PATCH'
+        return self.open(*args, **kw)
+
+    def post(self, *args, **kw):
+        """Like open but method is enforced to POST."""
+        kw['method'] = 'POST'
+        return self.open(*args, **kw)
+
+    def head(self, *args, **kw):
+        """Like open but method is enforced to HEAD."""
+        kw['method'] = 'HEAD'
+        return self.open(*args, **kw)
+
+    def put(self, *args, **kw):
+        """Like open but method is enforced to PUT."""
+        kw['method'] = 'PUT'
+        return self.open(*args, **kw)
+
+    def delete(self, *args, **kw):
+        """Like open but method is enforced to DELETE."""
+        kw['method'] = 'DELETE'
+        return self.open(*args, **kw)
+
+class ContextStorage(object):
+    """
+    Used to save increament vars
+    """
+
+    __variables__ = {}
+
+    def __init__(self, args={}):
+        self.__class__.__variables__ = args
+        self._vars = {}
+
+    def __getattr__(self, key):
+        try: 
+            return self['_vars'][key]
+        except KeyError as e: 
+            try:
+                return self[key]
+            except KeyError as e:
+                return None
+
+    def copy(self):
+        n = ContextStorage(self.__variables__)
+        n._vars = self._vars.copy()
+        return n
+
+    def to_dict(self):
+        d = self._vars.copy()
+        d.update(self.__variables__)
+        return d
+
+    def __getitem__(self, key):
+        try:
+            return self._vars[key]
+        except KeyError as e:
+            return self.__variables__[key]
+
+    def __setitem__(self, key, value):
+        self._vars[key] = value
+
+    def update(self, arg):
+        self._vars.update(arg)
+
+    def items(self):
+        keys = set()
+        for k, v in self._vars.items():
+            keys.add(k)
+            yield k, v
+
+        for k, v in self.__variables__.items():
+            if k not in keys:
+                yield k, v
+
+    def __repr__(self):
+        return '<ContextStorage ' + repr(self.__variables__) + ' ' + repr(self._vars) + ' >'
+
 class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, 
@@ -491,14 +583,14 @@ class Dispatcher(object):
         self.install_exposes()
         #process middlewares
         Dispatcher.middlewares = self.install_middlewares()
-        
+
         dispatch.call(self, 'prepare_default_env', Dispatcher.env)
         Dispatcher.default_template = pkg.resource_filename('uliweb.core', 'default.html')
         
         Dispatcher.installed = True
         
     def _prepare_env(self):
-        env = Storage({})
+        env = {}
         env['url_for'] = url_for
         env['redirect'] = redirect
         env['Redirect'] = Redirect
@@ -507,7 +599,12 @@ class Dispatcher(object):
         env['settings'] = settings
         env['json'] = json
         env['jsonp'] = jsonp
-        return env
+        env['functions'] = functions
+        env['json_dumps'] = json_dumps
+
+
+        c = ContextStorage(env)
+        return c
     
     def set_log(self):
         import logging
@@ -677,12 +774,6 @@ class Dispatcher(object):
         log.exception(e)
         return response
     
-    def get_env(self, env=None):
-        e = Storage(self.env.copy())
-        if env:
-            e.update(env)
-        return e
-    
     def prepare_request(self, request, rule):
         from uliweb.utils.common import safe_import
 
@@ -848,29 +939,24 @@ class Dispatcher(object):
     def get_view_env(self):
         #prepare local env
         local_env = {}
-        
+
         #process before view call
         dispatch.call(self, 'prepare_view_env', local_env)
         
         local_env['application'] = __global__.application
         local_env['request'] = local.request
         local_env['response'] = local.response
-        local_env['url_for'] = url_for
-        local_env['redirect'] = redirect
-        local_env['Redirect'] = Redirect
-        local_env['error'] = error
         local_env['settings'] = __global__.settings
-        local_env['json'] = json
-        local_env['function'] = function
-        local_env['functions'] = functions
-        local_env['json_dumps'] = json_dumps
         
-        return self.get_env(local_env)
-       
+        env = Storage(self.env.to_dict())
+        env.update(local_env)
+        return env
+
     def _call_function(self, handler, request, response, env, args=None, kwargs=None):
         
-        for k, v in env.items():
-            handler.func_globals[k] = v
+        handler.func_globals.update(env)
+        # for k, v in env.items():
+        #     handler.func_globals[k] = v
         
         handler.func_globals['env'] = env
         
@@ -1046,9 +1132,39 @@ class Dispatcher(object):
                 raise UliwebError('EXPOSES definition [%s=%r] is not right' % (name, args))
        
     def install_middlewares(self):
-        return self.sort_middlewares(settings.get('MIDDLEWARES', {}).values())
-    
-    def sort_middlewares(self, middlewares):
+        m = self._sort_middlewares(settings.get('MIDDLEWARES', {}).values())
+        req_classes, res_classes, ex_classes = self._get_middlewares_classes(m)
+        Dispatcher.process_request_classes = req_classes
+        Dispatcher.process_response_classes = res_classes
+        Dispatcher.process_exception_classes = ex_classes
+        return m
+
+    def _get_middlewares_classes(self, middlewares):
+        m = middlewares
+
+        req_clses = []
+        res_clses = []
+        ex_clses = []
+
+        for cls in m:
+            f = getattr(cls, 'process_request', None)
+            if f:
+                req_clses.append(cls)
+
+        r_m = reversed(m)
+        for cls in r_m:
+            f = getattr(cls, 'process_response', None)
+            if f:
+                res_clses.append(cls)
+
+        for cls in r_m:
+            f = getattr(cls, 'process_exception', None)
+            if f:
+                ex_clses.append(cls)
+
+        return req_clses, res_clses, ex_clses
+
+    def _sort_middlewares(self, middlewares):
         #middleware process
         #middleware can be defined as
         #middleware_name = middleware_class_path[, order]
@@ -1108,23 +1224,26 @@ class Dispatcher(object):
         
         pre_call = kwargs.pop('pre_call', None)
         post_call = kwargs.pop('post_call', None)
-        middlewares = kwargs.pop('middlewares', [])
-        if middlewares is not None:
-            m = self.sort_middlewares(middlewares)
-        else:
-            m = self.middlewares
-        
+        middlewares = kwargs.pop('middlewares', None)
+
         builder = EnvironBuilder(*args, **kwargs)
         try:
             environ = builder.get_environ()
         finally:
             builder.close()
             
-        return self._open(environ, pre_call=pre_call, post_call=post_call, middlewares=m)
+        return self._open(environ, pre_call=pre_call, post_call=post_call, middlewares=middlewares)
         
     def _open(self, environ, pre_call=None, post_call=None, middlewares=None):
         if middlewares is None:
             middlewares = self.middlewares
+            pocess_request_classes = self.process_request_classes
+            process_response_classes = self.process_response_classes
+            process_exception_classes = self.process_exception_classes
+        else:
+            m = self._sort_middlewares(middlewares)
+            process_request_classes, process_response_classes, process_exception_classes = self._get_middlewares_classes(m)
+
             
         local.request = req = Request(environ)
         local.response = res = Response(content_type='text/html')
@@ -1145,13 +1264,12 @@ class Dispatcher(object):
                 response = None
                 _clses = {}
                 _inss = {}
-                for cls in middlewares:
-                    if hasattr(cls, 'process_request'):
-                        ins = cls(self, settings)
-                        _inss[cls] = ins
-                        response = ins.process_request(req)
-                        if response is not None:
-                            break
+                for cls in pocess_request_classes:
+                    ins = cls(self, settings)
+                    _inss[cls] = ins
+                    response = ins.process_request(req)
+                    if response is not None:
+                        break
                 
                 if response is None:
                     try:
@@ -1165,25 +1283,23 @@ class Dispatcher(object):
                         if post_call:
                             response = post_call(req, response)
                     except Exception as e:
-                        for cls in reversed(middlewares):
-                            if hasattr(cls, 'process_exception'):
-                                ins = _inss.get(cls)
-                                if not ins:
-                                    ins = cls(self, settings)
-                                response = ins.process_exception(req, e)
-                                if response:
-                                    break
+                        for cls in process_exception_classes:
+                            ins = _inss.get(cls)
+                            if not ins:
+                                ins = cls(self, settings)
+                            response = ins.process_exception(req, e)
+                            if response:
+                                break
                         raise
                     
-                for cls in reversed(middlewares):
-                    if hasattr(cls, 'process_response'):
-                        ins = _inss.get(cls)
-                        if not ins:
-                            ins = cls(self, settings)
-                        response = ins.process_response(req, response)
-                        
-                        if not isinstance(response, (OriginalResponse, Response)):
-                            raise Exception("Middleware %s should return an Response object, but %r found" % (ins.__class__.__name__, response))
+                for cls in process_response_classes:
+                    ins = _inss.get(cls)
+                    if not ins:
+                        ins = cls(self, settings)
+                    response = ins.process_response(req, response)
+
+                    if not isinstance(response, (OriginalResponse, Response)):
+                        raise Exception("Middleware %s should return an Response object, but %r found" % (ins.__class__.__name__, response))
                 
                 #process post_response call, you can set some async process in here
                 #but the sync may fail, so you should think about the checking mechanism
@@ -1219,43 +1335,6 @@ class Dispatcher(object):
         response = self._open(environ)
         return response(environ, start_response)
             
-class DispatcherHandler(object):
-    def __init__(self, application):
-        self.application = application
-        
-    def open(self, *args, **kw):
-        return self.application.open(*args, **kw)
-        
-    def get(self, *args, **kw):
-        """Like open but method is enforced to GET."""
-        kw['method'] = 'GET'
-        return self.open(*args, **kw)
-    
-    def patch(self, *args, **kw):
-        """Like open but method is enforced to PATCH."""
-        kw['method'] = 'PATCH'
-        return self.open(*args, **kw)
-    
-    def post(self, *args, **kw):
-        """Like open but method is enforced to POST."""
-        kw['method'] = 'POST'
-        return self.open(*args, **kw)
-    
-    def head(self, *args, **kw):
-        """Like open but method is enforced to HEAD."""
-        kw['method'] = 'HEAD'
-        return self.open(*args, **kw)
-    
-    def put(self, *args, **kw):
-        """Like open but method is enforced to PUT."""
-        kw['method'] = 'PUT'
-        return self.open(*args, **kw)
-    
-    def delete(self, *args, **kw):
-        """Like open but method is enforced to DELETE."""
-        kw['method'] = 'DELETE'
-        return self.open(*args, **kw)
-
 response = LocalProxy(local, 'response', Response)
 request = LocalProxy(local, 'request', Request)
 settings = LocalProxy(__global__, 'settings', pyini.Ini)
