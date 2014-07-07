@@ -1156,8 +1156,6 @@ class Dispatcher(object):
             f = getattr(cls, 'process_response', None)
             if f:
                 res_clses.append(cls)
-
-        for cls in r_m:
             f = getattr(cls, 'process_exception', None)
             if f:
                 ex_clses.append(cls)
