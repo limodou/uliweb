@@ -740,8 +740,8 @@ class Dispatcher(object):
     <h3>Current URL Mapping is</h3>
     <table border="1">
     <tr><th>#</th><th>URL</th><th>View Functions</th></tr>
-    {{for i, (url, methods, endpoint) in enumerate(urls):}}
-    <tr><td>{{=i+1}}</td><td>{{=url}} {{=methods}}</td><td>{{=endpoint}}</td></tr>
+    {{for i, (_url, _methods, _endpoint) in enumerate(urls):}}
+    <tr><td>{{=i+1}}</td><td>{{=_url}} {{=_methods}}</td><td>{{=_endpoint}}</td></tr>
     {{pass}}
     </table>
     """ % description

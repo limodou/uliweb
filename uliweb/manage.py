@@ -88,9 +88,9 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     dispatcher_kwargs = dispatcher_kwargs or {}
     
     if project_dir:
-        apps_dir = os.path.normpath(os.path.join(project_dir, 'apps'))
+        apps_dir = os.path.abspath(os.path.normpath(os.path.join(project_dir, 'apps')))
     if not project_dir:
-        project_dir = os.path.normpath(os.path.abspath(os.path.join(apps_dir, '..')))
+        project_dir = os.path.abspath(os.path.normpath(os.path.abspath(os.path.join(apps_dir, '..'))))
         
     if project_dir not in sys.path:
         sys.path.insert(0, project_dir)
@@ -1156,7 +1156,7 @@ def call(args=None):
     from uliweb.core.commands import execute_command_line
     
     def callback(global_options):
-        apps_dir = global_options.apps_dir or os.path.join(os.getcwd(), 'apps')
+        apps_dir = os.path.abspath(global_options.apps_dir or os.path.join(os.getcwd(), 'apps'))
         if os.path.exists(apps_dir) and apps_dir not in sys.path:
             sys.path.insert(0, apps_dir)
            

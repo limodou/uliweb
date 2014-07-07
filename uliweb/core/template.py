@@ -568,7 +568,7 @@ class Template(object):
             # from being applied to the generated code.
             self.compiled = self._compile(
                 to_unicode(self.code),
-                # "%s.generated.py" % self.name,
+                # "%s.generated.py" % self.name.replace('/', '_'),
                 self.name,
                 "exec", dont_inherit=True)
         except Exception:
@@ -591,7 +591,9 @@ class Template(object):
             # __name__ and __loader__ allow the traceback mechanism to find
             # the generated source code.
             "defined": defined,
-            "__name__": self.filename,
+            #fix RuntimeWarning: Parent module 'a/b/c' not found while handling absolute import warning
+            "__name__": self.name.replace('.', '_'),
+            # "__name__": self.name,
             "__loader__": ObjectDict(get_source=lambda name: self.code),
         }
         namespace.update(default_namespace)
