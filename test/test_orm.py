@@ -1384,7 +1384,7 @@ def test_pickle():
     >>> db.metadata.clear()
     >>> class User(Model):
     ...     username = Field(str, max_length=40)
-    ...     memo = Field(PICKLE)
+    ...     memo = Field(PICKLE, default={})
     >>> a = User(username='limodou', memo={'age':30})
     >>> a.save()
     True
@@ -1393,6 +1393,14 @@ def test_pickle():
     >>> b = User.get(1)
     >>> print b.memo
     {'age': 30}
+    >>> c = User(username='limodou')
+    >>> c.save()
+    True
+    >>> print c.memo
+    {}
+    >>> d = User.get(2)
+    >>> print c.memo
+    {}
     """
 
 def test_default_query():

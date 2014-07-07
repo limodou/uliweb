@@ -5,6 +5,11 @@ Uliweb Change Log
 -----------------
 * Refactor template with tornado
 
+0.3.2 Version
+-----------------
+
+* Fix Pickle default value process bug, will not convert empty value to ''
+
 0.3.1 Version
 -----------------
 

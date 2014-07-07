@@ -1289,6 +1289,9 @@ class PickleProperty(BlobProperty):
     
     def convert_dump(self, v):
         return pickle.loads(v)
+
+    def convert(self, value):
+        return value
     
 class DateTimeProperty(Property):
     data_type = datetime.datetime
