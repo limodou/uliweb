@@ -1575,8 +1575,8 @@ def _parse(reader, template, in_block=None, in_loop=None,
             elif operator == "link":
                 block = _Link(suffix, line, template)
             elif operator == "embed":
-                warnings.simplefilter('default')
-                warnings.warn("embed is not supported any more, just replace it with '<<'.", DeprecationWarning)
+                # warnings.simplefilter('default')
+                # warnings.warn("embed is not supported any more, just replace it with '<<'.", DeprecationWarning)
                 block = _Expression(suffix, line)
             elif operator == "BEGIN_TAG":
                 block = _Text(begin_tag, line)
