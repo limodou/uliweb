@@ -297,6 +297,8 @@ def to_basestring(value):
     the user supplied.  In python3, the two types are not interchangeable,
     so this method is needed to convert byte strings to unicode.
     """
+    if value is None:
+        return 'None'
     if isinstance(value, _BASESTRING_TYPES):
         return value
     elif isinstance(value, unicode_type):
@@ -789,8 +791,10 @@ class Loader(object):
         with self.lock:
             if self.cache:
                 if not self.use_tmp:
+                    #check current template file expiration
                     if filename in self.templates:
                         t = self.templates[filename]
+                        #check depends tempaltes expiration
                         check = self.check_expiration(t)
                         if not check:
                             return t

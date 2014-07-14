@@ -48,7 +48,7 @@
                         {{if f.get('hidden', False):}}
                             {{continue}}
                         {{pass}}
-                        <td>{%obj.{{ =f['name'] }}|html%}</td>
+                        <td>{%obj.{{= f['name'] }}|html%}</td>
                     {{pass}}
                     <td>
                         <a ms-href="[[=url]]/view/{%obj.id%}" data-click="view"><i class="icon-eye-open" title="{{=_('View')}}"></i></a>

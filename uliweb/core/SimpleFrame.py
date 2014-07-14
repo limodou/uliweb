@@ -758,7 +758,7 @@ class Dispatcher(object):
                 urls.append((r.rule, methods, r.endpoint))
             urls.sort()
             return self._page_not_found(url=local.request.path, urls=urls)
-        tmp_file = template.get_templatefile('404'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = self.template_loader.resolve_path('404'+settings.GLOBAL.TEMPLATE_SUFFIX)
         if tmp_file:
             response = self.render(tmp_file, {'url':local.request.path}, status=404)
         else:
@@ -766,7 +766,7 @@ class Dispatcher(object):
         return response
     
     def internal_error(self, e):
-        tmp_file = template.get_templatefile('500'+settings.GLOBAL.TEMPLATE_SUFFIX, self.template_dirs)
+        tmp_file = self.template_loader.resolve_path('500'+settings.GLOBAL.TEMPLATE_SUFFIX)
         if tmp_file:
             response = self.render(tmp_file, {'url':local.request.path}, status=500)
         else:

@@ -48,7 +48,7 @@
                         {{if f.get('hidden', False):}}
                             {{continue}}
                         {{pass}}
-                        <td><div ng-bind-html-unsafe="obj.{{ =f['name'] }}"></div></td>
+                        <td><div ng-bind-html-unsafe="obj.{{= f['name'] }}"></div></td>
                     {{pass}}
                     <td>
                         <a ng-href="[[=url]]/view/{%obj.id%}" data-click="view"><i class="icon-eye-open" title="{{=_('View')}}"></i></a> 

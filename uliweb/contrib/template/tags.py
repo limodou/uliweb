@@ -110,8 +110,8 @@ def find(plugin, *args, **kwargs):
             #test if the funtion is defined as old style
             if ['app', 'var', 'env'] == para[:3]:
                 warnings.simplefilter('default')
-                warnings.warn("Tmplate plugs call function should be defined"
-                              " as call(*args, **kwargs) not need (app, var, env) any more",
+                warnings.warn("Tmplate plugs call function(%s) should be defined"
+                              " as call(*args, **kwargs) not need (app, var, env) any more" % call.__module__,
                               DeprecationWarning)
                 v = call(app, {}, {}, *args, **kwargs)
 
