@@ -380,7 +380,7 @@ def get_apps(apps_dir, include_apps=None, settings_file='settings.ini', local_se
     return apps
 
 def collect_settings(project_dir, include_apps=None, settings_file='settings.ini', 
-    local_settings_file='local_settings.ini', default_settings=None):
+    local_settings_file='local_settings.ini'):
     
     apps_dir = os.path.join(project_dir, 'apps')
     apps = get_apps(apps_dir, None, settings_file=settings_file, local_settings_file=local_settings_file)
@@ -407,12 +407,13 @@ def get_settings(project_dir, include_apps=None, settings_file='settings.ini',
     local_settings_file='local_settings.ini', default_settings=None):
         
     settings = collect_settings(project_dir, include_apps, settings_file,
-        local_settings_file, default_settings)
+        local_settings_file)
 
     x = pyini.Ini(lazy=True, basepath=os.path.join(project_dir, 'apps'))
     for v in settings:
         x.read(v)
-    x.update(default_settings or {})
+    d = dict([(k, repr(v)) for k, v in default_settings.items()])
+    x.update(d or {})
     x.freeze()
     
     #process FILESYSTEM_ENCODING
@@ -1058,7 +1059,9 @@ class Dispatcher(object):
 #        settings = pyini.Ini()
         for v in s:
             settings.read(v)
-        settings.update(self.default_settings)
+
+        d = dict([(k, repr(v)) for k, v in self.default_settings.items()])
+        settings.update(d)
         settings.freeze()
         
         #process FILESYSTEM_ENCODING

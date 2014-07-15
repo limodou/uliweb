@@ -862,6 +862,147 @@ class DevelopCommand(RunserverCommand):
     develop = True
 register_command(DevelopCommand)
 
+class StaticizeCommand(RunserverCommand):
+    """
+    Staticize a site, limit:
+
+    1. Only support Get method
+    2. Json result shuld be exposed as @expose('xxx.json')
+    3. Support redirect
+    4. Support i18n
+    5. Not support parameter of URL
+
+    It not works like a spyder.
+    """
+    name = 'staticize'
+    help = 'Statizice a site to static web pages.'
+    args = '[options] output_directory'
+    check_apps_dirs = True
+    option_list = (
+        make_option('-l', dest='lang', default='',
+            help='Language of the site, default it no language specified.'),
+        # make_option('-o', dest='outputfile', default='',
+        #     help='Output staticize script.'),
+    )
+
+    def handle(self, options, global_options, *args):
+        import uliweb.core.SimpleFrame
+        from uliweb.core.SimpleFrame import get_app_dir, url_for as _old_url_for
+        import uliweb.contrib.i18n.middle_i18n as i18n
+        from urlparse import urlparse
+
+        if not args:
+            print "Please give output directory."
+            sys.exit(1)
+
+        dst_path = args[0]
+        if options.lang:
+            path = os.path.join(dst_path, options.lang)
+        else:
+            path = dst_path
+
+        #redefine url_for
+        def _u(endpoint, **values):
+            url = _old_url_for(endpoint, **values)
+            return self.fix_url(url)
+        uliweb.core.SimpleFrame.url_for = _u
+
+        #redefine get_language_from_request
+        def _get_language_from_request(request, settings):
+            return options.lang
+        i18n.get_language_from_request = _get_language_from_request
+
+        app = self.get_application(global_options,
+                                   default_settings={'I18N/URL_LANG_KEY':'lang'})
+
+        from uliweb.core.SimpleFrame import url_map
+        from uliweb.utils.test import client_from_application
+        from werkzeug import Response
+
+        Response.autocorrect_location_header = False
+
+        client = client_from_application(app)
+
+        u = []
+        for i, r in enumerate(sorted(url_map.iter_rules(), key=lambda x:x.rule)):
+            #only execute GET method
+            end_point = r.rule[1:] or 'index.html'
+            p = os.path.join(path, end_point)
+            p = self.fix_url(p)
+            print 'GET %s to %s' % (r.rule, p)
+
+            base_dir = os.path.dirname(p)
+            if not os.path.exists(base_dir):
+                os.makedirs(base_dir)
+
+            # u.append((r.rule, methods, r.endpoint))
+            with open(os.path.join(p), 'w') as f:
+                response = client.get(r.rule, data={'lang':options.lang})
+                if response.status_code == 302:
+                    f.write('<meta http-equiv="Refresh" content="0; url=%s" />' %
+                            self.fix_url(response.location))
+                else:
+                    text = self.convert_text(response.data)
+                    f.write(text)
+            # if i>1:
+            #     return
+
+        print "Export static files to %s" % dst_path
+        call('uliweb exportstatic %s/static' % dst_path)
+
+
+    def convert_text(self, text):
+        from HTMLParser import HTMLParser
+        from urlparse import urlparse, urlunparse
+
+        pos = []
+        class MyHTMLParser(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                if tag == 'a':
+                    _attrs = dict(attrs)
+                    if 'href' in _attrs:
+                        p = self.getpos()
+                        pos.append([p[0], p[1], _attrs.get('href'), len(self.get_starttag_text()), _attrs])
+
+        parser = MyHTMLParser()
+        parser.feed(text)
+
+        lines = text.splitlines()
+        num = 0
+        for line, start, href, length, attrs in reversed(pos):
+            r = urlparse(href)
+            if r.scheme or r.netloc:
+                continue
+            #relative url
+            else:
+                href = self.fix_url(href)
+                x = list(r)
+                x[2] = href
+                url = urlunparse(x)
+                attrs['href'] = url
+                tag = '<a ' + ' '.join(['%s="%s"' % (k, v) for k, v in attrs.items()]) + '>'
+                old_line = lines[line-1]
+                lines[line-1] = old_line[:start] + tag + old_line[start+length:]
+                num += 1
+
+        if num > 0:
+            return '\n'.join(lines)
+        else:
+            return text
+
+    def fix_url(self, p):
+        if p == '#':
+            return p
+        if p == '/':
+            return '/index.html'
+        if os.path.splitext(p)[1]:
+            pass
+        else:
+            p += '.html'
+        return p
+
+register_command(StaticizeCommand)
+
 from code import interact, InteractiveConsole
 class MyInteractive(InteractiveConsole):
     def interact(self, banner=None, call=None):

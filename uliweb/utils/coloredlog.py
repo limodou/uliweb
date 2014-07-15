@@ -61,7 +61,7 @@ class ColoredFormatter(logging.Formatter):
 
     Intended to help in creating more readable logging output."""
 
-    def __init__(self, format, datefmt=None,
+    def __init__(self, format=None, datefmt=None,
                  log_colors=None, reset=True, style='%'):
         """
         :Parameters:

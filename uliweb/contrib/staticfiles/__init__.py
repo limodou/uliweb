@@ -47,7 +47,7 @@ def url_for_static(filename=None, **kwargs):
     
     kwargs['filename'] = filename
     url_adapter = get_url_adapter('static')
-    return url_adapter.build('uliweb.contrib.staticfiles.static', 
+    return url_adapter.build('uliweb.contrib.staticfiles.static',
         kwargs, force_external=external)
 
 def static(filename):
