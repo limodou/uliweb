@@ -895,11 +895,11 @@ class StaticizeCommand(RunserverCommand):
             print "Please give output directory."
             sys.exit(1)
 
-        dst_path = args[0]
-        if options.lang:
-            path = os.path.join(dst_path, options.lang)
-        else:
-            path = dst_path
+        path = dst_path = args[0]
+        # if options.lang:
+        #     path = os.path.join(dst_path, options.lang)
+        # else:
+        #     path = dst_path
 
         #redefine url_for
         def _u(endpoint, **values):
