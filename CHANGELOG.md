@@ -6,6 +6,7 @@ Uliweb Change Log
 * Refactor template with tornado
 * Fix Pickle default value process bug, will not convert empty value to ''
 * Add staticize command
+* Resume DEBUG_TEMPLATE option for template
 
 0.3.1 Version
 -----------------

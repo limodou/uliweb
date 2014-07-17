@@ -1066,8 +1066,12 @@ class _NamedBlock(_Node):
 
     def generate(self, writer):
         block = writer.named_blocks[self.name]
+        if self.template.debug:
+            writer.write_line('_tt_append("<!-- BLOCK %s (%s) -->")' % (self.name, block.template.filename), self.line)
         with writer.include(block.template, self.line):
             block.body.generate(writer)
+        if self.template.debug:
+            writer.write_line('_tt_append("<!-- END %s -->")' % self.name, self.line)
 
     def find_named_blocks(self, loader, named_blocks):
         named_blocks[self.name] = self
@@ -1666,7 +1670,7 @@ def template_py(text, **kwargs):
 
 def template_file(filename, vars=None, env=None, dirs=None, loader=None, **kwargs):
     if not loader:
-        loader = Loader(dirs)
+        loader = Loader(dirs, **kwargs)
     return loader.load(filename).generate(vars, env)
 
 def template_file_py(filename, dirs=None, loader=None, **kwargs):

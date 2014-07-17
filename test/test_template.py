@@ -682,3 +682,25 @@ def test_custom_node_2():
         return _tt_utf8('').join(_tt_buffer)  # <string>:0
     <BLANKLINE>
     """
+
+def test_template_debug():
+    """
+    >>> d = {'name':'uliweb'}
+    >>> dirs = [os.path.join(path, 'templates', x) for x in ['b', 'a']]
+    >>> print (template_file('parent.html', d, dirs=dirs, debug=True))  # doctest:+ELLIPSIS
+    <html>
+    <head>
+    <title><!-- BLOCK title (.../b/layout.html) -->title2<!-- END title --></title>
+    </head>
+    <body>
+    <!-- BLOCK content (.../a/layout.html) -->
+    <!-- BLOCK main (.../b/parent.html) -->
+    <BLANKLINE>
+    uliweb
+    <!-- END main -->
+    <!-- BLOCK side (.../a/layout.html) -->side<!-- END side -->
+    <!-- END content -->
+    </body>
+    </html>
+    """
+

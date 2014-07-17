@@ -11,7 +11,7 @@ import re
 import types
 from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
-from werkzeug.exceptions import HTTPException, NotFound, BadRequest
+from werkzeug.exceptions import HTTPException, NotFound, BadRequest, InternalServerError
 from werkzeug.routing import Map
 
 from . import template
@@ -722,6 +722,7 @@ class Dispatcher(object):
         if self.debug:
             args['check_modified_time'] = True
             args['log'] = log
+            args['debug'] = settings.get_var('GLOBAL/DEBUG_TEMPLATE', False)
         return Loader(dirs, **args)
 
     def template(self, filename, vars=None, env=None, default_template=None):
@@ -771,7 +772,7 @@ class Dispatcher(object):
         if tmp_file:
             response = self.render(tmp_file, {'url':local.request.path}, status=500)
         else:
-            response = e
+            response = InternalServerError()
         log.exception(e)
         return response
     
