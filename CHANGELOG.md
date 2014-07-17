@@ -7,6 +7,7 @@ Uliweb Change Log
 * Fix Pickle default value process bug, will not convert empty value to ''
 * Add staticize command
 * Resume DEBUG_TEMPLATE option for template
+* Fix count implement when there is group_by, limit, join, it'll use select count(*) from (select * from table)
 
 0.3.1 Version
 -----------------

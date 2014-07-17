@@ -408,7 +408,7 @@ class Session(object):
             self.local_cache[key] = value
         return value
         
-def get_connection(connection='', connection_type='long', **args):
+def get_connection(connection='', engine_name='default', connection_type='long', **args):
     """
     Creating an NamedEngine or just return existed engine instance
 
@@ -1781,6 +1781,8 @@ class Result(object):
         self.distinct_field = None
         self._values_flag = False
         self._join = []
+        self._limit = None
+        self._offset = None
         self.connection = model.get_connection()
         
     def do_(self, query):
@@ -1872,11 +1874,14 @@ class Result(object):
             return self.filter(condition).one()
     
     def count(self):
-        if self.condition is not None:
-            query = select([func.count('*')], self.condition, from_obj=[self.model.table])
+        if self._limit or self._group_by or self._join:
+            return self.do_(self.get_query().alias().count()).scalar()
         else:
-            query = select([func.count('*')], from_obj=[self.model.table])
-        return self.do_(query).scalar()
+            if self.condition is not None:
+                query = select([func.count('*')], self.condition, from_obj=[self.model.table])
+            else:
+                query = select([func.count('*')], from_obj=[self.model.table])
+            return self.do_(query).scalar()
 
     def any(self):
         row = self.do_(
@@ -1946,10 +1951,12 @@ class Result(object):
         return self
     
     def limit(self, *args, **kwargs):
+        self._limit = True
         self.funcs.append(('limit', args, kwargs))
         return self
 
     def offset(self, *args, **kwargs):
+        self._offset = True
         self.funcs.append(('offset', args, kwargs))
         return self
     
@@ -2077,6 +2084,8 @@ class ReverseResult(Result):
         self.default_query_flag = True
         self._group_by = None
         self._having = None
+        self._limit = None
+        self._offset = None
         self._join = []
         self.distinct_field = None
         self._values_flag = False
@@ -2087,10 +2096,9 @@ class ReverseResult(Result):
         
         if not ids:
             return False
-        
-        count = self.do_(self.model.table.count(self.condition & (self.model.table.c['id'].in_(ids)))).scalar()
-        return count > 0
-    
+
+        return self.model.filter(self.condition, self.model.table.c['id'].in_(ids)).any()
+
     def ids(self):
         query = select([self.model.c['id']], self.condition)
         ids = [x[0] for x in self.do_(query)]
@@ -2135,6 +2143,8 @@ class ManyResult(Result):
         self._group_by = None
         self._having = None
         self._join = []
+        self._limit = None
+        self._offset = None
         self.distinct_field = None
         self._values_flag = False
         self.connection = self.modela.get_connection()
@@ -2248,12 +2258,15 @@ class ManyResult(Result):
     remove = clear
     
     def count(self):
-        return self.do_(
-            self.table.count(
-                (self.table.c[self.fielda]==self.valuea) & 
-                (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & 
-                self.condition)
-            ).scalar()
+        if self._limit or self._group_by or self._join:
+            return self.do_(self.get_query().alias().count()).scalar()
+        else:
+            return self.do_(
+                self.table.count(
+                    (self.table.c[self.fielda]==self.valuea) &
+                    (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) &
+                    self.condition)
+                ).scalar()
     
     def any(self):
         row = self.do_(
@@ -2305,9 +2318,9 @@ class ManyResult(Result):
         if not relation_name:
             relation_name = 'relation'
         if hasattr(self.modelb, relation_name):
-            raise Error, "The attribute name %s has already existed in Model %s!" % (relation_name, self.modelb.__name__)
+            raise Error("The attribute name %s has already existed in Model %s!" % (relation_name, self.modelb.__name__))
         if not self.through_model:
-            raise Error, "Only with through style in ManyToMany supports with_relation function of Model %s!" % self.modelb.__name__
+            raise Error("Only with through style in ManyToMany supports with_relation function of Model %s!" % self.modelb.__name__)
         self.with_relation_name = relation_name
         return self
         

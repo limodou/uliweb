@@ -108,6 +108,10 @@ def test_3():
     <Test {'username':u'limodou1','year':0,'id':1}>
     >>> list(a1.test1.all())[0]
     <Test1 {'test1':<ReferenceProperty:1>,'test2':<ReferenceProperty:1>,'name':u'user','id':1}>
+    >>> Test1.all().limit(1).count()
+    1
+    >>> Test1.all().count()
+    3
     >>> a1.test1.count()
     2
     >>> a1.test1.any()
@@ -2305,6 +2309,8 @@ def test_group_by_and_having():
     [<User {'username':u'python','id':2}>]
     >>> list(u.all().group_by(User.c.username).having(func.count('*')>0))
     [<User {'username':u'python','id':2}>]
+    >>> u.all().group_by(User.c.username).count()
+    1
     """
 
 def test_join():
@@ -2332,6 +2338,8 @@ def test_join():
     True
     >>> list(User.all().join(Group, User.c.id==Group.c.user))
     [<User {'username':u'limodou','year':5,'id':1}>]
+    >>> User.all().join(Group, User.c.id==Group.c.user).count()
+    1
     """
 
 # db = get_connection('sqlite://')
