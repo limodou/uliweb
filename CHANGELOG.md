@@ -8,6 +8,7 @@ Uliweb Change Log
 * Add staticize command
 * Resume DEBUG_TEMPLATE option for template
 * Fix count implement when there is group_by, limit, join, it'll use select count(*) from (select * from table)
+* Add __debug__ parameter for tracing i18n language 
 
 0.3.1 Version
 -----------------
