@@ -8,7 +8,10 @@ Uliweb Change Log
 * Add staticize command
 * Resume DEBUG_TEMPLATE option for template
 * Fix count implement when there is group_by, limit, join, it'll use select count(*) from (select * from table)
-* Add __debug__ parameter for tracing i18n language 
+* Add __debug__ parameter for tracing i18n language
+* ORM add duplication support, so you can set it in CONNECTIONS options, it'll make definition of
+  Model engine simple
+* Add `set_session()` function to orm
 
 0.3.1 Version
 -----------------

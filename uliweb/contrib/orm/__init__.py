@@ -50,7 +50,8 @@ def after_init_apps(sender):
             'debug_log':d.get('DEBUG_LOG', None),
             'connection_args':d.get('CONNECTION_ARGS', {}),
             'strategy':d.get('STRATEGY', 'threadlocal'),
-            'connection_type':d.get('CONNECTION_TYPE', 'long')
+            'connection_type':d.get('CONNECTION_TYPE', 'long'),
+            'duplication':d.get('DUPLICATION', False),
         }
         orm.engine_manager.add(name, x)
 

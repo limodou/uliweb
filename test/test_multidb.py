@@ -7,6 +7,7 @@ os.chdir('test_multidb')
 
 manage.call('uliweb syncdb -v')
 manage.call('uliweb syncdb -v --engine=b')
+manage.call('uliweb syncdb -v --engine=c')
 
 def test_1():
     """
@@ -238,5 +239,33 @@ def test_patch_none():
     >>> cond = None
     >>> print (Blog.c.id == 1) & cond
     blog.id = :id_1
+    """
+
+def test_connection_duplication():
+    """
+    >>> app = make_simple_application(project_dir='.')
+    >>> import uliweb.orm as orm
+    >>> print engine_manager['c'].models
+    {'blog': {'model': <class 'blog.models.Blog'>, 'created': None, 'model_path': 'blog.models.Blog', 'appname': 'blog'}}
+    >>> Blog1 = get_model('blog', 'c')
+    >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_connection()
+    blog1 <class 'uliweb.orm.ConnectModel'> blog blog c c
+    """
+
+def test_set_session():
+    """
+    >>> app = make_simple_application(project_dir='.')
+    >>> import uliweb.orm as orm
+    >>> s = Session('c')
+    >>> set_session('default', s)
+    >>> Blog1 = get_model('blog')
+    >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_connection()
+    blog1 <class 'blog.models.Blog'> blog blog default default
+    >>> s = get_session('default')
+    >>> print s
+    <Session engine_name:c, auto_transaction=None, auto_close=True>
+    >>> b1 = Blog1(title='2', content='2')
+    >>> b1.save()
+    True
     """
 

@@ -7,7 +7,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'get_model', 'set_model', 'engine_manager', 
     'set_auto_transaction_in_web', 'set_auto_transaction_in_notweb',
     'set_tablename_converter', 'set_check_max_length', 'set_post_do',
-    'rawsql', 'Lazy', 'set_echo', 'Session', 'get_session',
+    'rawsql', 'Lazy', 'set_echo', 'Session', 'get_session', 'set_session',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
@@ -32,6 +32,7 @@ __auto_set_model__ = True
 __auto_transaction_in_web__ = False
 __auto_transaction_in_notweb__ = False
 __debug_query__ = None
+__default_engine__ = 'default'
 __default_encoding__ = 'utf-8'
 __zero_float__ = 0.0000005
 __models__ = {}
@@ -102,7 +103,7 @@ class SQLStorage(dict):
     def __getattr__(self, key): return self[key]
     def __setattr__(self, key, value):
         if self.has_key(key):
-            raise SyntaxError, 'Object exists and cannot be redefined'
+            raise SyntaxError('Object exists and cannot be redefined')
         self[key] = value
     def __repr__(self): return '<SQLStorage ' + dict.__repr__(self) + '>'
 
@@ -209,6 +210,7 @@ class NamedEngine(object):
             'connection_args':{},
             'debug_log':None,
             'connection_type':'long',
+            'duplication':False,
             })
         strategy = options.pop('strategy', None)
         d.update(options)
@@ -222,11 +224,19 @@ class NamedEngine(object):
         self.options = d
         self.engine_instance = None
         self.metadata = MetaData()
-        self.models = {}
+        self._models = {}
         self.local = threading.local() #used to save thread vars
         
         self._create()
-        
+
+    def _get_models(self):
+        if self.options.duplication:
+            return engine_manager[self.options.duplication].models
+        else:
+            return self._models
+
+    models = property(fget=_get_models)
+
     def _create(self, new=False):
         c = self.options
         
@@ -251,7 +261,10 @@ class NamedEngine(object):
                 s = Session(self.name)
                 self.local.session = s
                 return s
-        
+
+    def set_session(self, session):
+        self.local.session = session
+
     @property
     def engine(self):
         return self.engine_instance
@@ -269,7 +282,7 @@ class EngineManager(object):
         return engine
         
     def get(self, name=None):
-        name = name or 'default'
+        name = name or __default_engine__
         
         engine = self.engines.get(name)
         if not engine:
@@ -295,14 +308,14 @@ class Session(object):
     used to manage relationship between engine_name and connect
     can also manage transcation
     """
-    def __init__(self, engine_name='default', auto_transaction=None, 
+    def __init__(self, engine_name=None, auto_transaction=None,
         auto_close=True):
         """
         If auto_transaction is True, it'll automatically start transacation
         in web environment, it'll be commit or rollback after the request finished
         and in no-web environment, you should invoke commit or rollback yourself.
         """
-        self.engine_name = engine_name
+        self.engine_name = engine_name or __default_engine__
         self.auto_transaction = auto_transaction
         self.auto_close = auto_close
         self.engine = engine_manager[engine_name]
@@ -408,13 +421,14 @@ class Session(object):
             self.local_cache[key] = value
         return value
         
-def get_connection(connection='', engine_name='default', connection_type='long', **args):
+def get_connection(connection='', engine_name=None, connection_type='long', **args):
     """
     Creating an NamedEngine or just return existed engine instance
 
     if '://' include in connection parameter, it'll create new engine object
     otherwise return existed engine isntance
     """
+    engine_name = engine_name or __default_engine__
     if '://' in connection:
         d = {
             'connection_string':connection,
@@ -424,7 +438,7 @@ def get_connection(connection='', engine_name='default', connection_type='long',
         
         return engine_manager.add(engine_name, d).engine
     else:
-        connection = connection or 'default'
+        connection = connection or __default_engine__
         if connection in engine_manager:
             return engine_manager[connection].engine
         else:
@@ -447,7 +461,7 @@ def get_session(ec=None, create=True):
     ec - engine_name or connection
     """
     
-    ec = ec or 'default'
+    ec = ec or __default_engine__
     if isinstance(ec, (str, unicode)):
         session = engine_manager[ec].session(create=True)
     elif isinstance(ec, Session):
@@ -455,7 +469,10 @@ def get_session(ec=None, create=True):
     else:
         raise Error("Connection %r should be existed engine name or Session object" % ec)
     return session
-    
+
+def set_session(engine_name, session):
+    engine_manager[engine_name].set_session(session)
+
 def Reset(ec=None):
     session = get_session(ec, False)
     if session:
@@ -477,7 +494,7 @@ def rawsql(query, ec=None):
     if isinstance(query, Result):
         query = query.get_query()
 
-    ec = ec or 'default'
+    ec = ec or __default_engine__
     engine = engine_manager[ec]
     dialect = engine.engine.dialect
     comp = query.compile(dialect=dialect)
@@ -496,7 +513,7 @@ def get_engine_name(ec=None):
     """
     Get the name of a engine or session
     """
-    ec = ec or 'default'
+    ec = ec or __default_engine__
     if isinstance(ec, (str, unicode)):
         return ec
     elif isinstance(ec, Session):
@@ -781,12 +798,19 @@ def get_model(model, engine_name=None):
             #search according model_item, and it should has only one engine defined
             engines = model_item['engines']
             if len(engines) > 1:
-                engine_name = 'default'
+                engine_name = __default_engine__
             else:
                 engine_name = engines[0]
         engine = engine_manager[engine_name]
-            
-        item = engine.models.get(model)
+
+        item = engine._models.get(model)
+        #process duplication
+        if not item and engine.options.duplication:
+            _item = engine.models.get(model)
+            if _item:
+                item = _item.copy()
+                item['model'] = None
+                engine._models[model] = item
         if item:
             m = item['model']
             if isinstance(m, type) and issubclass(m, Model):
@@ -3225,7 +3249,7 @@ class Model(object):
         
     @classmethod
     def get_engine_name(cls):
-        return cls._engine_name or 'default'
+        return cls._engine_name or __default_engine__
     
     @classmethod
     def get_engine(cls):
