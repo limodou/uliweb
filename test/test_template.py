@@ -704,3 +704,18 @@ def test_template_debug():
     </html>
     """
 
+def test_include_block():
+    """
+    >>> dirs = [os.path.join(path, 'templates', x) for x in ['a']]
+    >>> print (template_file('d.html', dirs=dirs, debug=True))  # doctest:+ELLIPSIS
+    <html>
+    <head>
+    <title><!-- BLOCK title (.../a/layout.html) -->Untitled<!-- END title --></title>
+    </head>
+    <body>
+    <!-- BLOCK content (.../a/inc_block.html) -->
+    include content
+    <!-- END content -->
+    </body>
+    </html>
+    """
