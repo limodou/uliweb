@@ -1001,14 +1001,15 @@ class Property(object):
     property_type = 'column'   #Property type: 'column', 'compound', 'relation'
     server_default = None
     
-    def __init__(self, verbose_name=None, name=None, default=None,
+    def __init__(self, verbose_name=None, fieldname=None, default=None,
         required=False, validators=None, choices=None, max_length=None, 
         hint='', auto=None, auto_add=None, type_class=None, type_attrs=None, 
         placeholder='', extra=None,
         sequence=False, **kwargs):
         self.verbose_name = verbose_name
         self.property_name = None
-        self.name = name
+        self.name = None
+        self.fieldname = fieldname
         self.default = default
         self.required = required
         self.auto = auto
@@ -1063,7 +1064,8 @@ class Property(object):
         if self.sequence:
             args = (self.sequence, )
 
-        return Column(self.property_name, f_type, *args, **kwargs)
+        # return Column(self.property_name, f_type, *args, **kwargs)
+        return Column(self.fieldname, f_type, *args, **kwargs)
 
     def _create_type(self):
         if self.max_length:
@@ -1075,8 +1077,9 @@ class Property(object):
     def __property_config__(self, model_class, property_name):
         self.model_class = model_class
         self.property_name = property_name
-        if not self.name:
-            self.name = property_name
+        self.name = property_name
+        if not self.fieldname:
+            self.fieldname = property_name
         setattr(model_class, self._lazy_value(), LazyValue(self._attr_name(), self))
         
     def get_attr(self, model_instance, name, default):
@@ -1159,9 +1162,8 @@ class Property(object):
                 value = self.convert_dump(value)
             else:
                 value = self.convert(value)
-        except TypeError, err:
-            raise BadValueError('Property %s must be convertible '
-                'to %s, but the value is (%s)' % (self.name, self.data_type, err))
+        except TypeError as err:
+            raise BadValueError('Property %s must be convertible to %s, but the value is (%s)' % (self.name, self.data_type, err))
         if hasattr(self, 'custom_validate'):
             value = self.custom_validate(value)
                 
@@ -1194,7 +1196,7 @@ class Property(object):
         return self.convert(value)
     
     def __repr__(self):
-        return ("<%s 'type':%r, 'verbose_name':%r, 'name':%r, " 
+        return ("<%s 'type':%r, 'verbose_name':%r, 'name':%r, 'fieldname':%r, "
             "'default':%r, 'required':%r, 'validator':%r, "
             "'chocies':%r, 'max_length':%r, 'kwargs':%r>"
             % (
@@ -1202,6 +1204,7 @@ class Property(object):
             self.data_type, 
             self.verbose_name,
             self.name,
+            self.fieldname,
             self.default,
             self.required,
             self.validators,
@@ -1561,7 +1564,6 @@ class ReferenceProperty(Property):
         args['unique'] = self.kwargs.get('unique', False)
         args['nullable'] = self.kwargs.get('nullable', __nullable__)
         f_type = self._create_type()
-#        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
         if __server_default__:
             #for int or long data_type, it'll automatically set text('0')
             if self.data_type is int or self.data_type is long :
@@ -1569,7 +1571,7 @@ class ReferenceProperty(Property):
             else:
                 v = self.reference_field.kwargs.get('server_default')
                 args['server_default'] = v
-        return Column(self.property_name, f_type, **args)
+        return Column(self.fieldname, f_type, **args)
     
     def _create_type(self):
         if not hasattr(self.reference_class, self.reference_fieldname):
@@ -1731,13 +1733,12 @@ class OneToOne(ReferenceProperty):
         args['unique'] = self.kwargs.get('unique', True)
         args['nullable'] = self.kwargs.get('nullable', __nullable__)
         f_type = self._create_type()
-#        return Column(self.property_name, f_type, ForeignKey("%s.id" % self.reference_class.tablename), **args)
         if __server_default__:
             if self.data_type is int or self.data_type is long :
                 args['server_default'] = text('0')
             else:
                 args['server_default'] = self.reference_field.kwargs.get('server_default')
-        return Column(self.property_name, f_type, **args)
+        return Column(self.fieldname, f_type, **args)
 
     def __property_config__(self, model_class, property_name):
         """Loads all of the references that point to this model.
@@ -2823,7 +2824,7 @@ class Model(object):
     def __init__(self, **kwargs):
         self._old_values = {}
         
-        self._load(kwargs)
+        self._load(kwargs, from_='')
         
     def set_saved(self):
         self._old_values = self.to_dict()
@@ -3453,7 +3454,7 @@ class Model(object):
         return Result(cls, **kwargs).filter(*condition).any()
     
     @classmethod
-    def load(cls, values, set_saved=True, from_dump=False):
+    def load(cls, values, set_saved=True, from_='db'):
         if isinstance(values, (list, tuple)):
             d = cls._data_prepare(values)
         elif isinstance(values, dict):
@@ -3465,7 +3466,7 @@ class Model(object):
 #            raise BadValueError("ID property must be existed or could not be empty.")
         
         o = cls()
-        o._load(d, use_delay=True, from_dump=from_dump)
+        o._load(d, use_delay=True, from_=from_)
         if set_saved:
             o.set_saved()
             
@@ -3488,20 +3489,23 @@ class Model(object):
         self.update(**d)
         self.set_saved()
         
-    def _load(self, data, use_delay=False, from_dump=False):
+    def _load(self, data, use_delay=False, from_='db'):
         if not data:
             return
         
         #compounds fields will be processed in the end
         compounds = []
-        fields = []
         for prop in self.properties.values():
-            if prop.name in data:
+            if from_ == 'db':
+                name = prop.fieldname
+            else:
+                name = prop.name
+            if name in data:
                 if prop.property_type == 'compound':
                     compounds.append(prop)
                     continue
-                value = data[prop.name]
-                if from_dump:
+                value = data[name]
+                if from_ == 'dump':
                     value = prop.convert_dump(value)
             else:
                 if prop.property_type == 'compound':
@@ -3513,14 +3517,16 @@ class Model(object):
                     value = prop.default_value()
                     
             prop.__set__(self, value)
-            fields.append(prop.name)
-        
+
         for prop in compounds:
-            if prop.name in data:
-                value = data[prop.name]
+            if from_ == 'db':
+                name = prop.fieldname
+            else:
+                name = prop.name
+            if name in data:
+                value = data[name]
                 prop.__set__(self, value)
-                fields.append(prop.name)
-        
+
     def dump(self, fields=None, exclude=None):
         """
         Dump current object to dict, but the value is string

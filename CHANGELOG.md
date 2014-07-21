@@ -12,6 +12,7 @@ Uliweb Change Log
 * ORM add duplication support, so you can set it in CONNECTIONS options, it'll make definition of
   Model engine simple
 * Add `set_session()` function to orm
+* Add `fieldname` parameter to Property, and fix column mapping process between property and table field
 
 0.3.1 Version
 -----------------

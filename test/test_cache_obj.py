@@ -18,6 +18,11 @@ def teardown():
 def test_file():
     """
     >>> init()
+    [default] Creating [1/5, Test] blog...CREATED
+    [default] Creating [2/5, Test] group_user_members...CREATED
+    [default] Creating [3/5, Test] group...CREATED
+    [default] Creating [4/5, Test] user...CREATED
+    [default] Creating [5/5, uliweb.contrib.tables] tables...CREATED
     >>> User = functions.get_model('user')
     >>> Group = functions.get_model('group')
     >>> a = User(username='limodou', email='limodou@abc.om')
@@ -68,7 +73,7 @@ def test_file():
 
 def init():
     setup()
-    manage.call('uliweb makeproject -f TestProject')
+    manage.call('uliweb makeproject --yes TestProject')
     os.chdir('TestProject')
     path = os.getcwd()
     manage.call('uliweb makeapp Test')
@@ -102,7 +107,10 @@ INSTALLED_APPS = [
 ]
 
 [LOG]
-level = 'debug'
+level = 'info'
+
+[LOG.Loggers]
+uliweb.contrib.objcache = {'level':'info'}
 
 [MODELS]
 user = 'Test.models.User'

@@ -1924,7 +1924,7 @@ def test_load_dump():
     >>> d = a2.dump()
     >>> d
     {'t': '1', 'id': '1', 'name': ''}
-    >>> x = Test2.load(d, from_dump=True)
+    >>> x = Test2.load(d, from_='dump')
     >>> x
     <Test2 {'name':u'','t':<ReferenceProperty:1>,'id':1}>
     >>> a3 = Test2(name='a')
@@ -1933,7 +1933,7 @@ def test_load_dump():
     >>> d = a3.dump()
     >>> print d
     {'t': '', 'id': '2', 'name': 'a'}
-    >>> a4 = Test2.load(d, from_dump=True)
+    >>> a4 = Test2.load(d, from_='dump')
     >>> a4
     <Test2 {'name':u'a','t':None,'id':2}>
     """
@@ -2020,13 +2020,13 @@ def test_manytomany_loaddump():
     >>> g.users.all(cache=True)
     [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
     >>> x = {'users': '', 'id': '1', 'name': 'python'}
-    >>> g3 = Group.load(x, from_dump=True)
+    >>> g3 = Group.load(x, from_='dump')
     >>> print g3._users_
     []
     >>> list(g3.users)
     [<User {'username':u'limodou','year':5,'id':1}>, <User {'username':u'user','year':10,'id':2}>]
     >>> x = {'users': '1,2', 'id': '1', 'name': 'python'}
-    >>> g4 = Group.load(x, from_dump=True)
+    >>> g4 = Group.load(x, from_='dump')
     >>> print g4._users_
     [1, 2]
     """
@@ -2340,6 +2340,56 @@ def test_join():
     [<User {'username':u'limodou','year':5,'id':1}>]
     >>> User.all().join(Group, User.c.id==Group.c.user).count()
     1
+    """
+
+def test_rename_table_and_columns():
+    """
+    >>> from sqlalchemy.schema import CreateTable, CreateIndex
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     __tablename__ = 'test_user'
+    ...     username = Field(CHAR, fieldname='f_username', max_length=20)
+    ...     year = Field(int, fieldname='f_year')
+    >>> class Group(Model):
+    ...     __tablename__ = 'test_group'
+    ...     name = Field(str, fieldname='f_name', max_length=20)
+    ...     user = Reference(User, fieldname='f_userid')
+    >>> engine = get_connection()
+    >>> t = User.table
+    >>> x = str(CreateTable(t).compile(dialect=engine.dialect)).strip()
+    >>> print x.replace('\\t', '').replace('\\n', '')
+    CREATE TABLE test_user (f_username CHAR(20), f_year INTEGER, id INTEGER NOT NULL, PRIMARY KEY (id))
+    >>> User.properties.keys()
+    ['username', 'id', 'year']
+    >>> User.c.keys()
+    ['username', 'year', 'id']
+    >>> a = User(username='limodou', year=5)
+    >>> set_echo(True)
+    >>> a.save() # doctest:+ELLIPSIS
+    <BLANKLINE>
+    ===>>>>> [default] (...)
+    INSERT INTO test_user (f_username, f_year) VALUES ('limodou', 5);
+    ===<<<<< time used ...
+    <BLANKLINE>
+    True
+    >>> x = User.get(User.c.username=='limodou') # doctest:+ELLIPSIS
+    <BLANKLINE>
+    ===>>>>> [default] (...)
+    SELECT test_user.f_username, test_user.f_year, test_user.id FROM test_user WHERE test_user.f_username = 'limodou' LIMIT 1 OFFSET 0;
+    ===<<<<< time used ...
+    <BLANKLINE>
+    >>> set_echo(False)
+    >>> x
+    <User {'username':u'limodou','year':5,'id':1}>
+    >>> set_echo(False)
+    >>> g1 = Group(name='python', user=a)
+    >>> g1.save()
+    True
+    >>> g2 = Group.get(1)
+    >>> print repr(g2.user)
+    <User {'username':u'limodou','year':5,'id':1}>
     """
 
 # db = get_connection('sqlite://')

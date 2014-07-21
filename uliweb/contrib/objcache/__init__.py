@@ -40,7 +40,7 @@ def clear_table(engine, tablename):
 def get_redis():
     try:
         redis = functions.get_redis()
-    except Exception, e:
+    except Exception as e:
         log.exception(e)
         redis = None
     return redis
@@ -79,12 +79,12 @@ def get_object(model, cid, engine_name=None, connection=None):
         log.debug("Try to find objcache:get:table=%s:id=[%s]" % (tablename, _id))
         if redis.exists(_id):
             v = redis.hgetall(_id)
-            o = model.load(v, from_dump=True)
+            o = model.load(v, from_='dump')
             log.debug("Found!")
             return o
         else:
             log.debug("Not Found!")
-    except Exception, e:
+    except Exception as e:
         log.exception(e)
        
 
@@ -132,7 +132,7 @@ def set_object(model, instance, fields=None, engine_name=None):
             expire_msg = ':expire=%d' % expire
         r = p.execute()
         log.debug("Saving to cache objcache:set:table=%s:id=[%s]:%s" % (tablename, _id, expire_msg))
-    except Exception, e:
+    except Exception as e:
         log.exception(e)
         
 def post_save(model, instance, created, data, old_data):
@@ -193,7 +193,7 @@ def post_delete(model, instance):
         try:
             redis.delete(_id)
             log.debug("objcache:post_delete:id="+_id)
-        except Exception, e:
+        except Exception as e:
             log.exception(e)
     
     if response:
