@@ -1677,7 +1677,7 @@ class SimpleListView(object):
             q = query.with_only_columns([func.count()]).order_by(None).limit(None).offset(None)
             return do_(q).scalar()
             
-        return do_(query.order_by(None).limit(None).offset(None).alias().count()).scalar()
+        return do_(query.get_query().order_by(None).limit(None).offset(None).alias().count()).scalar()
 
     def download(self, filename, timeout=3600, action=None, query=None, fields_convert_map=None, type=None, domain=None):
         """
@@ -2223,12 +2223,14 @@ class ListView(SimpleListView):
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
             query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
-            if isinstance(query, orm.Result):
-                if not self.manual:
-                    self.total = query.count()
-            else:
-                if not self.manual:
-                    self.total = self.count(query)
+            if not self.manual:
+                self.total = self.count(query)
+            # if isinstance(query, orm.Result):
+            #     if not self.manual:
+            #         self.total = self.count(query)
+            # else:
+            #     if not self.manual:
+            #         self.total = self.count(query)
         else:
             query = self.query_range(self.pageno, self.pagination)
         return query
@@ -2386,10 +2388,11 @@ class SelectListView(ListView):
         limit = self.rows_per_page
         query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
         if not self.manual:
-            if isinstance(query, orm.Result):
-                self.total = query.count()
-            else:
-                self.total = self.count(query)
+            self.total = self.count(query)
+            # if isinstance(query, orm.Result):
+            #     self.total = query.count()
+            # else:
+            #     self.total = self.count(query)
         return query
 
     def query_model(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
