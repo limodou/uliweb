@@ -68,7 +68,7 @@ class User(Model):
         ]
     
 class UserGroup(Model):
-    name = Field(str, max_length=30, verbose_name=_('Name'), index=True, nullable=True)
+    name = Field(str, max_length=128, verbose_name=_('Name'), index=True, nullable=True)
     parent = SelfReference(verbose_name=_('Parent Group'), collection_name='children', nullable=True, default=0)
     users = ManyToMany('user', verbose_name=_('Users'), collection_name='groups')
     deleted = Field(bool, verbose_name=_('Deleted'))
