@@ -20,7 +20,10 @@ class RecorderrMiddle(Middleware):
             return response
         
         if settings.get_var('ULIWEBRECORDER/response_text'):
-            text = response.data
+            try:
+                text = response.data
+            except Exception as e:
+                text = str(e)
         else:
             text = ''
         
