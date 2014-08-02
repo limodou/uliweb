@@ -598,11 +598,14 @@ class LoadCommand(SQLCommandMixin, Command):
             help='Character encoding used in text file. Default is "utf-8".'),
         make_option('-p', '--project', dest='all', default=True, action='store_false',
             help='Process all tables defined in engine include tables which are not defined in current application.'),
+        make_option('-z', dest='zipfile', 
+            help='Extract zip file into directory which is specified by -d option.'),
     )
     check_apps = True
     
     def handle(self, options, global_options, *args):
         from uliweb import orm
+        from zipfile import ZipFile
         
         if args:
             message = """This command will delete all data of [%s]-[%s] before loading, 
@@ -619,6 +622,19 @@ are you sure to load data""" % options.engine
         path = os.path.join(options.dir, options.engine)
         if not os.path.exists(path):
             os.makedirs(path)
+
+        # extract zip file to path
+        if options.zipfile:
+            zipfile = None
+            try:
+                zipfile = ZipFile(options.zipfile, 'r')
+                zipfile.extractall(path)
+            except:
+                log.exception("There are something wrong when extract zip file [%s]" % options.zipfile)
+                sys.exit(1)
+            finally:
+                if zipfile:
+                    zipfile.close()
         
         engine = get_engine(options, global_options)
 
@@ -668,10 +684,13 @@ class LoadTableCommand(SQLCommandMixin, Command):
             help='delimiter character used in text file. Default is ",".'),
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
+        make_option('-z', dest='zipfile', 
+            help='Extract zip file into directory which is specified by -d option.'),
     )
 
     def handle(self, options, global_options, *args):
         from uliweb import orm
+        from zipfile import ZipFile
         
         if args:
             message = """This command will delete all data of [%s]-[%s] before loading, 
@@ -685,6 +704,19 @@ are you sure to load data""" % (options.engine, ','.join(args))
         path = os.path.join(options.dir, options.engine)
         if not os.path.exists(path):
             os.makedirs(path)
+
+        # extract zip file to path
+        if options.zipfile:
+            zipfile = None
+            try:
+                zipfile = ZipFile(options.zipfile, 'r')
+                zipfile.extractall(path)
+            except:
+                log.exception("There are something wrong when extract zip file [%s]" % options.zipfile)
+                sys.exit(1)
+            finally:
+                if zipfile:
+                    zipfile.close()
         
         engine = get_engine(options, global_options)
 
