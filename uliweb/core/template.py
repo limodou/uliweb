@@ -766,7 +766,7 @@ class Loader(object):
         self.comment = comment
 
         #init tmp_dir
-        if self.cache and self.tmp_dir:
+        if self.cache and self.use_tmp and self.tmp_dir:
             if not os.path.exists(self.tmp_dir):
                 os.makedirs(self.tmp_dir)
 

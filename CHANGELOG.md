@@ -13,6 +13,8 @@ Uliweb Change Log
   Model engine simple
 * Add `set_session()` function to orm
 * Add `fieldname` parameter to Property, and fix column mapping process between property and table field
+* Add `-z` paramter to `load` and `loadtable` command, thanks for linuxr
+* Fix `tmp/templates_temp` creation
 
 0.3.1 Version
 -----------------

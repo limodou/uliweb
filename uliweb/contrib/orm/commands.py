@@ -606,7 +606,9 @@ class LoadCommand(SQLCommandMixin, Command):
     def handle(self, options, global_options, *args):
         from uliweb import orm
         from zipfile import ZipFile
-        
+        import tempfile
+        import shutil
+
         if args:
             message = """This command will delete all data of [%s]-[%s] before loading, 
 are you sure to load data""" % (options.engine, ','.join(args))
@@ -619,12 +621,11 @@ are you sure to load data""" % options.engine
         if ans != 'Y':
             return
 
-        path = os.path.join(options.dir, options.engine)
-        if not os.path.exists(path):
-            os.makedirs(path)
-
         # extract zip file to path
         if options.zipfile:
+            path = tempfile.mkdtemp(prefix='dump', dir=options.dir)
+            if global_options.verbose:
+                print "Extract path is %s" % path
             zipfile = None
             try:
                 zipfile = ZipFile(options.zipfile, 'r')
@@ -635,7 +636,11 @@ are you sure to load data""" % options.engine
             finally:
                 if zipfile:
                     zipfile.close()
-        
+        else:
+            path = os.path.join(options.dir, options.engine)
+            if not os.path.exists(path):
+                os.makedirs(path)
+
         engine = get_engine(options, global_options)
 
         tables = get_sorted_tables(get_tables(global_options.apps_dir, args, 
@@ -669,6 +674,9 @@ are you sure to load data""" % options.engine
                 log.exception("There are something wrong when loading table [%s]" % name)
                 orm.Rollback()
 
+        if options.zipfile:
+            shutil.rmtree(path)
+
 class LoadTableCommand(SQLCommandMixin, Command):
     name = 'loadtable'
     args = '<tablename, tablename, ...>'
@@ -691,7 +699,9 @@ class LoadTableCommand(SQLCommandMixin, Command):
     def handle(self, options, global_options, *args):
         from uliweb import orm
         from zipfile import ZipFile
-        
+        import tempfile
+        import shutil
+
         if args:
             message = """This command will delete all data of [%s]-[%s] before loading, 
 are you sure to load data""" % (options.engine, ','.join(args))
@@ -701,12 +711,11 @@ are you sure to load data""" % (options.engine, ','.join(args))
 
         ans = 'Y' if global_options.yes else get_answer(message, quit='q')
 
-        path = os.path.join(options.dir, options.engine)
-        if not os.path.exists(path):
-            os.makedirs(path)
-
         # extract zip file to path
         if options.zipfile:
+            path = tempfile.mkdtemp(prefix='dump', dir=options.dir)
+            if global_options.verbose:
+                print "Extract path is %s" % path
             zipfile = None
             try:
                 zipfile = ZipFile(options.zipfile, 'r')
@@ -717,7 +726,12 @@ are you sure to load data""" % (options.engine, ','.join(args))
             finally:
                 if zipfile:
                     zipfile.close()
-        
+        else:
+            path = os.path.join(options.dir, options.engine)
+            if not os.path.exists(path):
+                os.makedirs(path)
+
+
         engine = get_engine(options, global_options)
 
         tables = get_sorted_tables(get_tables(global_options.apps_dir, 
@@ -750,6 +764,9 @@ are you sure to load data""" % (options.engine, ','.join(args))
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
                 orm.Rollback()
+
+        if options.zipfile:
+            shutil.rmtree(path)
 
 class LoadTableFileCommand(SQLCommandMixin, Command):
     name = 'loadtablefile'
