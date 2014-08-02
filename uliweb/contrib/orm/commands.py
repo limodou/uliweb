@@ -420,7 +420,7 @@ class DumpCommand(SQLCommandMixin, Command):
         make_option('-z', dest='zipfile', 
             help='Compress table files into a zip file.'),
         make_option('-p', '--project', dest='all', default=True, action='store_false',
-            help='Process all tables defined in engine include tables which are not defined in current application.'),
+            help='Process all tables only defined in project. Default is False, it will include all the tables defined in database maybe outside of project.'),
     )
     check_apps = True
     
@@ -436,6 +436,9 @@ class DumpCommand(SQLCommandMixin, Command):
         
         zipfile = None
         if options.zipfile:
+            path = os.path.dirname(options.zipfile)
+            if not os.path.exists(path):
+                os.makedirs(path)
             zipfile = ZipFile(options.zipfile, 'w', compression=ZIP_DEFLATED)
             
         inspector = Inspector.from_engine(engine)
@@ -587,9 +590,9 @@ class LoadCommand(SQLCommandMixin, Command):
     help = 'Load all models records according all available apps. If no apps, then process the whole database.'
     option_list = (
         make_option('-d', dest='dir', default='./data',
-            help='Directory of data files.'),
+            help='Directory of data files. Default is ./data'),
         make_option('-b', dest='bulk', default='100',
-            help='Bulk number of insert.'),
+            help='Bulk number of insert. Default is 100.'),
         make_option('-t', '--text', dest='text', action='store_true', default=False,
             help='Load files in text format.'),
         make_option('--delimiter', dest='delimiter', default=',',
@@ -597,9 +600,9 @@ class LoadCommand(SQLCommandMixin, Command):
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
         make_option('-p', '--project', dest='all', default=True, action='store_false',
-            help='Process all tables defined in engine include tables which are not defined in current application.'),
+            help='Process all tables only defined in project. Default is False, it will include all the tables defined in database maybe outside of project.'),
         make_option('-z', dest='zipfile', 
-            help='Extract zip file into directory which is specified by -d option.'),
+            help='Extract zip file into directory which can be combined with -d option.'),
     )
     check_apps = True
     
@@ -693,7 +696,7 @@ class LoadTableCommand(SQLCommandMixin, Command):
         make_option('--encoding', dest='encoding', default='utf-8',
             help='Character encoding used in text file. Default is "utf-8".'),
         make_option('-z', dest='zipfile', 
-            help='Extract zip file into directory which is specified by -d option.'),
+            help='Extract zip file into directory which can be combined with -d option.'),
     )
 
     def handle(self, options, global_options, *args):
