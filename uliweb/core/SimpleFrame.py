@@ -1239,7 +1239,7 @@ class Dispatcher(object):
     def _open(self, environ, pre_call=None, post_call=None, middlewares=None):
         if middlewares is None:
             middlewares = self.middlewares
-            pocess_request_classes = self.process_request_classes
+            process_request_classes = self.process_request_classes
             process_response_classes = self.process_response_classes
             process_exception_classes = self.process_exception_classes
         else:
@@ -1266,7 +1266,7 @@ class Dispatcher(object):
                 response = None
                 _clses = {}
                 _inss = {}
-                for cls in pocess_request_classes:
+                for cls in process_request_classes:
                     ins = cls(self, settings)
                     _inss[cls] = ins
                     response = ins.process_request(req)
