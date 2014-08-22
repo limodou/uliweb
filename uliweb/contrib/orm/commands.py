@@ -437,7 +437,7 @@ class DumpCommand(SQLCommandMixin, Command):
         zipfile = None
         if options.zipfile:
             path = os.path.dirname(options.zipfile)
-            if not os.path.exists(path):
+            if path and not os.path.exists(path):
                 os.makedirs(path)
             zipfile = ZipFile(options.zipfile, 'w', compression=ZIP_DEFLATED)
             
@@ -507,6 +507,9 @@ class DumpTableCommand(SQLCommandMixin, Command):
             
         zipfile = None
         if options.zipfile:
+            path = os.path.dirname(options.zipfile)
+            if path and not os.path.exists(path):
+                os.makedirs(path)
             zipfile = ZipFile(options.zipfile, 'w', compression=ZIP_DEFLATED)
 
         inspector = Inspector.from_engine(engine)
@@ -626,6 +629,8 @@ are you sure to load data""" % options.engine
 
         # extract zip file to path
         if options.zipfile:
+            if options.dir and not os.path.exists(options.dir):
+                os.makedirs(options.dir)
             path = tempfile.mkdtemp(prefix='dump', dir=options.dir)
             if global_options.verbose:
                 print "Extract path is %s" % path
@@ -716,6 +721,8 @@ are you sure to load data""" % (options.engine, ','.join(args))
 
         # extract zip file to path
         if options.zipfile:
+            if options.dir and not os.path.exists(options.dir):
+                os.makedirs(options.dir)
             path = tempfile.mkdtemp(prefix='dump', dir=options.dir)
             if global_options.verbose:
                 print "Extract path is %s" % path
