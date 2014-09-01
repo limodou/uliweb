@@ -107,6 +107,8 @@ class Expose(object):
             self.kwargs = kwargs
             
     def _fix_url(self, appname, rule):
+        from uliweb import application
+
         if rule.startswith('/') and appname in __app_rules__:
             suffix = __app_rules__[appname]
             url = os.path.join(suffix, rule.lstrip('/')).replace('\\', '/')
@@ -115,8 +117,18 @@ class Expose(object):
                 url = rule[1:]
             else:
                 url = rule
-        return url.rstrip('/') or '/'
-            
+        _url = url.rstrip('/') or '/'
+        if application:
+            if self.kwargs.get('static'):
+                domain_name = 'static'
+            else:
+                domain_name = 'default'
+            domain = application.domains.get(domain_name, {})
+            url_prefix = domain.get('url_prefix', '')
+            _url = url_prefix + _url
+
+        return _url
+
     def _get_path(self, f):
         m = f.__module__.split('.')
         s = []

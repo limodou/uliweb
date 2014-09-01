@@ -696,7 +696,8 @@ class Dispatcher(object):
             _domain = urlparse(v['domain'])
             self.domains[k] = {'domain':v.get('domain'), 'domain_parse':_domain, 
                 'host':_domain.netloc,
-                'scheme':_domain.scheme or 'http', 'display':v.get('display', False)}
+                'scheme':_domain.scheme or 'http', 'display':v.get('display', False),
+                'url_prefix':v.get('url_prefix', '')}
         
     def get_file(self, filename, dir='static'):
         """

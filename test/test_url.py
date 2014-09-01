@@ -9,10 +9,10 @@ def test_1():
     >>> def view():pass
     >>> f = expose('!/')(view)
     >>> rules.merge_rules() # doctest:+ELLIPSIS
-    [('__main__', '__main__.view', '/', {})]
+    [('test_url', 'test_url.view', '/', {})]
     >>> f = expose('/hello')(view)
     >>> rules.merge_rules() # doctest:+ELLIPSIS
-    [('__main__', '__main__.view', '/', {}), ('__main__', '__main__.view', '/hello', {})]
+    [('test_url', 'test_url.view', '/', {}), ('test_url', 'test_url.view', '/hello', {})]
     >>> @expose('/test')
     ... class TestView(object):
     ...     @expose('')
@@ -28,11 +28,11 @@ def test_1():
     ...         return {}
     >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
     ...     print v[1], v[2]
-    __main__.TestView.index /test
-    __main__.TestView.pnt /print
-    __main__.TestView.ttt /ttt
-    __main__.view /
-    __main__.view /hello
+    test_url.TestView.index /test
+    test_url.TestView.pnt /print
+    test_url.TestView.ttt /ttt
+    test_url.view /
+    test_url.view /hello
     >>> @expose('/test')
     ... class TestView1(TestView):
     ...     @expose('/print')
@@ -42,14 +42,14 @@ def test_1():
     ...         pass
     >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
     ...     print v[1], v[2]
-    __main__.TestView.index /test
-    __main__.TestView.ttt /ttt
-    __main__.TestView1.index /test/index
-    __main__.TestView1.pnt /print
-    __main__.TestView1.test /test/test
-    __main__.TestView1.ttt /test/ttt
-    __main__.view /
-    __main__.view /hello
+    test_url.TestView.index /test
+    test_url.TestView.ttt /ttt
+    test_url.TestView1.index /test/index
+    test_url.TestView1.pnt /print
+    test_url.TestView1.test /test/test
+    test_url.TestView1.ttt /test/ttt
+    test_url.view /
+    test_url.view /hello
     """
     
 def test_endpoint():
@@ -57,7 +57,7 @@ def test_endpoint():
     >>> def view():pass
     >>> f = expose('/hello')(view)
     >>> rules.get_endpoint(f)
-    '__main__.view'
+    'test_url.view'
     >>> rules.get_endpoint('views.index')
     'views.index'
     >>> rules.clear_rules()
@@ -82,9 +82,9 @@ def test_endpoint():
     ...     def test(self):
     ...         pass
     >>> rules.get_endpoint(TestView.pnt)
-    '__main__.TestView.pnt'
+    'test_url.TestView.pnt'
     >>> rules.get_endpoint(TestView1.pnt)
-    '__main__.TestView1.pnt'
+    'test_url.TestView1.pnt'
     """
 
 def test_template():
@@ -122,9 +122,9 @@ def test_template():
     ...     def test(self):
     ...         pass
     >>> print TestView.index.__template__
-    {'function': 'index', 'view_class': 'TestView', 'appname': '__main__'}
+    {'function': 'index', 'view_class': 'TestView', 'appname': 'test_url'}
     >>> print TestView1.index.__template__
-    {'function': 'index', 'view_class': 'TestView', 'appname': '__main__'}
+    {'function': 'index', 'view_class': 'TestView', 'appname': 'test_url'}
     >>> print TestView1.pnt.__template__
     None
     >>> print TestView1.test.__template__
@@ -200,11 +200,10 @@ def test_not_replace():
     ...         pass
     >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
     ...     print v[1], v[2]
-    __main__.TestView.index /test
-    __main__.TestView.ttt /ttt
-    __main__.TestView1.index /test1/index
-    __main__.TestView1.pnt /print
-    __main__.TestView1.test /test1/test
-    __main__.TestView1.ttt /test1/ttt
+    test_url.TestView.index /test
+    test_url.TestView.ttt /ttt
+    test_url.TestView1.index /test1/index
+    test_url.TestView1.pnt /print
+    test_url.TestView1.test /test1/test
+    test_url.TestView1.ttt /test1/ttt
     """
-
