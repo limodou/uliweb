@@ -211,42 +211,43 @@ def get_url_adapter(_domain_name):
     Fetch a domain url_adapter object, and bind it to according domain
     """
     domain = application.domains.get(_domain_name, {})
+    server_name = None
     if domain.get('domain', ''):
-        adapter = url_map.bind(domain['host'], url_scheme=domain.get('scheme', 'http'))
-    else:
-        try:
-            env = request.environ
-        except:
-            #this env if for testing only
-            env = {
-                'HTTP_ACCEPT': 'text/html,application/xhtml+xml,application/xml;'
-                               'q=0.9,*/*;q=0.8',
-                'HTTP_ACCEPT_CHARSET': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-                'HTTP_ACCEPT_ENCODING': 'gzip,deflate,sdch',
-                'HTTP_ACCEPT_LANGUAGE': 'uk,en-US;q=0.8,en;q=0.6',
-                'HTTP_CACHE_CONTROL': 'max-age=0',
-                'HTTP_CONNECTION': 'keep-alive',
-                # 'HTTP_HOST': 'localhost:8080',
-                'HTTP_USER_AGENT': 'Mozilla/5.0 (X11; Linux i686)',
-                # 'PATH_INFO': '/',
-                # 'QUERY_STRING': '',
-                'REMOTE_ADDR': '127.0.0.1',
-                'REQUEST_METHOD': 'GET',
-                'REQUEST_URI': '/',
-                'SCRIPT_NAME': '',
-                'SERVER_NAME': 'localhost',
-                'SERVER_PORT': '8080',
-                'SERVER_PROTOCOL': 'HTTP/1.1',
-                'wsgi.errors': None,
-                'wsgi.file_wrapper': None,
-                # 'wsgi.input': BytesIO(ntob('', 'utf-8')),
-                'wsgi.multiprocess': False,
-                'wsgi.multithread': False,
-                'wsgi.run_once': False,
-                'wsgi.url_scheme': 'http',
-                'wsgi.version': (1, 0),
-            }
-        adapter = url_map.bind_to_environ(env)
+        server_name = domain['domain']
+        #adapter = url_map.bind(domain['host'], url_scheme=domain.get('scheme', 'http'))
+    try:
+        env = request.environ
+    except:
+        #this env if for testing only
+        env = {
+            'HTTP_ACCEPT': 'text/html,application/xhtml+xml,application/xml;'
+                           'q=0.9,*/*;q=0.8',
+            'HTTP_ACCEPT_CHARSET': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+            'HTTP_ACCEPT_ENCODING': 'gzip,deflate,sdch',
+            'HTTP_ACCEPT_LANGUAGE': 'uk,en-US;q=0.8,en;q=0.6',
+            'HTTP_CACHE_CONTROL': 'max-age=0',
+            'HTTP_CONNECTION': 'keep-alive',
+            # 'HTTP_HOST': 'localhost:8080',
+            'HTTP_USER_AGENT': 'Mozilla/5.0 (X11; Linux i686)',
+            # 'PATH_INFO': '/',
+            # 'QUERY_STRING': '',
+            'REMOTE_ADDR': '127.0.0.1',
+            'REQUEST_METHOD': 'GET',
+            'REQUEST_URI': '/',
+            'SCRIPT_NAME': '',
+            'SERVER_NAME': 'localhost',
+            'SERVER_PORT': '8080',
+            'SERVER_PROTOCOL': 'HTTP/1.1',
+            'wsgi.errors': None,
+            'wsgi.file_wrapper': None,
+            # 'wsgi.input': BytesIO(ntob('', 'utf-8')),
+            'wsgi.multiprocess': False,
+            'wsgi.multithread': False,
+            'wsgi.run_once': False,
+            'wsgi.url_scheme': 'http',
+            'wsgi.version': (1, 0),
+        }
+    adapter = url_map.bind_to_environ(env, server_name=server_name)
     return adapter
 
 def url_for(endpoint, **values):
@@ -695,7 +696,7 @@ class Dispatcher(object):
         for k, v in settings.DOMAINS.items():
             _domain = urlparse(v['domain'])
             self.domains[k] = {'domain':v.get('domain'), 'domain_parse':_domain, 
-                'host':_domain.netloc,
+                'host':_domain.netloc or v.get('domain'),
                 'scheme':_domain.scheme or 'http', 'display':v.get('display', False),
                 'url_prefix':v.get('url_prefix', '')}
         
