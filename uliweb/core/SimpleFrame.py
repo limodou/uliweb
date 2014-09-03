@@ -210,44 +210,63 @@ def get_url_adapter(_domain_name):
     """
     Fetch a domain url_adapter object, and bind it to according domain
     """
+    from werkzeug._compat import wsgi_decoding_dance
+
     domain = application.domains.get(_domain_name, {})
     server_name = None
     if domain.get('domain', ''):
         server_name = domain['domain']
-        #adapter = url_map.bind(domain['host'], url_scheme=domain.get('scheme', 'http'))
-    try:
-        env = request.environ
-    except:
-        #this env if for testing only
-        env = {
-            'HTTP_ACCEPT': 'text/html,application/xhtml+xml,application/xml;'
-                           'q=0.9,*/*;q=0.8',
-            'HTTP_ACCEPT_CHARSET': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-            'HTTP_ACCEPT_ENCODING': 'gzip,deflate,sdch',
-            'HTTP_ACCEPT_LANGUAGE': 'uk,en-US;q=0.8,en;q=0.6',
-            'HTTP_CACHE_CONTROL': 'max-age=0',
-            'HTTP_CONNECTION': 'keep-alive',
-            # 'HTTP_HOST': 'localhost:8080',
-            'HTTP_USER_AGENT': 'Mozilla/5.0 (X11; Linux i686)',
-            # 'PATH_INFO': '/',
-            # 'QUERY_STRING': '',
-            'REMOTE_ADDR': '127.0.0.1',
-            'REQUEST_METHOD': 'GET',
-            'REQUEST_URI': '/',
-            'SCRIPT_NAME': '',
-            'SERVER_NAME': 'localhost',
-            'SERVER_PORT': '8080',
-            'SERVER_PROTOCOL': 'HTTP/1.1',
-            'wsgi.errors': None,
-            'wsgi.file_wrapper': None,
-            # 'wsgi.input': BytesIO(ntob('', 'utf-8')),
-            'wsgi.multiprocess': False,
-            'wsgi.multithread': False,
-            'wsgi.run_once': False,
-            'wsgi.url_scheme': 'http',
-            'wsgi.version': (1, 0),
-        }
-    adapter = url_map.bind_to_environ(env, server_name=server_name)
+        try:
+            env = {}
+            environ = request.environ
+            env['url_scheme'] = environ['wsgi.url_scheme']
+            env['default_method'] = environ['REQUEST_METHOD']
+
+            def _get_wsgi_string(name):
+                val = environ.get(name)
+                if val is not None:
+                    return wsgi_decoding_dance(val, "utf-8")
+
+            env['script_name'] = _get_wsgi_string('SCRIPT_NAME')
+            env['path_info'] = _get_wsgi_string('PATH_INFO')
+            env['query_args'] = _get_wsgi_string('QUERY_STRING')
+        except:
+            env = {}
+        adapter = url_map.bind(server_name, **env)
+    else:
+        try:
+            env = request.environ
+        except:
+            #this env if for testing only
+            env = {
+                'HTTP_ACCEPT': 'text/html,application/xhtml+xml,application/xml;'
+                               'q=0.9,*/*;q=0.8',
+                'HTTP_ACCEPT_CHARSET': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+                'HTTP_ACCEPT_ENCODING': 'gzip,deflate,sdch',
+                'HTTP_ACCEPT_LANGUAGE': 'uk,en-US;q=0.8,en;q=0.6',
+                'HTTP_CACHE_CONTROL': 'max-age=0',
+                'HTTP_CONNECTION': 'keep-alive',
+                # 'HTTP_HOST': 'localhost:8080',
+                'HTTP_USER_AGENT': 'Mozilla/5.0 (X11; Linux i686)',
+                # 'PATH_INFO': '/',
+                # 'QUERY_STRING': '',
+                'REMOTE_ADDR': '127.0.0.1',
+                'REQUEST_METHOD': 'GET',
+                'REQUEST_URI': '/',
+                'SCRIPT_NAME': '',
+                'SERVER_NAME': 'localhost',
+                'SERVER_PORT': '8080',
+                'SERVER_PROTOCOL': 'HTTP/1.1',
+                'wsgi.errors': None,
+                'wsgi.file_wrapper': None,
+                # 'wsgi.input': BytesIO(ntob('', 'utf-8')),
+                'wsgi.multiprocess': False,
+                'wsgi.multithread': False,
+                'wsgi.run_once': False,
+                'wsgi.url_scheme': 'http',
+                'wsgi.version': (1, 0),
+            }
+        adapter = url_map.bind_to_environ(env)
     return adapter
 
 def url_for(endpoint, **values):
@@ -744,8 +763,11 @@ class Dispatcher(object):
     <h3>Current URL Mapping is</h3>
     <table border="1">
     <tr><th>#</th><th>URL</th><th>View Functions</th></tr>
-    {{for i, (_url, _methods, _endpoint) in enumerate(urls):}}
-    <tr><td>{{=i+1}}</td><td>{{=_url}} {{=_methods}}</td><td>{{=_endpoint}}</td></tr>
+    {{for i, (_url, _methods, _subdomain, _endpoint) in enumerate(urls):}}
+    <tr><td>{{=i+1}}</td><td>{{=_url}}
+        {{if _methods:}}[methods={{=_methods}}]{{pass}}
+        {{if _subdomain:}}[subdomain={{=_subdomain}}]{{pass}}
+    </td><td>{{=_endpoint}}</td></tr>
     {{pass}}
     </table>
     """ % description
@@ -759,7 +781,7 @@ class Dispatcher(object):
                     methods = ' '.join(list(r.methods))
                 else:
                     methods = ''
-                urls.append((r.rule, methods, r.endpoint))
+                urls.append((r.rule, methods, r.subdomain, r.endpoint))
             urls.sort()
             return self._page_not_found(url=local.request.path, urls=urls)
         tmp_file = self.template_loader.resolve_path('404'+settings.GLOBAL.TEMPLATE_SUFFIX)
