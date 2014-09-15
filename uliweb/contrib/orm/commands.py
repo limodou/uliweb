@@ -169,12 +169,14 @@ def load_table(table, filename, con, delimiter=',', format=None,
         first_line = f.readline()
         if first_line.startswith('#'):
             first_line = first_line[1:]
-        fields = first_line.strip().split()
         n = 0
         count = 0
         if format:
+            fields = first_line.strip().split(delimiter)
             fin = csv.reader(f, delimiter=delimiter)
-            
+        else:
+            fields = first_line.strip().split()
+
         buf = []
         for line in fin:
             try:
