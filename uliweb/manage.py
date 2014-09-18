@@ -1265,6 +1265,57 @@ class FindCommand(Command):
                 
 register_command(FindCommand)
 
+class ValidateTemplateCommand(Command):
+    name = 'validatetemplate'
+    help = 'Validate template files syntax.'
+    args = '[appname] [-f tempaltefile]'
+    check_apps_dirs = True
+    option_list = (
+        make_option('-f', dest='template',
+            help='Template filename which will be validated.'),
+    )
+
+    def handle(self, options, global_options, *args):
+        self.get_application(global_options)
+        from uliweb import application as app
+        if options.template:
+            files = [options.template]
+        else:
+            if args:
+                files = self._find_templates(args)
+            else:
+                files = self._find_templates(app.apps)
+        self._validate_templates(app, files, global_options.verbose)
+
+    def _find_templates(self, apps):
+        from glob import glob
+        from uliweb import get_app_dir
+        from uliweb.utils.common import walk_dirs
+
+        for app in apps:
+            path = os.path.join(get_app_dir(app), 'templates')
+            for f in walk_dirs(path, include_ext=['.html']):
+                yield f
+
+    def _validate_templates(self, app, files, verbose):
+        """
+        If tree is true, then will display the track of template extend or include
+        """
+        from uliweb import application
+        from uliweb.core.template import template_file
+        from uliweb.utils.common import trim_path
+
+        app.template_loader.log = None
+        for f in files:
+            try:
+                t = app.template_loader.load(f)
+                if verbose:
+                    print 'PASSED', f
+            except Exception as e:
+                print 'FAILED', f, str(e)
+
+register_command(ValidateTemplateCommand)
+
 def collect_files(options, apps_dir, apps):
     files = [os.path.join(apps_dir, options.settings), 
         os.path.join(apps_dir, options.local_settings)]

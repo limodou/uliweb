@@ -29,6 +29,7 @@ Uliweb Change Log
 * Add whole database dump and load support #33
 * Add NotFound to __all__ of orm
 * Fix recorder bug
+* Add `validatetemplate` command to validate syntax for template files
 
 0.3 Version
 -----------------
