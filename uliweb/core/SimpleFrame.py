@@ -1063,11 +1063,20 @@ class Dispatcher(object):
             appname, endpoint, url, kw = v
             static = kw.pop('static', None)
             if static:
+                domain_name = 'static'
+            else:
+                domain_name = 'default'
+            domain = self.domains.get(domain_name, {})
+            url_prefix = domain.get('url_prefix', '')
+            _url = url_prefix + url
+
+            if static:
                 static_views.append(endpoint)
+
             try:
-                rules.add_rule(url_map, url, endpoint, **kw)
+                rules.add_rule(url_map, _url, endpoint, **kw)
             except:
-                log.error("Wrong url url=%s, endpoint=%s" % (url, endpoint))
+                log.error("Wrong url url=%s, endpoint=%s" % (_url, endpoint))
                 raise
     
     def install_apps(self):

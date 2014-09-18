@@ -139,15 +139,6 @@ class Expose(object):
             else:
                 url = rule
         _url = url.rstrip('/') or '/'
-        if application:
-            if self.kwargs.get('static'):
-                domain_name = 'static'
-            else:
-                domain_name = 'default'
-            domain = application.domains.get(domain_name, {})
-            url_prefix = domain.get('url_prefix', '')
-            _url = url_prefix + _url
-
         return _url
 
     def _fix_kwargs(self, appname, v):
