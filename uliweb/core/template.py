@@ -967,10 +967,21 @@ class Loader(object):
         blocks = {}
         block_names = []
 
-        def see(name, filename, indent=0):
-            if name not in blocks:
-                block_names.append(name)
-                blocks[name] = {'filename':filename, 'indent':indent}
+        class ID(object):
+            count = 1
+
+        def see(name, filename, parent):
+            if not name in blocks:
+                _id = ID.count
+                blocks[name] = {'filename':filename, 'path':[]}
+                ID.count += 1
+                if parent:
+                    parent_path = blocks[parent]['path']
+                else:
+                    parent_path = []
+                blocks[name]['path'] = x = parent_path + [_id]
+                blocks[name]['indent'] = len(x)
+                block_names.append((x, name))
             else:
                 blocks[name]['filename'] = filename
 
@@ -978,9 +989,9 @@ class Loader(object):
         ancestors = t._get_ancestors(self)
         ancestors.reverse()
         for ancestor in ancestors:
-            ancestor.see_named_blocks(self, named_blocks, see, 0)
+            ancestor.see_named_blocks(self, named_blocks, None, see)
 
-        for name in block_names:
+        for _path, name in sorted(block_names, key=lambda x:x[0]):
             filename, indent = blocks[name]['filename'], blocks[name]['indent']
             f = self._get_rel_filename(filename, path)
             if with_filename:
@@ -1000,9 +1011,9 @@ class _Node(object):
         for child in self.each_child():
             child.find_named_blocks(loader, named_blocks)
 
-    def see_named_blocks(self, loader, named_blocks, see=None, indent=0):
+    def see_named_blocks(self, loader, named_blocks, path=None, see=None):
         for child in self.each_child():
-            child.see_named_blocks(loader, named_blocks, see, indent)
+            child.see_named_blocks(loader, named_blocks, path, see)
 
 class _File(_Node):
     def __init__(self, template, body):
@@ -1077,11 +1088,11 @@ class _NamedBlock(_Node):
         named_blocks[self.name] = self
         _Node.find_named_blocks(self, loader, named_blocks)
 
-    def see_named_blocks(self, loader, named_blocks, see=None, indent=0):
+    def see_named_blocks(self, loader, named_blocks, parent=None, see=None):
         named_blocks[self.name] = self
         if see:
-            see(self.name, self.template.filename, indent+1)
-        _Node.see_named_blocks(self, loader, named_blocks, see, indent+1)
+            see(self.name, self.template.filename, parent=parent)
+        _Node.see_named_blocks(self, loader, named_blocks, self.name, see)
 
 
 class _ExtendsBlock(_Node):
@@ -1105,12 +1116,12 @@ class _IncludeBlock(_Node):
             self.template.has_links = True
         included.file.find_named_blocks(loader, named_blocks)
 
-    def see_named_blocks(self, loader, named_blocks, see=None, indent=0):
+    def see_named_blocks(self, loader, named_blocks, parent, see=None):
         included = loader.load(self.name, self.template_name)
         self.template.depends.add(included.filename)
-        if loader.see:
-            loader.see('include', self.template.filename, included.filename)
-        included.file.see_named_blocks(loader, named_blocks, see, indent)
+        # if loader.see:
+        #     loader.see('include', self.template.filename, included.filename)
+        included.file.see_named_blocks(loader, named_blocks, parent, see)
 
     def generate(self, writer):
         included = writer.loader.load(self.name, self.template_name)
