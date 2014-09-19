@@ -681,7 +681,7 @@ class LRUTmplatesCacheDict(object):
         self.__access_keys = []
         self.__modified_times.clear()
 
-    def __contains__(self, key):
+    def has(self, key, mtime=None):
         """
         This method should almost NEVER be used. The reason is that between the time
         has_key is called, and the key is accessed, the key might vanish.
@@ -691,14 +691,17 @@ class LRUTmplatesCacheDict(object):
         if not v:
             return False
         if self.check_modified_time:
-            mtime = os.path.getmtime(key)
+            mtime = mtime or os.path.getmtime(key)
             if mtime != self.__modified_times[key]:
-                self.__delitem__(key)
+                del self[key]
                 return False
         return True
 
-    def __setitem__(self, key, value):
-        self.__delitem__(key)
+    def __contains__(self, key):
+        return self.has(key)
+
+    def set(self, key, value, mtime=None):
+        del self[key]
         self.__values[key] = value
         try:
             pos = self.__access_keys.remove(key)
@@ -706,21 +709,27 @@ class LRUTmplatesCacheDict(object):
             pass
         self.__access_keys.insert(0, key)
         if self.check_modified_time:
-            self.__modified_times[key] = os.path.getmtime(key)
+            self.__modified_times[key] = mtime or os.path.getmtime(key)
         self.cleanup()
 
-    def __getitem__(self, key):
+    def __setitem__(self, key, value):
+        self.set(key, value)
+
+    def get(self, key, mtime=None):
         v = self.__values.get(key, None)
         if not v:
             return None
         if self.check_modified_time:
-            mtime = os.path.getmtime(key)
+            mtime = mtime or os.path.getmtime(key)
             if mtime != self.__modified_times[key]:
-                self.__delitem__(key)
+                del self[key]
                 return None
         self.__access_keys.remove(key)
         self.__access_keys.insert(0, key)
         return v
+
+    def __getitem__(self, key):
+        return self.get(key)
 
     def __delitem__(self, key):
         if key in self.__values:
@@ -737,6 +746,8 @@ class LRUTmplatesCacheDict(object):
 
     def keys(self):
         return self.__values.keys()
+
+r_extend = re.compile(r'(\s*#.*?)?\{\{extend[s]?\s\S+\s*\}\}', re.DOTALL)
 
 class Loader(object):
     """A template loader that loads from a single root directory.
@@ -780,7 +791,7 @@ class Loader(object):
                 else:
                     self.templates = {}
 
-    def load(self, name, skip='', skip_original='', default_template=None):
+    def load(self, name, skip='', skip_original='', default_template=None, layout=None):
         """Loads a template."""
         filename = self.resolve_path(name, skip=skip, skip_original=skip_original,
                                      default_template=default_template)
@@ -789,11 +800,18 @@ class Loader(object):
             raise ParseError("Can't find template %s." % name)
 
         with self.lock:
+            if layout:
+                _filename = filename + '.' + layout
+                mtime = os.path.getmtime(filename)
+            else:
+                mtime = None
+                _filename = filename
+
             if self.cache:
                 if not self.use_tmp:
                     #check current template file expiration
-                    if filename in self.templates:
-                        t = self.templates[filename]
+                    t = self.templates.get(_filename, mtime=mtime)
+                    if t:
                         #check depends tempaltes expiration
                         check = self.check_expiration(t)
                         if not check:
@@ -801,10 +819,10 @@ class Loader(object):
                 else:
                     #get cached file from disk
                     pass
-            t = self._create_template(name, filename)
+            t = self._create_template(name, filename, layout=layout)
             if self.cache:
                 if not self.use_tmp:
-                    self.templates[filename] = t
+                    self.templates.set(_filename, t, mtime)
                 else:
                     #save cached file to disk
                     pass
@@ -852,12 +870,20 @@ class Loader(object):
                 if filename:
                     return filename
 
-    def _create_template(self, name, filename, _compile=None, see=None):
+    def _create_template(self, name, filename, _compile=None, see=None, layout=None):
         if not os.path.exists(filename):
             raise ParseError("The file %s is not existed." % filename)
 
-        with open(filename, "rb") as f:
-            template = Template(f.read(), name=name, loader=self,
+        with open(filename, 'rb') as f:
+            text = f.read()
+            #if layout is not empty and there is no {{extend}} exsited
+            if layout:
+                if not r_extend.match(text):
+                    text = ('{{extend "%s"}}\n' % layout) + text
+                    name = name + '.' + layout
+                    filename = filename + '.' + layout
+
+            template = Template(text, name=name, loader=self,
                                 begin_tag=self.begin_tag, end_tag=self.end_tag,
                                 debug=self.debug, see=self.see,
                                 filename=filename, _compile=self._compile,
@@ -1679,12 +1705,13 @@ def template_py(text, **kwargs):
     t = Template(text, **kwargs)
     return t.code
 
-def template_file(filename, vars=None, env=None, dirs=None, loader=None, **kwargs):
+def template_file(filename, vars=None, env=None, dirs=None, loader=None, layout=None, **kwargs):
     if not loader:
         loader = Loader(dirs, **kwargs)
-    return loader.load(filename).generate(vars, env)
+    return loader.load(filename, layout=layout).generate(vars, env)
 
-def template_file_py(filename, dirs=None, loader=None, **kwargs):
+def template_file_py(filename, dirs=None, loader=None, layout=None, **kwargs):
     if not loader:
         loader = Loader(dirs, **kwargs)
-    return loader.load(filename).code
+    return loader.load(filename, layout=layout).code
+

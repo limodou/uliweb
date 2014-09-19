@@ -347,6 +347,40 @@ def test_extend():
     </html>
     """
 
+def test_dynamic_extend():
+    """
+    >>> d = {'name':'中文'}
+    >>> dirs = [os.path.join(path, 'templates', x) for x in ['a']]
+    >>> loader = Loader(dirs)
+    >>> print (template_file('test_dynamic_extend.html', d, dirs=dirs, loader=loader, layout="index.html"))
+    <html>
+    <head>
+    <title>Untitled</title>
+    </head>
+    <body>
+    <BLANKLINE>
+    <h1>Hello, 中文</h1>
+    dynamic extend
+    side1
+    <BLANKLINE>
+    </body>
+    </html>
+    >>> d = {'name':'aaa'}
+    >>> print (template_file('test_dynamic_extend.html', d, dirs=dirs, loader=loader, layout="index.html"))
+    <html>
+    <head>
+    <title>Untitled</title>
+    </head>
+    <body>
+    <BLANKLINE>
+    <h1>Hello, aaa</h1>
+    dynamic extend
+    side1
+    <BLANKLINE>
+    </body>
+    </html>
+    """
+
 def test_extend_self():
     """
     >>> d = {'name':'uliweb'}
@@ -719,3 +753,4 @@ def test_include_block():
     </body>
     </html>
     """
+
