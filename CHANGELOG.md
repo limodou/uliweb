@@ -1,6 +1,11 @@
 Uliweb Change Log
 =====================
 
+0.4.1 Version
+-----------------
+
+* Add new app sequence, you can use it to create sequence value.
+
 0.4 Version
 -----------------
 * Refactor template with tornado
