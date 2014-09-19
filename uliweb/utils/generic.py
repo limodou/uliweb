@@ -2302,7 +2302,7 @@ class ListView(SimpleListView):
     def get_table_info(self):
         t = {'fields_name':[], 'fields_list':[], 'fields':[], 'fields_label':{}}
     
-        if self.fields:
+        if self.fields is not None:
             fields = self.fields
         elif hasattr(self.model, self.meta):
             fields = getattr(self.model, self.meta).fields
