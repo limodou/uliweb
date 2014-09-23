@@ -1054,12 +1054,14 @@ class _File(_Node):
             writer.write_line("_tt_append = _tt_buffer.append", self.line)
             writer.write_line("def _tt_write(t, escape=True):", self.line)
             writer.write_line("    if escape:", self.line)
-            writer.write_line("        _tt_append(xhtml_escape(t))", self.line)
+            writer.write_line("        _tt_append(xhtml_escape(_tt_utf8(t)))", self.line)
             writer.write_line("    else:", self.line)
-            writer.write_line("        _tt_append(t)", self.line)
+            writer.write_line("        _tt_append(_tt_utf8(t))", self.line)
             writer.write_line("        pass", self.line)
             writer.write_line("    pass", self.line)
-            writer.write_line("out_write = _tt_append", self.line)
+            writer.write_line("def out_write(value):", self.line)
+            writer.write_line("    _tt_append(_tt_utf8(value))", self.line)
+            writer.write_line("    pass", self.line)
 
             if has_links:
                 writer.write_line("_tt_links = {'toplinks': [], 'bottomlinks': []}", self.line)
