@@ -961,8 +961,11 @@ class AddView(object):
         
     def save(self, data):
         obj = self.model(**data)
-        obj.save(version=self.version, version_fieldname=self.version_fieldname,
+        if self.version:
+            obj.save(version=self.version, version_fieldname=self.version_fieldname,
                         version_exception=self.version_exception)
+        else:
+            obj.save()
         
         return obj
         
@@ -1067,8 +1070,11 @@ class EditView(AddView):
         
     def save(self, obj, data):
         obj.update(**data)
-        r = obj.save(version=self.version, version_fieldname=self.version_fieldname,
-                        version_exception=self.version_exception)
+        if self.version:
+            r = obj.save(version=self.version, version_fieldname=self.version_fieldname,
+                            version_exception=self.version_exception)
+        else:
+            r = obj.save()
         return r
         
     def query(self):

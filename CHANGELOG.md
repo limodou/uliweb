@@ -5,6 +5,7 @@ Uliweb Change Log
 -----------------
 
 * Add new app sequence, you can use it to create sequence value.
+* Fix generic version parameter passing to obj.save() bug, only when version is not False will be passed
 
 0.4 Version
 -----------------
