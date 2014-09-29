@@ -288,5 +288,39 @@ def test_app_subdomain():
     test_url.TestView.index /test {'subdomain': 'test'}
     test_url.TestView.pnt /print {'subdomain': 'test'}
     test_url.TestView.ttt /ttt {'subdomain': 'test'}
+    test_url.view /hello {'subdomain': 'test'}
+    """
+
+def test_multi_expose():
+    """
+    >>> rules.clear_rules()
+    >>> rules.__app_rules__ = {}
+    >>> @expose('/test')
+    ... class TestView(object):
+    ...     @expose('')
+    ...     @expose('/')
+    ...     def index(self):
+    ...         return {}
+    ...     @expose('a')
+    ...     @expose('/d')
+    ...     def test(self):
+    ...         return {}
+    ...
+    >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
+    ...     print v[1], v[2], v[3]
+    test_url.TestView.index / {}
+    test_url.TestView.index /test {}
+    test_url.TestView.test /d {}
+    test_url.TestView.test /test/a {}
 
     """
+
+@expose('/test')
+class TestView(object):
+    @expose('')
+    @expose('/')
+    def index(self):
+        return {}
+
+for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
+    print v[1], v[2], v[3]

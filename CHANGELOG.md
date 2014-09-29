@@ -7,6 +7,7 @@ Uliweb Change Log
 * Add new app sequence, you can use it to create sequence value.
 * Fix generic version parameter passing to obj.save() bug, only when version is not False will be passed
 * Improve nginx and supervisor config content for deployment
+* Fix multi expose `expose('/')` and `expose('')` for the same URL bug
 
 0.4 Version
 -----------------

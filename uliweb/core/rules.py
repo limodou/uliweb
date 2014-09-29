@@ -138,8 +138,9 @@ class Expose(object):
                 url = rule[1:]
             else:
                 url = rule
-        _url = url.rstrip('/') or '/'
-        return _url
+        if len(url) > 1:
+            url = url.rstrip('/')
+        return url
 
     def _fix_kwargs(self, appname, v):
         _subdomain = self._get_app_subdomin(appname)
@@ -275,7 +276,7 @@ class Expose(object):
         else:
             rule = self.rule
         rule = self._fix_url(appname, rule)
-        
+
         #get endpoint
         clsname = ''
         if inspect.ismethod(f):
