@@ -1903,10 +1903,16 @@ class Result(object):
         If result is True, then the count will process result set , if
         result if False, then only use condition to count
         """
+        from sqlalchemy.sql import func
+
         if result and self._limit or self._group_by or self._join:
             return self.do_(self.get_query().alias().count()).scalar()
         else:
-            return self.do_(self.get_query().order_by(None).limit(None).offset(None).alias().count()).scalar()
+            if self.condition is not None:
+                query = select([func.count('*')], self.condition, from_obj=[self.model.table])
+            else:
+                query = select([func.count('*')], from_obj=[self.model.table])
+            return self.do_(query).scalar()
 
     def any(self):
         row = self.do_(
@@ -2287,7 +2293,10 @@ class ManyResult(Result):
             return self.do_(self.get_query().alias().count()).scalar()
         else:
             return self.do_(
-                self.get_query().order_by(None).limit(None).offset(None).alias().count()
+                self.table.count(
+                    (self.table.c[self.fielda]==self.valuea) &
+                    (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) &
+                    self.condition)
                 ).scalar()
     
     def any(self):
