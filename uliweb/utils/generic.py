@@ -1682,8 +1682,8 @@ class SimpleListView(object):
         if isinstance(query, Select):
             q = query.with_only_columns([func.count()]).order_by(None).limit(None).offset(None)
             return do_(q).scalar()
-            
-        return do_(query.get_query().order_by(None).limit(None).offset(None).alias().count()).scalar()
+
+        return query.count()
 
     def download(self, filename, timeout=3600, action=None, query=None, fields_convert_map=None, type=None, domain=None):
         """

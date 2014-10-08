@@ -1898,21 +1898,15 @@ class Result(object):
         else:
             return self.filter(condition).one()
     
-    def count(self, result=True):
+    def count(self):
         """
         If result is True, then the count will process result set , if
         result if False, then only use condition to count
         """
-        from sqlalchemy.sql import func
-
-        if result and self._limit or self._group_by or self._join:
+        if self._group_by or self._join:
             return self.do_(self.get_query().alias().count()).scalar()
         else:
-            if self.condition is not None:
-                query = select([func.count('*')], self.condition, from_obj=[self.model.table])
-            else:
-                query = select([func.count('*')], from_obj=[self.model.table])
-            return self.do_(query).scalar()
+            return self.do_(self.get_query().with_only_columns([func.count()]).limit(None).order_by(None).offset(None)).scalar()
 
     def any(self):
         row = self.do_(
@@ -1982,8 +1976,11 @@ class Result(object):
         return self
     
     def limit(self, *args, **kwargs):
-        self._limit = True
         self.funcs.append(('limit', args, kwargs))
+        if args:
+            self._limit = bool(args[0])
+        else:
+            self._limit = False
         return self
 
     def offset(self, *args, **kwargs):
@@ -2289,14 +2286,11 @@ class ManyResult(Result):
     remove = clear
     
     def count(self):
-        if self._limit or self._group_by or self._join:
+        if self._group_by or self._join:
             return self.do_(self.get_query().alias().count()).scalar()
         else:
             return self.do_(
-                self.table.count(
-                    (self.table.c[self.fielda]==self.valuea) &
-                    (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) &
-                    self.condition)
+                self.get_query().with_only_columns([func.count()]).limit(None).order_by(None).offset(None)
                 ).scalar()
     
     def any(self):

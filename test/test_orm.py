@@ -109,7 +109,7 @@ def test_3():
     >>> list(a1.test1.all())[0]
     <Test1 {'test1':<ReferenceProperty:1>,'test2':<ReferenceProperty:1>,'name':u'user','id':1}>
     >>> Test1.all().limit(1).count()
-    1
+    3
     >>> Test1.all().count()
     3
     >>> a1.test1.count()
