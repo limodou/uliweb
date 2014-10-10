@@ -39,7 +39,7 @@ local.request = None
 local.response = None
 __global__ = Global()
 local_manager = LocalManager([local])
-url_map = Map()
+url_map = Map(strict_slashes=False)
 static_views = []
 use_urls = False
 url_adapters = {}

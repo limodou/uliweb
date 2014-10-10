@@ -8,6 +8,7 @@ Uliweb Change Log
 * Fix generic version parameter passing to obj.save() bug, only when version is not False will be passed
 * Improve nginx and supervisor config content for deployment
 * Fix multi expose `expose('/')` and `expose('')` for the same URL bug
+* Add `strict_slashes=False` to Map instance.
 
 0.4 Version
 -----------------
