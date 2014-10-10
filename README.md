@@ -32,8 +32,7 @@ other developers, for example:
 I also referenced some code from other web frameworks, for example:
 
 
-* The Templating system is styled after the one used in [web2py](http://mdp.cti.depaul.edu/) several
-    improvements were made.
+* The Templating system is modified from [tornado](http://www.tornadoweb.org/).
 * Some code inspired from Django.
 
 I also constructed a few new "wheels" myself. For example:
