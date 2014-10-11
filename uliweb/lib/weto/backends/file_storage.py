@@ -40,7 +40,7 @@ class Storage(BaseStorage):
         key = _get_key(_key)
         _file = self._get_file(key)
         if not os.path.exists(_file):
-            raise KeyError, "Cache key [%s] not found" % _key
+            raise KeyError("Cache key [%s] not found" % _key)
             
         lock = self._get_lock(key)
         try:
@@ -50,7 +50,7 @@ class Storage(BaseStorage):
                 stored_time, expiry_time, value = ret
                 if self._is_not_expiry(stored_time, expiry_time):
                     return value
-            raise KeyError, "Cache key [%s] not found" % _key
+            raise KeyError("Cache key [%s] not found" % _key)
         finally:
             lock.close()
     

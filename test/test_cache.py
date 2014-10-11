@@ -11,7 +11,7 @@ def teardown():
 
 def test_file():
     """
-    >>> manage.call('uliweb makeproject -f TestProject')
+    >>> manage.call('uliweb makeproject -y TestProject')
     >>> os.chdir('TestProject')
     >>> path = os.getcwd()
     >>> app = manage.make_simple_application(project_dir=path, include_apps=['uliweb.contrib.cache'])
@@ -50,7 +50,7 @@ def test_file():
 
 def test_redis():
     """
-    >>> manage.call('uliweb makeproject -f TestProject')
+    >>> manage.call('uliweb makeproject -y TestProject')
     >>> os.chdir('TestProject')
     >>> path = os.getcwd()
     >>> app = manage.make_simple_application(project_dir=path, include_apps=['uliweb.contrib.cache'])
@@ -99,7 +99,7 @@ def test_redis():
 
 def test_memcache():
     """
-    >>> manage.call('uliweb makeproject -f TestProject')
+    >>> manage.call('uliweb makeproject -y TestProject')
     >>> os.chdir('TestProject')
     >>> path = os.getcwd()
     >>> app = manage.make_simple_application(project_dir=path, include_apps=['uliweb.contrib.cache'])
@@ -146,8 +146,8 @@ def test_memcache():
     >>> teardown()
     """
 
-#if __name__ == '__main__':
-#    manage.call('uliweb makeproject -f TestProject')
+# if __name__ == '__main__':
+#    manage.call('uliweb makeproject -y TestProject')
 #    os.chdir('TestProject')
 #    path = os.getcwd()
 #    app = manage.make_simple_application(project_dir=path, include_apps=['uliweb.contrib.cache'])
@@ -159,4 +159,3 @@ def test_memcache():
 #        return 'test'
 #    print cache.get('name', creator=set_name)
 #    print cache.get('name')
-#    

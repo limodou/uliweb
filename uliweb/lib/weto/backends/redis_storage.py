@@ -39,7 +39,7 @@ class Storage(BaseStorage):
             else:
                 return int(v)
         else:
-            raise KeyError, "Cache key [%s] not found" % key
+            raise KeyError("Cache key [%s] not found" % key)
     
     def set(self, key, value, expiry_time):
         key = self._key(key)
@@ -47,13 +47,13 @@ class Storage(BaseStorage):
             v = self._dump(value)
         else:
             v = value
-        pipe = self.client.pipeline()
-        r = pipe.set(key, v).expire(key, expiry_time).execute()
-        return r[0]
+        r = self.client.setex(key, v, expiry_time)
+        return r
     
     def delete(self, key):
         key = self._key(key)
-        return self.client.delete(key)
+        self.client.delete(key)
+        return True
         
     def inc(self, key, step, expiry_time):
         key = self._key(key)

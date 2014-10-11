@@ -78,7 +78,7 @@ class Cache(object):
         """
         try:
             return self.storage.get(key)
-        except KeyError, e:
+        except KeyError as e:
             if creator is not Empty:
                 if callable(creator):
                     v = creator()

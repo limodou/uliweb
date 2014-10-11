@@ -26,7 +26,7 @@ class Storage(BaseStorage):
             key = key.encode('utf-8')
         v = self.client.get(key)
         if v is None:
-            raise KeyError, "Cache key [%s] not found" % key
+            raise KeyError("Cache key [%s] not found" % key)
         else:
             return v
     
