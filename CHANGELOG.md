@@ -9,6 +9,9 @@ Uliweb Change Log
 * Improve nginx and supervisor config content for deployment
 * Fix multi expose `expose('/')` and `expose('')` for the same URL bug
 * Add `strict_slashes=False` to Map instance.
+* Add `Reference()` with `reference_class` is `None`, it can replace `SelfReference`
+* Add `ManyToMany()` with `reference_class` is `None`, it can implements self manytomany relationship.
+* Fix `ManyToMany()` with through model references to the same model bug
 
 0.4 Version
 -----------------

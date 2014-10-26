@@ -1540,10 +1540,6 @@ class ReferenceProperty(Property):
         self.reference_fieldname = reference_fieldname or 'id'
         self.required = required
         self.engine_name = engine_name
-
-        if reference_class is None:
-            reference_class = Model
-            
         self.reference_class = reference_class
         
         if __lazy_model_init__:
@@ -1599,7 +1595,7 @@ class ReferenceProperty(Property):
                 valid_model(self.reference_class, self.engine_name)):
             raise KindError('reference_class %r must be Model or _SELF_REFERENCE or available table name' % self.reference_class)
         
-        if self.reference_class is _SELF_REFERENCE:
+        if self.reference_class is _SELF_REFERENCE or self.reference_class is None:
             self.reference_class = model_class
         else:
             self.reference_class = get_model(self.reference_class, self.engine_name)
@@ -2436,12 +2432,14 @@ class ManyToMany(ReferenceProperty):
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
         reference_fieldname=None, reversed_fieldname=None, required=False, through=None, 
         through_reference_fieldname=None, through_reversed_fieldname=None, 
-        reversed_manytomany_fieldname=None, **attrs):
+        **attrs):
         """
         Definition of ManyToMany property
-        
-        :param through_field_from: relative to field of A 
-        :param through_field_to: relative to field of B 
+
+        :param reference_fieldname: relative to field of B
+        :param reversed_fieldname: relative to field of A
+        :param through_reference_fieldname: through model relative to field of B
+        :param through_reversed_fieldname: throught model relative to field of A
         :param index_reverse: create index reversed
         """
             
@@ -2451,6 +2449,7 @@ class ManyToMany(ReferenceProperty):
     
         self.reversed_fieldname = reversed_fieldname or 'id'
         self.through = through
+
         self.through_reference_fieldname = through_reference_fieldname
         self.through_reversed_fieldname = through_reversed_fieldname
         self.index_reverse = attrs['index_reverse'] if 'index_reverse' in attrs else __manytomany_index_reverse__
@@ -2506,37 +2505,57 @@ class ManyToMany(ReferenceProperty):
         return _table
     
     def init_through(self):
+        def find_property(properties, model, skip=None):
+            for k, v in properties.items():
+                if isinstance(v, ReferenceProperty) and v.reference_class is model and (not skip or skip and v.reference_class is not skip):
+                    return k, v
+
         if self.through and (not isinstance(self.through, type) or not issubclass(self.through, Model)):
             if not (
                     (isinstance(self.through, type) and issubclass(self.reference_class, Model)) or
                     valid_model(self.reference_class)):
                 raise KindError('through must be Model or available table name')
             self.through = get_model(self.through)
-            for k, v in self.through.properties.items():
-                find = False
-                if isinstance(v, ReferenceProperty):
-                    if self.model_class is v.reference_class:
-                        if self.through_reversed_fieldname:
-                            if k == self.through_reversed_fieldname:
-                                find = True
-                        else:
-                            find = True
-                        if find:
-                            self.fielda = k
-                            self.reversed_fieldname = v.reference_fieldname
-                    elif self.reference_class is v.reference_class:
-                        if self.through_reference_fieldname:
-                            if k == self.through_reference_fieldname:
-                                find = True
-                        else:
-                            find = True
-                        if find:
-                            self.fieldb = k
-                            self.reference_fieldname = v.reference_fieldname
-            if not hasattr(self.through, self.fielda):
-                raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fielda, self.through))
-            if not hasattr(self.through, self.fieldb):
-                raise BadPropertyTypeError("Can't find %s in Model %r" % (self.fieldb, self.through))
+            #auto find model
+            _auto_model = None
+            #process through_reference_fieldname
+            if self.through_reversed_fieldname:
+                k = self.through_reversed_fieldname
+                v = self.through.properties.get(k)
+                if not v:
+                    raise BadPropertyTypeError("Can't find property %s in through model %s" % (
+                        k, self.through.__name__))
+            else:
+                x = find_property(self.through.properties, self.model_class)
+                if not x:
+                    raise BadPropertyTypeError("Can't find reference property of model %s in through model %s" % (
+                        self.model_class.__name__, self.through.__name__))
+                k, v = x
+                _auto_model = self.model_class
+            self.fielda = k
+            self.reversed_fieldname = v.reference_fieldname
+
+            #process through_reversed_fieldname
+            if self.through_reference_fieldname:
+                k = self.through_reference_fieldname
+                v = self.through.properties.get(k)
+                if not v:
+                    raise BadPropertyTypeError("Can't find property %s in through model %s" % (
+                        k, self.through.__name__))
+            else:
+                x = find_property(self.through.properties, self.reference_class, self.model_class)
+                if not x:
+                    raise BadPropertyTypeError("Can't find reference property of model %s in through model %s" % (
+                        self.model_class.__name__, self.through.__name__))
+                k, v = x
+                #check if the auto find models are the same
+                if _auto_model and _auto_model is self.reference_class:
+                    raise BadPropertyTypeError("If the two reference fields come from the same"
+                        " model, you should specify them via through_reference_fieldname or"
+                        " through_reversed_fieldname in through model %s" % self.through.__name__)
+            self.fieldb = k
+            self.reference_fieldname = v.reference_fieldname
+
             self.table = self.through.table
             appname = self.model_class.__module__
             self.table.__appname__ = appname[:appname.rfind('.')]
@@ -2557,8 +2576,8 @@ class ManyToMany(ReferenceProperty):
                 self.reference_class is _SELF_REFERENCE or
                 valid_model(self.reference_class, self.engine_name)):
             raise KindError('reference_class %r must be Model or _SELF_REFERENCE or available table name' % self.reference_class)
-        
-        if self.reference_class is _SELF_REFERENCE:
+
+        if self.reference_class is _SELF_REFERENCE or self.reference_class is None:
             self.reference_class = self.data_type = model_class
         else:
             self.reference_class = get_model(self.reference_class, self.engine_name)
@@ -3212,7 +3231,6 @@ class Model(object):
         reference_fieldname=None, reversed_fieldname=None, required=False, 
         through=None, 
         through_reference_fieldname=None, through_reversed_fieldname=None, 
-        reversed_manytomany_fieldname=None,
         **kwargs):
         prop = ManyToMany(reference_class=model, 
             collection_name=collection_name,
@@ -3221,7 +3239,6 @@ class Model(object):
             through=through,
             through_reference_fieldname=through_reference_fieldname,
             through_reversed_fieldname=through_reversed_fieldname,
-            reversed_manytomany_fieldname=reversed_manytomany_fieldname,
             **kwargs)
         cls.add_property(name, prop)
         #create property, it'll create Table object

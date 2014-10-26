@@ -320,6 +320,26 @@ def test_7():
     {'users': [1, 2], 'id': 1, 'name': 'python'}
     """
 
+def test_model_self_manytomany():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     users = ManyToMany()
+    >>> a1 = User(username='limodou')
+    >>> a1.save()
+    True
+    >>> a2 = User(username='guest')
+    >>> a2.save()
+    True
+    >>> a1.users.add(a2)
+    True
+    >>> a1.users.ids()
+    [2]
+    """
+
 def test_model_manytomany():
     """
     >>> #set_debug_query(True)
@@ -434,6 +454,35 @@ def test_selfreference():
     <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
     """
     
+#test SelfReference
+def test_selfreference_2():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     parent = Reference(collection_name='children')
+    >>> a = User(username='a')
+    >>> a.save()
+    True
+    >>> b = User(username='b', parent=a)
+    >>> b.save()
+    True
+    >>> c = User(username='c', parent=a)
+    >>> c.save()
+    True
+    >>> for i in User.all():
+    ...     print repr(i)
+    <User {'username':u'a','parent':None,'id':1}>
+    <User {'username':u'b','parent':<ReferenceProperty:1>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
+    >>> for i in a.children.all():
+    ...     print repr(i)
+    <User {'username':u'b','parent':<ReferenceProperty:1>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
+    """
+
 def test_model_selfreference():
     """
     >>> #set_debug_query(True)
@@ -967,6 +1016,36 @@ def test_many2many_through():
     True
     >>> print list(a.group_set.all())
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
+    """
+
+def test_many2many_self_through():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    ...     users = ManyToMany(through='relation', through_reference_fieldname='user_b', through_reversed_fieldname='user')
+    >>> class Relation(Model):
+    ...     user = Reference('user')
+    ...     user_b = Reference('user')
+    ...     year = Field(int)
+    >>> a = User(username='limodou', year=5)
+    >>> a.save()
+    True
+    >>> b = User(username='guest', year=5)
+    >>> b.save()
+    True
+    >>> r = Relation(user=a, user_b=b, year=20)
+    >>> r.save()
+    True
+    >>> print list(a.users.all())
+    [<User {'username':u'guest','year':5,'id':2}>]
+    >>> u = a.users.all().with_relation().one()
+    >>> u.relation
+    <Relation {'user':<ReferenceProperty:1>,'user_b':<ReferenceProperty:2>,'year':20,'id':1}>
     """
 
 def test_many2many_through_alone():
@@ -2414,3 +2493,24 @@ def test_rename_table_and_columns():
 # g1.save()
 #
 # print list(User.all().join(Group, User.c.id==Group.c.user))
+
+db = get_connection('sqlite://')
+db.echo = False
+db.metadata.drop_all()
+db.metadata.clear()
+class User(Model):
+    username = Field(CHAR, max_length=20)
+    year = Field(int)
+    users = ManyToMany(through='relation', through_reference_fieldname='user_b', through_reversed_fieldname='user')
+class Relation(Model):
+    user = Reference('user')
+    user_b = Reference('user')
+    year = Field(int)
+a = User(username='limodou', year=5)
+a.save()
+
+b = User(username='guest', year=5)
+b.save()
+r = Relation(user=a, user_b=b, year=20)
+r.save()
+print (a.users.all())
