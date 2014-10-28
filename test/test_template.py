@@ -678,12 +678,14 @@ def test_custom_node_1():
         _tt_append = _tt_buffer.append  # <string>:0
         def _tt_write(t, escape=True):  # <string>:0
             if escape:  # <string>:0
-                _tt_append(xhtml_escape(t))  # <string>:0
+                _tt_append(xhtml_escape(_tt_utf8(t)))  # <string>:0
             else:  # <string>:0
-                _tt_append(t)  # <string>:0
+                _tt_append(_tt_utf8(t))  # <string>:0
                 pass  # <string>:0
             pass  # <string>:0
-        out_write = _tt_append  # <string>:0
+        def out_write(value):  # <string>:0
+            _tt_append(_tt_utf8(value))  # <string>:0
+            pass  # <string>:0
         ok("uliweb", 2, 3)  # <string>:1
         return _tt_utf8('').join(_tt_buffer)  # <string>:0
     <BLANKLINE>
@@ -704,12 +706,14 @@ def test_custom_node_2():
         _tt_append = _tt_buffer.append  # <string>:0
         def _tt_write(t, escape=True):  # <string>:0
             if escape:  # <string>:0
-                _tt_append(xhtml_escape(t))  # <string>:0
+                _tt_append(xhtml_escape(_tt_utf8(t)))  # <string>:0
             else:  # <string>:0
-                _tt_append(t)  # <string>:0
+                _tt_append(_tt_utf8(t))  # <string>:0
                 pass  # <string>:0
             pass  # <string>:0
-        out_write = _tt_append  # <string>:0
+        def out_write(value):  # <string>:0
+            _tt_append(_tt_utf8(value))  # <string>:0
+            pass  # <string>:0
         if True:  # <string>:1
             _tt_append('abc')  # <string>:1
             pass  # <string>:1

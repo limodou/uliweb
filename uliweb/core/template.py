@@ -1066,14 +1066,14 @@ class _File(_Node):
             if has_links:
                 writer.write_line("_tt_links = {'toplinks': [], 'bottomlinks': []}", self.line)
                 writer.write_line("def _tt_use(name, *args, **kwargs):", self.line)
-                writer.write_line("    use(_tt_links, name, *args, **kwargs)", self.line)
+                writer.write_line("    _tag_use(_tt_links, name, *args, **kwargs)", self.line)
                 writer.write_line("    pass", self.line)
                 writer.write_line("def _tt_link(name, media=None, to='toplinks'):", self.line)
-                writer.write_line("    link(_tt_links, name, media, to)", self.line)
+                writer.write_line("    _tag_link(_tt_links, name, media, to)", self.line)
                 writer.write_line("    pass", self.line)
             self.body.generate(writer)
             if has_links:
-                writer.write_line("return htmlmerge(_tt_utf8('').join(_tt_buffer), _tt_links)", self.line)
+                writer.write_line("return _tag_htmlmerge(_tt_utf8('').join(_tt_buffer), _tt_links)", self.line)
             else:
                 writer.write_line("return _tt_utf8('').join(_tt_buffer)", self.line)
 
