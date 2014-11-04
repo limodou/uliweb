@@ -47,6 +47,7 @@ except:
 r_encoding = re.compile(r'\s*coding\s*[=:]\s*([-\w.]+)')
 r_var = re.compile(ur'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})', re.U)
 r_var_env = re.compile(ur'(?<!\{)\{\{([^\{].*?)(?<!\})\}\}(?!\})|(?:\$(\w[\d\w_]*)|\$\{(\w[\d\w_]*)\})', re.U)
+r_pre_var = re.compile(ur'#\{\w+\}', re.U)
 __default_env__ = {}
 
 def set_env(env=None):
@@ -377,8 +378,8 @@ class Section(SortedDict):
     def __delattr__(self, key):
         try: 
             del self[key]
-        except KeyError, k: 
-            raise AttributeError, k
+        except KeyError as k:
+            raise AttributeError(k)
     
     def __str__(self):     
         buf = StringIO.StringIO()
@@ -388,7 +389,7 @@ class Section(SortedDict):
 class Ini(SortedDict):
     def __init__(self, inifile='', commentchar=None, encoding=None,
         env=None, convertors=None, lazy=False, writable=False, raw=False,
-        import_env=True, basepath='.'):
+        import_env=True, basepath='.', pre_variables=None):
         """
         lazy is used to parse first but not deal at time, and only when 
         the user invoke finish() function, it'll parse the data.
@@ -405,6 +406,7 @@ class Ini(SortedDict):
         self._env['set'] = set
         self.update(self._env)
         self._globals = SortedDict()
+        self._pre_variables = pre_variables or {}
         self._import_env = import_env
         if self._import_env:
             self._globals.update(os.environ)
@@ -429,9 +431,22 @@ class Ini(SortedDict):
 
     def set_basepath(self, basepath):
         self._basepath = basepath
-    
+
+    def set_pre_variables(self, v):
+        self._pre_variables = v or {}
+
     filename = property(get_filename, set_filename)
-    
+
+    def _pre_var(self, value):
+        """
+        replace predefined variables, the format is #{name}
+        """
+
+        def sub_(m):
+            return self._pre_variables.get(m.group()[2:-1].strip(), '')
+
+        return r_pre_var.sub(sub_, value)
+
     def read(self, fobj, filename=''):
         encoding = None
         
@@ -503,7 +518,7 @@ class Ini(SortedDict):
                     comments = []
                 elif '=' in line:
                     if section is None:
-                        raise Exception, "No section found, please define it first in %s file" % self.filename
+                        raise Exception("No section found, please define it first in %s file" % self.filename)
 
                     #if find <=, then it'll replace the old value for mutable variables
                     #because the default behavior will merge list and dict
@@ -529,9 +544,11 @@ class Ini(SortedDict):
                         f.seek(lastpos+end)
                         try:
                             value, iden_existed = self.__read_line(f)
-                        except Exception, e:
+                            #add pre variables process
+                            value = self._pre_var(value)
+                        except Exception as e:
                             print_exc()
-                            raise Exception, "Parsing ini file error in %s:%d:%s" % (filename or self._inifile, lineno, line)
+                            raise Exception("Parsing ini file error in %s:%d:%s" % (filename or self._inifile, lineno, line))
                     if self._lazy:
                         if iden_existed:
                             v = EvalValue(value, filename or self._inifile, lineno, line)

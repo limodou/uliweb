@@ -566,3 +566,24 @@ def test_email():
     <BLANKLINE>
     """
 
+def test_pre_var():
+    """
+    >>> from uliweb.i18n import gettext_lazy as _, i18n_ini_convertor
+    >>> from StringIO import StringIO
+    >>> import os
+    >>> x = Ini(import_env=True, lazy=True, pre_variables={'appname':'test'})
+    >>> buf = StringIO(\"\"\"
+    ... [DEFAULT]
+    ... model = '#{appname}.models.Model'
+    ... \"\"\")
+    >>> x.set_filename('test.ini')
+    >>> x.read(buf)
+    >>> x.freeze()
+    >>> print x
+    #coding=UTF-8
+    <BLANKLINE>
+    [DEFAULT]
+    model = 'test.models.Model'
+    <BLANKLINE>
+    """
+

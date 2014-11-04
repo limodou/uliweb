@@ -1004,7 +1004,7 @@ class Dispatcher(object):
         settings = []
 
         inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
-        settings.insert(0, inifile)
+        settings.insert(0, ('', inifile))
         
         def enum_views(views_path, appname, subfolder=None, pattern=None):
             if not os.path.exists(views_path):
@@ -1036,15 +1036,15 @@ class Dispatcher(object):
             inifile =os.path.join(get_app_dir(p), 'settings.ini')
             
             if os.path.exists(inifile):
-                settings.append(inifile)
+                settings.append((p, inifile))
 
         set_ini = os.path.join(self.apps_dir, self.settings_file)
         if os.path.exists(set_ini):
-            settings.append(set_ini)
+            settings.append(('', set_ini))
         
         local_set_ini = os.path.join(self.apps_dir, self.local_settings_file)
         if os.path.exists(local_set_ini):
-            settings.append(local_set_ini)
+            settings.append(('', local_set_ini))
         
         modules['views'] = list(views)
         modules['settings'] = settings
@@ -1091,7 +1091,8 @@ class Dispatcher(object):
     def install_settings(self, s):
         settings.set_basepath(self.apps_dir)
 #        settings = pyini.Ini()
-        for v in s:
+        for appname, v in s:
+            settings.set_pre_variables({'appname':appname})
             settings.read(v)
 
         d = dict([(k, repr(v)) for k, v in self.default_settings.items()])
