@@ -1,9 +1,11 @@
 def startup_installed(sender):
     from uliweb.core import template
-    from .tags import link, use, htmlmerge
+    from .tags import link, use, htmlmerge, head, head_link
     
     template.default_namespace['_tag_link'] = link
     template.default_namespace['_tag_use'] = use
+    template.default_namespace['_tag_head_link'] = head_link
+    template.default_namespace['_tag_head'] = head
     template.default_namespace['_tag_htmlmerge'] = htmlmerge
 
 def init_static_combine():

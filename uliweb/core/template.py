@@ -603,7 +603,6 @@ class Template(object):
         namespace.update(self.namespace)
         namespace.update(vars or {})
         namespace['_vars'] = vars
-        # print (namespace.keys())
         exec_in(self.compiled, namespace)
         execute = namespace["_tt_execute"]
         # Clear the traceback module's cache of source data now that
@@ -1064,12 +1063,18 @@ class _File(_Node):
             writer.write_line("    pass", self.line)
 
             if has_links:
-                writer.write_line("_tt_links = {'toplinks': [], 'bottomlinks': []}", self.line)
+                writer.write_line("_tt_links = {'toplinks': [], 'bottomlinks': [], 'headlinks':[]}", self.line)
                 writer.write_line("def _tt_use(name, *args, **kwargs):", self.line)
                 writer.write_line("    _tag_use(_tt_links, name, *args, **kwargs)", self.line)
                 writer.write_line("    pass", self.line)
-                writer.write_line("def _tt_link(name, media=None, to='toplinks'):", self.line)
-                writer.write_line("    _tag_link(_tt_links, name, media, to)", self.line)
+                writer.write_line("def _tt_link(name, to='toplinks', **kwargs):", self.line)
+                writer.write_line("    _tag_link(_tt_links, name, to=to, **kwargs)", self.line)
+                writer.write_line("    pass", self.line)
+                writer.write_line("def _tt_head(name, **kwargs):", self.line)
+                writer.write_line("    _tag_head(_tt_links, name, **kwargs)", self.line)
+                writer.write_line("    pass", self.line)
+                writer.write_line("def _tt_head_link(args):", self.line)
+                writer.write_line("    _tag_head_link(_tt_links, args)", self.line)
                 writer.write_line("    pass", self.line)
             self.body.generate(writer)
             if has_links:
@@ -1300,6 +1305,31 @@ class _Link(_Node):
         if value:
             writer.write_line('_tt_link(%s)' % value, self.line)
 
+class _Head(_Node):
+    def __init__(self, value, line, template):
+        self.value = value
+        self.line = line
+        self.template = template
+        self.template.has_links = True
+
+
+    def generate(self, writer):
+        value = self.value
+        if value:
+            writer.write_line('_tt_head(%s)' % value, self.line)
+
+class _HeadLink(_Node):
+    def __init__(self, value, line, template):
+        self.value = value
+        self.line = line
+        self.template = template
+        self.template.has_links = True
+
+
+    def generate(self, writer):
+        value = self.value
+        if value:
+            writer.write_line('_tt_head_link(%s)' % value, self.line)
 
 class ParseError(Exception):
     """Raised for template syntax errors."""
@@ -1602,7 +1632,8 @@ def _parse(reader, template, in_block=None, in_loop=None,
             return body
 
         elif operator in ("extend", "extends", "include", "embed",
-                          "BEGIN_TAG", "END_TAG", "use", "link"):
+                          "BEGIN_TAG", "END_TAG", "use", "link",
+                          "head", "head_link"):
             if operator in ("extend", "extends"):
                 if template.skip_extern: continue
                 suffix = suffix.strip('"').strip("'")
@@ -1621,6 +1652,10 @@ def _parse(reader, template, in_block=None, in_loop=None,
                 block = _Use(suffix, line, template)
             elif operator == "link":
                 block = _Link(suffix, line, template)
+            elif operator == "head":
+                block = _Head(suffix, line, template)
+            elif operator == "head_link":
+                block = _HeadLink(suffix, line, template)
             elif operator == "embed":
                 # warnings.simplefilter('default')
                 # warnings.warn("embed is not supported any more, just replace it with '<<'.", DeprecationWarning)

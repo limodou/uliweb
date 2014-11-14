@@ -20,19 +20,32 @@ __use_cached__ = {}
 class UseModuleNotFound(Exception): pass
 class TemplateDefineError(Exception): pass
 
-def link(env, links, media=None, to='toplinks'):
+def link(env, links, to='toplinks', **kwargs):
     if not isinstance(links, (tuple, list)):
         links = [links]
-    if media:
+    if kwargs:
         new_links = []
         for x in links:
-            new_links.append({'value':x, 'media':media})
+            kw = {'value':x}
+            kw.update(kwargs)
+            new_links.append(kw)
         links = new_links
     if to == 'toplinks':
         env['toplinks'].extend(links)
     else:
         env['bottomlinks'].extend(links)
 
+def head_link(env, links, **kwargs):
+    if not isinstance(links, (tuple, list)):
+        links = [links]
+    if kwargs:
+        new_links = []
+        for x in links:
+            kw = {'value':x}
+            kw.update(kwargs)
+            new_links.append(kw)
+        links = new_links
+    env['headlinks'].extend(links)
 
 def htmlmerge(text, env):
     m = HtmlMerge(text, env)
@@ -42,6 +55,11 @@ def use(env, plugin, *args, **kwargs):
     toplinks, bottomlinks = find(plugin, *args, **kwargs)
     env['toplinks'].extend(toplinks)
     env['bottomlinks'].extend(bottomlinks)
+
+def head(env, plugin, *args, **kwargs):
+    toplinks, bottomlinks = find(plugin, *args, **kwargs)
+    env['headlinks'].extend(toplinks)
+    env['headlinks'].extend(bottomlinks)
 
 def find(plugin, *args, **kwargs):
     from uliweb.core.SimpleFrame import get_app_dir
@@ -174,7 +192,7 @@ class HtmlMerge(object):
         #cal links first, if no toplinks or bottomlinks be found, then
         #do nothing, otherwise find the head, and calculate the position
         #of toplinks and bottomlinks
-        if result['toplinks'] or result['bottomlinks']:
+        if result['toplinks'] or result['bottomlinks'] or result['headlinks']:
             links = []
             b = r_head.search(self.text)
             if b:
@@ -187,9 +205,9 @@ class HtmlMerge(object):
                 head = ''
                 start, end = 0, 0
             result = self.assemble(self._clean_collection(links))
-            if result['toplinks'] or result['bottomlinks']:
+            if result['toplinks'] or result['bottomlinks'] or result['headlinks']:
                 top = result['toplinks'] or ''
-                bottom = result['bottomlinks'] or ''
+                bottom = result['bottomlinks'] + result['headlinks'] or ''
                 top_start, bottom_start = self.cal_position(self.text, top, bottom,
                     len(head), start)
                 
@@ -201,14 +219,15 @@ class HtmlMerge(object):
                     return self.text[:top_start] + top + self.text[top_start:]
                 elif bottom:
                     return self.text[:bottom_start] + bottom + self.text[bottom_start:]
-        
+
         return self.text
     
     def _clean_collection(self, existlinks):
-        r = {'toplinks':[], 'bottomlinks':[]}
-        links = {}
+        from uliweb.utils.sorteddict import SortedDict
+
+        r = {'toplinks':SortedDict(), 'bottomlinks':SortedDict(), 'headlinks':SortedDict()}
         #process links, link could be (order, link) or link
-        for _type in ['toplinks', 'bottomlinks']:
+        for _type in ['toplinks', 'bottomlinks', 'headlinks']:
             t = self.links.get(_type, [])
             for link in t:
                 #link will also be template string
@@ -217,13 +236,22 @@ class HtmlMerge(object):
                     raise TemplateDefineError("Can't support tag {{}} in links")
                     
                 #process static combine
-                new_link = __static_mapping__.get(link, link)
+                if isinstance(link, dict):
+                    link_key = link.get('value')
+                    link_value = link.copy()
+                    link_value.pop('value')
+                else:
+                    link_key = link
+                    link_value = {}
+                new_link = __static_mapping__.get(link_key, link_key)
                 if new_link.endswith('.js') or new_link.endswith('.css'):
                     _link = functions.url_for_static(new_link)
                 else:
                     _link = new_link
                 if not new_link in r[_type] and not _link in existlinks:
-                    r[_type].append(new_link)
+                    link_value['link'] = _link
+                    r[_type][new_link] = link_value
+                    existlinks.append(_link)
         return r
 
     def cal_position(self, text, has_toplinks, has_bottomlinks, head_len, head_start):
@@ -252,27 +280,40 @@ class HtmlMerge(object):
         return top_end, bottom_end
 
     def assemble(self, links):
+        from uliweb.core.html import to_attrs
+
         toplinks = ['']
         bottomlinks = ['']
         for _type, result in [('toplinks', toplinks), ('bottomlinks', bottomlinks)]:
-            for x in links[_type]:
-                if isinstance(x, dict):
-                    link, media = x['value'], x['media']
+            for link, kw in links[_type].items():
+                _link = kw.pop('link', link)
+                if kw:
+                    attrs = to_attrs(kw)
                 else:
-                    link, media = x, None
+                    attrs = ''
                 if link.endswith('.js'):
-                    link = functions.url_for_static(link)
-                    result.append('<script type="text/javascript" src="%s"></script>' % link)
+                    result.append('<script type="text/javascript" src="%s"%s></script>' % (_link, attrs))
                 elif link.endswith('.css'):
-                    link = functions.url_for_static(link)
-                    if media:
-                        result.append('<link rel="stylesheet" type="text/css" href="%s" media="%s"/>' % (link, media))
-                    else:
-                        result.append('<link rel="stylesheet" type="text/css" href="%s"/>' % link)
-                elif link.endswith('.less'):
-                    link = functions.url_for_static(link)
-                    result.append('<link rel="stylesheet/less" href="%s"/>' % link)
+                    result.append('<link rel="stylesheet" type="text/css" href="%s"%s/>' % (_link, attrs))
                 else:
                     result.append(link)
-        return {'toplinks':'\n'.join(toplinks), 'bottomlinks':'\n'.join(bottomlinks)}
+
+        s = []
+        for link, kw in links['headlinks'].items():
+            _link = kw.pop('link', link)
+            if link.endswith('.js') or link.endswith('.css'):
+                s.append(_link)
+
+        if s:
+            headlinks = '''
+<script>
+head.load(%s);
+</script>
+''' % ','.join(['"%s"' % x for x in s])
+        else:
+            headlinks = ''
+
+        print '+++++++', links
+        return {'toplinks':'\n'.join(toplinks), 'bottomlinks':'\n'.join(bottomlinks),
+                'headlinks':headlinks}
 
