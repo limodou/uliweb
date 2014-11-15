@@ -498,7 +498,7 @@ def reindent(text, filename):
         line5 = line[:5]
         line6 = line[:6]
         line7 = line[:7]
-        if line3=='if ' or line4=='def ' or line4=='for ' or\
+        if line3=='if ' or line4 in ('def ', 'for ', 'try:') or\
             line6=='while ' or line6=='class ' or line5=='with ':
             new_lines.append('    '*k+line)
             k += 1
