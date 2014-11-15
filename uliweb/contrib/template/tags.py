@@ -313,7 +313,6 @@ head.load(%s);
         else:
             headlinks = ''
 
-        print '+++++++', links
         return {'toplinks':'\n'.join(toplinks), 'bottomlinks':'\n'.join(bottomlinks),
                 'headlinks':headlinks}
 
