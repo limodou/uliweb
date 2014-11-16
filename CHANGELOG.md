@@ -12,6 +12,10 @@ Uliweb Change Log
 * Add `Reference()` with `reference_class` is `None`, it can replace `SelfReference`
 * Add `ManyToMany()` with `reference_class` is `None`, it can implements self manytomany relationship.
 * Fix `ManyToMany()` with through model references to the same model bug
+* Fix OneToOne result object not be cached bug
+* When access reversed OneToOne property, if OneToOne record not existed, it'll auto create
+  a blank object automatically. And if delete one record, it'll delete reversed onetoone
+  record also.
 
 0.4 Version
 -----------------

@@ -730,17 +730,23 @@ def set_model(model, tablename=None, created=None):
     
         engine_manager[name].models[tablename] = item.copy()
     
-def set_model_config(model_name, config):
+def set_model_config(model_name, config, replace=False):
     """
     This function should be only used in initialization phrase
     :param model_name: model name it's should be string
-    :param config: config should be dict. e.g. {'__mapping_only__':xxx}
+    :param config: config should be dict. e.g.
+        {'__mapping_only__', '__tablename__', '__ext_model__'}
+    :param replace: if True, then replace original config, False will update
     """
     assert isinstance(model_name, str)
     assert isinstance(config, dict)
     
     d = __models__.setdefault(model_name, {})
-    d['config'] = config
+    if replace:
+        d['config'] = config
+    else:
+        c = d.setdefault('config', {})
+        c.update(config)
     
 def valid_model(model, engine_name=None):
     if isinstance(model, type) and issubclass(model, Model):
@@ -778,17 +784,19 @@ def find_metadata(model):
     engine = engine_manager[engine_name]
     return engine.metadata
     
-def get_model(model, engine_name=None):
+def get_model(model, engine_name=None, refresh=False):
     """
     Return a real model object, so if the model is already a Model class, then
     return it directly. If not then import it.
 
     if engine_name is None, then if there is multi engines defined, it'll use
     'default', but if there is only one engine defined, it'll use this one
+
+    :param refresh: Used to reload model
     """
-    if model is _SELF_REFERENCE:
-        return model
     if isinstance(model, type) and issubclass(model, Model):
+        if refresh:
+            raise Error("With 'refresh=True', you should use string value for model parameter, but %r given" % model)
         return model
     if not isinstance(model, (str, unicode)):
         raise Error("Model %r should be string or unicode type" % model)
@@ -815,13 +823,26 @@ def get_model(model, engine_name=None):
                 item['model'] = None
                 engine._models[model] = item
         if item:
+            loaded = False #True, model is already loaded, so consider if it needs be cached
             m = item['model']
+            m_config = __models__[model].get('config', {})
             if isinstance(m, type) and issubclass(m, Model):
-                return m
+                loaded = True
+                #add get_model previous hook
+                model_inst = dispatch.get(None, 'get_model', model_name=model, model_inst=m,
+                                  model_info=item, model_config=m_config) or m
+                if m is not model_inst:
+                    loaded = False
             else:
-                mod_path, name = item['model_path'].rsplit('.', 1)
-                mod = __import__(mod_path, fromlist=['*'])
-                model_inst = getattr(mod, name)
+                #add get_model previous hook
+                model_inst = dispatch.get(None, 'get_model', model_name=model, model_inst=None,
+                                  model_info=item, model_config=m_config)
+                if not model_inst:
+                    mod_path, name = item['model_path'].rsplit('.', 1)
+                    mod = __import__(mod_path, fromlist=['*'])
+                    model_inst = getattr(mod, name)
+
+            if not loaded:
                 if model_inst._bound_classname == model:
                     model_inst = model_inst._use(engine_name)
                     item['model'] = model_inst
@@ -839,7 +860,11 @@ def get_model(model, engine_name=None):
                     
                 #add bind process
                 model_inst.bind(engine.metadata)
-                return model_inst
+
+            #post get_model
+            dispatch.call(None, 'post_get_model', model_name=model, model_inst=model_inst,
+                                  model_info=item, model_config=m_config)
+            return model_inst
             
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
     
@@ -949,6 +974,7 @@ class ModelMetaclass(type):
                 cls.properties.update(base.properties)
         
         cls._manytomany = {}
+        cls._onetoone = {}
         for attr_name in dct.keys():
             attr = dct[attr_name]
             if isinstance(attr, Property):
@@ -1707,7 +1733,7 @@ class ReferenceProperty(Property):
         Returns:
             Attribute name of where to store resolved reference model instance.
         """
-        return '_RESOLVED' + self._attr_name()
+        return '_RESOLVED_' + self._attr_name()
 
     def convert(self, value):
         if value == '':
@@ -1766,7 +1792,10 @@ class OneToOne(ReferenceProperty):
             raise DuplicatePropertyError('Class %s already has property %s'
                  % (self.reference_class.__name__, self.collection_name))
         setattr(self.reference_class, self.collection_name,
-            _OneToOneReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
+            _OneToOneReverseReferenceProperty(model_class, property_name,
+                            self._id_attr_name(), self.collection_name))
+        #append to reference_class._onetoone
+        self.reference_class._onetoone[self.collection_name] = model_class
   
 def get_objs_columns(objs, field='id'):
     ids = []
@@ -2751,7 +2780,7 @@ class _ReverseReferenceProperty(Property):
         raise BadValueError('Virtual property is read-only')
     
 class _OneToOneReverseReferenceProperty(_ReverseReferenceProperty):
-    def __init__(self, model, reference_id, reversed_id):
+    def __init__(self, model, reference_id, reversed_id, collection_name):
         """Constructor for reverse reference.
     
         Constructor does not take standard values of other property types.
@@ -2760,20 +2789,45 @@ class _OneToOneReverseReferenceProperty(_ReverseReferenceProperty):
         self._model = model
         self._reference_id = reference_id    #B Reference(A) this is B's id
         self._reversed_id = reversed_id    #A's id
+        self._collection_name = collection_name
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
         if model_instance:
             _id = getattr(model_instance, self._reversed_id, None)
+
+            # print self._resolved_attr_name()
             if _id is not None:
-                b_id = self._reference_id
-                d = self._model.c[self._reference_id]
-                return self._model.get(d==_id)
+                #this will cache the reference object
+                resolved = getattr(model_instance, self._resolved_attr_name(), None)
+                if resolved is not None:
+                    return resolved
+                else:
+                    b_id = self._reference_id
+                    d = self._model.c[self._reference_id]
+                    instance = self._model.get(d==_id)
+                    if not instance:
+                        instance = self._model(**{b_id:_id})
+                        instance.save()
+                    setattr(model_instance, self._resolved_attr_name(), instance)
+                    return instance
+
             else:
                 return None
         else:
             return self
-    
+
+    def _resolved_attr_name(self):
+        """Get attribute of resolved attribute.
+
+        The resolved attribute is where the actual loaded reference instance is
+        stored on the referring model instance.
+
+        Returns:
+            Attribute name of where to store resolved reference model instance.
+        """
+        return '_RESOLVED_' + self._collection_name
+
 class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
     def __init__(self, reference_property, collection_name):
         """Constructor for reverse reference.
@@ -3075,7 +3129,8 @@ class Model(object):
         warnings.warn("put method will be deprecated in next version.", DeprecationWarning)
         return self.save(*args, **kwargs)
 
-    def delete(self, manytomany=True, delete_fieldname=None, send_dispatch=True):
+    def delete(self, manytomany=True, delete_fieldname=None, send_dispatch=True,
+               onetoone=True):
         """
         Delete current obj
         :param manytomany: if also delete all manytomany relationships
@@ -3085,8 +3140,13 @@ class Model(object):
         if get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'pre_delete', instance=self, signal=self.tablename)
         if manytomany:
-            for k, v in self._manytomany.iteritems():
+            for k, v in self._manytomany.items():
                 getattr(self, k).clear()
+        if onetoone:
+            for k, v in self._onetoone.items():
+                row = getattr(self, k)
+                if row:
+                    row.delete()
         if delete_fieldname:
             if delete_fieldname is True:
                 delete_fieldname = 'deleted'

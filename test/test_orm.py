@@ -226,6 +226,12 @@ def test_6():
     <Test1 {'test':<OneToOne:1>,'name':u'user','id':1}>
     >>> b1.test
     <Test {'username':u'limodou1','year':0,'id':1}>
+    >>> a1.test1.name = 'guest'
+    >>> a1.test1.save()
+    True
+    >>> c = Test1.get(1)
+    >>> c.name
+    u'guest'
     """
     
 #test ManyToMany
