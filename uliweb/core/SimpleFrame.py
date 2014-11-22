@@ -9,6 +9,7 @@ import cgi
 import inspect
 import re
 import types
+import threading
 from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, BadRequest, InternalServerError
@@ -547,6 +548,7 @@ class Dispatcher(object):
         _xhr_redirect_json = xhr_redirect_json
         __global__.application = self
         self.debug = False
+        self.lock = threading.Lock()
         self.include_apps = include_apps or []
         self.default_settings = default_settings or {}
         self.settings_file = settings_file
@@ -1280,14 +1282,18 @@ class Dispatcher(object):
             m = self._sort_middlewares(middlewares)
             process_request_classes, process_response_classes, process_exception_classes = self._get_middlewares_classes(m)
 
-            
-        local.request = req = Request(environ)
-        local.response = res = Response(content_type='text/html')
-        #add local cached
-        local.local_cache = {}
-        #add in web flag
-        local.in_web = True
-        
+        self.lock.acquire()
+        try:
+            local.request = req = Request(environ)
+            local.response = res = Response(content_type='text/html')
+
+            #add local cached
+            local.local_cache = {}
+            #add in web flag
+            local.in_web = True
+        finally:
+            self.lock.release()
+
         url_adapter = get_url_adapter('default')
         try:
             rule, values = url_adapter.match(return_rule=True)

@@ -1,6 +1,11 @@
 Uliweb Change Log
 =====================
 
+0.5 Version
+-----------------
+
+* Add lock protect when creating request and response local instance in `_open()` function
+
 0.4.1 Version
 -----------------
 
