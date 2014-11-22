@@ -13,3 +13,12 @@ def test_1():
     >>> d.items()
     [(1, {'id': 'b', 'name': 'a1'}), (2, {'id': 'a', 'name': 'a2'}), (3, {'id': 'c', 'name': 'a3'}), (4, {'id': 'd', 'name': 'a4'})]
     """
+
+def test_init():
+    """
+    >>> d = SortedDict({'a':'b', 'c':'d'})
+    >>> d[1] = 'e'
+    >>> d[2] = 'f'
+    >>> d.items()
+    [('a', 'b'), ('c', 'd'), (1, 'e'), (2, 'f')]
+    """

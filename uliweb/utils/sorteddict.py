@@ -1,7 +1,10 @@
 class SortedDict(object):
-    def __init__(self):
-        self._dict = {}
-        self._fields = []
+    def __init__(self, value=None):
+        self._dict = value or {}
+        if value:
+            self._fields = self._dict.keys()
+        else:
+            self._fields = []
             
     def __getitem__(self, key):
         return self._dict[key]
@@ -9,7 +12,7 @@ class SortedDict(object):
     def __getattr__(self, key): 
         try: 
             return self.__getitem__(key)
-        except KeyError, k: 
+        except KeyError as k:
             return None
         
     def __setitem__(self, key, value, append=False):
@@ -44,8 +47,8 @@ class SortedDict(object):
     def __delattr__(self, key):
         try: 
             self.__delitem__(key)
-        except KeyError, k: 
-            raise AttributeError, k
+        except KeyError as k:
+            raise AttributeError(k)
         
     def __len__(self):
         return len(self._dict)
@@ -78,7 +81,7 @@ class SortedDict(object):
     def get(self, key, default=None):
         try: 
             return self.__getitem__(key)
-        except KeyError, k: 
+        except KeyError as k:
             return default
     
     def pop(self, key, default=None):
