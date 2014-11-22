@@ -95,6 +95,21 @@ def _get_model_3(sender, model_name, model_inst, model_info, model_config):
             {'name':'_parent', 'type':'OneToOne', 'kwargs':{'reference_class':'user', 'collection_name':'ext'}},
             # {'name':'_parent', 'type':'int'},
             {'name':'name', 'type':'str', 'kwargs':{}},
+        ]
+        x = create_model(ext_name, fields)
+        #x.OneToOne('_parent', model_inst, collection_name='ext')
+    return model_inst
+
+def _get_model_4(sender, model_name, model_inst, model_info, model_config):
+    print 'hook:get_model model_name=%s' % model_name
+    ext_name = model_config.get('__ext_model__')
+    if ext_name:
+        print ext_name
+
+        fields = [
+            {'name':'_parent', 'type':'OneToOne', 'kwargs':{'reference_class':'user', 'collection_name':'ext'}},
+            # {'name':'_parent', 'type':'int'},
+            {'name':'name', 'type':'str', 'kwargs':{}},
             {'name':'active', 'type':'bool'}
         ]
         x = create_model(ext_name, fields)
@@ -185,99 +200,73 @@ def test_get_extension_model():
     >>> dispatch.unbind('post_get_model', _get_model_3)
     """
 
-# db = get_connection('sqlite://')
-# db.metadata.drop_all()
-# db.echo = True
-# set_auto_create(False)
-# print engine_manager['default'].models.keys()
-#
-# f = dispatch.bind('get_model')(_get_model_1)
-# f1 = dispatch.bind('find_model')(_find_model)
-# U = get_model('user')
-# print engine_manager['default'].models.keys()
-# U.create()
-# print U.properties.keys()
-# a1 = U(username='limodou', year=20)
-# a1.save()
-#
-# b = U.get(1)
-# print repr(b)
-# dispatch.unbind('get_model', _get_model_1)
+def test_migrate():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> set_auto_create(False)
+    >>> orm.__models__ = {}
+    >>> from sqlalchemy import *
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     year = Field(int, default=30)
+    ...     birth = Field(datetime.date)
+    >>> User.create()
+    >>> UE = Table('user_extension', db.metadata,
+    ...     Column('id', INT, primary_key=True, autoincrement=True),
+    ...     Column('_parent', INT),
+    ...     Column('name', VARCHAR(255)))
+    >>> UE.create()
+    >>> set_model_config('user', {'__ext_model__':'user_extension', '__ext_model_reference_field__':'_parent'})
+    >>> f = dispatch.bind('post_get_model')(_get_model_4)
+    >>> U = get_model('user')
+    hook:get_model model_name=user
+    user_extension
+    >>> T = get_model('user_extension')
+    hook:get_model model_name=user_extension
+    >>> migrate_tables(['user_extension'])
+    >>> from sqlalchemy.engine.reflection import Inspector
+    >>> inspector = Inspector.from_engine(db.connect())
+    >>> print [x['name'] for x in inspector.get_columns('user_extension')]
+    [u'id', u'_parent', u'name', u'active']
+    """
 
-db = get_connection('sqlite://')
-db.metadata.drop_all()
-db.echo = True
-set_auto_create(False)
-orm.__models__ = {}
-from sqlalchemy import *
-class User(Model):
-    username = Field(unicode)
-    year = Field(int, default=30)
-    birth = Field(datetime.date)
-User.create()
-UE = Table('user_extension', db.metadata,
-    Column('id', INT, primary_key=True, autoincrement=True),
-    Column('_parent', INT),
-    Column('name', VARCHAR(255)))
-UE.create()
-set_model_config('user', {'__ext_model__':'user_extension', '__ext_model_reference_field__':'_parent'})
-f = dispatch.bind('post_get_model')(_get_model_3)
+def test_migrate_2():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> set_auto_create(False)
+    >>> orm.__models__ = {}
+    >>> from sqlalchemy import *
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     year = Field(int, default=30)
+    ...     birth = Field(datetime.date)
+    >>> User.migrate()
+    >>> from sqlalchemy.engine.reflection import Inspector
+    >>> inspector = Inspector.from_engine(db.connect())
+    >>> print [x['name'] for x in inspector.get_columns('user')]
+    [u'username', u'year', u'birth', u'id']
+    """
 
-U = get_model('user')
-T = get_model('user_extension')
-print T
+def test_migrate_3():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> set_auto_create(False)
+    >>> orm.__models__ = {}
+    >>> from sqlalchemy import *
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     year = Field(int, default=30)
+    ...     birth = Field(datetime.date)
+    >>> class Group(Model):
+    ...     users = ManyToMany('user')
+    >>> User.migrate()
+    >>> Group.migrate()
+    >>> from sqlalchemy.engine.reflection import Inspector
+    >>> inspector = Inspector.from_engine(db.connect())
+    >>> inspector.get_table_names()
+    [u'group', u'group_user_users', u'user']
+    """
 
-from alembic.migration import MigrationContext
-engine = engine_manager['default']
-mc = MigrationContext.configure(engine.session().connection)
-
-def migrate_tables(context, tables, metadata, engine_name=None):
-    from alembic.autogenerate.api import compare_metadata, _produce_net_changes, \
-        _autogen_context, _indent, _produce_upgrade_commands, _compare_tables
-    from sqlalchemy.engine.reflection import Inspector
-
-
-    diffs = []
-
-    autogen_context, connection = _autogen_context(context, None)
-
-    #init autogen_context
-    autogen_context['opts']['sqlalchemy_module_prefix'] = 'sa.'
-    autogen_context['opts']['alembic_module_prefix'] = 'op.'
-
-    inspector = Inspector.from_engine(connection)
-
-    _tables = set(inspector.get_table_names()).union(tables)
-    conn_table_names = set(zip([None] * len(_tables), _tables))
-
-    for t in tables:
-        m = engine.models.get(t)
-        if not m['model']:
-            get_model(t, engine_name, signal=False)
-
-    metadata_table_names = set(zip([None] * len(tables), tables))
-
-    _compare_tables(conn_table_names, metadata_table_names,
-                    (),
-                    inspector, metadata, diffs, autogen_context, False)
-
-    script = """def upgrade():
-    """ + _indent(_produce_upgrade_commands(diffs, autogen_context)) + """
-upgrade()
-"""
-    return script
-
-def run(context, script):
-    from alembic import op
-    import sqlalchemy as sa
-    from alembic.operations import Operations
-
-    op = Operations(context)
-    code = compile(script, '<string>', 'exec', dont_inherit=True)
-    env = {'op':op, 'sa':sa}
-    exec code in env
-
-script =  migrate_tables(mc, ['user_extension'], engine.metadata)
-print script
-run(mc, script)
-print migrate_tables(mc, ['user_extension'], engine.metadata)

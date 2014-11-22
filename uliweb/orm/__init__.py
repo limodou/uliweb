@@ -26,7 +26,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'get_object', 'get_cached_object',
     'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
     'NotFound',
-    'get_field_type', 'create_model', 'get_metadata'
+    'get_field_type', 'create_model', 'get_metadata', 'migrate_tables'
     ]
 
 __auto_create__ = False
@@ -976,6 +976,64 @@ def begin_sql_monitor(key_length=70, record_details=False):
 def close_sql_monitor(monitor):
     dispatch.unbind('post_do', monitor.post_do)
     monitor.close()
+
+def get_migrate_script(context, tables, metadata, engine_name=None):
+    from alembic.autogenerate.api import compare_metadata, _produce_net_changes, \
+        _autogen_context, _indent, _produce_upgrade_commands, _compare_tables
+    from sqlalchemy.engine.reflection import Inspector
+
+
+    diffs = []
+    engine = engine_manager[engine_name]
+
+    autogen_context, connection = _autogen_context(context, None)
+
+    #init autogen_context
+    autogen_context['opts']['sqlalchemy_module_prefix'] = 'sa.'
+    autogen_context['opts']['alembic_module_prefix'] = 'op.'
+
+    inspector = Inspector.from_engine(connection)
+
+    _tables = set(inspector.get_table_names()) & set(tables)
+    conn_table_names = set(zip([None] * len(_tables), _tables))
+
+    for t in tables:
+        m = engine.models.get(t)
+        if m and not m['model']:
+            get_model(t, engine_name, signal=False)
+
+    metadata_table_names = set(zip([None] * len(tables), tables))
+
+    _compare_tables(conn_table_names, metadata_table_names,
+                    (),
+                    inspector, metadata, diffs, autogen_context, False)
+
+    script = """def upgrade():
+    """ + _indent(_produce_upgrade_commands(diffs, autogen_context)) + """
+upgrade()
+"""
+    return script
+
+def run_migrate_script(context, script):
+    from alembic import op
+    import sqlalchemy as sa
+    from alembic.operations import Operations
+
+    op = Operations(context)
+    code = compile(script, '<string>', 'exec', dont_inherit=True)
+    env = {'op':op, 'sa':sa}
+    exec code in env
+
+def migrate_tables(tables, engine_name=None):
+    """
+    Used to migrate dynamic table to database
+    :param tables: tables name list, such as ['user']
+    """
+    from alembic.migration import MigrationContext
+    engine = engine_manager[engine_name]
+    mc = MigrationContext.configure(engine.session().connection)
+    script =  get_migrate_script(mc, tables, engine.metadata)
+    run_migrate_script(mc, script)
 
 class ModelMetaclass(type):
     def __init__(cls, name, bases, dct):
@@ -3673,3 +3731,11 @@ class Model(object):
             d['id'] = str(self.id)
         return d
         
+    @classmethod
+    def migrate(cls, manytomany=True):
+        tables = [cls.tablename]
+        if manytomany:
+            for x in cls.manytomany:
+                tables.append(x.name)
+
+        migrate_tables(tables, cls.get_engine_name())
