@@ -10,7 +10,8 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'rawsql', 'Lazy', 'set_echo', 'Session', 'get_session', 'set_session',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
-    'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE',
+    'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE', 'FILE', 'INT', 'DATE',
+    'TIME', 'DATETIME', 'FLOAT', 'BOOLEAN',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
@@ -19,12 +20,13 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError', 'SaveError',
-    'BadPropertyTypeError', 'FILE', 'Begin', 'Commit', 'Rollback',
+    'BadPropertyTypeError', 'Begin', 'Commit', 'Rollback',
     'CommitAll', 'RollbackAll', 'set_lazy_model_init',
     'begin_sql_monitor', 'close_sql_monitor', 'set_model_config', 'text',
     'get_object', 'get_cached_object',
     'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
     'NotFound',
+    'get_field_type', 'create_model', 'get_metadata'
     ]
 
 __auto_create__ = False
@@ -453,7 +455,7 @@ def get_metadata(engine_name=None):
     
     for tablename, m in engine.models.items():
         if not m['model']:
-            get_model(tablename, engine_name)
+            get_model(tablename, engine_name, signal=False)
     return engine.metadata
 
 def get_session(ec=None, create=True):
@@ -678,11 +680,13 @@ def check_reserved_word(f):
             "Cannot define property using reserved word '%s'. " % f
             )
 
-def set_model(model, tablename=None, created=None):
+def set_model(model, tablename=None, created=None, appname=None):
     """
     Register an model and tablename to a global variable.
     model could be a string format, i.e., 'uliweb.contrib.auth.models.User'
-    
+
+    :param appname: if no appname, then archive according to model
+
     item structure
         created
         model
@@ -709,7 +713,8 @@ def set_model(model, tablename=None, created=None):
         item['created'] = None
     if isinstance(model, (str, unicode)):
         model_path = model
-        appname = model.rsplit('.', 2)[0]
+        if not appname:
+            appname = model.rsplit('.', 2)[0]
         #for example 'uliweb.contrib.auth.models.User'
         model = None
     else:
@@ -747,7 +752,20 @@ def set_model_config(model_name, config, replace=False):
     else:
         c = d.setdefault('config', {})
         c.update(config)
-    
+
+def create_model(tablename, fields):
+    props = {}
+    props['__tablename__'] = tablename
+    props['__dynamic__'] = True
+
+    for p in fields:
+        _type = get_field_type(p['type'])
+        prop = _type(**p.get('kwargs', {}))
+        props[p['name']] = prop
+
+    cls = type(tablename.title(), (Model,), props)
+    return cls
+
 def valid_model(model, engine_name=None):
     if isinstance(model, type) and issubclass(model, Model):
         return True
@@ -763,12 +781,11 @@ def check_model_class(model_cls):
 #    Model.__engines__ could be a list, so if there are multiple then use
 #    the first one
 #    """
-#    tablename = model._alias or model.tablename
-#    name = model.__name__
-#    appname = model.__module__
-#    model_path = appname + '.' + name
-#    return (tablename not in __models__)
-#
+
+    #check dynamic flag
+    if getattr(model_cls, "__dynamic__", False):
+        return True
+
     #check the model_path
     model_path = model_cls.__module__ + '.' + model_cls.__name__
     _path = __models__.get(model_cls.tablename, {}).get('model_path', '')
@@ -784,7 +801,7 @@ def find_metadata(model):
     engine = engine_manager[engine_name]
     return engine.metadata
     
-def get_model(model, engine_name=None, refresh=False):
+def get_model(model, engine_name=None, signal=True):
     """
     Return a real model object, so if the model is already a Model class, then
     return it directly. If not then import it.
@@ -792,11 +809,9 @@ def get_model(model, engine_name=None, refresh=False):
     if engine_name is None, then if there is multi engines defined, it'll use
     'default', but if there is only one engine defined, it'll use this one
 
-    :param refresh: Used to reload model
+    :param dispatch: Used to switch dispatch signal
     """
     if isinstance(model, type) and issubclass(model, Model):
-        if refresh:
-            raise Error("With 'refresh=True', you should use string value for model parameter, but %r given" % model)
         return model
     if not isinstance(model, (str, unicode)):
         raise Error("Model %r should be string or unicode type" % model)
@@ -804,6 +819,8 @@ def get_model(model, engine_name=None, refresh=False):
     #make model name is lower case
     model = model.lower()
     model_item = __models__.get(model)
+    if not model_item:
+        model_item = dispatch.get(None, 'find_model', model_name=model)
     if model_item:
         if not engine_name:
             #search according model_item, and it should has only one engine defined
@@ -829,10 +846,13 @@ def get_model(model, engine_name=None, refresh=False):
             if isinstance(m, type) and issubclass(m, Model):
                 loaded = True
                 #add get_model previous hook
-                model_inst = dispatch.get(None, 'get_model', model_name=model, model_inst=m,
-                                  model_info=item, model_config=m_config) or m
-                if m is not model_inst:
-                    loaded = False
+                if signal:
+                    model_inst = dispatch.get(None, 'get_model', model_name=model, model_inst=m,
+                                      model_info=item, model_config=m_config) or m
+                    if m is not model_inst:
+                        loaded = False
+                else:
+                    model_inst = m
             else:
                 #add get_model previous hook
                 model_inst = dispatch.get(None, 'get_model', model_name=model, model_inst=None,
@@ -862,8 +882,9 @@ def get_model(model, engine_name=None, refresh=False):
                 model_inst.bind(engine.metadata)
 
             #post get_model
-            dispatch.call(None, 'post_get_model', model_name=model, model_inst=model_inst,
-                                  model_info=item, model_config=m_config)
+            if signal:
+                dispatch.call(None, 'post_get_model', model_name=model, model_inst=model_inst,
+                                      model_info=item, model_config=m_config)
             return model_inst
             
     raise Error("Can't found the model %s in engine %s" % (model, engine_name))
@@ -871,14 +892,15 @@ def get_model(model, engine_name=None, refresh=False):
 def get_object_id(engine_name, tablename, id):
     return 'OC:%s:%s:%s' % (engine_name, tablename, str(id))
 
-def get_object(table, id, condition=None, cache=False, fields=None, use_local=False, session=None):
+def get_object(table, id, condition=None, cache=False, fields=None, use_local=False,
+               engine_name=None, session=None):
     """
     Get obj in Local.object_caches first and also use get(cache=True) function if 
     not found in object_caches
     """
     from uliweb import functions, settings
     
-    model = get_model(table)
+    model = get_model(table, engine_name)
         
     #if id is an object of Model, so get the real id value
     if isinstance(id, Model):
@@ -965,7 +987,6 @@ class ModelMetaclass(type):
         #check if cls is matched with __models__ module_path
         if not check_model_class(cls):
             return
-        
         cls.properties = {}
         cls._fields_list = []
         defined = set()
@@ -1627,7 +1648,8 @@ class ReferenceProperty(Property):
         if self.reference_class is _SELF_REFERENCE or self.reference_class is None:
             self.reference_class = model_class
         else:
-            self.reference_class = get_model(self.reference_class, self.engine_name)
+            self.reference_class = get_model(self.reference_class, self.engine_name,
+                                             signal=False)
             
         self.collection_name = self.reference_class.get_collection_name(self._collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
@@ -1783,7 +1805,8 @@ class OneToOne(ReferenceProperty):
         if self.reference_class is _SELF_REFERENCE:
             self.reference_class = self.data_type = model_class
         else:
-            self.reference_class = get_model(self.reference_class, self.engine_name)
+            self.reference_class = get_model(self.reference_class, self.engine_name,
+                                             signal=False)
 
         self.collection_name = self._collection_name
         if self.collection_name is None:
@@ -1847,7 +1870,8 @@ class Result(object):
             if issubclass(model, Model):
                 v = fieldname.split('.')
                 if len(v) > 1:
-                    field = get_model(v[0]).table.c(v[1])
+                    field = get_model(v[0], engine_name=self.model.get_engine_name(),
+                                      signal=False).table.c(v[1])
                 else:
                     field = model.table.c[fieldname]
             else:
@@ -1881,11 +1905,13 @@ class Result(object):
             if isinstance(col, (str, unicode)):
                 v = col.split('.')
                 if len(v) > 1:
-                    field = get_model(v[0]).properties(v[1])
+                    field = get_model(v[0], engine_name=self.model.get_engine_name(),
+                                      signal=False).properties(v[1])
                 else:
                     field = model.properties[col]
             elif isinstance(col, Column):
-                field = get_model(col.table.name).properties[col.name]
+                field = get_model(col.table.name, engine_name=self.model.get_engine_name(),
+                                  signal=False).properties[col.name]
             else:
                 field = col
             
@@ -1904,7 +1930,8 @@ class Result(object):
 
     def join(self, model, cond, isouter=False):
         _join = None
-        model = get_model(model)
+        model = get_model(model, engine_name=self.model.get_engine_name(),
+                          signal=False)
         if issubclass(model, Model):
             # if cond is None:
             #     for prop in Model.proterties:
@@ -2547,7 +2574,8 @@ class ManyToMany(ReferenceProperty):
                     (isinstance(self.through, type) and issubclass(self.reference_class, Model)) or
                     valid_model(self.reference_class)):
                 raise KindError('through must be Model or available table name')
-            self.through = get_model(self.through)
+            self.through = get_model(self.through, engine_name=self.engine_name,
+                                                                 signal=False)
             #auto find model
             _auto_model = None
             #process through_reference_fieldname
@@ -2612,7 +2640,8 @@ class ManyToMany(ReferenceProperty):
         if self.reference_class is _SELF_REFERENCE or self.reference_class is None:
             self.reference_class = self.data_type = model_class
         else:
-            self.reference_class = get_model(self.reference_class, self.engine_name)
+            self.reference_class = get_model(self.reference_class, self.engine_name,
+                                             signal=False)
 
         self.tablename = '%s_%s_%s' % (model_class.tablename, self.reference_class.tablename, property_name)
         self.collection_name = self.reference_class.get_collection_name(self._collection_name, model_class.tablename)
@@ -2858,29 +2887,39 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
 
 FILE = FileProperty
 PICKLE = PickleProperty
-BIGINT = BigIntegerProperty
 
 _fields_mapping = {
+    BIGINT:BigIntegerProperty,
     str:StringProperty,
+    VARCHAR:StringProperty,
     CHAR:CharProperty,
     unicode: UnicodeProperty,
-    TEXT:TextProperty,
-    BLOB:BlobProperty,
-    FILE:FileProperty,
+    TEXT: TextProperty,
+    BLOB: BlobProperty,
     int:IntegerProperty,
-    BIGINT:BigIntegerProperty,
+    INT:IntegerProperty,
     float:FloatProperty,
+    FLOAT:FloatProperty,
     bool:BooleanProperty,
+    BOOLEAN:BooleanProperty,
     datetime.datetime:DateTimeProperty,
+    DATETIME:DateTimeProperty,
     datetime.date:DateProperty,
+    DATE:DateProperty,
     datetime.time:TimeProperty,
+    TIME:TimeProperty,
     decimal.Decimal:DecimalProperty,
     DECIMAL:DecimalProperty,
-    PICKLE:PickleProperty,
 }
 def Field(type, *args, **kwargs):
     t = _fields_mapping.get(type, type)
     return t(*args, **kwargs)
+
+def get_field_type(_type):
+    assert isinstance(_type, (str, unicode))
+
+    _t = eval(_type)
+    return _fields_mapping.get(_t, _t)
 
 class Model(object):
 
@@ -2899,7 +2938,6 @@ class Model(object):
     
     def __init__(self, **kwargs):
         self._old_values = {}
-        
         self._load(kwargs, from_='')
         
     def set_saved(self):
@@ -3194,7 +3232,6 @@ class Model(object):
     def add_property(cls, name, prop, config=True, set_property=True):
         if isinstance(prop, Property):
             check_reserved_word(name)
-            
             #process if there is already the same property
             old_prop = cls.properties.get(name)
             if old_prop:
@@ -3363,7 +3400,7 @@ class Model(object):
         """
         
         if isinstance(ec, (str, unicode)):
-            m = get_model(cls._alias, ec)
+            m = get_model(cls._alias, ec, signal=False)
         else:
             m = cls._use(ec)
         return m
@@ -3386,15 +3423,16 @@ class Model(object):
                     c = f.create(cls)
                     if c is not None:
                         cols.append(c)
-                        
-                #check the model_path
-                if cls._base_class:
-                    model_path = cls._base_class.__module__ + '.' + cls._base_class.__name__
-                else:
-                    model_path = cls.__module__ + '.' + cls.__name__
-                _path = __models__.get(cls.tablename, {}).get('model_path', '')
-                if _path and model_path != _path:
-                    return
+
+                if not getattr(cls, '__dynamic__', False):
+                    #check the model_path
+                    if cls._base_class:
+                        model_path = cls._base_class.__module__ + '.' + cls._base_class.__name__
+                    else:
+                        model_path = cls.__module__ + '.' + cls.__name__
+                    _path = __models__.get(cls.tablename, {}).get('model_path', '')
+                    if _path and model_path != _path:
+                        return
                 
                 #check if the table is already existed
                 t = cls.metadata.tables.get(cls.tablename, None)
