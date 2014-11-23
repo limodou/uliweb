@@ -702,4 +702,4 @@ class Ini(SortedDict):
                     else:
                         v.__setitem__(_k, _v.get(), replace=True)
                         del _v
-        del self._globals
+        self._globals = SortedDict()
