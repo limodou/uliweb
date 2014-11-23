@@ -4,7 +4,8 @@ def after_init_apps(sender):
     from uliweb import orm
     from uliweb.utils.common import import_attr
     from uliweb.core.SimpleFrame import __app_alias__
-    
+
+    orm.__models__ = {}
     orm.set_debug_query(settings.get_var('ORM/DEBUG_LOG'))
     orm.set_auto_create(settings.get_var('ORM/AUTO_CREATE'))
     orm.set_pk_type(settings.get_var('ORM/PK_TYPE'))

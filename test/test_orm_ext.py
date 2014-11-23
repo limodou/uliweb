@@ -69,19 +69,19 @@ def test_get_model():
 def _get_model_1(sender, model_name, model_inst, model_info, model_config):
     if model_name == 'user':
         fields = [
-            {'name':'username', 'type':'unicode', 'kwargs':{}},
-            {'name':'year', 'type':'int', 'kwargs':{'default':30}},
-            {'name':'birth', 'type':'datetime.date', 'kwargs':{}},
+            ('username', 'str'),
+            ('year', 'int', {'default':30}),
+            ('birth', 'datetime.date'),
         ]
         return create_model(model_name, fields)
 
 def _get_model_2(sender, model_name, model_inst, model_info, model_config):
     if model_name == 'user':
         fields = [
-            {'name':'username', 'type':'unicode', 'kwargs':{}},
-            {'name':'year', 'type':'int', 'kwargs':{'default':30}},
-            {'name':'birth', 'type':'datetime.date', 'kwargs':{}},
-            {'name':'active', 'type':'bool', 'kwargs':{}},
+            ('username', 'str'),
+            ('year', 'int', {'default':30}),
+            ('birth', 'datetime.date'),
+            ('active', 'bool'),
         ]
         return create_model(model_name, fields)
 
@@ -92,9 +92,9 @@ def _get_model_3(sender, model_name, model_inst, model_info, model_config):
         print ext_name
 
         fields = [
-            {'name':'_parent', 'type':'OneToOne', 'kwargs':{'reference_class':'user', 'collection_name':'ext'}},
+            ('_parent', 'OneToOne', {'reference_class':'user', 'collection_name':'ext'}),
             # {'name':'_parent', 'type':'int'},
-            {'name':'name', 'type':'str', 'kwargs':{}},
+            ('name', 'str'),
         ]
         x = create_model(ext_name, fields)
         #x.OneToOne('_parent', model_inst, collection_name='ext')
@@ -107,10 +107,10 @@ def _get_model_4(sender, model_name, model_inst, model_info, model_config):
         print ext_name
 
         fields = [
-            {'name':'_parent', 'type':'OneToOne', 'kwargs':{'reference_class':'user', 'collection_name':'ext'}},
+            ('_parent', 'OneToOne', {'reference_class':'user', 'collection_name':'ext'}),
             # {'name':'_parent', 'type':'int'},
-            {'name':'name', 'type':'str', 'kwargs':{}},
-            {'name':'active', 'type':'bool'}
+            ('name', 'str'),
+            ('active', 'bool'),
         ]
         x = create_model(ext_name, fields)
         #x.OneToOne('_parent', model_inst, collection_name='ext')
@@ -268,5 +268,25 @@ def test_migrate_3():
     >>> inspector = Inspector.from_engine(db.connect())
     >>> inspector.get_table_names()
     [u'group', u'group_user_users', u'user']
+    """
+
+def test_extend_model():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> set_auto_create(False)
+    >>> orm.__models__ = {}
+    >>> from sqlalchemy import *
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     year = Field(int, default=30)
+    ...     birth = Field(datetime.date)
+    >>> class User(User):
+    ...     __replace__ = True
+    ...     name = Field(str)
+    >>> print User.properties.keys()
+    ['name', 'id']
+    >>> print User.table.columns.keys()
+    ['name', 'id']
     """
 

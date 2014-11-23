@@ -26,7 +26,8 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'get_object', 'get_cached_object',
     'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
     'NotFound',
-    'get_field_type', 'create_model', 'get_metadata', 'migrate_tables'
+    'get_field_type', 'create_model', 'get_metadata', 'migrate_tables',
+    'print_model',
     ]
 
 __auto_create__ = False
@@ -57,7 +58,7 @@ import re
 import cPickle as pickle
 from uliweb.utils import date as _date
 from uliweb.utils.common import (flat_list, classonlymethod, simple_value, 
-    safe_str)
+    safe_str, import_attr)
 from sqlalchemy import *
 from sqlalchemy.sql import select, ColumnElement, text, true
 from sqlalchemy.pool import NullPool
@@ -525,7 +526,23 @@ def get_engine_name(ec=None):
         return ec.engine_name
     else:
         raise Error("Parameter ec should be an engine_name or Session object, but %r found" % ec)
-        
+
+def print_model(model, engine_name=None, skipblank=False):
+    from sqlalchemy.schema import CreateTable, CreateIndex
+
+    engine = engine_manager[engine_name].engine
+    M = get_model(model)
+    t = M.table
+    s = []
+    s.append("%s;" % str(CreateTable(t).compile(dialect=engine.dialect)).rstrip())
+    for x in t.indexes:
+        s.append("%s;" % CreateIndex(x))
+    sql = '\n'.join(s)
+    if skipblank:
+        return re.sub('[\t\n]+', '', sql)
+    else:
+        return sql
+
 def do_(query, ec=None, args=None):
     """
     Execute a query
@@ -753,17 +770,71 @@ def set_model_config(model_name, config, replace=False):
         c = d.setdefault('config', {})
         c.update(config)
 
-def create_model(tablename, fields):
-    props = {}
-    props['__tablename__'] = tablename
+def create_model(modelname, fields, indexes=None, basemodel=None, **props):
+    """
+    Create model dynamically
+
+    :param fields: Just format like [(name, type, kwargs), ...]
+                    type should be a string, eg. 'str', 'int', etc
+                    kwargs will be passed to Property.__init__() according field type,
+                    it'll be a dict
+    :param props: Model attributes, such as '__mapping_only__', '__replace__'
+    :param indexes: Multiple fields index, single index can be set directly using `index=True`
+                    to a field, the value format should be:
+
+                    [(name, *args, **kwargs), ...]
+
+                    e.g. [ ('audit_idx', ['table_id', 'obj_id'], {})]
+
+                    for kwargs can be ommited.
+
+    :param basemodel: Will be the new Model base class, so new Model can inherited
+                    parent methods, it can be a string or a real class object
+    """
+    assert not props or isinstance(props, dict)
+    assert not indexes or isinstance(indexes, list) and isinstance(indexes[0], (list, tuple))
+
+    props = SortedDict(props or {})
     props['__dynamic__'] = True
+    props['__config__'] = False
 
     for p in fields:
-        _type = get_field_type(p['type'])
-        prop = _type(**p.get('kwargs', {}))
-        props[p['name']] = prop
+        if len(p) == 2:
+            name, _type = p
+            kwargs = {}
+        else:
+            name, _type, kwargs = p
+        field_type = get_field_type(_type)
+        prop = field_type(**kwargs)
+        props[name] = prop
 
-    cls = type(tablename.title(), (Model,), props)
+    if basemodel:
+        model = import_attr(basemodel)
+    else:
+        model = Model
+    cls = type(modelname.title(), (model,), props)
+
+    tablename = props.get('__tablename__', modelname)
+    set_model(cls, tablename, appname=__name__)
+    get_model(modelname, signal=False, reload=True)
+
+    indexes = indexes or []
+    for x in indexes:
+        if len(x) == 2:
+            name, fields = x
+            kwargs = {}
+        else:
+            name, fields, kwargs = x
+
+        if not isinstance(fields, (list, tuple)) or not isinstance(kwargs, dict):
+            raise ValueError("Index value format is not right, the value is %r" % indexes)
+
+        props = []
+        for y in fields:
+            props.append(cls.c[y])
+
+        Index(name, *props, **kwargs)
+
     return cls
 
 def valid_model(model, engine_name=None):
@@ -801,7 +872,7 @@ def find_metadata(model):
     engine = engine_manager[engine_name]
     return engine.metadata
     
-def get_model(model, engine_name=None, signal=True):
+def get_model(model, engine_name=None, signal=True, reload=False):
     """
     Return a real model object, so if the model is already a Model class, then
     return it directly. If not then import it.
@@ -845,6 +916,8 @@ def get_model(model, engine_name=None, signal=True):
             m_config = __models__[model].get('config', {})
             if isinstance(m, type) and issubclass(m, Model):
                 loaded = True
+                if reload:
+                    loaded = False
                 #add get_model previous hook
                 if signal:
                     model_inst = dispatch.get(None, 'get_model', model_name=model, model_inst=m,
@@ -863,7 +936,7 @@ def get_model(model, engine_name=None, signal=True):
                     model_inst = getattr(mod, name)
 
             if not loaded:
-                if model_inst._bound_classname == model:
+                if model_inst._bound_classname == model and not reload:
                     model_inst = model_inst._use(engine_name)
                     item['model'] = model_inst
                 else:
@@ -874,12 +947,17 @@ def get_model(model, engine_name=None, signal=True):
                     item['model'] = model_inst
                     model_inst._alias = model
                     model_inst._engine_name = engine_name
-                    
-                    for k, v in model_inst.properties.items():
-                        v.__property_config__(model_inst, k)
+
+                    if __lazy_model_init__:
+                        for k, v in model_inst.properties.items():
+                            v.__property_config__(model_inst, k)
                     
                 #add bind process
-                model_inst.bind(engine.metadata)
+                if reload:
+                    reset = True
+                else:
+                    reset = False
+                model_inst.bind(engine.metadata, reset=reset)
 
             #post get_model
             if signal:
@@ -1041,17 +1119,16 @@ class ModelMetaclass(type):
         if name == 'Model':
             return
         cls._set_tablename()
-        
-        #check if cls is matched with __models__ module_path
-        if not check_model_class(cls):
-            return
+
         cls.properties = {}
         cls._fields_list = []
         defined = set()
+        is_replace = dct.get('__replace__')
         for base in bases:
-            if hasattr(base, 'properties'):
+            if hasattr(base, 'properties') and not is_replace:
                 cls.properties.update(base.properties)
-        
+
+        is_config = dct.get('__config__', True)
         cls._manytomany = {}
         cls._onetoone = {}
         for attr_name in dct.keys():
@@ -1082,6 +1159,10 @@ class ModelMetaclass(type):
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         cls._fields_list = fields_list
         
+        #check if cls is matched with __models__ module_path
+        if not check_model_class(cls):
+            return
+
         if cls._bind and not __lazy_model_init__:
             cls.bind(auto_create=__auto_create__)
         
@@ -1853,7 +1934,6 @@ class OneToOne(ReferenceProperty):
         #ReferenceProperty process, but instead of invode ReferenceProperty's
         #parent function
         super(ReferenceProperty, self).__property_config__(model_class, property_name)
-    
         if not (
                 (isinstance(self.reference_class, type) and issubclass(self.reference_class, Model)) or
                 self.reference_class is _SELF_REFERENCE or
@@ -3464,7 +3544,7 @@ class Model(object):
         return m
     
     @classmethod
-    def bind(cls, metadata=None, auto_create=False):
+    def bind(cls, metadata=None, auto_create=False, reset=False):
         cls._lock.acquire()
         try:
             cls.metadata = metadata or find_metadata(cls)
@@ -3494,7 +3574,7 @@ class Model(object):
                 
                 #check if the table is already existed
                 t = cls.metadata.tables.get(cls.tablename, None)
-                if t is not None and not __auto_set_model__:
+                if t is not None and not __auto_set_model__ and not reset:
                     return 
                 
                 if t is not None:
