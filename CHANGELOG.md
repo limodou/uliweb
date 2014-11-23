@@ -9,6 +9,8 @@ Uliweb Change Log
   a blank object automatically. And if delete one record, it'll delete reversed onetoone
   record also.
 * Add lock protect when creating request and response local instance in `_open()` function
+* Add ORM Model migrate support
+* Refactor SortedDict with dict base class
 
 0.4.1 Version
 -----------------
