@@ -86,6 +86,7 @@ class NotFound(Error):
         
     def __str__(self):
         return "%s(%s) instance can't be found" % (self.model.__name__, str(self.id))
+class ModelNotFound(Error):pass
 class ReservedWordError(Error):pass
 class ModelInstanceError(Error):pass
 class DuplicatePropertyError(Error):
@@ -697,7 +698,7 @@ def check_reserved_word(f):
             "Cannot define property using reserved word '%s'. " % f
             )
 
-def set_model(model, tablename=None, created=None, appname=None):
+def set_model(model, tablename=None, created=None, appname=None, model_path=None):
     """
     Register an model and tablename to a global variable.
     model could be a string format, i.e., 'uliweb.contrib.auth.models.User'
@@ -709,6 +710,8 @@ def set_model(model, tablename=None, created=None, appname=None):
         model
         model_path
         appname
+
+    For dynamic model you should pass model_path with '' value
     """
     
     if isinstance(model, type) and issubclass(model, Model):
@@ -729,14 +732,20 @@ def set_model(model, tablename=None, created=None, appname=None):
     else:
         item['created'] = None
     if isinstance(model, (str, unicode)):
-        model_path = model
+        if model_path is None:
+            model_path = model
+        else:
+            model_path = model_path
         if not appname:
             appname = model.rsplit('.', 2)[0]
         #for example 'uliweb.contrib.auth.models.User'
         model = None
     else:
         appname = model.__module__.rsplit('.', 1)[0]
-        model_path = model.__module__ + '.' + model.__name__
+        if model_path is None:
+            model_path = model.__module__ + '.' + model.__name__
+        else:
+            model_path = ''
         #for example 'uliweb.contrib.auth.models'
         model.__engines__ = engines
         
@@ -810,12 +819,19 @@ def create_model(modelname, fields, indexes=None, basemodel=None, **props):
 
     if basemodel:
         model = import_attr(basemodel)
+        model.clear_relation()
     else:
         model = Model
+    try:
+        old = get_model(modelname, signal=False)
+        old.clear_relation()
+    except ModelNotFound as e:
+        pass
+
     cls = type(modelname.title(), (model,), props)
 
     tablename = props.get('__tablename__', modelname)
-    set_model(cls, tablename, appname=__name__)
+    set_model(cls, tablename, appname=__name__, model_path='')
     get_model(modelname, signal=False, reload=True)
 
     indexes = indexes or []
@@ -928,12 +944,19 @@ def get_model(model, engine_name=None, signal=True, reload=False):
                     model_inst = m
             else:
                 #add get_model previous hook
-                model_inst = dispatch.get(None, 'get_model', model_name=model, model_inst=None,
-                                  model_info=item, model_config=m_config)
+                if signal:
+                    model_inst = dispatch.get(None, 'get_model', model_name=model, model_inst=None,
+                                      model_info=item, model_config=m_config)
+                else:
+                    model_inst = None
                 if not model_inst:
-                    mod_path, name = item['model_path'].rsplit('.', 1)
-                    mod = __import__(mod_path, fromlist=['*'])
-                    model_inst = getattr(mod, name)
+                    if item['model_path']:
+                        mod_path, name = item['model_path'].rsplit('.', 1)
+                        mod = __import__(mod_path, fromlist=['*'])
+                        model_inst = getattr(mod, name)
+                    #empty model_path means dynamic model
+                if not model_inst:
+                    raise ModelNotFound("Can't found the model %s in engine %s" % (model, engine_name))
 
             if not loaded:
                 if model_inst._bound_classname == model and not reload:
@@ -965,7 +988,7 @@ def get_model(model, engine_name=None, signal=True, reload=False):
                                       model_info=item, model_config=m_config)
             return model_inst
             
-    raise Error("Can't found the model %s in engine %s" % (model, engine_name))
+    raise ModelNotFound("Can't found the model %s in engine %s" % (model, engine_name))
     
 def get_object_id(engine_name, tablename, id):
     return 'OC:%s:%s:%s' % (engine_name, tablename, str(id))
@@ -1789,11 +1812,10 @@ class ReferenceProperty(Property):
         else:
             self.reference_class = get_model(self.reference_class, self.engine_name,
                                              signal=False)
-            
         self.collection_name = self.reference_class.get_collection_name(self._collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
             _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
-        
+
     def __get__(self, model_instance, model_class):
         """Get reference object.
 
@@ -1957,7 +1979,7 @@ class OneToOne(ReferenceProperty):
                             self._id_attr_name(), self.collection_name))
         #append to reference_class._onetoone
         self.reference_class._onetoone[self.collection_name] = model_class
-  
+
 def get_objs_columns(objs, field='id'):
     ids = []
     new_objs = []
@@ -3819,3 +3841,18 @@ class Model(object):
                 tables.append(x.name)
 
         migrate_tables(tables, cls.get_engine_name())
+
+    @classmethod
+    def clear_relation(cls):
+        """
+        Clear relation properties for reference Model, such as OneToOne, Reference,
+        ManyToMany
+        """
+        for k, v in cls.properties.items():
+            if isinstance(v, ReferenceProperty):
+                if v.collection_name and hasattr(v.reference_class, v.collection_name):
+                    delattr(v.reference_class, v.collection_name)
+
+                    if isinstance(v, OneToOne):
+                        #append to reference_class._onetoone
+                        del v.reference_class._onetoone[v.collection_name]

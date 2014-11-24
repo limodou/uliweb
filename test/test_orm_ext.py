@@ -120,7 +120,7 @@ def _find_model(sender, model_name):
     import uliweb.orm as orm
 
     if model_name == 'user':
-        set_model(model_name, model_name, appname=__name__)
+        set_model(model_name, model_name, appname=__name__, model_path='')
         return orm.__models__.get(model_name)
 
 #basic testing
