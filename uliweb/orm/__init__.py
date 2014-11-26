@@ -453,11 +453,14 @@ def get_metadata(engine_name=None):
     get metadata according used for alembic
     It'll import all tables
     """
+    dispatch.get(None, 'load_models')
+
     engine = engine_manager[engine_name]
     
     for tablename, m in engine.models.items():
-        if not m['model']:
-            get_model(tablename, engine_name, signal=False)
+        get_model(tablename, engine_name, signal=False)
+        if hasattr(m, '__dynamic__') and getattr(m, '__dynamic__'):
+            m.table.__mapping_only__ = True
     return engine.metadata
 
 def get_session(ec=None, create=True):
@@ -693,7 +696,7 @@ def RollbackAll(close=None):
             session.rollback()
     
 def check_reserved_word(f):
-    if f in ['put', 'save', 'table', 'tablename'] or f in dir(Model):
+    if f in ['put', 'save', 'table', 'tablename', 'c', 'columns'] or f in dir(Model):
         raise ReservedWordError(
             "Cannot define property using reserved word '%s'. " % f
             )
@@ -754,7 +757,7 @@ def set_model(model, tablename=None, created=None, appname=None, model_path=None
     item['appname'] = appname
     d['model_path'] = model_path
     d['appname'] = appname
-    
+
     for name in engines:
         if not isinstance(name, (str, unicode)):
             raise BadValueError('Engine name should be string type, but %r found' % name)
@@ -2967,7 +2970,7 @@ class _ReverseReferenceProperty(Property):
     def __set__(self, model_instance, value):
         """Not possible to set a new collection."""
         raise BadValueError('Virtual property is read-only')
-    
+
 class _OneToOneReverseReferenceProperty(_ReverseReferenceProperty):
     def __init__(self, model, reference_id, reversed_id, collection_name):
         """Constructor for reverse reference.
@@ -3539,9 +3542,10 @@ class Model(object):
         """
         underly implement of use
         """
-        class ConnectModel(cls):
-            pass
-            
+        # class ConnectModel(cls):
+        #     pass
+        ConnectModel = type(cls.__name__, (cls,), {})
+
         ConnectModel.tablename = cls.tablename
         ConnectModel._base_class = cls
         if isinstance(ec, (str, unicode)):

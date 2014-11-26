@@ -18,11 +18,11 @@ def test_1():
     >>> print engine_manager['default'].models
     {'blog': {'model': <class 'blog.models.Blog'>, 'created': None, 'model_path': 'blog.models.Blog', 'appname': 'blog'}}
     >>> print engine_manager['b'].models
-    {'blog': {'model': <class 'uliweb.orm.ConnectModel'>, 'created': None, 'model_path': 'blog.models.Blog', 'appname': 'blog'}, 'category': {'model': <class 'blog.models.Category'>, 'created': None, 'model_path': 'blog.models.Category', 'appname': 'blog'}}
+    {'blog': {'model': <class 'uliweb.orm.Blog'>, 'created': None, 'model_path': 'blog.models.Blog', 'appname': 'blog'}, 'category': {'model': <class 'blog.models.Category'>, 'created': None, 'model_path': 'blog.models.Category', 'appname': 'blog'}}
     >>> Blog1 = get_model('blog')
     >>> Blog2 = get_model('blog', 'b')
     >>> print 'blog2', Blog2, Blog2.table, Blog2.tablename, Blog2.get_engine_name(), Blog2.get_connection()
-    blog2 <class 'uliweb.orm.ConnectModel'> blog blog b b
+    blog2 <class 'uliweb.orm.Blog'> blog blog b b
     >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_connection()
     blog1 <class 'blog.models.Blog'> blog blog default default
     >>> r = Blog2.all().remove()
@@ -249,7 +249,7 @@ def test_connection_duplication():
     {'blog': {'model': <class 'blog.models.Blog'>, 'created': None, 'model_path': 'blog.models.Blog', 'appname': 'blog'}}
     >>> Blog1 = get_model('blog', 'c')
     >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_connection()
-    blog1 <class 'uliweb.orm.ConnectModel'> blog blog c c
+    blog1 <class 'uliweb.orm.Blog'> blog blog c c
     """
 
 def test_set_session():

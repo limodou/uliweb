@@ -11,6 +11,7 @@ Uliweb Change Log
 * Add lock protect when creating request and response local instance in `_open()` function
 * Add ORM Model migrate support
 * Refactor SortedDict with dict base class
+* Add model_config app, to support dynamic create model
 
 0.4.1 Version
 -----------------

@@ -4,6 +4,7 @@ import datetime
 from decimal import Decimal
 from uliweb.core.commands import Command, get_answer, CommandManager, get_commands
 from optparse import make_option
+from uliweb.core import dispatch
 from uliweb.utils.common import log, is_pyfile_exist
 from sqlalchemy.types import *
 from sqlalchemy import MetaData, Table
@@ -50,13 +51,21 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
     
     engine = orm.engine_manager[engine_name]
     e = engine.options['connection_string']
-    
+
+    dispatch.get(None, 'load_models')
+
     old_models = orm.__models__.keys()
     tables_map = {}
+    tables_mapping_only = {}
     try:
         for tablename, m in engine.models.items():
             try:
                 x = orm.get_model(tablename, engine_name)
+                #convert dynamic model to mapping_only model
+                if hasattr(x, '__dynamic__') and getattr(x, '__dynamic__'):
+                    x.__mapping_only__ = True
+                if hasattr(x, '__mapping_only__') and getattr(x, '__mapping_only__'):
+                    tables_mapping_only[x.tablename] = True
             except:
                 print "Error on Model [%s]" % tablename
                 raise
@@ -71,11 +80,12 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
 
     if apps:
         t = {}
-        for tablename, m in all_meta.tables.items():
+        for tablename, table in all_meta.tables.items():
             if tablename in meta.tables:
-                m = meta.tables[tablename]
-                if hasattr(m, '__appname__') and m.__appname__ in apps:
-                    t[tables_map.get(tablename, tablename)] = m
+                table = meta.tables[tablename]
+                if hasattr(table, '__appname__') and table.__appname__ in apps:
+                    t[tables_map.get(tablename, tablename)] = table
+                    table.__mapping_only__ = tables_mapping_only.get(tablename, False)
     elif tables:
         t = {}
         for tablename in tables:
@@ -86,6 +96,7 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
                     table = all_meta.tables[tablename]
                     table.__appname__ = 'UNKNOWN'
                 t[tables_map.get(tablename, tablename)] = table
+                table.__mapping_only__ = tables_mapping_only.get(tablename, False)
             else:
                 print "Table [%s] can't be found, it'll be skipped." % tablename
     else:
@@ -99,7 +110,7 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
                 table = all_meta.tables[tablename]
                 table.__appname__ = 'UNKNOWN'
             t[tables_map.get(tablename, tablename)] = table
-     
+            table.__mapping_only__ = tables_mapping_only.get(tablename, False)
     return t
 
 def get_sorted_tables(tables):
