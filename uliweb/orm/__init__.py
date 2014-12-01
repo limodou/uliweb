@@ -1251,7 +1251,7 @@ class CharProperty(Property):
         super(CharProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
     
     def convert(self, value):
-        if not value:
+        if value is None:
             return u''
         if isinstance(value, str):
             return unicode(value, __default_encoding__)

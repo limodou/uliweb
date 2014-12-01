@@ -2288,8 +2288,8 @@ class ListView(SimpleListView):
                 query = query.filter(condition)
         else:
             query = self.model.filter(condition)
-            
-        if settings.GLOBAL.DEBUG and request.GET.get('_debug_'):
+
+        if request.GET.get('_debug_'):
             log.info(rawsql(query.get_query()))
         
         if self.pagination:
