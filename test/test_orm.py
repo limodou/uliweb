@@ -654,6 +654,13 @@ def test_none_value():
     >>> a.decimal = None
     >>> a.to_dict()
     {'date1': None, 'date3': None, 'date2': None, 'string': '', 'decimal': '0.0', 'float': 0.0, 'boolean': False, 'integer': None, 'id': None}
+    >>> b = Test()
+    >>> b.string = 0
+    >>> b.string
+    u'0'
+    >>> b.string = False
+    >>> b.string
+    False
     """
 
 def test_match():
