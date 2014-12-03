@@ -1061,10 +1061,10 @@ class ShellCommand(Command):
     help = 'Create a new interactive python shell environment.'
     args = '<filename>'
     check_apps_dirs = True
-#    option_list = (
-#        make_option('-i', dest='ipython', default=False, action='store_true',
-#            help='Using ipython if exists.'),
-#    )
+    option_list = (
+        make_option('-I', dest='no_ipython', default=False, action='store_true',
+            help='Not using ipython.'),
+    )
     banner = "Uliweb Command Shell"
     
     def make_shell_env(self, global_options):
@@ -1095,16 +1095,21 @@ class ShellCommand(Command):
         else:
             import rlcompleter
             readline.parse_and_bind("tab: complete")
-        
-#        if options.ipython:
-#            try:
-#                import IPython
-#            except ImportError:
-#                pass
-#            else:
-#                sh = IPython.Shell.IPShellEmbed(banner=self.banner)
-#                sh(global_ns={}, local_ns=namespace)
-#                return
+
+        #according to https://github.com/ipython/ipython/wiki/Cookbook%3a-Updating-code-for-use-with-IPython-0.11-and-later
+        if not options.no_ipython:
+            try:
+                import IPython
+                from IPython.config.loader import Config
+                cfg = Config()
+                # cfg.PromptManager.in_template="In [\\#]> "
+                # cfg.PromptManager.out_template="Out [\\#]: "
+                # directly open the shell
+                IPython.embed(config=cfg, user_ns=namespace, banner2=self.banner)
+                return
+            except ImportError:
+                pass
+
         from code import interact, InteractiveConsole
         Interpreter = MyInteractive(namespace)
         if args:
