@@ -541,7 +541,8 @@ class Dispatcher(object):
     installed = False
     def __init__(self, apps_dir='apps', project_dir=None, include_apps=None, 
         start=True, default_settings=None, settings_file='settings.ini', 
-        local_settings_file='local_settings.ini', xhr_redirect_json=True):
+        local_settings_file='local_settings.ini', xhr_redirect_json=True,
+        reset=False):
             
         global _xhr_redirect_json
         
@@ -553,7 +554,7 @@ class Dispatcher(object):
         self.default_settings = default_settings or {}
         self.settings_file = settings_file
         self.local_settings_file = local_settings_file
-        if not Dispatcher.installed:
+        if not Dispatcher.installed or reset:
             self.init(project_dir, apps_dir)
             dispatch.call(self, 'startup_installed')
             self.init_urls()

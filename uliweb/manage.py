@@ -106,6 +106,7 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
         local_settings_file=local_settings_file, 
         start=start,
         default_settings=default_settings,
+        reset=True,
         **dispatcher_kwargs)
     
     if verbose:

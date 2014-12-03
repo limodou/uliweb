@@ -300,47 +300,47 @@ def test_model_config_app():
     [default] Creating [5/6, uliweb] user...SKIPPED(Mapping Table)
     [default] Creating [6/6, uliweb] usergroup...EXISTED
     """
-app = make_simple_application(project_dir='.', reuse=False)
-set_echo(True)
-M = get_model('model_config')
-MH = get_model('model_config_his')
-fields = [
-    ('year', 'int'),
-    ('username', 'str'),
-    ('age', 'int'),
-    ('group', 'Reference', {'reference_class':'usergroup', 'collection_name':'myusers'})
-]
-indexes = [
-    ('user_idx', ['year'], {'unique':True})
-]
-ext_fields = [
-    ('skill', 'int'),
-    ('level', 'int'),
-]
-ext_indexes = [
-    ('user_ext_idx', ['skill'])
-]
-from uliweb.utils.common import get_uuid
-from uliweb.utils import date
-MH.remove()
-mh = MH(model_name='user', table_name='user', basemodel='Test.models.User',
-      fields=fields, indexes=indexes, has_extension=True,
-      extension_fields=ext_fields, extension_indexes=ext_indexes,
-      uuid=get_uuid())
-mh.save(version=True)
-
-M.remove()
-m = M(name='user', cur_uuid=mh.uuid, submitted_time=date.now())
-m.save(version=True)
-from uliweb.contrib.orm.commands import get_tables
-
-tables = []
-for name, t in get_tables('.').items():
-    tables.append((name, t.__mapping_only__))
-print tables
-
-tables = []
-for name, t in get_metadata().tables.items():
-    tables.append((name, t.__mapping_only__))
-print tables
-manage.call('uliweb syncdb -v')
+# app = make_simple_application(project_dir='.', reuse=False)
+# set_echo(True)
+# M = get_model('model_config')
+# MH = get_model('model_config_his')
+# fields = [
+#     ('year', 'int'),
+#     ('username', 'str'),
+#     ('age', 'int'),
+#     ('group', 'Reference', {'reference_class':'usergroup', 'collection_name':'myusers'})
+# ]
+# indexes = [
+#     ('user_idx', ['year'], {'unique':True})
+# ]
+# ext_fields = [
+#     ('skill', 'int'),
+#     ('level', 'int'),
+# ]
+# ext_indexes = [
+#     ('user_ext_idx', ['skill'])
+# ]
+# from uliweb.utils.common import get_uuid
+# from uliweb.utils import date
+# MH.remove()
+# mh = MH(model_name='user', table_name='user', basemodel='Test.models.User',
+#       fields=fields, indexes=indexes, has_extension=True,
+#       extension_fields=ext_fields, extension_indexes=ext_indexes,
+#       uuid=get_uuid())
+# mh.save(version=True)
+#
+# M.remove()
+# m = M(name='user', cur_uuid=mh.uuid, submitted_time=date.now())
+# m.save(version=True)
+# from uliweb.contrib.orm.commands import get_tables
+#
+# tables = []
+# for name, t in get_tables('.').items():
+#     tables.append((name, t.__mapping_only__))
+# print tables
+#
+# tables = []
+# for name, t in get_metadata().tables.items():
+#     tables.append((name, t.__mapping_only__))
+# print tables
+# manage.call('uliweb syncdb -v')
