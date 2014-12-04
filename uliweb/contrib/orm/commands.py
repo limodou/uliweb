@@ -887,8 +887,9 @@ class SqldotCommand(SQLCommandMixin, Command):
             apps = args
         else:
             apps = self.get_apps(global_options)
-        
-        tables = get_tables(global_options.apps_dir, apps, engine_name=options.engine, 
+
+        tables = get_tables(global_options.apps_dir, args,
+            engine_name=options.engine,
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings)
         print generate_dot(tables, apps)
