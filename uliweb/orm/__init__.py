@@ -502,12 +502,16 @@ def rawsql(query, ec=None):
     if b:
         return comp.string % comp.params
     else:
-        params = []
-        for k in comp.positiontup:
-            v = comp.params[k]
-            params.append(repr(simple_value(v)))
-        line = comp.string.replace('?', '%s') % tuple(params)
-        return line.replace('\n', '')+';'
+        if dialect.name == 'postgresql':
+            from sqlalchemy.dialects import postgresql
+            return str(query.statement.compile(dialect=postgresql.dialect()))
+        else:
+            params = []
+            for k in comp.positiontup:
+                v = comp.params[k]
+                params.append(repr(simple_value(v)))
+            line = comp.string.replace('?', '%s') % tuple(params)
+            return line.replace('\n', '')+';'
     
 def get_engine_name(ec=None):
     """

@@ -660,7 +660,7 @@ def test_none_value():
     u'0'
     >>> b.string = False
     >>> b.string
-    False
+    u'False'
     """
 
 def test_match():
