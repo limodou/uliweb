@@ -20,14 +20,7 @@ def after_init_apps(sender):
     
     patch_none = settings.get_var('ORM/PATCH_NONE')
     if patch_none:
-        from sqlalchemy import __version__
-        
-        if tuple(map(int, __version__.split('.')[:2])) >= (0, 9):
-            import sqlalchemy.sql.elements as exp
-            if patch_none == 'empty':
-                exp.and_ = and_empty(exp.and_)
-            elif patch_none == 'exception':
-                exp.and_ = and_exception(exp.and_)
+        patch(patch_none)
     
     #judge if transaction middle has not install then set
     #AUTO_DOTRANSACTION is False
@@ -73,24 +66,23 @@ def after_init_apps(sender):
                     break
             orm.set_model(path, name)
 
-def and_empty(func):
-    def and_(*clauses):
-        c = []
-        for clause in clauses:
-            if clause is not None:
-                c.append(clause)
-        return func(*c)
-    return and_
+def patch(patch_none='empty'):
+    from sqlalchemy import __version__
 
-def and_exception(func):
-    def and_(*clauses):
-        c = []
-        for clause in clauses:
-            if clause is not None:
-                c.append(clause)
-        return func(*c)
-    return and_
+    if tuple(map(int, __version__.split('.')[:2])) >= (0, 9):
+        def f(func, exception=False):
+            def _construct(cls, operator, continue_on, skip_on, *clauses, **kw):
+                c = []
+                for clause in clauses:
+                    if clause is not None:
+                        c.append(clause)
+                    else:
+                        if exception:
+                            raise Exception("Found None condition, in %r" % clauses)
+                return func(operator, continue_on, skip_on, *c, **kw)
+            return _construct
 
+        import sqlalchemy.sql.elements as exp
+        _f = f(exp.BooleanClauseList._construct, patch_none=='exception')
+        exp.BooleanClauseList._construct = classmethod(_f)
 
-
-    

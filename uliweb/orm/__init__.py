@@ -503,8 +503,7 @@ def rawsql(query, ec=None):
         return comp.string % comp.params
     else:
         if dialect.name == 'postgresql':
-            from sqlalchemy.dialects import postgresql
-            return str(query.statement.compile(dialect=postgresql.dialect()))
+            return comp.string
         else:
             params = []
             for k in comp.positiontup:

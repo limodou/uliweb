@@ -2463,7 +2463,7 @@ def test_rename_table_and_columns():
     >>> x = User.get(User.c.username=='limodou') # doctest:+ELLIPSIS
     <BLANKLINE>
     ===>>>>> [default] (...)
-    SELECT test_user.f_username, test_user.f_year, test_user.id FROM test_user WHERE test_user.f_username = 'limodou' LIMIT 1 OFFSET 0;
+    SELECT test_user.f_username, test_user.f_year, test_user.id FROM test_user WHERE test_user.f_username = 'limodou'...LIMIT 1 OFFSET 0;
     ===<<<<< time used ...
     <BLANKLINE>
     >>> set_echo(False)
@@ -2476,6 +2476,21 @@ def test_rename_table_and_columns():
     >>> g2 = Group.get(1)
     >>> print repr(g2.user)
     <User {'username':u'limodou','year':5,'id':1}>
+    """
+
+def test_none_condition():
+    """
+    >>> from uliweb.contrib.orm import patch
+    >>> patch()
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     __tablename__ = 'test_user'
+    ...     username = Field(CHAR, fieldname='f_username', max_length=20)
+    ...     year = Field(int, fieldname='f_year')
+    >>> print (User.c.username=='limodou') & None
+    test_user.f_username = :f_username_1
     """
 
 # db = get_connection('sqlite://')
@@ -2501,23 +2516,23 @@ def test_rename_table_and_columns():
 #
 # print list(User.all().join(Group, User.c.id==Group.c.user))
 
-db = get_connection('sqlite://')
-db.echo = False
-db.metadata.drop_all()
-db.metadata.clear()
-class User(Model):
-    username = Field(CHAR, max_length=20)
-    year = Field(int)
-    users = ManyToMany(through='relation', through_reference_fieldname='user_b', through_reversed_fieldname='user')
-class Relation(Model):
-    user = Reference('user')
-    user_b = Reference('user')
-    year = Field(int)
-a = User(username='limodou', year=5)
-a.save()
-
-b = User(username='guest', year=5)
-b.save()
-r = Relation(user=a, user_b=b, year=20)
-r.save()
-print (a.users.all())
+# db = get_connection('sqlite://')
+# db.echo = False
+# db.metadata.drop_all()
+# db.metadata.clear()
+# class User(Model):
+#     username = Field(CHAR, max_length=20)
+#     year = Field(int)
+#     users = ManyToMany(through='relation', through_reference_fieldname='user_b', through_reversed_fieldname='user')
+# class Relation(Model):
+#     user = Reference('user')
+#     user_b = Reference('user')
+#     year = Field(int)
+# a = User(username='limodou', year=5)
+# a.save()
+#
+# b = User(username='guest', year=5)
+# b.save()
+# r = Relation(user=a, user_b=b, year=20)
+# r.save()
+# print (a.users.all())
