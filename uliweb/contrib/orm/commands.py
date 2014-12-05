@@ -2,14 +2,13 @@ import os, sys
 import re
 import datetime
 from decimal import Decimal
-from uliweb.core.commands import Command, get_answer, CommandManager
+from uliweb.core.commands import Command, get_answer, CommandManager, get_commands
 from optparse import make_option
 from uliweb.utils.common import log, is_pyfile_exist
 from sqlalchemy.types import *
 from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
 from uliweb.orm import get_connection, set_auto_set_model, do_
-import inspect
 from time import time
 
 def get_engine(options, global_options):
@@ -1008,22 +1007,6 @@ class ValidatedbCommand(SQLCommandMixin, Command):
                 
             if global_options.verbose or flag!='OK':
                 print 'Validating [%s] %s...%s' % (options.engine, show_table(name, t, i, _len), flag)
-
-def get_commands(mod):
-    import types
-    
-    commands = {}
-    
-    def check(c):
-        return (inspect.isclass(c) and 
-            issubclass(c, Command) and c is not Command and not issubclass(c, CommandManager))
-    
-    for name in dir(mod):
-        c = getattr(mod, name)
-        if check(c):
-            commands[c.name] = c
-        
-    return commands
 
 class AlembicCommand(SQLCommandMixin, CommandManager):
     name = 'alembic'

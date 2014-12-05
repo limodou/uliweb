@@ -50,6 +50,26 @@ def get_answer(message, answers='Yn', default='Y', quit=''):
         sys.exit(0)
     return ans
 
+def get_commands(mod):
+    """
+    Find commands from a module
+    """
+    import inspect
+    import types
+
+    commands = {}
+
+    def check(c):
+        return (inspect.isclass(c) and
+            issubclass(c, Command) and c is not Command and not issubclass(c, CommandManager))
+
+    for name in dir(mod):
+        c = getattr(mod, name)
+        if check(c):
+            commands[c.name] = c
+
+    return commands
+
 def get_input(prompt, default=None, choices=None, option_value=None):
     """
     If option_value is not None, then return it. Otherwise get the result from 
@@ -173,7 +193,7 @@ class Command(object):
                     args.append(p)
         try:
             self.handle(options, global_options, *args)
-        except CommandError, e:
+        except CommandError as e:
             log.exception(e)
             sys.exit(1)
 
@@ -268,7 +288,7 @@ class CommandManager(Command):
         # Preprocess options to extract --settings and --pythonpath.
         # These options could affect the commands that are available, so they
         # must be processed early.
-        parser = NewOptionParser(prog=self.prog_name,
+        self.parser = parser = NewOptionParser(prog=self.prog_name,
                              usage=self.usage_info,
 #                             version=self.get_version(),
                              formatter = NewFormatter(),
@@ -290,19 +310,22 @@ class CommandManager(Command):
         if callback:
             callback(global_options)
             
-        def print_help(global_options):
-            parser.print_help()
-            sys.stderr.write(self.print_help_info(global_options) + '\n')
-            sys.exit(0)
-            
         if len(args) == 0:
             if global_options.version:
                 print self.get_version()
                 sys.exit(0)
             else:
-                print_help(global_options)
+                self.print_help(global_options)
                 sys.ext(1)
-    
+
+        self.do_command(args, global_options)
+
+    def print_help(self, options):
+        self.parser.print_help()
+        sys.stderr.write(self.print_help_info(options) + '\n')
+        sys.exit(0)
+
+    def do_command(self, args, global_options):
         try:
             subcommand = args[0]
         except IndexError:
@@ -318,9 +341,9 @@ class CommandManager(Command):
                     command().print_help(self.prog_name, args[1])
                 sys.exit(0)
             else:
-                print_help(global_options)
+                self.print_help(global_options)
         if global_options.help:
-            print_help(global_options)
+            self.print_help(global_options)
         else:
             command = self.fetch_command(global_options, subcommand)
             if issubclass(command, CommandManager):
