@@ -69,19 +69,19 @@ def test_get_model():
 def _get_model_1(sender, model_name, model_inst, model_info, model_config):
     if model_name == 'user':
         fields = [
-            ('username', 'str'),
-            ('year', 'int', {'default':30}),
-            ('birth', 'datetime.date'),
+            {'name':'username', 'type':'str'},
+            {'name':'year', 'type':'int', 'default':30},
+            {'name':'birth', 'type':'datetime.date'},
         ]
         return create_model(model_name, fields)
 
 def _get_model_2(sender, model_name, model_inst, model_info, model_config):
     if model_name == 'user':
         fields = [
-            ('username', 'str'),
-            ('year', 'int', {'default':30}),
-            ('birth', 'datetime.date'),
-            ('active', 'bool'),
+            {'name':'username', 'type':'str'},
+            {'name':'year', 'type':'int', 'default':30},
+            {'name':'birth', 'type':'datetime.date'},
+            {'name':'active', 'type':'bool'},
         ]
         return create_model(model_name, fields)
 
@@ -92,9 +92,9 @@ def _get_model_3(sender, model_name, model_inst, model_info, model_config):
         print ext_name
 
         fields = [
-            ('_parent', 'OneToOne', {'reference_class':'user', 'collection_name':'ext'}),
+            {'name':'_parent', 'type':'OneToOne', 'reference_class':'user', 'collection_name':'ext'},
             # {'name':'_parent', 'type':'int'},
-            ('name', 'str'),
+            {'name':'name', 'type':'str'},
         ]
         x = create_model(ext_name, fields)
         #x.OneToOne('_parent', model_inst, collection_name='ext')
@@ -107,10 +107,10 @@ def _get_model_4(sender, model_name, model_inst, model_info, model_config):
         print ext_name
 
         fields = [
-            ('_parent', 'OneToOne', {'reference_class':'user', 'collection_name':'ext'}),
+            {'name':'_parent', 'type':'OneToOne', 'reference_class':'user', 'collection_name':'ext'},
             # {'name':'_parent', 'type':'int'},
-            ('name', 'str'),
-            ('active', 'bool'),
+            {'name':'name', 'type':'str'},
+            {'name':'active', 'type':'bool'},
         ]
         x = create_model(ext_name, fields)
         #x.OneToOne('_parent', model_inst, collection_name='ext')

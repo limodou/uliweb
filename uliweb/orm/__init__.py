@@ -716,12 +716,10 @@ def set_model(model, tablename=None, created=None, appname=None, model_path=None
 
     For dynamic model you should pass model_path with '' value
     """
-    
     if isinstance(model, type) and issubclass(model, Model):
         #use alias first
         tablename = model._alias or model.tablename
     tablename = tablename.lower()
-    
     #set global __models__
     d = __models__.setdefault(tablename, {})
     engines = d.get('config', {}).pop('engines', ['default'])
@@ -786,7 +784,10 @@ def create_model(modelname, fields, indexes=None, basemodel=None, **props):
     """
     Create model dynamically
 
-    :param fields: Just format like [(name, type, kwargs), ...]
+    :param fields: Just format like [
+                        {'name':name, 'type':type, ...},
+                        ...
+                        ]
                     type should be a string, eg. 'str', 'int', etc
                     kwargs will be passed to Property.__init__() according field type,
                     it'll be a dict
@@ -794,9 +795,13 @@ def create_model(modelname, fields, indexes=None, basemodel=None, **props):
     :param indexes: Multiple fields index, single index can be set directly using `index=True`
                     to a field, the value format should be:
 
-                    [(name, *args, **kwargs), ...]
+                    [
+                        {'name':name, 'fields':[...], ...},
+                    ]
 
-                    e.g. [ ('audit_idx', ['table_id', 'obj_id'], {})]
+                    e.g. [
+                        {'name':'audit_idx', 'fields':['table_id', 'obj_id']}
+                    ]
 
                     for kwargs can be ommited.
 
@@ -804,34 +809,38 @@ def create_model(modelname, fields, indexes=None, basemodel=None, **props):
                     parent methods, it can be a string or a real class object
     """
     assert not props or isinstance(props, dict)
-    assert not indexes or isinstance(indexes, list) and isinstance(indexes[0], (list, tuple))
+    assert not indexes or isinstance(indexes, list)
 
     props = SortedDict(props or {})
     props['__dynamic__'] = True
     props['__config__'] = False
 
     for p in fields:
-        if len(p) == 2:
-            name, _type = p
-            kwargs = {}
-        else:
-            name, _type, kwargs = p
+        kwargs = p.copy()
+        name = kwargs.pop('name')
+        _type = kwargs.pop('type')
+
+        #if the key is start with '_', then remove it
+        for k in kwargs.keys():
+            if k.startswith('_'):
+                kwargs.pop(k, None)
+
         field_type = get_field_type(_type)
         prop = field_type(**kwargs)
         props[name] = prop
 
     if basemodel:
         model = import_attr(basemodel)
-        model.clear_relation()
+        # model.clear_relation()
     else:
         model = Model
-    try:
-        old = get_model(modelname, signal=False)
-        old.clear_relation()
-    except ModelNotFound as e:
-        pass
+    # try:
+    #     old = get_model(modelname, signal=False)
+    #     old.clear_relation()
+    # except ModelNotFound as e:
+    #     pass
 
-    cls = type(modelname.title(), (model,), props)
+    cls = type(str(modelname.title()), (model,), props)
 
     tablename = props.get('__tablename__', modelname)
     set_model(cls, tablename, appname=__name__, model_path='')
@@ -839,13 +848,16 @@ def create_model(modelname, fields, indexes=None, basemodel=None, **props):
 
     indexes = indexes or []
     for x in indexes:
-        if len(x) == 2:
-            name, fields = x
-            kwargs = {}
-        else:
-            name, fields, kwargs = x
+        kwargs = x.copy()
+        name = kwargs.pop('name')
+        fields = kwargs.pop('fields')
 
-        if not isinstance(fields, (list, tuple)) or not isinstance(kwargs, dict):
+        #if the key is start with '_', then remove it
+        for k in kwargs.keys():
+            if k.startswith('_'):
+                kwargs.pop(k, None)
+
+        if not isinstance(fields, (list, tuple)):
             raise ValueError("Index value format is not right, the value is %r" % indexes)
 
         props = []
@@ -977,7 +989,7 @@ def get_model(model, engine_name=None, signal=True, reload=False):
                     if __lazy_model_init__:
                         for k, v in model_inst.properties.items():
                             v.__property_config__(model_inst, k)
-                    
+
                 #add bind process
                 if reload:
                     reset = True
@@ -1090,7 +1102,9 @@ def get_migrate_script(context, tables, metadata, engine_name=None):
     diffs = []
     engine = engine_manager[engine_name]
 
-    autogen_context, connection = _autogen_context(context, None)
+    imports = set()
+
+    autogen_context, connection = _autogen_context(context, imports)
 
     #init autogen_context
     autogen_context['opts']['sqlalchemy_module_prefix'] = 'sa.'
@@ -1112,20 +1126,26 @@ def get_migrate_script(context, tables, metadata, engine_name=None):
                     (),
                     inspector, metadata, diffs, autogen_context, False)
 
-    script = """def upgrade():
-    """ + _indent(_produce_upgrade_commands(diffs, autogen_context)) + """
+    script = """
+def upgrade():
+    """  + _indent(_produce_upgrade_commands(diffs, autogen_context)) + """
 upgrade()
 """
+    script = """
+import sqlalchemy as sa
+%s
+""" % '\n'.join(list(imports)) + script
     return script
 
 def run_migrate_script(context, script):
-    from alembic import op
-    import sqlalchemy as sa
+    import logging
     from alembic.operations import Operations
 
+    log = logging.getLogger(__name__)
     op = Operations(context)
     code = compile(script, '<string>', 'exec', dont_inherit=True)
-    env = {'op':op, 'sa':sa}
+    env = {'op':op}
+    log.debug(script)
     exec code in env
 
 def migrate_tables(tables, engine_name=None):
@@ -1148,6 +1168,8 @@ class ModelMetaclass(type):
 
         cls.properties = {}
         cls._fields_list = []
+        cls._collection_names = {}
+
         defined = set()
         is_replace = dct.get('__replace__')
         for base in bases:
@@ -1212,6 +1234,7 @@ class LazyValue(object):
 class Property(object):
     data_type = str
     field_class = String
+    type_name = 'str'
     creation_counter = 0
     property_type = 'column'   #Property type: 'column', 'compound', 'relation'
     server_default = None
@@ -1458,6 +1481,7 @@ class CharProperty(Property):
     data_type = unicode
     field_class = CHAR
     server_default=''
+    type_name = 'CHAR'
     
     def __init__(self, verbose_name=None, default=u'', max_length=None, **kwds):
         if __check_max_length__ and not max_length:
@@ -1487,6 +1511,8 @@ class StringProperty(CharProperty):
     field_class = VARCHAR
     
 class FileProperty(StringProperty):
+    type_name = 'FILE'
+
     def __init__(self, verbose_name=None, max_length=None, upload_to=None, upload_to_sub=None, **kwds):
         max_length = max_length or 255
         super(FileProperty, self).__init__(verbose_name, max_length=max_length, **kwds)
@@ -1499,7 +1525,8 @@ class UnicodeProperty(CharProperty):
 class TextProperty(Property):
     field_class = Text
     data_type = unicode
-    
+    type_name = 'TEXT'
+
     def __init__(self, verbose_name=None, default=u'', **kwds):
         super(TextProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
     
@@ -1514,6 +1541,7 @@ class TextProperty(Property):
 class BlobProperty(Property):
     field_class = BLOB
     data_type = str
+    type_name = 'BLOB'
     
     def __init__(self, verbose_name=None, default='', **kwds):
         super(BlobProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
@@ -1529,6 +1557,7 @@ class BlobProperty(Property):
 class PickleProperty(BlobProperty):
     field_class = PickleType
     data_type = None
+    type_name = 'PICKLE'
     
     def to_str(self, v):
         return pickle.dumps(v, pickle.HIGHEST_PROTOCOL)
@@ -1543,6 +1572,7 @@ class DateTimeProperty(Property):
     data_type = datetime.datetime
     field_class = DateTime
     server_default = '0000-00-00 00:00:00'
+    type_name = 'DATETIME'
     
     def __init__(self, verbose_name=None, auto_now=False, auto_now_add=False,
             format=None, **kwds):
@@ -1598,6 +1628,7 @@ class DateProperty(DateTimeProperty):
     data_type = datetime.date
     field_class = Date
     server_default = '0000-00-00'
+    type_name = 'DATE'
     
     @staticmethod
     def _convert_func(*args, **kwargs):
@@ -1611,6 +1642,7 @@ class TimeProperty(DateTimeProperty):
     data_type = datetime.time
     field_class = Time
     server_default = '00:00:00'
+    type_name = 'TIME'
     
     @staticmethod
     def _convert_func(*args, **kwargs):
@@ -1626,6 +1658,7 @@ class IntegerProperty(Property):
     data_type = int
     field_class = Integer
     server_default=text('0')
+    type_name = 'int'
     
     def __init__(self, verbose_name=None, default=0, **kwds):
         super(IntegerProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1645,6 +1678,7 @@ class IntegerProperty(Property):
 
 class BigIntegerProperty(IntegerProperty):
     field_class = BigInteger
+    type_name = 'BIGINT'
     
 class FloatProperty(Property):
     """A float property."""
@@ -1652,6 +1686,7 @@ class FloatProperty(Property):
     data_type = float
     field_class = Float
     server_default=text('0')
+    type_name = 'FLOAT'
     
     def __init__(self, verbose_name=None, default=0.0, precision=None, **kwds):
         super(FloatProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1680,6 +1715,7 @@ class DecimalProperty(Property):
     data_type = decimal.Decimal
     field_class = Numeric
     server_default=text('0.00')
+    type_name = 'DECIMAL'
     
     def __init__(self, verbose_name=None, default='0.0', precision=10, scale=2, **kwds):
         super(DecimalProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1712,6 +1748,7 @@ class BooleanProperty(Property):
     data_type = bool
     field_class = Boolean
     server_default=text('0')
+    type_name = 'bool'
     
     def __init__(self, verbose_name=None, default=False, **kwds):
         super(BooleanProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1735,6 +1772,7 @@ class ReferenceProperty(Property):
     """
     data_type = int
     field_class = PKCLASS()
+    type_name = 'Reference'
 
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
         reference_fieldname=None, required=False, engine_name=None, **attrs):
@@ -1815,7 +1853,7 @@ class ReferenceProperty(Property):
         else:
             self.reference_class = get_model(self.reference_class, self.engine_name,
                                              signal=False)
-        self.collection_name = self.reference_class.get_collection_name(self._collection_name, model_class.tablename)
+        self.collection_name = self.reference_class.get_collection_name(model_class.tablename, self._collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
             _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
 
@@ -1931,6 +1969,8 @@ class ReferenceProperty(Property):
 Reference = ReferenceProperty
 
 class OneToOne(ReferenceProperty):
+    type_name = 'OneToOne'
+
     def create(self, cls):
         global __nullable__
         
@@ -2651,6 +2691,8 @@ class ManyResult(Result):
             yield o
         
 class ManyToMany(ReferenceProperty):
+    type_name = 'ManyToMany'
+
     def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
         reference_fieldname=None, reversed_fieldname=None, required=False, through=None, 
         through_reference_fieldname=None, through_reversed_fieldname=None, 
@@ -2680,16 +2722,21 @@ class ManyToMany(ReferenceProperty):
         if not self.through:
             self.fielda = "%s_id" % self.model_class.tablename
             #test model_a is equels model_b
-            if self.model_class.tablename == self.reference_class.tablename:
+            #modified by limodou
+            #if self.model_class.tablename == self.reference_class.tablename:
+            if cls.tablename == self.reference_class.tablename:
                 _t = self.reference_class.tablename + '_b'
             else:
                 _t = self.reference_class.tablename
             self.fieldb = "%s_id" % _t
             self.table = self.create_table()
             #add appname to self.table
-            appname = self.model_class.__module__
+            # appname = self.model_class.__module__
+            appname = cls.__module__
             self.table.__appname__ = appname[:appname.rfind('.')]
-            self.model_class.manytomany.append(self.table)
+            #modified by limodou
+            #self.model_class.manytomany.append(self.table)
+            cls.manytomany.append(self.table)
             index_name = '%s_mindx' % self.tablename
             if index_name not in [x.name for x in self.table.indexes]:
                 Index(index_name, self.table.c[self.fielda], self.table.c[self.fieldb], unique=True)
@@ -2699,7 +2746,8 @@ class ManyToMany(ReferenceProperty):
 
             #process __mapping_only__ property, if the modela or modelb is mapping only
             #then manytomany table will be mapping only
-            if getattr(self.model_class, '__mapping_only__', False) or getattr(self.reference_class, '__mapping_only__', False):
+            # if getattr(self.model_class, '__mapping_only__', False) or getattr(self.reference_class, '__mapping_only__', False):
+            if getattr(cls, '__mapping_only__', False) or getattr(self.reference_class, '__mapping_only__', False):
                 self.table.__mapping_only__ = True
             else:
                 self.table.__mapping_only__ = False
@@ -2807,7 +2855,7 @@ class ManyToMany(ReferenceProperty):
                                              signal=False)
 
         self.tablename = '%s_%s_%s' % (model_class.tablename, self.reference_class.tablename, property_name)
-        self.collection_name = self.reference_class.get_collection_name(self._collection_name, model_class.tablename)
+        self.collection_name = self.reference_class.get_collection_name(model_class.tablename, self._collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
             _ManyToManyReverseReferenceProperty(self, self.collection_name))
     
@@ -3442,7 +3490,7 @@ class Model(object):
             raise AttributeError("Prop should be instance of Property, but %r found" % prop)
         
     @classmethod
-    def get_collection_name(cls, collection_name=None, prefix=None):
+    def get_collection_name(cls, from_class_name, collection_name=None, prefix=None):
         """
         Get reference collection_name, if the collection_name is None
         then make sure the collection_name is not conflict, but
@@ -3457,8 +3505,9 @@ class Model(object):
                 collection_name = prefix + '_set_' + str(cls._collection_set_id)
                 cls._collection_set_id += 1
         else:
-            if hasattr(cls, collection_name):
-                raise DuplicatePropertyError("Model %s already has property %s" % (cls.__name__, collection_name))
+            if collection_name in cls._collection_names:
+                if cls._collection_names.get(collection_name) != from_class_name:
+                    raise DuplicatePropertyError("Model %s already has property %s" % (cls.__name__, collection_name))
         return collection_name
             
     @classmethod
@@ -3853,8 +3902,9 @@ class Model(object):
         ManyToMany
         """
         for k, v in cls.properties.items():
+            print '=====', k, v.name, isinstance(v, ReferenceProperty)
             if isinstance(v, ReferenceProperty):
-                if v.collection_name and hasattr(v.reference_class, v.collection_name):
+                if hasattr(v, 'collection_name') and hasattr(v.reference_class, v.collection_name):
                     delattr(v.reference_class, v.collection_name)
 
                     if isinstance(v, OneToOne):

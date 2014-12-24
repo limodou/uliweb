@@ -303,7 +303,7 @@ def get_app_dir(app):
         try:
             path = pkg.resource_filename(p[0], '')
         except ImportError as e:
-            log.error("Can't import app %s" % p[0])
+            log.error("Can't import app %s" % app)
             log.exception(e)
             path = ''
         if len(p) > 1:
@@ -555,6 +555,7 @@ class Dispatcher(object):
         self.settings_file = settings_file
         self.local_settings_file = local_settings_file
         if not Dispatcher.installed or reset:
+            dispatch.reset()
             self.init(project_dir, apps_dir)
             dispatch.call(self, 'startup_installed')
             self.init_urls()

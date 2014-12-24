@@ -25,7 +25,7 @@ def test_dynamic_extend_model_1():
     """
     >>> app = make_simple_application(project_dir='.', reuse=False)
     >>> fields = [
-    ...     ('year', 'int')
+    ...     {'name':'year', 'type':'int'}
     ... ]
     >>> U = create_model('user2', fields)
     >>> print U.properties.keys()
@@ -36,7 +36,7 @@ def test_dynamic_extend_model_2():
     """
     >>> app = make_simple_application(project_dir='.', reuse=False)
     >>> fields = [
-    ...     ('year', 'int')
+    ...     {'name':'year', 'type':'int'}
     ... ]
     >>> U = create_model('user3', fields, basemodel='uliweb.contrib.auth.models.User')
     >>> print U.properties.keys()
@@ -49,7 +49,7 @@ def test_dynamic_extend_model_3():
     """
     >>> app = make_simple_application(project_dir='.', reuse=False)
     >>> fields = [
-    ...     ('year', 'int')
+    ...     {'name':'year', 'type':'int'}
     ... ]
     >>> U = create_model('user', fields, __replace__=True, basemodel='uliweb.contrib.auth.models.User')
     >>> U = get_model('user')
@@ -60,14 +60,27 @@ def test_dynamic_extend_model_3():
     True
     """
 
+def test_dynamic_extend_model_4():
+    """
+    >>> app = make_simple_application(project_dir='.', reuse=False)
+    >>> fields = [
+    ...     {'name':'year', 'type':'int', '_reserved':True}
+    ... ]
+    >>> U = create_model('user3', fields, basemodel='uliweb.contrib.auth.models.User')
+    >>> print U.properties.keys()
+    ['username', 'locked', 'deleted', 'image', 'date_join', 'email', 'is_superuser', 'last_login', 'year', 'active', 'password', 'nickname', 'id']
+    >>> print hasattr(U, 'check_password')
+    True
+    """
+
 def test_create_model_index():
     """
     >>> app = make_simple_application(project_dir='.')
     >>> fields = [
-    ...     ('year', 'int')
+    ...     {'name':'year', 'type':'int'}
     ... ]
     >>> indexes = [
-    ...     ('user_idx', ['year'], {'unique':True})
+    ...     {'name':'user_idx', 'fields':['year'], 'unique':True},
     ... ]
     >>> U = orm.create_model('user', fields, indexes=indexes,
     ...                      __replace__=True, basemodel='uliweb.contrib.auth.models.User')
@@ -80,11 +93,11 @@ def test_recreate_model():
     """
     >>> app = make_simple_application(project_dir='.')
     >>> fields = [
-    ...     ('year', 'int'),
-    ...     ('group', 'Reference', {'reference_class':'usergroup', 'collection_name':'myusers'})
+    ...     {'name':'year', 'type':'int'},
+    ...     {'name':'group', 'type':'Reference', 'reference_class':'usergroup', 'collection_name':'myusers'}
     ... ]
     >>> indexes = [
-    ...     ('user_idx', ['year'], {'unique':True})
+    ...     {'name':'user_idx', 'fields':['year'], 'unique':True},
     ... ]
     >>> U = orm.create_model('user', fields, indexes=indexes,
     ...                      __replace__=True, basemodel='uliweb.contrib.auth.models.User')
@@ -104,13 +117,13 @@ def test_model_config():
     >>> M = get_model('model_config')
     >>> MH = get_model('model_config_his')
     >>> fields = [
-    ...     ('year', 'int'),
-    ...     ('username', 'str'),
-    ...     ('age', 'int'),
-    ...     ('group', 'Reference', {'reference_class':'usergroup', 'collection_name':'myusers'})
+    ...     {'name':'year', 'type':'int'},
+    ...     {'name':'username', 'type':'str'},
+    ...     {'name':'age', 'type':'int'},
+    ...     {'name':'group', 'type':'Reference', 'reference_class':'usergroup', 'collection_name':'myusers'}
     ... ]
     >>> indexes = [
-    ...     ('user_idx', ['year'], {'unique':True})
+    ...     {'name':'user_idx', 'fields':['year'], 'unique':True},
     ... ]
     >>> from uliweb.utils.common import get_uuid
     >>> from uliweb.utils import date
@@ -119,7 +132,7 @@ def test_model_config():
     ...       uuid=get_uuid())
     >>> mh.save(version=True)
     True
-    >>> m = M(name='user', cur_uuid=mh.uuid, submitted_time=date.now())
+    >>> m = M(model_name='user', uuid=mh.uuid, published_time=date.now())
     >>> m.save(version=True)
     True
     >>> from uliweb.contrib.model_config import find_model
@@ -134,35 +147,35 @@ def test_model_config():
     >>> print repr(a)
     <User {'year':2014,'username':u'guest','age':30,'group':None,'id':1}>
     >>> fields = [
-    ...     ('year', 'int'),
-    ...     ('username', 'str'),
-    ...     ('age', 'int'),
-    ...     ('nickname', 'str'),
-    ...     ('group', 'Reference', {'reference_class':'usergroup', 'collection_name':'myusers'})
+    ...     {'name':'year', 'type':'int'},
+    ...     {'name':'username', 'type':'str'},
+    ...     {'name':'age', 'type':'int'},
+    ...     {'name':'nickname', 'type':'str'},
+    ...     {'name':'group', 'type':'Reference', 'reference_class':'usergroup', 'collection_name':'myusers'}
     ... ]
     >>> mh = MH(model_name='user', table_name='user', basemodel='Test.models.User',
     ...       fields=fields, indexes=indexes, has_extension=False,
     ...       uuid=get_uuid())
     >>> mh.save(version=True)
     True
-    >>> m = M.get(M.c.name=='user')
-    >>> m.cur_uuid = mh.uuid
+    >>> m = M.get(M.c.model_name=='user')
+    >>> m.uuid = mh.uuid
     >>> m.save(version=True)
     True
     >>> fields = [
-    ...     ('year', 'int'),
-    ...     ('username', 'str'),
-    ...     ('age', 'int'),
-    ...     ('nickname', 'str'),
-    ...     ('group', 'Reference', {'reference_class':'usergroup', 'collection_name':'myusers'})
+    ...     {'name':'year', 'type':'int'},
+    ...     {'name':'username', 'type':'str'},
+    ...     {'name':'age', 'type':'int'},
+    ...     {'name':'nickname', 'type':'str'},
+    ...     {'name':'group', 'type':'Reference', 'reference_class':'usergroup', 'collection_name':'myusers'}
     ... ]
     >>> mh = MH(model_name='user', table_name='user', basemodel='Test.models.User',
     ...       fields=fields, indexes=indexes, has_extension=False,
     ...       uuid=get_uuid())
     >>> mh.save(version=True)
     True
-    >>> m = M.get(M.c.name=='user')
-    >>> m.cur_uuid = mh.uuid
+    >>> m = M.get(M.c.model_name=='user')
+    >>> m.uuid = mh.uuid
     >>> m.save(version=True)
     True
     >>> M = get_model('user')
@@ -176,20 +189,20 @@ def test_extension_model():
     >>> M = get_model('model_config')
     >>> MH = get_model('model_config_his')
     >>> fields = [
-    ...     ('year', 'int'),
-    ...     ('username', 'str'),
-    ...     ('age', 'int'),
-    ...     ('group', 'Reference', {'reference_class':'usergroup', 'collection_name':'myusers'})
+    ...     {'name':'year', 'type':'int'},
+    ...     {'name':'username', 'type':'str'},
+    ...     {'name':'age', 'type':'int'},
+    ...     {'name':'group', 'type':'Reference', 'reference_class':'usergroup', 'collection_name':'myusers'}
     ... ]
     >>> indexes = [
-    ...     ('user_idx', ['year'], {'unique':True})
+    ...     {'name':'user_idx', 'fields':['year'], 'unique':True},
     ... ]
     >>> ext_fields = [
-    ...     ('skill', 'int'),
-    ...     ('level', 'int'),
+    ...     {'name':'skill', 'type':'int'},
+    ...     {'name':'level', 'type':'int'},
     ... ]
     >>> ext_indexes = [
-    ...     ('user_ext_idx', ['skill'])
+    ...     {'name':'user_ext_idx', 'fields':['skill']}
     ... ]
     >>> from uliweb.utils.common import get_uuid
     >>> from uliweb.utils import date
@@ -201,7 +214,7 @@ def test_extension_model():
     >>> mh.save(version=True)
     True
     >>> M.remove()
-    >>> m = M(name='user', cur_uuid=mh.uuid, submitted_time=date.now())
+    >>> m = M(model_name='user', uuid=mh.uuid, published_time=date.now())
     >>> m.save(version=True)
     True
     >>> from uliweb.contrib.model_config import find_model
@@ -225,19 +238,19 @@ def test_extension_model():
     >>> print repr(a.ext)
     <User_Extension {'_parent':<OneToOne:1>,'skill':2,'level':3,'id':1}>
     >>> fields = [
-    ...     ('year', 'int'),
-    ...     ('username', 'str'),
-    ...     ('age', 'int'),
-    ...     ('nickname', 'str'),
-    ...     ('group', 'Reference', {'reference_class':'usergroup', 'collection_name':'myusers'})
+    ...     {'name':'year', 'type':'int'},
+    ...     {'name':'username', 'type':'str'},
+    ...     {'name':'age', 'type':'int'},
+    ...     {'name':'nickname', 'type':'str'},
+    ...     {'name':'group', 'type':'Reference', 'reference_class':'usergroup', 'collection_name':'myusers'}
     ... ]
     >>> mh = MH(model_name='user', table_name='user', basemodel='Test.models.User',
     ...       fields=fields, indexes=indexes, has_extension=False,
     ...       uuid=get_uuid())
     >>> mh.save(version=True)
     True
-    >>> m = M.get(M.c.name=='user')
-    >>> m.cur_uuid = mh.uuid
+    >>> m = M.get(M.c.model_name=='user')
+    >>> m.uuid = mh.uuid
     >>> m.save(version=True)
     True
     >>> M = get_model('user')
@@ -251,20 +264,20 @@ def test_model_config_app():
     >>> M = get_model('model_config')
     >>> MH = get_model('model_config_his')
     >>> fields = [
-    ...     ('year', 'int'),
-    ...     ('username', 'str'),
-    ...     ('age', 'int'),
-    ...     ('group', 'Reference', {'reference_class':'usergroup', 'collection_name':'myusers'})
+    ...     {'name':'year', 'type':'int'},
+    ...     {'name':'username', 'type':'str'},
+    ...     {'name':'age', 'type':'int'},
+    ...     {'name':'group', 'type':'Reference', 'reference_class':'usergroup', 'collection_name':'myusers'}
     ... ]
     >>> indexes = [
-    ...     ('user_idx', ['year'], {'unique':True})
+    ...     {'name':'user_idx', 'fields':['year'], 'unique':True},
     ... ]
     >>> ext_fields = [
-    ...     ('skill', 'int'),
-    ...     ('level', 'int'),
+    ...     {'name':'skill', 'type':'int'},
+    ...     {'name':'level', 'type':'int'},
     ... ]
     >>> ext_indexes = [
-    ...     ('user_ext_idx', ['skill'])
+    ...     {'name':'user_ext_idx', 'fields':['skill']},
     ... ]
     >>> from uliweb.utils.common import get_uuid
     >>> from uliweb.utils import date
@@ -276,7 +289,7 @@ def test_model_config_app():
     >>> mh.save(version=True)
     True
     >>> M.remove()
-    >>> m = M(name='user', cur_uuid=mh.uuid, submitted_time=date.now())
+    >>> m = M(model_name='user', uuid=mh.uuid, published_time=date.now())
     >>> m.save(version=True)
     True
     >>> from uliweb.contrib.orm.commands import get_tables
@@ -344,3 +357,4 @@ def test_model_config_app():
 #     tables.append((name, t.__mapping_only__))
 # print tables
 # manage.call('uliweb syncdb -v')
+

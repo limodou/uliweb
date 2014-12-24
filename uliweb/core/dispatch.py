@@ -11,6 +11,12 @@ LOW = 3
 _receivers = {}
 _called = {}
 
+def reset():
+    global _receivers, _called
+
+    _receivers.clear()
+    _called.clear()
+
 def bind(topic, signal=None, kind=MIDDLE, nice=-1):
     """
     This is a decorator function, so you should use it as:
