@@ -944,8 +944,8 @@ class SqlShellCommand(SQLCommandMixin, Command):
                 host = v
                 port = None
             else:
-                host = v[0]
-                port = v[1]
+                host = x[0]
+                port = x[1]
         else:
             user = password = host = port = ''
 
@@ -956,14 +956,19 @@ class SqlShellCommand(SQLCommandMixin, Command):
             else:
                 p = ''
             cmd = 'mysql -u %s -p%s %s -h%s %s' % (user, password, database, host, p)
+            _cmd = 'mysql -u %s -p*** %s -h%s %s' % (user, database, host, p)
         elif _type == 'sqlite':
             cmd = 'sqlite %s' % database
+            _cmd = cmd
         elif _type == 'postgresql':
             if port:
                 p = '-p %s' % port
             else:
                 p = ''
-            cmd = 'psql -U %s -W%s -d %s -h %s %s' % (user, password, database, host, p)
+            cmd = 'export PGPASSWORD=%s;psql -U %s -h %s %s %s' % (password, user, host, p, database)
+            _cmd = 'export PGPASSWORD=***;psql -U %s -h %s %s %s' % (user, host, p, database)
+        if global_options.verbose:
+            print _cmd
         os.system(cmd)
 
 class ValidatedbCommand(SQLCommandMixin, Command):
