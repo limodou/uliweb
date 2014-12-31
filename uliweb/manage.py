@@ -1055,7 +1055,9 @@ class MyInteractive(InteractiveConsole):
                 self.write("\nKeyboardInterrupt\n")
                 self.resetbuffer()
                 more = 0
-    
+
+from uliweb import __version__
+
 class ShellCommand(Command):
     name = 'shell'
     help = 'Create a new interactive python shell environment.'
@@ -1064,9 +1066,14 @@ class ShellCommand(Command):
     option_list = (
         make_option('-I', dest='no_ipython', default=False, action='store_true',
             help='Not using ipython.'),
+        make_option('-n', '--notebook', dest='notebook', default=False, action='store_true',
+            help='Starting ipython notebook.'),
+        make_option('-m', '--module', dest='module', default='',
+            help="Module name that will be executed when starting the shell."),
     )
-    banner = "Uliweb Command Shell"
-    
+    banner = "Uliweb %s Command Shell" % __version__
+    skip_options = True
+
     def make_shell_env(self, global_options):
         from uliweb import functions, settings
         from uliweb.core.SimpleFrame import Dispatcher
@@ -1087,6 +1094,8 @@ class ShellCommand(Command):
         return env
     
     def handle(self, options, global_options, *args):
+        args = list(args)
+
         namespace = self.make_shell_env(global_options)
         try:
             import readline
@@ -1100,24 +1109,39 @@ class ShellCommand(Command):
         if not options.no_ipython:
             try:
                 import IPython
-                from IPython.config.loader import Config
-                cfg = Config()
-                # cfg.PromptManager.in_template="In [\\#]> "
-                # cfg.PromptManager.out_template="Out [\\#]: "
-                # directly open the shell
-                IPython.embed(config=cfg, user_ns=namespace, banner2=self.banner)
-                return
             except ImportError:
-                pass
+                print "Error: Can't import IPython, please install it first"
+                return
 
-        from code import interact, InteractiveConsole
-        Interpreter = MyInteractive(namespace)
-        if args:
-            def call():
-                execfile(args[0], namespace)
+            if options.module:
+                _args = ['-m', options.module]
+            else:
+                _args = []
+
+            if options.notebook:
+                # from IPython.html.notebookapp import NotebookApp
+                # app = NotebookApp.instance()
+                # app.initialize(['--ext', 'uliweb.utils.ipython_extension'] + args)
+                # app.start()
+                cmd = ' '.join(['LOCAL_SETTINGS='+global_options.local_settings,
+                       'SETTINGS='+global_options.settings,
+                       'ipython',
+                       'notebook', '--ext=uliweb.utils.ipython_extension'] + _args + args)
+                os.system(cmd)
+            else:
+                if options.module:
+                    _args.append('-i')
+                IPython.start_ipython(_args + args, user_ns=namespace, banner2=self.banner)
         else:
-            call = None
-        Interpreter.interact(self.banner, call=call)
+            from code import interact, InteractiveConsole
+            Interpreter = MyInteractive(namespace)
+            if args or options.module:
+                def call():
+                    mod = __import__(options.module or args[0], {}, {}, ['*'])
+                    namespace.update(vars(mod))
+            else:
+                call = None
+            Interpreter.interact(self.banner, call=call)
 register_command(ShellCommand)
 
 class FindCommand(Command):

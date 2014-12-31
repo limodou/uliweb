@@ -108,6 +108,7 @@ class Command(object):
     args = ''
     check_apps_dirs = True
     check_apps = False
+    skip_options = False #if True, then it'll skip not defined options and keep them in args
 
     def create_parser(self, prog_name, subcommand):
         """
@@ -168,7 +169,15 @@ class Command(object):
     
         """
         self.prog_name = prog
-        parser = self.create_parser(prog, subcommand)
+        if self.skip_options:
+            parser = NewOptionParser(prog=self.prog_name,
+                     usage=self.usage(subcommand),
+                    version='',
+                    formatter = NewFormatter(),
+                     add_help_option = False,
+                     option_list=self.option_list)
+        else:
+            parser = self.create_parser(prog, subcommand)
         options, args = parser.parse_args(argv)
         self.execute(args, options, global_options)
         
