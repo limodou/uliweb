@@ -965,8 +965,8 @@ class SqlShellCommand(SQLCommandMixin, Command):
                 p = '-p %s' % port
             else:
                 p = ''
-            cmd = 'export PGPASSWORD=%s;psql -U %s -h %s %s %s' % (password, user, host, p, database)
-            _cmd = 'export PGPASSWORD=***;psql -U %s -h %s %s %s' % (user, host, p, database)
+            cmd = 'PGPASSWORD=%s psql -U %s -h %s %s %s' % (password, user, host, p, database)
+            _cmd = 'PGPASSWORD=*** psql -U %s -h %s %s %s' % (user, host, p, database)
         if global_options.verbose:
             print _cmd
         os.system(cmd)
