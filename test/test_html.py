@@ -102,4 +102,24 @@ def test_other():
 #    a = {'name':u'中文', 'date':datetime.datetime(2010, 10, 25), 'data':{'name':'aaa', 'total': 100, 'has':True}}
 #    print json_dumps(a)
 #    print json_dumps(a, indent=4)
-#    
+#
+
+def test_Table():
+    """
+    >>> print Table([['a', 'b']], head=['A', 'B'])
+    <table>
+        <thead>
+            <tr>
+                <th>A</th>
+                <th>B</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>a</td>
+                <td>b</td>
+            </tr>
+        </tbody>
+    </table>
+    <BLANKLINE>
+    """

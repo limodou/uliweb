@@ -3132,6 +3132,44 @@ def get_field_type(_type):
     _t = eval(_type)
     return _fields_mapping.get(_t, _t)
 
+class ModelReprDescriptor(object):
+    def __get__(self, model_instance, model_class):
+        if model_instance is None:
+            return self._cls_repr_html_(model_class)
+
+        return self._instance_repr_html_(model_instance)
+
+    def _cls_repr_html_(self, cls):
+        def f():
+            return '<pre>'+print_model(cls)+'</pre>'
+        return f
+
+    def _instance_repr_html_(self, instance):
+        def f():
+            from uliweb.core.html import Table
+
+            s = []
+            for k, v in instance._fields_list:
+                if not isinstance(v, ManyToMany):
+                    t = getattr(instance, k, None)
+                    d = [v.verbose_name, k]
+                    _type = v.__class__.__name__
+                    if _type.endswith('Property'):
+                        _type = _type[:-8]
+                    if _type in ('String', 'Char', 'Unicode', 'File'):
+                        _type = _type + '(%d)' % v.max_length
+                    elif _type == 'Decimal':
+                        _type = _type + '(%d,%d)' % (v.precision, v.scale)
+                    d.append(_type)
+                    if isinstance(v, Reference) and t:
+                        d.append('%s:%r:%s' % (v.reference_class.__name__, t.id, unicode(t)))
+                    else:
+                        d.append(t)
+                    s.append(d)
+            return str(Table(s, ['Display Name', 'Column Name',
+                                              'Column Type', 'Value']))
+        return f
+
 class Model(object):
 
     __metaclass__ = ModelMetaclass
@@ -3146,6 +3184,9 @@ class Model(object):
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
+
+    #add support for IPython notebook display
+    _repr_html_ = ModelReprDescriptor()
     
     def __init__(self, **kwargs):
         self._old_values = {}
@@ -3430,7 +3471,7 @@ class Model(object):
     
     def __unicode__(self):
         return str(self.id)
-    
+
     def get_display_value(self, field_name, value=None):
         return self.properties[field_name].get_display_value(value or getattr(self, field_name))
         

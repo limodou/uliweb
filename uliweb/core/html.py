@@ -171,6 +171,24 @@ def begin_tag(tag, **kwargs):
 def end_tag(tag):
     return '</%s>' % tag
 
+def Table(data, head=None, **kwargs):
+    header = head or []
+    table = Tag('table', newline=True, **kwargs)
+    with table:
+        if head:
+            with table.thead as thead:
+                with thead.tr as tr:
+                    for h in header:
+                        tr.th(h)
+        if data:
+            with table.tbody as tbody:
+                for row in data:
+                    with tbody.tr as tr:
+                        for t in row:
+                            tr.td(t)
+    return table
+
+
 if __name__ == '__main__':
     b = Buf()
     with b.html(name='xml'):
