@@ -87,7 +87,7 @@ class {{=classname}}(object):
         def get_url(id):
             return url_for(self.__class__.list)
         
-        template_data = {'layout':'{{=appname}}_layout.html'}
+        template_data = {'layout':'{{=layout}}'}
         
         view = functions.AddView(self.model,
             ok_url=get_url,
