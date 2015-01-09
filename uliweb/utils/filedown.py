@@ -125,22 +125,34 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
         else:
             range = parse_range_header(environ.get('HTTP_RANGE'))
         #when request range,only recognize "bytes" as range units
-        if range!=None and range.units=="bytes":
-            rbegin,rend = range.ranges[0]
+        if range and range.units=="bytes":
             try:
                 fsize = os.path.getsize(real_filename)
             except OSError as e:
                 return Response("Not found",status=404)
-            if (rbegin+1)<fsize:
+            mtime = datetime.utcfromtimestamp(os.path.getmtime(real_filename))
+            mtime_str = http_date(mtime)
+            if cache:
+                etag = _generate_etag(mtime, fsize, real_filename)
+            else:
+                etag = mtime_str
+
+            if_range = environ.get('HTTP_IF_RANGE')
+            if if_range:
+                check_if_range_ok = (if_range.strip('"')==etag)
+                #print "check_if_range_ok (%s) = (%s ==%s)"%(check_if_range_ok,if_range.strip('"'),etag)
+            else:
+                check_if_range_ok = True
+
+            rbegin,rend = range.ranges[0]
+            if check_if_range_ok and (rbegin+1)<fsize:
                 if rend == None:
                     rend = fsize-1
                 headers.append(('Content-Length',str(rend-rbegin+1)))
                 #werkzeug do not count rend with the same way of rfc7233,so -1
                 headers.append(('Content-Range','%s %d-%d/%d' %(range.units,rbegin, rend-1, fsize)))
-                mtime = datetime.utcfromtimestamp(os.path.getmtime(real_filename))
-                headers.append(('Last-Modified', http_date(mtime)))
+                headers.append(('Last-Modified', mtime_str))
                 if cache:
-                    etag = _generate_etag(mtime, fsize, real_filename)
                     headers.append(('ETag', '"%s"' % etag))
                 #for small file, read it to memory and return directly
                 #and this can avoid some issue with google chrome
