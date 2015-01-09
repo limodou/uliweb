@@ -24,14 +24,14 @@ def _generate_etag(mtime, file_size, real_filename):
         file_size,
         adler32(real_filename) & 0xffffffff
     )
-    
+
 def _get_download_filename(env, filename):
     from uliweb.utils.common import safe_str
     import urllib2
     from werkzeug.useragents import UserAgent
-    
+
     agent = UserAgent(env)
-    
+
     fname = safe_str(filename, 'utf8')
     if agent.browser == 'msie':
         result = 'filename=' + urllib2.quote(fname)
@@ -79,7 +79,7 @@ class FileIterator(object):
         return chunk
     __next__ = next # py3 compat
 
-def filedown(environ, filename, cache=True, cache_timeout=None, 
+def filedown(environ, filename, cache=True, cache_timeout=None,
     action=None, real_filename=None, x_sendfile=False,
     x_header_name=None, x_filename=None, fileobj=None,
     default_mimetype='application/octet-stream'):
@@ -87,23 +87,23 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
     @param filename: is used for display in download
     @param real_filename: if used for the real file location
     @param x_urlfile: is only used in x-sendfile, and be set to x-sendfile header
-    @param fileobj: if provided, then returned as file content 
+    @param fileobj: if provided, then returned as file content
     @type fileobj: (fobj, mtime, size)
-    
+
     filedown now support web server controlled download, you should set
     xsendfile=True, and add x_header, for example:
-    
+
     nginx
         ('X-Accel-Redirect', '/path/to/local_url')
     apache
         ('X-Sendfile', '/path/to/local_url')
     """
     from werkzeug.http import parse_range_header
-    
+
     guessed_type = mimetypes.guess_type(filename)
     mime_type = guessed_type[0] or default_mimetype
     real_filename = real_filename or filename
-    
+
     #make common headers
     headers = []
     headers.append(('Content-Type', mime_type))
@@ -135,17 +135,29 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
                 if rend == None:
                     rend = fsize-1
                 headers.append(('Content-Length',str(rend-rbegin+1)))
-                headers.append(('Content-Range','%s %d-%d/%d' %(range.units,rbegin, rend, fsize)))
-                return Response(FileIterator(real_filename,rbegin,rend),
-                    status=206, headers=headers, direct_passthrough=True)
-        
+                #werkzeug do not count rend with the same way of rfc7233,so -1
+                headers.append(('Content-Range','%s %d-%d/%d' %(range.units,rbegin, rend-1, fsize)))
+                mtime = datetime.utcfromtimestamp(os.path.getmtime(real_filename))
+                headers.append(('Last-Modified', http_date(mtime)))
+                if cache:
+                    etag = _generate_etag(mtime, fsize, real_filename)
+                    headers.append(('ETag', '"%s"' % etag))
+                #for small file, read it to memory and return directly
+                #and this can avoid some issue with google chrome
+                if (rend-rbegin) < FileIterator.chunk_size:
+                    s = "".join([chunk for chunk in FileIterator(real_filename,rbegin,rend)])
+                    return Response(s,status=206, headers=headers, direct_passthrough=True)
+                else:
+                    return Response(FileIterator(real_filename,rbegin,rend),
+                        status=206, headers=headers, direct_passthrough=True)
+
         #process fileobj
         if fileobj:
             f, mtime, file_size = fileobj
         else:
             f, mtime, file_size = _opener(real_filename)
         headers.append(('Date', http_date()))
-    
+
         if cache:
             etag = _generate_etag(mtime, file_size, real_filename)
             headers += [
@@ -161,12 +173,12 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
                 return Response(status=304, headers=headers)
         else:
             headers.append(('Cache-Control', 'public'))
-    
+
 
         headers.extend((
             ('Content-Length', str(file_size)),
             ('Last-Modified', http_date(mtime))
         ))
-    
+
         return Response(wrap_file(environ, f), status=200, headers=headers,
             direct_passthrough=True)
