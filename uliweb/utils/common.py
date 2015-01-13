@@ -2,7 +2,6 @@ import os, sys
 import re
 import logging
 import cPickle
-import inspect
 
 log = logging
 class _Default(object): pass
@@ -25,6 +24,8 @@ def import_mod_attr(path):
     Import string format module, e.g. 'uliweb.orm' or an object
     return module object and object
     """
+    import inspect
+
     if isinstance(path, (str, unicode)):
         v = path.split(':')
         if len(v) == 1:
