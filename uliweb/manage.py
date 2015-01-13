@@ -1106,13 +1106,13 @@ class ShellCommand(Command):
             import rlcompleter
             readline.parse_and_bind("tab: complete")
 
+        try:
+            import IPython
+        except ImportError:
+            IPython = None
+
         #according to https://github.com/ipython/ipython/wiki/Cookbook%3a-Updating-code-for-use-with-IPython-0.11-and-later
-        if not options.no_ipython:
-            try:
-                import IPython
-            except ImportError:
-                print "Error: Can't import IPython, please install it first"
-                return
+        if IPython and not options.no_ipython:
 
             if options.module:
                 _args = ['-m', options.module]
@@ -1134,6 +1134,9 @@ class ShellCommand(Command):
                     _args.append('-i')
                 IPython.start_ipython(_args + args, user_ns=namespace, banner2=self.banner)
         else:
+            if not IPython and not options.no_ipython:
+                print "Error: Can't import IPython, please install it first"
+
             from code import interact, InteractiveConsole
             Interpreter = MyInteractive(namespace)
             if args or options.module:
