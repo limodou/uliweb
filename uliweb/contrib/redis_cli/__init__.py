@@ -98,4 +98,21 @@ return n
         return r[0]
         
     return 0
-        
+
+def count_prefix(prefix):
+    redis = get_redis()
+    if redis:
+        text = """
+local n = 0
+for _,k in ipairs(redis.call('keys', ARGV[1])) do
+    n = n + 1
+end
+return n
+"""
+        script = redis.register_script(text)
+        pipe = redis.pipeline()
+        script(args=[prefix], client=pipe)
+        r = pipe.execute()
+        return r[0]
+
+    return 0
