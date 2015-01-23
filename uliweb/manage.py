@@ -1124,7 +1124,13 @@ class ShellCommand(Command):
                 # app = NotebookApp.instance()
                 # app.initialize(['--ext', 'uliweb.utils.ipython_extension'] + args)
                 # app.start()
-                cmd = ' '.join(['LOCAL_SETTINGS='+global_options.local_settings,
+                if sys.platform == 'win32':
+                    cmd = ' '.join(['set LOCAL_SETTINGS='+global_options.local_settings,
+                       '&set SETTINGS='+global_options.settings,
+                       '&ipython',
+                       'notebook', '--ext=uliweb.utils.ipython_extension'] + _args + args)
+                else:
+                    cmd = ' '.join(['LOCAL_SETTINGS='+global_options.local_settings,
                        'SETTINGS='+global_options.settings,
                        'ipython',
                        'notebook', '--ext=uliweb.utils.ipython_extension'] + _args + args)
