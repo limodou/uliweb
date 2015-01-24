@@ -3134,41 +3134,41 @@ def get_field_type(_type):
 
 class ModelReprDescriptor(object):
     def __get__(self, model_instance, model_class):
-        if model_instance is None:
-            return self._cls_repr_html_(model_class)
+        def f():
+            from IPython.display import display_html, display_svg
 
-        return self._instance_repr_html_(model_instance)
+            if model_instance is None:
+                display_html(self._cls_repr_html_(model_class), raw=True)
+            else:
+                display_html(self._instance_repr_html_(model_instance), raw=True)
+        return f
 
     def _cls_repr_html_(self, cls):
-        def f():
-            return '<pre>'+print_model(cls)+'</pre>'
-        return f
+        return '<pre>'+print_model(cls)+'</pre>'
 
     def _instance_repr_html_(self, instance):
-        def f():
-            from uliweb.core.html import Table
+        from uliweb.core.html import Table
 
-            s = []
-            for k, v in instance._fields_list:
-                if not isinstance(v, ManyToMany):
-                    t = getattr(instance, k, None)
-                    d = [v.verbose_name, k]
-                    _type = v.__class__.__name__
-                    if _type.endswith('Property'):
-                        _type = _type[:-8]
-                    if _type in ('String', 'Char', 'Unicode', 'File'):
-                        _type = _type + '(%d)' % v.max_length
-                    elif _type == 'Decimal':
-                        _type = _type + '(%d,%d)' % (v.precision, v.scale)
-                    d.append(_type)
-                    if isinstance(v, Reference) and t:
-                        d.append('%s:%r:%s' % (v.reference_class.__name__, t.id, unicode(t)))
-                    else:
-                        d.append(t)
-                    s.append(d)
-            return str(Table(s, ['Display Name', 'Column Name',
-                                              'Column Type', 'Value']))
-        return f
+        s = []
+        for k, v in instance._fields_list:
+            if not isinstance(v, ManyToMany):
+                t = getattr(instance, k, None)
+                d = [v.verbose_name, k]
+                _type = v.__class__.__name__
+                if _type.endswith('Property'):
+                    _type = _type[:-8]
+                if _type in ('String', 'Char', 'Unicode', 'File'):
+                    _type = _type + '(%d)' % v.max_length
+                elif _type == 'Decimal':
+                    _type = _type + '(%d,%d)' % (v.precision, v.scale)
+                d.append(_type)
+                if isinstance(v, Reference) and t:
+                    d.append('%s:%r:%s' % (v.reference_class.__name__, t.id, unicode(t)))
+                else:
+                    d.append(t)
+                s.append(d)
+        return str(Table(s, ['Display Name', 'Column Name',
+                                          'Column Type', 'Value']))
 
 class Model(object):
 
@@ -3186,7 +3186,7 @@ class Model(object):
     _c_lock = threading.Lock()
 
     #add support for IPython notebook display
-    _repr_html_ = ModelReprDescriptor()
+    _ipython_display_ = ModelReprDescriptor()
     
     def __init__(self, **kwargs):
         self._old_values = {}
