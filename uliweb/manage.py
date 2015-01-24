@@ -1095,6 +1095,8 @@ class ShellCommand(Command):
         return env
     
     def handle(self, options, global_options, *args):
+        import subprocess as sub
+
         args = list(args)
 
         namespace = self.make_shell_env(global_options)
@@ -1124,17 +1126,12 @@ class ShellCommand(Command):
                 # app = NotebookApp.instance()
                 # app.initialize(['--ext', 'uliweb.utils.ipython_extension'] + args)
                 # app.start()
-                if sys.platform == 'win32':
-                    cmd = ' '.join(['set LOCAL_SETTINGS='+global_options.local_settings,
-                       '&set SETTINGS='+global_options.settings,
-                       '&ipython',
-                       'notebook', '--ext=uliweb.utils.ipython_extension'] + _args + args)
-                else:
-                    cmd = ' '.join(['LOCAL_SETTINGS='+global_options.local_settings,
-                       'SETTINGS='+global_options.settings,
-                       'ipython',
-                       'notebook', '--ext=uliweb.utils.ipython_extension'] + _args + args)
-                os.system(cmd)
+                cmd = ' '.join(['ipython',
+                        'notebook', '--ext=uliweb.utils.ipython_extension'] + _args + args)
+                _env = os.environ.copy()
+                _env.update({'LOCAL_SETTINGS':global_options.local_settings,
+                       'SETTINGS':global_options.settings})
+                sub.call(cmd, shell=True, cwd=os.getcwd(), env=_env)
             else:
                 if options.module:
                     _args.append('-i')
