@@ -16,7 +16,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
-    'PickleProperty', 'BigIntegerProperty',
+    'PickleProperty', 'BigIntegerProperty', 'FileProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError', 'SaveError',
@@ -696,7 +696,7 @@ def RollbackAll(close=None):
             session.rollback()
     
 def check_reserved_word(f):
-    if f in ['put', 'save', 'table', 'tablename', 'c', 'columns'] or f in dir(Model):
+    if f in ['put', 'save', 'table', 'tablename', 'c', 'columns', 'manytomany'] or f in dir(Model):
         raise ReservedWordError(
             "Cannot define property using reserved word '%s'. " % f
             )
@@ -1277,12 +1277,8 @@ class Property(object):
             'default', 'validators', 'max_length']:
             d[k] = getattr(self, k)
         return d
-        
-    def create(self, cls):
-        global __nullable__
-        
-        kwargs = self.kwargs.copy()
-        kwargs['key'] = self.name
+
+    def _get_column_info(self, kwargs):
         kwargs['primary_key'] = self.kwargs.get('primary_key', False)
         kwargs['autoincrement'] = self.kwargs.get('autoincrement', False)
         kwargs['index'] = self.kwargs.get('index', False)
@@ -1296,6 +1292,13 @@ class Property(object):
             if v is not None and isinstance(v, (int, long)):
                 v = text(str(v))
             kwargs['server_default' ] = v
+
+    def create(self, cls):
+        global __nullable__
+        
+        kwargs = self.kwargs.copy()
+        kwargs['key'] = self.name
+        self._get_column_info(kwargs)
 
         f_type = self._create_type()
         args = ()
@@ -1476,7 +1479,22 @@ class Property(object):
             if v is None:
                 return u''
             return unicode(v)
-    
+
+    def to_column_info(self):
+        d = {}
+        d['verbose_name'] = self.verbose_name
+        d['name'] = self.name
+        d['fieldname'] = self.fieldname
+        d['type'] = self.get_column_type_name()
+        d['relation'] = None
+        if isinstance(self, Reference):
+            d['relation'] = '%s(%s)' % (self.type_name, self.reference_class.__name__)
+        self._get_column_info(d)
+        return d
+
+    def get_column_type_name(self):
+        return self.type_name
+
 class CharProperty(Property):
     data_type = unicode
     field_class = CHAR
@@ -1506,21 +1524,23 @@ class CharProperty(Property):
     
     def to_str(self, v):
         return safe_str(v)
-    
+
+    def get_column_type_name(self):
+        return '%s(%d)' % (self.type_name, self.max_length)
+
 class StringProperty(CharProperty):
+    type_name = 'VARCHAR'
     field_class = VARCHAR
     
 class FileProperty(StringProperty):
-    type_name = 'FILE'
-
     def __init__(self, verbose_name=None, max_length=None, upload_to=None, upload_to_sub=None, **kwds):
         max_length = max_length or 255
         super(FileProperty, self).__init__(verbose_name, max_length=max_length, **kwds)
         self.upload_to = upload_to
         self.upload_to_sub = upload_to_sub
         
-class UnicodeProperty(CharProperty):
-    field_class = Unicode
+class UnicodeProperty(StringProperty):
+    pass
     
 class TextProperty(Property):
     field_class = Text
@@ -1658,7 +1678,7 @@ class IntegerProperty(Property):
     data_type = int
     field_class = Integer
     server_default=text('0')
-    type_name = 'int'
+    type_name = 'INTEGER'
     
     def __init__(self, verbose_name=None, default=0, **kwds):
         super(IntegerProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1708,7 +1728,10 @@ class FloatProperty(Property):
         if abs(value) < __zero_float__:
             value = 0.0
         return value
-    
+
+    def get_column_type_name(self):
+        return '%s' % self.type_name
+
 class DecimalProperty(Property):
     """A float property."""
 
@@ -1741,14 +1764,17 @@ class DecimalProperty(Property):
             return v
         else:
             return str(value)
-    
+
+    def get_column_type_name(self):
+        return '%s(%d,%d)' % (self.type_name, self.precision, self.scale)
+
 class BooleanProperty(Property):
     """A boolean property."""
 
     data_type = bool
     field_class = Boolean
     server_default=text('0')
-    type_name = 'bool'
+    type_name = 'BOOL'
     
     def __init__(self, verbose_name=None, default=False, **kwds):
         super(BooleanProperty, self).__init__(verbose_name, default=default, **kwds)
@@ -1965,7 +1991,10 @@ class ReferenceProperty(Property):
         if value is None:
             return value
         return self.data_type(value)
-    
+
+    def get_column_type_name(self):
+        return self.reference_field.get_column_type_name()
+
 Reference = ReferenceProperty
 
 class OneToOne(ReferenceProperty):
@@ -3943,7 +3972,6 @@ class Model(object):
         ManyToMany
         """
         for k, v in cls.properties.items():
-            print '=====', k, v.name, isinstance(v, ReferenceProperty)
             if isinstance(v, ReferenceProperty):
                 if hasattr(v, 'collection_name') and hasattr(v.reference_class, v.collection_name):
                     delattr(v.reference_class, v.collection_name)
@@ -3951,3 +3979,9 @@ class Model(object):
                     if isinstance(v, OneToOne):
                         #append to reference_class._onetoone
                         del v.reference_class._onetoone[v.collection_name]
+
+    @classmethod
+    def get_columns_info(cls):
+        for k, v in cls._fields_list:
+            if not isinstance(v, ManyToMany):
+                yield v.to_column_info()
