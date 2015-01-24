@@ -683,6 +683,10 @@ class cached_property(object):
             self.value = value
         return value
 
+def get_tempfilename(prefix, dir=''):
+    import tempfile
+    return tempfile.mkdtemp(prefix='dump', dir=dir)
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:
