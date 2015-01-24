@@ -87,7 +87,7 @@ def get_model_fields(model, add_reserver_flag=True):
         d['name'] = prop.fieldname or name
         d['verbose_name'] = unicode(prop.verbose_name)
         d['nullable'] = bool(prop.kwargs.get('nullable', orm.__nullable__))
-        if d['type'] in ('str', 'CHAR'):
+        if d['type'] in ('VARCHAR', 'CHAR'):
             d['max_length'] = prop.max_length
         if d['type'] in ('Reference', 'OneToOne', 'ManyToMany'):
             d['reference_class'] = prop.reference_class

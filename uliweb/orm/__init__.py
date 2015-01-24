@@ -1482,11 +1482,11 @@ class Property(object):
 
     def to_column_info(self):
         d = {}
-        d['verbose_name'] = self.verbose_name
+        d['verbose_name'] = self.verbose_name or ''
         d['name'] = self.name
         d['fieldname'] = self.fieldname
         d['type'] = self.get_column_type_name()
-        d['relation'] = None
+        d['relation'] = ''
         if isinstance(self, Reference):
             d['relation'] = '%s(%s)' % (self.type_name, self.reference_class.__name__)
         self._get_column_info(d)
@@ -3168,12 +3168,21 @@ class ModelReprDescriptor(object):
 
             if model_instance is None:
                 display_html(self._cls_repr_html_(model_class), raw=True)
+                display_svg(self._cls_repr_svg_(model_class), raw=True)
             else:
                 display_html(self._instance_repr_html_(model_instance), raw=True)
         return f
 
     def _cls_repr_html_(self, cls):
         return '<pre>'+print_model(cls)+'</pre>'
+
+    def _cls_repr_svg_(self, cls):
+        from uliweb.orm.graph import generate_file
+        from uliweb import application
+
+        engine_name = cls.get_engine_name()
+        return generate_file({cls.tablename:cls.table}, application.apps,
+                             None, 'svg', engine_name)
 
     def _instance_repr_html_(self, instance):
         from uliweb.core.html import Table

@@ -5,7 +5,7 @@ from decimal import Decimal
 from uliweb.core.commands import Command, get_answer, CommandManager, get_commands
 from optparse import make_option
 from uliweb.core import dispatch
-from uliweb.utils.common import log, is_pyfile_exist
+from uliweb.utils.common import log, is_pyfile_exist, get_temppath
 from sqlalchemy.types import *
 from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
@@ -624,7 +624,6 @@ class LoadCommand(SQLCommandMixin, Command):
     def handle(self, options, global_options, *args):
         from uliweb import orm
         from zipfile import ZipFile
-        import tempfile
         import shutil
 
         if args:
@@ -643,7 +642,7 @@ are you sure to load data""" % options.engine
         if options.zipfile:
             if options.dir and not os.path.exists(options.dir):
                 os.makedirs(options.dir)
-            path = tempfile.mkdtemp(prefix='dump', dir=options.dir)
+            path = get_temppath(prefix='dump', dir=options.dir)
             if global_options.verbose:
                 print "Extract path is %s" % path
             zipfile = None
@@ -719,7 +718,6 @@ class LoadTableCommand(SQLCommandMixin, Command):
     def handle(self, options, global_options, *args):
         from uliweb import orm
         from zipfile import ZipFile
-        import tempfile
         import shutil
 
         if args:
@@ -735,7 +733,7 @@ are you sure to load data""" % (options.engine, ','.join(args))
         if options.zipfile:
             if options.dir and not os.path.exists(options.dir):
                 os.makedirs(options.dir)
-            path = tempfile.mkdtemp(prefix='dump', dir=options.dir)
+            path = get_temppath(prefix='dump', dir=options.dir)
             if global_options.verbose:
                 print "Extract path is %s" % path
             zipfile = None
@@ -885,11 +883,23 @@ class DbinitCommand(SQLCommandMixin, Command):
 class SqldotCommand(SQLCommandMixin, Command):
     name = 'sqldot'
     args = '<appname, appname, ...>'
-    help = "Create graphviz dot file. If no apps, then process the whole database."
+    help = ("Create graphviz dot file. If no apps, then process the whole database. If "
+        "tables is also supplied then apps will used to limited the searching range of apps.")
     check_apps = True
-    
+    option_list = (
+        make_option('-t', '--table', dest='tables', action='append', default=[],
+            help='Tables name which you want to display.'),
+        make_option('-T', dest='format', default='',
+            help='Output dot result to given format using graphviz. And "txt" will be outputed as .dot file.'),
+        make_option('-o', dest='outputfile', default='',
+            help='Output filename.'),
+        make_option('-d', dest='dir', default='',
+            help='Output directory.'),
+    )
+
     def handle(self, options, global_options, *args):
-        from graph import generate_dot
+        from uliweb.orm.graph import generate_dot, generate_file
+        from uliweb.utils.common import get_tempfilename, get_tempfilename2
 
         engine = get_engine(options, global_options)
 
@@ -898,12 +908,27 @@ class SqldotCommand(SQLCommandMixin, Command):
         else:
             apps = self.get_apps(global_options)
 
-        tables = get_tables(global_options.apps_dir, args,
+        if not options.tables:
+            _apps = apps
+        else:
+            _apps = None
+        tables = get_tables(global_options.apps_dir, _apps, tables=options.tables,
             engine_name=options.engine,
-            settings_file=global_options.settings, 
+            settings_file=global_options.settings,
             local_settings_file=global_options.local_settings)
-        print generate_dot(tables, apps)
-        
+
+        if options.format=='txt' or not options.format:
+            result = generate_dot(tables, apps, engine_name=options.engine)
+            if options.outputfile:
+                with open(options.outputfile, 'w') as f:
+                    f.write(result)
+            else:
+                print result
+        else:
+            result = generate_file(tables, apps, options.outputfile, options.format, engine_name=options.engine)
+            if result:
+                print result
+
 class SqlHtmlCommand(SQLCommandMixin, Command):
     name = 'sqlhtml'
     args = '<appname, appname, ...>'
