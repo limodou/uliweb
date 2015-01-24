@@ -683,9 +683,16 @@ class cached_property(object):
             self.value = value
         return value
 
-def get_tempfilename(prefix, dir=''):
+def get_temppath(prefix, suffix='', dir=''):
     import tempfile
-    return tempfile.mkdtemp(prefix='dump', dir=dir)
+    return tempfile.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
+
+def get_tempfilename2(prefix, suffix='', dir=''):
+    import tempfile
+    return tempfile.mkstemp(suffix=suffix, prefix=prefix, dir=dir)
+
+def get_tempfilename(prefix, suffix='', dir=''):
+    return get_tempfilename2(prefix, suffix, dir)[1]
 
 #if __name__ == '__main__':
 #    log.info('Info: info')
