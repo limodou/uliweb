@@ -3177,12 +3177,14 @@ class ModelReprDescriptor(object):
         return '<pre>'+print_model(cls)+'</pre>'
 
     def _cls_repr_svg_(self, cls):
+        import os
         from uliweb.orm.graph import generate_file
         from uliweb import application
 
         engine_name = cls.get_engine_name()
+        fontname = os.environ.get('dot_fontname', '')
         return generate_file({cls.tablename:cls.table}, application.apps,
-                             None, 'svg', engine_name)
+                             None, 'svg', engine_name, fontname=fontname)
 
     def _instance_repr_html_(self, instance):
         from uliweb.core.html import Table

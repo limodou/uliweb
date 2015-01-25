@@ -105,7 +105,7 @@ def get_model_tables(tables, appname):
             t.append(tablename)
     return t
 
-def generate_dot(tables, apps, engine_name=None, **kwargs):
+def generate_dot(tables, apps, engine_name=None, fontname=None, **kwargs):
     from uliweb.orm import (get_model, OneToOne, ReferenceProperty,
                             ManyToMany, engine_manager, Model)
     from uliweb.core.template import template
@@ -118,7 +118,7 @@ def generate_dot(tables, apps, engine_name=None, **kwargs):
     models = {}
     apps_graph = {}
     nodes = []
-    fontname = 'Helvetica'
+    fontname = fontname or 'Helvetica'
 
     def get_graph(name):
         graph = apps_graph.get(name)
@@ -300,12 +300,13 @@ def generate_dot(tables, apps, engine_name=None, **kwargs):
     dot += '\n' + tail_template
     return dot
 
-def generate_file(tables, apps, outputfile, format='svg', engine_name=None, **kwargs):
+def generate_file(tables, apps, outputfile, format='svg', engine_name=None, fontname=None,
+                  **kwargs):
     import os
     from uliweb.utils.common import get_tempfilename, get_tempfilename2
     import subprocess as sub
 
-    result = generate_dot(tables, apps, engine_name=engine_name, **kwargs)
+    result = generate_dot(tables, apps, engine_name=engine_name, fontname=fontname, **kwargs)
     dot_fd, dot_filename = get_tempfilename2('dot_', dir=None, suffix='.dot')
     try:
         os.write(dot_fd, result)

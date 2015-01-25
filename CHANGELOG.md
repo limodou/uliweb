@@ -12,6 +12,9 @@ Uliweb Change Log
 * Add ORM Model migrate support
 * Refactor SortedDict with dict base class
 * Add model_config app, to support dynamic create model
+* Add model ipython notebook support
+* Refact sqldot
+* Add environ variables passing in uliweb shell command
 
 0.4.1 Version
 -----------------

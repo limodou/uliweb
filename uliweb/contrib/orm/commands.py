@@ -1,3 +1,4 @@
+#coding=utf8
 import os, sys
 import re
 import datetime
@@ -895,9 +896,27 @@ class SqldotCommand(SQLCommandMixin, Command):
             help='Output filename.'),
         make_option('-d', dest='dir', default='',
             help='Output directory.'),
+        make_option('-f', '--font', dest='font', default='',
+            help='Dot file fontname.'),
     )
 
     def handle(self, options, global_options, *args):
+        """
+        For Chinese Font name:
+        新細明體：PMingLiU
+        細明體：MingLiU
+        標楷體：DFKai-SB
+        黑体：SimHei
+        宋体：SimSun
+        新宋体：NSimSun
+        仿宋：FangSong
+        楷体：KaiTi
+        仿宋_GB2312：FangSong_GB2312
+        楷体_GB2312：KaiTi_GB2312
+        微軟正黑體：Microsoft JhengHei
+        微软雅黑体：Microsoft YaHei
+        """
+
         from uliweb.orm.graph import generate_dot, generate_file
         from uliweb.utils.common import get_tempfilename, get_tempfilename2
 
@@ -918,14 +937,15 @@ class SqldotCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings)
 
         if options.format=='txt' or not options.format:
-            result = generate_dot(tables, apps, engine_name=options.engine)
+            result = generate_dot(tables, apps, engine_name=options.engine, fontname=options.font)
             if options.outputfile:
                 with open(options.outputfile, 'w') as f:
                     f.write(result)
             else:
                 print result
         else:
-            result = generate_file(tables, apps, options.outputfile, options.format, engine_name=options.engine)
+            result = generate_file(tables, apps, options.outputfile, options.format,
+                                   engine_name=options.engine, fontname=options.font)
             if result:
                 print result
 
