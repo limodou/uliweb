@@ -154,7 +154,7 @@ def generate_dot(tables, apps, engine_name=None, **kwargs):
 
     def add_relation(model, field, extras="", rel='', target_app=None):
         label = "%s(%s)" % (field.property_name, rel)
-        target_app = target_app or field.reference_class.table.__appname__.replace('.', '_')
+        target_app = (target_app or field.reference_class.table.__appname__).replace('.', '_')
         target = field.reference_class.tablename
         _rel = {
             'target_app': target_app,
