@@ -3167,48 +3167,48 @@ class ModelReprDescriptor(object):
             from IPython.display import display_html, display_svg
 
             if model_instance is None:
-                display_html(self._cls_repr_html_(model_class), raw=True)
-                display_svg(self._cls_repr_svg_(model_class), raw=True)
+                display_html(self._cls_repr_html_(model_class))
+                display_svg(self._cls_repr_svg_(model_class))
             else:
-                display_html(self._instance_repr_html_(model_instance), raw=True)
+                display_html(self._instance_repr_html_(model_instance))
         return f
 
     def _cls_repr_html_(self, cls):
-        return '<pre>'+print_model(cls)+'</pre>'
+        from IPython.display import HTML
+
+        return HTML('<pre>'+print_model(cls)+'</pre>')
 
     def _cls_repr_svg_(self, cls):
         import os
         from uliweb.orm.graph import generate_file
         from uliweb import application
+        from uliweb.utils.common import get_tempfilename
+        from IPython.display import SVG
 
         engine_name = cls.get_engine_name()
         fontname = os.environ.get('dot_fontname', '')
-        return generate_file({cls.tablename:cls.table}, application.apps,
-                             None, 'svg', engine_name, fontname=fontname)
+        outputfile = get_tempfilename('dot_svg_', suffix='.svg')
+        generate_file({cls.tablename:cls.table}, application.apps,
+                             outputfile, 'svg', engine_name, fontname=fontname)
+        return SVG(filename=outputfile)
 
     def _instance_repr_html_(self, instance):
         from uliweb.core.html import Table
+        from IPython.display import HTML
 
         s = []
         for k, v in instance._fields_list:
             if not isinstance(v, ManyToMany):
+                info = v.to_column_info()
+                d = [info['verbose_name'], info['name'], info['type']]
                 t = getattr(instance, k, None)
-                d = [v.verbose_name, k]
-                _type = v.__class__.__name__
-                if _type.endswith('Property'):
-                    _type = _type[:-8]
-                if _type in ('String', 'Char', 'Unicode', 'File'):
-                    _type = _type + '(%d)' % v.max_length
-                elif _type == 'Decimal':
-                    _type = _type + '(%d,%d)' % (v.precision, v.scale)
-                d.append(_type)
                 if isinstance(v, Reference) and t:
                     d.append('%s:%r:%s' % (v.reference_class.__name__, t.id, unicode(t)))
                 else:
                     d.append(t)
                 s.append(d)
-        return str(Table(s, ['Display Name', 'Column Name',
-                                          'Column Type', 'Value']))
+        return HTML(str(Table(s, ['Display Name', 'Column Name',
+                                          'Column Type', 'Value'])))
 
 class Model(object):
 
