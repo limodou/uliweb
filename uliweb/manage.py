@@ -1071,9 +1071,6 @@ class ShellCommand(Command):
             help='Starting ipython notebook.'),
         make_option('-m', '--module', dest='module', default='',
             help="Module name that will be executed when starting the shell."),
-        make_option('-E', dest='envs', default=[], action='append',
-            help="Environment variables will be defined before shell starts. "
-                "For example: -Efontname=\"Your Name\""),
     )
     banner = "Uliweb %s Command Shell" % __version__
     skip_options = True
@@ -1116,14 +1113,6 @@ class ShellCommand(Command):
         except ImportError:
             IPython = None
 
-        if options.envs:
-            for x in options.envs:
-                if '=' in x:
-                    k, v = x.split('=')
-                    os.environ[k.strip()] = v.strip()
-                else:
-                    print ('Error: environment variable definition (%s) format is not right, '
-                           'shoule be -Ek=v or -Ek="a b"' % x)
         #according to https://github.com/ipython/ipython/wiki/Cookbook%3a-Updating-code-for-use-with-IPython-0.11-and-later
         if IPython and not options.no_ipython:
 

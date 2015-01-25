@@ -312,7 +312,16 @@ class CommandManager(Command):
         else:
             global_options = self.global_options
             args = self.argv
-    
+
+        if global_options.envs:
+            for x in global_options.envs:
+                if '=' in x:
+                    k, v = x.split('=')
+                    os.environ[k.strip()] = v.strip()
+                else:
+                    print ('Error: environment variable definition (%s) format is not right, '
+                           'shoule be -Ek=v or -Ek="a b"' % x)
+
         global_options.settings = global_options.settings or os.environ.get('SETTINGS', 'settings.ini')
         global_options.local_settings = global_options.local_settings or os.environ.get('LOCAL_SETTINGS', 'local_settings.ini')
         
@@ -382,6 +391,9 @@ class ApplicationCommandManager(CommandManager):
             help="show program's version number and exit."),
 #        make_option('--include-apps', default=[], dest='include_apps',
 #            help='Including extend apps when execute the command.'),
+        make_option('-E', dest='envs', default=[], action='append',
+            help="Environment variables definition, "
+                "e.g. -Efontname=\"Your Name\", support multi variables."),
     )
     help = ''
     args = ''
