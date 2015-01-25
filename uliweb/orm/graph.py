@@ -45,10 +45,12 @@ subgraph {{= cluster_app_name }} {
       {{else:}}
         {{color=''}}
       {{pass}}
-      {{if field['relation'].startswith('ManyToMany'):}}
+      {{if field['type'] == 'ManyToMany':}}
         {{color=' BGCOLOR="lightskyblue"'}}
-      {{elif field['relation'].startswith('Reference'):}}
+      {{elif field['type'] == 'Reference':}}
         {{color=' BGCOLOR="khaki"'}}
+      {{elif field['type'] == 'OneToOne':}}
+        {{color=' BGCOLOR="thistle"'}}
       {{elif field['primary_key']:}}
         {{color=' BGCOLOR="lightsalmon"'}}
       {{pass}}
@@ -57,7 +59,7 @@ subgraph {{= cluster_app_name }} {
         <FONT FACE="{{=fontname}}">{{= field['label']}}</FONT>
        </TD>
        <TD ALIGN="LEFT"{{=color}}>
-        <FONT FACE="{{=fontname}}">{{= field['type'] }}</FONT>
+        <FONT FACE="{{=fontname}}">{{= field['type_name'] }}</FONT>
        </TD>
        <TD ALIGN="LEFT"{{=color}}>
         <FONT FACE="{{=fontname}}">{{= field['relation'] or ' ' }}</FONT>
@@ -218,16 +220,17 @@ def generate_dot(tables, apps, engine_name=None, fontname=None, **kwargs):
                     label = "%s(%s)" % (field.property_name, field.verbose_name)
                 else:
                     label = "%s" % field.property_name
-                    
-                if not isinstance(field, ManyToMany):
-                    d = field.to_column_info()
-                else:
-                    d = {
-                    'name': field.property_name,
-                    'type': ' ',
-                    'relation': 'ManyToMany(%s)' % field.reference_class.__name__,
-                    'primary_key': False
-                    }
+
+                d = field.to_column_info()
+                # if not isinstance(field, ManyToMany):
+                #     d = field.to_column_info()
+                # else:
+                #     d = {
+                #     'name': field.property_name,
+                #     'type': ' ',
+                #     'relation': 'ManyToMany(%s)' % field.reference_class.__name__,
+                #     'primary_key': False
+                #     }
                 d['label'] = label
                 model['fields'].append(d)
 

@@ -1485,10 +1485,11 @@ class Property(object):
         d['verbose_name'] = self.verbose_name or ''
         d['name'] = self.name
         d['fieldname'] = self.fieldname
-        d['type'] = self.get_column_type_name()
+        d['type'] = self.type_name
+        d['type_name'] = self.get_column_type_name()
         d['relation'] = ''
         if isinstance(self, Reference):
-            d['relation'] = '%s(%s)' % (self.type_name, self.reference_class.__name__)
+            d['relation'] = '%s(%s:%s)' % (self.type_name, self.reference_class.__name__, self.reference_fieldname)
         self._get_column_info(d)
         return d
 
@@ -2997,7 +2998,19 @@ class ManyToMany(ReferenceProperty):
         if not value:
             return []
         return [int(x) for x in value.split(',')]
-    
+
+    def to_column_info(self):
+        d = {}
+        d['verbose_name'] = self.verbose_name or ''
+        d['name'] = self.name
+        d['fieldname'] = self.fieldname
+        d['type'] = self.type_name
+        d['type_name'] = self.type_name
+        d['relation'] = 'ManyToMany(%s:%s-%s:%s)' % (self.model_class.__name__, self.reversed_fieldname,
+            self.reference_class.__name__, self.reference_fieldname)
+        self._get_column_info(d)
+        return d
+
 def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
     """Create a self reference.
     """
@@ -3200,7 +3213,7 @@ class ModelReprDescriptor(object):
         for k, v in instance._fields_list:
             if not isinstance(v, ManyToMany):
                 info = v.to_column_info()
-                d = [info['verbose_name'], info['name'], info['type']]
+                d = [info['verbose_name'], info['name'], info['type_name']]
                 t = getattr(instance, k, None)
                 if isinstance(v, Reference) and t:
                     d.append('%s:%r:%s' % (v.reference_class.__name__, t.id, unicode(t)))
@@ -3994,5 +4007,4 @@ class Model(object):
     @classmethod
     def get_columns_info(cls):
         for k, v in cls._fields_list:
-            if not isinstance(v, ManyToMany):
-                yield v.to_column_info()
+            yield v.to_column_info()

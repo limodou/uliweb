@@ -2507,6 +2507,8 @@ def test_to_column_info():
     >>> import datetime
     >>> class Other(Model):
     ...     name = Field(str)
+    >>> class One(Model):
+    ...     name = Field(str)
     >>> class Test(Model):
     ...     string = StringProperty(max_length=40)
     ...     char = CharProperty(max_length=40)
@@ -2521,32 +2523,37 @@ def test_to_column_info():
     ...     decimal = DecimalProperty()
     ...     reference = Reference()
     ...     other = ManyToMany(Other)
+    ...     one = OneToOne(One)
     >>> Test.string.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'VARCHAR(40)', 'fieldname': 'string', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'string'}
+    {'index': False, 'name': 'string', 'nullable': True, 'type': 'VARCHAR', 'type_name': 'VARCHAR(40)', 'fieldname': 'string', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.char.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'CHAR(40)', 'fieldname': 'char', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'char'}
+    {'index': False, 'name': 'char', 'nullable': True, 'type': 'CHAR', 'type_name': 'CHAR(40)', 'fieldname': 'char', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.file.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'VARCHAR(40)', 'fieldname': 'file', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'file'}
+    {'index': False, 'name': 'file', 'nullable': True, 'type': 'VARCHAR', 'type_name': 'VARCHAR(40)', 'fieldname': 'file', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.uni.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'VARCHAR(40)', 'fieldname': 'uni', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'uni'}
+    {'index': False, 'name': 'uni', 'nullable': True, 'type': 'VARCHAR', 'type_name': 'VARCHAR(40)', 'fieldname': 'uni', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.boolean.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'BOOL', 'fieldname': 'boolean', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'boolean'}
+    {'index': False, 'name': 'boolean', 'nullable': True, 'type': 'BOOL', 'type_name': 'BOOL', 'fieldname': 'boolean', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.integer.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'INTEGER', 'fieldname': 'integer', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'integer'}
+    {'index': False, 'name': 'integer', 'nullable': True, 'type': 'INTEGER', 'type_name': 'INTEGER', 'fieldname': 'integer', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.date1.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'DATETIME', 'fieldname': 'date1', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'date1'}
+    {'index': False, 'name': 'date1', 'nullable': True, 'type': 'DATETIME', 'type_name': 'DATETIME', 'fieldname': 'date1', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.date2.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'DATE', 'fieldname': 'date2', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'date2'}
+    {'index': False, 'name': 'date2', 'nullable': True, 'type': 'DATE', 'type_name': 'DATE', 'fieldname': 'date2', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.date3.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'TIME', 'fieldname': 'date3', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'date3'}
+    {'index': False, 'name': 'date3', 'nullable': True, 'type': 'TIME', 'type_name': 'TIME', 'fieldname': 'date3', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.float.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'FLOAT', 'fieldname': 'float', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'float'}
+    {'index': False, 'name': 'float', 'nullable': True, 'type': 'FLOAT', 'type_name': 'FLOAT', 'fieldname': 'float', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.decimal.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'DECIMAL(10,2)', 'fieldname': 'decimal', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'decimal'}
+    {'index': False, 'name': 'decimal', 'nullable': True, 'type': 'DECIMAL', 'type_name': 'DECIMAL(10,2)', 'fieldname': 'decimal', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
     >>> Test.reference.to_column_info()
-    {'index': False, 'primary_key': False, 'nullable': True, 'type': 'INTEGER', 'fieldname': 'reference', 'server_default': None, 'autoincrement': False, 'relation': 'Reference(Test)', 'unique': False, 'verbose_name': None, 'name': 'reference'}
-    >>> list(Test.get_columns_info())
-    [{'index': False, 'primary_key': False, 'nullable': True, 'type': 'VARCHAR(40)', 'fieldname': 'string', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'string'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'CHAR(40)', 'fieldname': 'char', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'char'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'VARCHAR(40)', 'fieldname': 'file', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'file'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'VARCHAR(40)', 'fieldname': 'uni', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'uni'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'BOOL', 'fieldname': 'boolean', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'boolean'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'INTEGER', 'fieldname': 'integer', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'integer'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'DATETIME', 'fieldname': 'date1', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'date1'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'DATE', 'fieldname': 'date2', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'date2'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'TIME', 'fieldname': 'date3', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'date3'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'FLOAT', 'fieldname': 'float', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'float'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'DECIMAL(10,2)', 'fieldname': 'decimal', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'decimal'}, {'index': False, 'primary_key': False, 'nullable': True, 'type': 'INTEGER', 'fieldname': 'reference', 'server_default': None, 'autoincrement': False, 'relation': 'Reference(Test)', 'unique': False, 'verbose_name': None, 'name': 'reference'}, {'index': False, 'primary_key': True, 'nullable': False, 'type': 'INTEGER', 'fieldname': 'id', 'server_default': None, 'autoincrement': True, 'relation': '', 'unique': False, 'verbose_name': None, 'name': 'id'}]
+    {'index': False, 'name': 'reference', 'nullable': True, 'type': 'Reference', 'type_name': 'INTEGER', 'fieldname': 'reference', 'server_default': None, 'autoincrement': False, 'relation': 'Reference(Test:id)', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    >>> Test.other.to_column_info()
+    {'index': False, 'name': 'other', 'nullable': True, 'type': 'ManyToMany', 'type_name': 'ManyToMany', 'fieldname': 'other', 'server_default': None, 'autoincrement': False, 'relation': 'ManyToMany(Test:id-Other:id)', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    >>> Test.one.to_column_info()
+    {'index': False, 'name': 'one', 'nullable': True, 'type': 'OneToOne', 'type_name': 'INTEGER', 'fieldname': 'one', 'server_default': None, 'autoincrement': False, 'relation': 'OneToOne(One:id)', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    >>> [(x['name'], x['type']) for x in Test.get_columns_info()]
+    [('string', 'VARCHAR'), ('char', 'CHAR'), ('file', 'VARCHAR'), ('uni', 'VARCHAR'), ('boolean', 'BOOL'), ('integer', 'INTEGER'), ('date1', 'DATETIME'), ('date2', 'DATE'), ('date3', 'TIME'), ('float', 'FLOAT'), ('decimal', 'DECIMAL'), ('reference', 'Reference'), ('other', 'ManyToMany'), ('one', 'OneToOne'), ('id', 'INTEGER')]
     """
 
 # db = get_connection('sqlite://')
