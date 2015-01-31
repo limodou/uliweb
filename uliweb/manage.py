@@ -654,20 +654,69 @@ register_command(InstallCommand)
 class MakeCmdCommand(Command):
     name = 'makecmd'
     help = 'Created a commands.py to the apps or current directory.'
-    args = '[appname, appname, ...]'
+    args = 'appname'
     check_apps = False
     check_apps_dirs = False
     
     def handle(self, options, global_options, *args):
+        from uliweb.core.commands import get_input, get_answer
+        from uliweb.core.template import template_file
         from uliweb.utils.common import extract_dirs
         from uliweb import get_app_dir
-        
+
         if not args:
-            extract_dirs('uliweb', 'template_files/command', '.', verbose=global_options.verbose)
+            path = '.'
         else:
-            for f in args:
-                p = get_app_dir(f)
-                extract_dirs('uliweb', 'template_files/command', p, verbose=global_options.verbose)
+            path = get_app_dir(args[0])
+        cmd_filename = os.path.join(path, 'commands.py')
+
+        overwrite = False
+        if os.path.exists(cmd_filename):
+            overwrite = get_answer('The commands.py is already existed, '
+                            'do you want to overwrite it',
+                            quit='q',
+                            default='n') == 'Y'
+
+        if overwrite:
+            command_file = open(cmd_filename, 'w')
+        else:
+            command_file = open(cmd_filename, 'a')
+        try:
+            if overwrite:
+                command_file.write(self._render_tempfile('command_head.tmpl'))
+            d = {}
+            d['name'] = get_input('Command name:')
+            d['has_subcommands'] = get_answer('Has subcommands', default='n') == 'Y'
+
+            command_file.write(self._render_tempfile('command.tmpl', d))
+
+            if d['has_subcommands']:
+                subcommand_filename = os.path.join(path, d['name']+'_subcommands.py')
+                if overwrite:
+                    sub_file = open(subcommand_filename, 'w')
+                else:
+                    sub_file = open(subcommand_filename, 'a')
+                try:
+                    if overwrite:
+                        sub_file.write(self._render_tempfile('command_head.tmpl'))
+                    d = {'name':'demoSub', 'has_subcommands':False}
+                    sub_file.write(self._render_tempfile('command.tmpl', d))
+                finally:
+                    sub_file.close()
+        finally:
+            command_file.close()
+
+    def _get_tempfile(self, tmplname):
+        from uliweb.utils.common import pkg
+
+        return os.path.join(pkg.resource_filename('uliweb', 'template_files/command'), tmplname)
+
+    def _render_tempfile(self, tmplname, vars=None):
+        from uliweb.core.template import template_file
+
+        tempfile = self._get_tempfile(tmplname)
+        return template_file(tempfile, vars or {})
+
 register_command(MakeCmdCommand)
 
 class RunserverCommand(Command):
@@ -701,11 +750,12 @@ class RunserverCommand(Command):
             help='Start uliweb server with gevent.'),
         make_option('--gevent-socketio', dest='gsocketio', action='store_true', default=False,
             help='Start uliweb server with gevent-socketio.'),
+        make_option('--coverage', dest='coverage', action='store_true', default=False,
+            help='Start uliweb server with coverage.'),
     )
     develop = False
     
     def handle(self, options, global_options, *args):
-        from werkzeug.serving import run_simple
         import logging
         from logging import StreamHandler
         from uliweb.utils.coloredlog import ColoredFormatter
@@ -735,10 +785,141 @@ class RunserverCommand(Command):
                         include_apps=include_apps, settings_file=global_options.settings,
                         local_settings_file=global_options.local_settings, debug_cls=debug_cls,
                         verbose=global_options.verbose)
-        
+
+        cov = None
+        try:
+            if options.coverage:
+                try:
+                    from coverage import coverage
+                except ImportError:
+                    print "Error: Can't import coverage!"
+                    return
+
+                cov = coverage(source=['apps'])
+                cov.start()
+            if options.tornado:
+                self.run_tornado(options, extra_files, get_app)
+            elif options.gevent:
+                self.run_gevent(options, extra_files, get_app)
+            elif options.gsocketio:
+                self.run_gevent_socketio(options, extra_files, get_app)
+            else:
+                self.run_simple(options, extra_files, get_app)
+        finally:
+            print '=======', cov
+            if cov:
+                cov.stop()
+                cov.html_report(directory='covhtml')
+
+    def run_tornado(self, options, extra_files, get_app):
+        try:
+            import tornado.wsgi
+            import tornado.httpserver
+            import tornado.ioloop
+            import tornado.autoreload
+        except:
+            print 'Error: Please install tornado first'
+            return
+
+        if options.ssl:
+            ctx = {
+                "certfile": options.ssl_cert,
+                "keyfile": options.ssl_key,
+            }
+            log.info(' * Running on https://%s:%d/' % (options.hostname, options.port))
+        else:
+            ctx = None
+            log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
+
+        container = tornado.wsgi.WSGIContainer(get_app())
+        http_server = tornado.httpserver.HTTPServer(container,
+            ssl_options=ctx)
+        http_server.listen(options.port, address=options.hostname)
+        loop=tornado.ioloop.IOLoop.instance()
+        if options.reload:
+            for f in extra_files:
+                tornado.autoreload.watch(f)
+            tornado.autoreload.start(loop)
+        loop.start()
+
+    def run_gevent(self, options, extra_files, get_app):
+        try:
+            from gevent.wsgi import WSGIServer
+            from gevent import monkey
+        except:
+            print 'Error: Please install gevent first'
+            return
+        from werkzeug.serving import run_with_reloader
+        from functools import partial
+
+        monkey.patch_all()
+
+        run_with_reloader = partial(run_with_reloader, extra_files=extra_files)
+
+        if options.ssl:
+            ctx = {
+                "certfile": options.ssl_cert,
+                "keyfile": options.ssl_key,
+            }
+        else:
+            ctx = {}
+        @run_with_reloader
+        def run_server():
+            log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
+            http_server = WSGIServer((options.hostname, options.port), get_app(), **ctx)
+            http_server.serve_forever()
+
+        run_server()
+
+    def run_gevent_socketio(self, options, extra_files, get_app):
+        try:
+            from gevent import monkey
+        except:
+            print 'Error: Please install gevent first'
+            return
+        try:
+            from socketio.server import SocketIOServer
+        except:
+            print 'Error: Please install gevent-socketio first'
+            sys.exit(1)
+        from werkzeug.serving import run_with_reloader
+        from functools import partial
+
+        monkey.patch_all()
+
+        from werkzeug.debug import DebuggedApplication
+        class MyDebuggedApplication(DebuggedApplication):
+            def __call__(self, environ, start_response):
+                # check if websocket call
+                if "wsgi.websocket" in environ and not environ["wsgi.websocket"] is None:
+                    # a websocket call, no debugger ;)
+                    return self.application(environ, start_response)
+                # else go on with debugger
+                return DebuggedApplication.__call__(self, environ, start_response)
+
+        if options.ssl:
+            ctx = {
+                "certfile": options.ssl_cert,
+                "keyfile": options.ssl_key,
+            }
+        else:
+            ctx = {}
+
+        run_with_reloader = partial(run_with_reloader, extra_files=extra_files)
+
+        @run_with_reloader
+        def run_server():
+            log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
+            SocketIOServer((options.hostname, options.port), get_app(MyDebuggedApplication), resource="socket.io", **ctx).serve_forever()
+
+        run_server()
+
+    def run_simple(self, options, extra_files, get_app):
+        from werkzeug.serving import run_simple
+
         if options.ssl:
             ctx = 'adhoc'
-            
+
             default = False
             if not os.path.exists(options.ssl_key):
                 log.info(' * SSL key file (%s) not found, will use default ssl config' % options.ssl_key)
@@ -746,116 +927,15 @@ class RunserverCommand(Command):
             if not os.path.exists(options.ssl_cert) and not default:
                 log.info(' * SSL cert file (%s) not found, will use default ssl config' % options.ssl_cert)
                 default = True
-                
+
             if not default:
                 ctx = (options.ssl_key, options.ssl_cert)
         else:
             ctx = None
-        
-        if options.tornado:
-            try:
-                import tornado.wsgi
-                import tornado.httpserver
-                import tornado.ioloop
-                import tornado.autoreload
-            except:
-                print 'Error: Please install tornado first'
-                sys.exit(1)
-               
-            if options.ssl:
-                ctx = {
-                    "certfile": options.ssl_cert,
-                    "keyfile": options.ssl_key,
-                }
-                log.info(' * Running on https://%s:%d/' % (options.hostname, options.port))
-            else:
-                ctx = None
-                log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
-                
-            container = tornado.wsgi.WSGIContainer(get_app())
-            http_server = tornado.httpserver.HTTPServer(container, 
-                ssl_options=ctx)
-            http_server.listen(options.port, address=options.hostname)
-            loop=tornado.ioloop.IOLoop.instance()
-            if options.reload:
-                for f in extra_files:
-                    tornado.autoreload.watch(f)
-                tornado.autoreload.start(loop)
-            loop.start()
-        elif options.gevent:
-            try:
-                from gevent.wsgi import WSGIServer
-                from gevent import monkey
-            except:
-                print 'Error: Please install gevent first'
-                sys.exit(1)
-            from werkzeug.serving import run_with_reloader
-            from functools import partial
-            
-            monkey.patch_all()
-            
-            run_with_reloader = partial(run_with_reloader, extra_files=extra_files)
-            
-            if options.ssl:
-                ctx = {
-                    "certfile": options.ssl_cert,
-                    "keyfile": options.ssl_key,
-                }
-            else:
-                ctx = {}
-            @run_with_reloader
-            def run_server():
-                log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
-                http_server = WSGIServer((options.hostname, options.port), get_app(), **ctx)
-                http_server.serve_forever()
-            
-            run_server()
-            
-        elif options.gsocketio:
-            try:
-                from gevent import monkey
-            except:
-                print 'Error: Please install gevent first'
-                sys.exit(1)
-            try:
-                from socketio.server import SocketIOServer
-            except:
-                print 'Error: Please install gevent-socketio first'
-                sys.exit(1)
-            from werkzeug.serving import run_with_reloader
-            from functools import partial
-            
-            monkey.patch_all()
-            
-            from werkzeug.debug import DebuggedApplication
-            class MyDebuggedApplication(DebuggedApplication):
-                def __call__(self, environ, start_response):
-                    # check if websocket call
-                    if "wsgi.websocket" in environ and not environ["wsgi.websocket"] is None:
-                        # a websocket call, no debugger ;)
-                        return self.application(environ, start_response)
-                    # else go on with debugger
-                    return DebuggedApplication.__call__(self, environ, start_response)
-            
-            if options.ssl:
-                ctx = {
-                    "certfile": options.ssl_cert,
-                    "keyfile": options.ssl_key,
-                }
-            else:
-                ctx = {}
 
-            run_with_reloader = partial(run_with_reloader, extra_files=extra_files)
-
-            @run_with_reloader
-            def run_server():
-                log.info(' * Running on http://%s:%d/' % (options.hostname, options.port))
-                SocketIOServer((options.hostname, options.port), get_app(MyDebuggedApplication), resource="socket.io", **ctx).serve_forever()
-            
-            run_server()
-        else:
             run_simple(options.hostname, options.port, get_app(), options.reload, False, True,
                 extra_files, 1, options.thread, options.processes, ssl_context=ctx)
+
 register_command(RunserverCommand)
 
 class DevelopCommand(RunserverCommand):

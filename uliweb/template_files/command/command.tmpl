@@ -1,0 +1,38 @@
+class {{=name.title()}}Command({{if has_subcommands:}}CommandManager{{else:}}Command{{pass}}):
+    #change the name to real command name, such as makeapp, makeproject, etc.
+    name = '{{=name}}'
+    #command line parameters definition
+    option_list = (
+        make_option('-d', '--demo', dest='demo', default=False, action='store_true',
+            help='Demo command demo.'),
+    )
+    #help information
+    help = ''
+    #args information, used to display show the command usage message
+    args = ''
+    #if True, it'll check the current directory should has apps directory
+    check_apps_dirs = True
+    #if True, it'll check args parameters should be valid apps name
+    check_apps = False
+    #if True, it'll skip not predefined parameters in options_list, otherwise it'll
+    #complain not the right parameters of the command, it'll used in subcommands or
+    #passing extra parameters to a special command
+    skip_options = {{=has_subcommands}}
+
+    def handle(self, options, global_options, *args):
+        print 'This is a demo of DemoCommand, you can enter: '
+        print
+        print '    uliweb help demo'
+        print
+        print 'to test this command'
+        print
+        print 'options=', options
+        print 'global_options=', global_options
+        print 'args=', args
+
+{{if has_subcommands:}}
+    def get_commands(self, global_options):
+        import {{=name}}_subcommands as subcommands
+        cmds = get_commands(subcommands)
+        return cmds
+{{pass}}
