@@ -18,7 +18,10 @@ class {{=name.title()}}Command({{if has_subcommands:}}CommandManager{{else:}}Com
     #complain not the right parameters of the command, it'll used in subcommands or
     #passing extra parameters to a special command
     skip_options = {{=has_subcommands}}
+    #if inherit the base class option_list, default True is inherit
+    options_inherit = True
 
+{{if not has_subcommands:}}
     def handle(self, options, global_options, *args):
         print 'This is a demo of DemoCommand, you can enter: '
         print
@@ -29,6 +32,7 @@ class {{=name.title()}}Command({{if has_subcommands:}}CommandManager{{else:}}Com
         print 'options=', options
         print 'global_options=', global_options
         print 'args=', args
+{{pass}}
 
 {{if has_subcommands:}}
     def get_commands(self, global_options):

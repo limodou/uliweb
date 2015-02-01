@@ -95,9 +95,10 @@ def get_input(prompt, default=None, choices=None, option_value=None):
 class CommandMetaclass(type):
     def __init__(cls, name, bases, dct):
         option_list = list(dct.get('option_list', []))
-        for c in bases:
-            if hasattr(c, 'option_list') and isinstance(c.option_list, list):
-                option_list.extend(c.option_list)
+        if dct.get('options_inherit', True):
+            for c in bases:
+                if hasattr(c, 'option_list') and isinstance(c.option_list, list):
+                    option_list.extend(c.option_list)
         cls.option_list = option_list
         
 class Command(object):

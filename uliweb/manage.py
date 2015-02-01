@@ -670,7 +670,7 @@ class MakeCmdCommand(Command):
             path = get_app_dir(args[0])
         cmd_filename = os.path.join(path, 'commands.py')
 
-        overwrite = False
+        overwrite = True
         if os.path.exists(cmd_filename):
             overwrite = get_answer('The commands.py is already existed, '
                             'do you want to overwrite it',
