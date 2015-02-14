@@ -291,10 +291,65 @@ def test_app_subdomain():
     test_url.view /hello {'subdomain': 'test'}
     """
 
+def test_app_prefix():
+    """
+    >>> rules.clear_rules()
+    >>> rules.__app_rules__ = {'test_url':{'prefix':'/demo'}}
+    >>> def view():pass
+    >>> f = expose('/hello')(view)
+    >>> @expose('/test')
+    ... class TestView(object):
+    ...     @expose('')
+    ...     def index(self):
+    ...         return {}
+    ...
+    ...     @expose('!/ttt')
+    ...     def ttt(self):
+    ...         return {}
+    ...
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
+    ...     print v[1], v[2], v[3]
+    test_url.TestView.index /demo/test {}
+    test_url.TestView.pnt /print {}
+    test_url.TestView.ttt /ttt {}
+    test_url.view /demo/hello {}
+    """
+
+def test_url_route():
+    """
+    >>> rules.clear_rules()
+    >>> rules.set_app_rules()
+    >>> rules.set_urlroute_rules({'0':
+    ...     ('/test', '/demo'),
+    ...     '1':('(/hhhh)', r'/name\\1')
+    ... })
+    >>> def view():pass
+    >>> f = expose('/hello')(view)
+    >>> @expose('/test')
+    ... class TestView(object):
+    ...     def index(self):
+    ...         return {}
+    ...
+    ...     @expose('/hhhh/hello')
+    ...     def ttt(self):
+    ...         return {}
+    ...
+    >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
+    ...     print v[1], v[2], v[3]
+    test_url.TestView.index /demo/index {}
+    test_url.TestView.ttt /name/hhhh/hello {}
+    test_url.view /hello {}
+
+    """
+
 def test_multi_expose():
     """
     >>> rules.clear_rules()
     >>> rules.__app_rules__ = {}
+    >>> rules.set_urlroute_rules([])
     >>> @expose('/test')
     ... class TestView(object):
     ...     @expose('')
@@ -315,12 +370,20 @@ def test_multi_expose():
 
     """
 
-@expose('/test')
-class TestView(object):
-    @expose('')
-    @expose('/')
-    def index(self):
-        return {}
-
-for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
-    print v[1], v[2], v[3]
+# rules.clear_rules()
+# rules.set_urlroute_rules([
+#     ('/test', '/demo'),
+#     ('^(/admin)', r'/name\1')
+# ])
+#
+# @expose('/test')
+# class TestView(object):
+#     def index(self):
+#         return {}
+#
+#     @expose('/admin/hello')
+#     def hello(self):
+#         pass
+#
+# for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
+#     print v[1], v[2], v[3]

@@ -15,6 +15,14 @@ Uliweb Change Log
 * Add model ipython notebook support
 * Refact sqldot
 * Add environ variables passing in uliweb shell command
+* Change app_url syntax to {'suffix':} to {'prefix':} only for dict data type
+* Add URL route option in settings, it is [URL_ROUTE], format is
+
+    ```
+    [URL_ROUTE]
+    any_key_1 = ('mapping_str', 'replacement')
+    any_key_2 = ('mapping_str', 'replacement')
+    ```
 
 0.4.1 Version
 -----------------

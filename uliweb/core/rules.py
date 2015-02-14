@@ -1,4 +1,5 @@
 import os
+import re
 import inspect
 from uliweb.utils.common import log
 from uliweb.utils.sorteddict import SortedDict
@@ -11,6 +12,7 @@ __exposes__ = SortedDict()
 __no_need_exposed__ = []
 __class_methods__ = {}
 __app_rules__ = {}
+__url_route_rules__ = []
 __url_names__ = {}
 static_views = []
 
@@ -56,10 +58,22 @@ def clear_rules():
     __exposes__ = {}
     __no_need_exposed__ = []
 
-def set_app_rules(rules):
+def set_app_rules(rules=None):
     global __app_rules__
-    __app_rules__.update(rules)
+    __app_rules__ = {}
+    __app_rules__.update(rules or {})
     
+def set_urlroute_rules(rules=None):
+    """
+    rules should be (pattern, replace)
+
+    e.g.: ('/admin', '/demo')
+    """
+    global __url_route_rules__
+    __url_route_rules__ = []
+    for k, v in (rules or {}).values():
+        __url_route_rules__.append((re.compile(k), v))
+
 def get_endpoint(f):
     if inspect.ismethod(f):
         if not f.im_self:    #instance method
@@ -107,7 +121,7 @@ class Expose(object):
             self.rule = rule
             self.kwargs = kwargs
 
-    def _get_app_suffix(self, appname):
+    def _get_app_prefix(self, appname):
         if appname in __app_rules__:
             d = __app_rules__[appname]
             if not d:
@@ -115,7 +129,7 @@ class Expose(object):
             if isinstance(d, str):
                 return d
             else:
-                return d.get('suffix')
+                return d.get('prefix')
 
     def _get_app_subdomin(self, appname):
         if appname in __app_rules__:
@@ -128,19 +142,24 @@ class Expose(object):
                 return d.get('subdomain')
 
     def _fix_url(self, appname, rule):
-        from uliweb import application
-
-        app_suffix = self._get_app_suffix(appname)
-        if rule.startswith('/') and app_suffix:
-            url = os.path.join(app_suffix, rule.lstrip('/')).replace('\\', '/')
+        app_prefix = self._get_app_prefix(appname)
+        if rule.startswith('/') and app_prefix:
+            url = os.path.normcase(os.path.join(app_prefix, rule.lstrip('/')).replace('\\', '/'))
         else:
             if rule.startswith('!'):
                 url = rule[1:]
             else:
                 url = rule
+
         if len(url) > 1:
             url = url.rstrip('/')
         return url
+
+    def _fix_route(self, rule):
+        for k, v in __url_route_rules__:
+            if k.match(rule):
+                return k.sub(v, rule)
+        return rule
 
     def _fix_kwargs(self, appname, v):
         _subdomain = self._get_app_subdomin(appname)
@@ -203,7 +222,7 @@ class Expose(object):
                                 #maybe it's root url, e.g. /register
                                 if not keep and rule.startswith(prefix):
                                     rule = self._fix_url(appname, rule)
-                                
+
                                 func.__old_rule__['clsname'] = clsname
                                 #save processed data
                                 x = list(v)
@@ -214,11 +233,13 @@ class Expose(object):
                                 #add subdomain process
                                 self._fix_kwargs(appname, v[3])
 
+                            rule = self._fix_route(rule)
                             __no_need_exposed__.append((v[0], new_endpoint, rule, v[3], now()))
                     else:
                         #maybe is subclass
                         v = copy.deepcopy(func.func_dict.get('__saved_rule__'))
                         rule = self._get_url(appname, prefix, func)
+                        rule = self._fix_route(rule)
                         if v and new_endpoint != v[1]:
                             if self.replace:
                                 v[3]['name'] = v[3].get('name') or v[1]
@@ -234,6 +255,7 @@ class Expose(object):
                             __no_need_exposed__.append(v)
                 else:
                     rule = self._get_url(appname, prefix, func)
+                    rule = self._fix_route(rule)
                     endpoint = '.'.join([f.__module__, clsname, func.__name__])
                     #process inherit kwargs from class
                     #add subdomain process
@@ -274,6 +296,7 @@ class Expose(object):
             else:
                 rule = '/' + '/'.join([path, f.__name__] + args)
         else:
+            self.rule = self._fix_route(self.rule)
             rule = self.rule
         rule = self._fix_url(appname, rule)
 

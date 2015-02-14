@@ -594,7 +594,8 @@ class Dispatcher(object):
         
         #set app rules
         rules.set_app_rules(dict(settings.get('URL', {})))
-        
+        rules.set_urlroute_rules(dict(settings.get('URL_ROUTE', {})))
+
         Dispatcher.env = self._prepare_env()
         Dispatcher.template_dirs = self.get_template_dirs()
         Dispatcher.template_loader = self.install_template_loader(Dispatcher.template_dirs)
