@@ -806,7 +806,6 @@ class RunserverCommand(Command):
             else:
                 self.run_simple(options, extra_files, get_app)
         finally:
-            print '=======', cov
             if cov:
                 cov.stop()
                 cov.html_report(directory='covhtml')
