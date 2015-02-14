@@ -220,7 +220,7 @@ class Expose(object):
                                     rule = prefix
                                 #if rule has perfix of appname, then fix it, otherwise
                                 #maybe it's root url, e.g. /register
-                                if not keep and rule.startswith(prefix):
+                                if not keep:
                                     rule = self._fix_url(appname, rule)
 
                                 func.__old_rule__['clsname'] = clsname

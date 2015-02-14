@@ -313,7 +313,7 @@ def test_app_prefix():
     >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
     ...     print v[1], v[2], v[3]
     test_url.TestView.index /demo/test {}
-    test_url.TestView.pnt /print {}
+    test_url.TestView.pnt /demo/print {}
     test_url.TestView.ttt /ttt {}
     test_url.view /demo/hello {}
     """
@@ -371,10 +371,7 @@ def test_multi_expose():
     """
 
 # rules.clear_rules()
-# rules.set_urlroute_rules([
-#     ('/test', '/demo'),
-#     ('^(/admin)', r'/name\1')
-# ])
+# rules.__app_rules__ = {'__main__':{'prefix':'/demo'}}
 #
 # @expose('/test')
 # class TestView(object):
