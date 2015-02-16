@@ -87,6 +87,7 @@ def test_ini1():
     <BLANKLINE>
     
     """
+
 def test_ini2():
     """
     >>> x = Ini()
@@ -587,3 +588,13 @@ def test_pre_var():
     <BLANKLINE>
     """
 
+def test_dict_init():
+    """
+    >>> x = Ini({'default':{'abc':'name'}})
+    >>> print x
+    #coding=utf-8
+    [default]
+    abc = 'name'
+    <BLANKLINE>
+
+    """

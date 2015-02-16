@@ -395,9 +395,16 @@ class Ini(SortedDict):
         the user invoke finish() function, it'll parse the data.
         
         import_env will import all environment variables
+
+        if inifile is dict, then automatically add to ini object
         """
         super(Ini, self).__init__()
-        self._inifile = inifile
+        if isinstance(inifile, dict):
+            self._inifile = ''
+            data = inifile
+        else:
+            self._inifile = inifile
+            data = None
         self._basepath = basepath
         self._commentchar = commentchar or __default_env__.get('commentchar', '#')
         self._encoding = encoding or __default_env__.get('encoding', 'utf-8')
@@ -422,6 +429,12 @@ class Ini(SortedDict):
             
         if self._inifile:
             self.read(self._inifile)
+
+        if data:
+            for k, v in data.items():
+                s = self.add(k)
+                for _k, _v in v.items():
+                    s[_k] = _v
         
     def set_filename(self, filename):
         self._inifile = filename
