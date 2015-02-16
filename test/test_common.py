@@ -48,5 +48,16 @@ def test_import_attr():
     """
     >>> f = import_attr('datetime:datetime.ctime')
     >>> f.__name__
-    ctime
+    'ctime'
+    """
+
+def test_get_configrable_object():
+    """
+    >>> from uliweb.utils.pyini import Ini
+    >>> x = Ini({'TEST':{'a':'uliweb.utils.common.import_attr'}})
+    >>> import uliweb
+    >>> uliweb.settings = x
+    >>> from uliweb.utils.common import get_configrable_object
+    >>> print get_configrable_object('a', 'TEST').__name__
+    import_attr
     """

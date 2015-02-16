@@ -694,6 +694,26 @@ def get_tempfilename2(prefix, suffix='', dir=''):
 def get_tempfilename(prefix, suffix='', dir=''):
     return get_tempfilename2(prefix, suffix, dir)[1]
 
+def get_configrable_object(key, section, cls=None):
+    """
+    if obj is a class, then check if the class is subclass of cls
+    or it should be object path, and it'll be imported by import_attr
+    """
+    from uliweb import UliwebError, settings
+    import inspect
+
+    if inspect.isclass(key) and cls and issubclass(key, cls):
+        return cls
+    elif isinstance(key, (str, unicode)):
+        path = settings[section].get(key)
+        if path:
+            _cls = import_attr(path)
+            return _cls
+        else:
+            raise UliwebError("Can't find section name %s in settings" % section)
+    else:
+        raise UliwebError("Key %r should be subclass of %r object or string path format!" % (key, cls))
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:
