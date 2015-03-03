@@ -37,7 +37,7 @@ class D(dict):
     def __getattr__(self, key):
         try:
             return self[key]
-        except KeyError, k:
+        except KeyError as k:
             return None
 
     def __setattr__(self, key, value):
@@ -46,8 +46,8 @@ class D(dict):
     def __delattr__(self, key):
         try:
             del self[key]
-        except KeyError, k:
-            raise AttributeError, k
+        except KeyError as k:
+            raise AttributeError(k)
 
 def check_reserved_word(f):
     if f in dir(Form):
@@ -106,10 +106,12 @@ class BaseField(object):
     default_validators = []
     default_datatype = None
     creation_counter = 0
+    type_name = 'str'
 
     def __init__(self, label='', default=None, required=False, validators=None,
         name='', html_attrs=None, help_string='', build=None, datatype=None,
-        multiple=False, idtype=None, static=False, placeholder='', **kwargs):
+        multiple=False, idtype=None, static=False, placeholder='',
+        hidden=False, **kwargs):
         self.label = label
         self._default = default
         self.validators = validators or []
@@ -120,6 +122,7 @@ class BaseField(object):
         self.datatype = datatype or self.default_datatype
         self.idtype = idtype
         self.static = static
+        self.hidden = hidden
         _cls = ''
         if '_class' in self.html_attrs:
             _cls = '_class'
@@ -167,7 +170,11 @@ class BaseField(object):
         if self.static:
             return str('<span class="value">%s</span>' % value)
         else:
-            return str(self.build(name=self.name, value=value, id=self.id, **self.html_attrs))
+            if self.hidden:
+                build = Hidden
+            else:
+                build = self.build
+            return str(build(name=self.name, value=value, id=self.id, **self.html_attrs))
 
     def get_label(self, delimeter=True, **kwargs):
         if self.label is None:
@@ -286,6 +293,7 @@ class BaseField(object):
 #
 class StringField(BaseField):
     default_datatype = str
+
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
 
@@ -302,6 +310,8 @@ class StringField(BaseField):
         return data
 
 class UnicodeField(BaseField):
+    type_name = 'unicode'
+
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
 
@@ -318,22 +328,29 @@ class UnicodeField(BaseField):
 
 class PasswordField(StringField):
     default_build = Password
+    type_name = 'password'
+
 
 class HiddenField(StringField):
     default_build = Hidden
+    type_name = 'hidden'
 
 class ListField(StringField):
-    def __init__(self, label='', default=None, required=False, validators=None, name='', delimeter=' ', html_attrs=None, help_string='', build=None, datatype=str, **kwargs):
+    type_name = 'list'
+
+    def __init__(self, label='', default=None, required=False, validators=None, name='', delimeter=', ', html_attrs=None, help_string='', build=None, datatype=str, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.delimeter = delimeter
         self._default = default or []
         self.datatype = datatype
 
     def to_python(self, data):
+        import re
+
         if issubclass(self.build, TextArea):
             return [self.datatype(x) for x in data.splitlines()]
         else:
-            return [self.datatype(x) for x in data.split(self.delimeter)]
+            return [self.datatype(x) for x in re.split('[%s]+' % self.delimeter, data)]
 
     def to_html(self, data):
         if issubclass(self.build, TextArea):
@@ -343,6 +360,7 @@ class ListField(StringField):
 
 class TextField(StringField):
     default_build = TextArea
+    type_name = 'text'
 
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, rows=4, cols=None, convert_html=False, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
@@ -374,6 +392,8 @@ class TextField(StringField):
             return data.encode(DEFAULT_ENCODING)
 
 class TextLinesField(TextField):
+    type_name = 'lines'
+
     def __init__(self, label='', default=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, datatype=str, rows=4, cols=None, **kwargs):
         TextField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, rows=rows, cols=cols, **kwargs)
         self._default = default or []
@@ -381,6 +401,9 @@ class TextLinesField(TextField):
 
     def to_python(self, data):
         return [self.datatype(x) for x in data.splitlines()]
+
+    def to_html(self, data):
+        return '\n'.join([u_str(x) for x in data])
 
     def html(self, data='', py=True):
         if data is None:
@@ -395,6 +418,7 @@ class TextLinesField(TextField):
 class BooleanField(BaseField):
     default_build = Checkbox
     field_css_class = 'checkbox'
+    type_name = 'bool'
 
     def __init__(self, label='', default=False, name='', html_attrs=None, help_string='', build=None, required=False, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=False, validators=None, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
@@ -428,6 +452,7 @@ class BooleanField(BaseField):
 
 class IntField(BaseField):
     default_build = Number
+    type_name = 'int'
 
     def __init__(self, label='', default=0, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
@@ -441,6 +466,8 @@ class IntField(BaseField):
         return str(data)
 
 class FloatField(BaseField):
+    type_name = 'float'
+
     def __init__(self, label='', default=0.0, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
 
@@ -454,12 +481,14 @@ class FloatField(BaseField):
 
 class SelectField(BaseField):
     default_build = Select
+    type_name = 'select'
 
-    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', size=10, **kwargs):
+    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', size=10, inline=False, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.choices = choices or []
         self.empty = empty
         self.size = size
+        self.inline = inline
         if self.multiple:
             self._default = default or []
         else:
@@ -499,9 +528,11 @@ class SelectField(BaseField):
 
 class RadioSelectField(SelectField):
     default_build = RadioSelect
+    type_name = 'radios'
 
 class CheckboxSelectField(SelectField):
     default_build = CheckboxSelect
+    type_name = 'checkboxes'
 
     def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, multiple=None, **kwargs):
         multiple = multiple if multiple is not None else True
@@ -509,6 +540,7 @@ class CheckboxSelectField(SelectField):
 
 class FileField(BaseField):
     default_build = File
+    type_name = 'file'
 
     def __init__(self, label='', upload_to=None, upload_to_sub=None, **kwargs):
         BaseField.__init__(self, label=label, **kwargs)
@@ -532,6 +564,7 @@ class FileField(BaseField):
         return str(self.build(name=self.name, id=self.id, **self.html_attrs))
 
 class ImageField(FileField):
+    type_name = 'image'
 
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, size=None, **kwargs):
         FileField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
@@ -566,14 +599,17 @@ class _BaseDatetimeField(StringField):
 
 class DateField(_BaseDatetimeField):
     field_css_class = 'field_date'
+    type_name = 'date'
 
 class TimeField(_BaseDatetimeField):
     field_css_class = 'field_time'
     time_func = 'to_time'
+    type_name = 'time'
 
 class DateTimeField(_BaseDatetimeField):
     field_css_class = 'field_datetime'
     time_func = 'to_datetime'
+    type_name = 'datetime'
 
 class FormMetaclass(type):
     def __init__(cls, name, bases, dct):
@@ -586,7 +622,6 @@ class FormMetaclass(type):
                     cls.add_field(name, field)
 
         fields_list = [(k, v) for k, v in dct.items() if isinstance(v, BaseField)]
-        fields_list, dct.items()
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         for (field_name, obj) in fields_list:
             cls.add_field(field_name, obj)
@@ -638,6 +673,7 @@ class Form(object):
 
         self.idtype = idtype
         self.layout = layout or self.layout
+        self.__class__.layout_class = get_form_layout_class(self.layout_class)
         self.vars = vars
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
@@ -722,12 +758,15 @@ class Form(object):
             self.data = result
 
         #the data of static field will be put into parsed data
-        for k, v in self.fields.iteritems():
+        for k, v in self.fields.items():
             if v.static and k in old_data:
                 self.data[k] = old_data[k]
         return self.ok
 
     def __str__(self):
+        return self.html()
+
+    def _repr_html_(self):
         return self.html()
 
     @property
@@ -775,3 +814,107 @@ class Form(object):
         result.end = layout.end()
         result.post_html = self.post_html() if hasattr(self, 'post_html') else ''
         return result
+
+fields_mapping = {
+    'str':StringField,
+    'select':SelectField,
+    'text':TextField,
+    'unicode':UnicodeField,
+    'lines':TextLinesField,
+    'password':PasswordField,
+    'hidden':HiddenField,
+    'int':IntField,
+    'list':ListField,
+    'radios':RadioSelectField,
+    'image':ImageField,
+    'float':FloatField,
+    'file':FileField,
+    'bool':BooleanField,
+    'checkboxes':CheckboxSelectField,
+    'date':DateField,
+    'time':TimeField,
+    'datetime':DateTimeField,
+}
+
+def make_field(type, **kwargs):
+    """
+    According field information creating Field instance
+    """
+    cls = fields_mapping.get(type, StringField)
+    return cls(**kwargs)
+
+def make_form(fields=None, layout=None, layout_class=None, base_class=Form,
+              get_form_field=None, name=None, **kwargs):
+    """
+    Make a from according dict data:
+
+    {'fields':[
+            {'name':'name', 'type':'str', 'label':'label,
+                'rules':{
+                        'required':
+                        'email'
+                        'required:back|front' #back means server side, front means front side
+                    }
+            ...},
+            ...
+        ],
+    #layout_class should be defined in settings.ini, just like
+    #[FORM_LAYOUT_CLASSES]
+    #bs3 = '#{appname}.form_help.Bootstrap3Layout'
+    #is also can be a Layout Class
+    #default is BootstrapLayout
+    'layout_class':'bs3',
+    'layout':{
+        'rows':[
+            '-- legend title --',
+            'field_name',
+            ['group_fieldname', 'group_fieldname']
+            {'name':'name', 'colspan':3}
+        ],
+    }
+    'base_class':'form class if not existed, then use Form'
+    }
+
+    get_form_field is a callback function, used to defined customized field class
+    if has name then it'll be cached
+    """
+    from uliweb.utils.sorteddict import SortedDict
+
+    get_form_field = get_form_field or (lambda name, f:None)
+
+    #make fields
+    props = SortedDict({})
+    for f in fields:
+        if isinstance(f, BaseField):
+            props[f.name] = get_form_field(f.name, f) or f
+        else:
+            props[f['name']] = get_form_field(f['name'], f) or make_field(**f)
+
+    #set other props
+    if layout:
+        props['layout'] = layout
+    if layout_class:
+        props['layout_class'] = layout_class
+    layout_class_args = kwargs.pop('layout_class_args', None)
+    if layout_class_args:
+        props['layout_class_args'] = layout_class_args
+
+    cls = type(name or 'MakeForm_', (base_class,), props)
+    return cls
+
+def get_form(formcls):
+    """
+    get form class according form class path or form class object
+    """
+    from uliweb.utils.common import get_configrable_object
+
+    return get_configrable_object(formcls, 'FORMS', Form)
+
+def get_form_layout_class(form_layout_class):
+    """
+    Get form layout class according form_layout_class path or layout class object
+    """
+    from uliweb.utils.common import get_configrable_object
+
+    return get_configrable_object(form_layout_class, 'FORM_LAYOUT_CLASSES', Layout)
+

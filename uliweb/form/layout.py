@@ -26,7 +26,11 @@ class Layout(object):
         self.form = form
         self.layout = layout
         self.kwargs = kwargs
-        
+        self.init()
+
+    def init(self):
+        pass
+
     def html(self):
         return '\n'.join([x for x in [self.begin(), self.hiddens(), self.body(), self.buttons_line(), self.end()] if x])
     
@@ -35,9 +39,9 @@ class Layout(object):
     
     def get_widget_name(self, f):
         return f.build.__name__
-    
+
     def is_hidden(self, f):
-        return self.get_widget_name(f) == 'Hidden'
+        return f.type_name == 'hidden' or f.hidden
     
     def begin(self):
         if not self.form.html_attrs['class'] and self.form_class:

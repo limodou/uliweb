@@ -703,7 +703,7 @@ def get_configrable_object(key, section, cls=None):
     import inspect
 
     if inspect.isclass(key) and cls and issubclass(key, cls):
-        return cls
+        return key
     elif isinstance(key, (str, unicode)):
         path = settings[section].get(key)
         if path:

@@ -21,7 +21,7 @@ def test_1():
     <div class="control-group" id="div_field_title">
         <label class="control-label" for="field_title">Title:<span class="field_required">*</span></label>
         <div class="controls">
-        <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
+        <input class="" id="field_title" name="title" type="text" value=""></input>
         <p class="help help-block">Title help string</p>
     </div>
     <BLANKLINE>
@@ -30,7 +30,7 @@ def test_1():
     <div class="control-group" id="div_field_content">
         <label class="control-label" for="field_content">Content:</label>
         <div class="controls">
-        <textarea class="field" cols id="field_content" name="content" placeholder="" rows="4"></textarea>
+        <textarea class="" cols id="field_content" name="content" rows="4"></textarea>
         <p class="help help-block"></p>
     </div>
     <BLANKLINE>
@@ -56,9 +56,9 @@ def test_1():
     'Hello'
     >>> f.title.data = 'limodou'
     >>> print f.title.html
-    <input class="field" id="field_title" name="title" placeholder="" type="text" value="limodou"></input>
+    <input class="" id="field_title" name="title" type="text" value="limodou"></input>
     >>> print F.title.html()
-    <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
+    <input class="" id="field_title" name="title" type="text" value=""></input>
     """
 
 def test_IS_PAST_DATE():
@@ -114,7 +114,7 @@ def test_string():
     """
     >>> a = StringField(name='title', label='Title', required=True, id='field_title')
     >>> print a.html('Test')
-    <input class="field" id="field_title" name="title" placeholder="" type="text" value="Test"></input>
+    <input class="" id="field_title" name="title" type="text" value="Test"></input>
     >>> print a.get_label()
     <label for="field_title">Title:<span class="field_required">*</span></label>
     >>> a.validate('')
@@ -125,24 +125,24 @@ def test_string():
     'Hello'
     >>> a = StringField(name='title', label='Title', required=True)
     >>> print a.html('')
-    <input class="field" name="title" placeholder="" type="text" value=""></input>
+    <input class="" name="title" type="text" value=""></input>
     >>> print a.get_label()
     <label>Title:<span class="field_required">*</span></label>
     >>> a.idtype = 'name'
     >>> print a.html('')
-    <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
+    <input class="" id="field_title" name="title" type="text" value=""></input>
     >>> print a.get_label()
     <label for="field_title">Title:<span class="field_required">*</span></label>
     >>> a = StringField(name='title', label='Title:', required=True, html_attrs={'class':'ffff'})
     >>> print a.html('')
-    <input class="ffff field" name="title" placeholder="" type="text" value=""></input>
+    <input class="ffff" name="title" type="text" value=""></input>
     """
 
 def test_unicode_field():
     """
     >>> a = UnicodeField(name='title', label='Title', required=True, id='field_title')
     >>> print a.html('Test')
-    <input class="field" id="field_title" name="title" placeholder="" type="text" value="Test"></input>
+    <input class="" id="field_title" name="title" type="text" value="Test"></input>
     >>> print a.get_label()
     <label for="field_title">Title:<span class="field_required">*</span></label>
     >>> a.validate('')
@@ -159,21 +159,21 @@ def test_password_field():
     """
     >>> a = PasswordField(name='password', label='Password:', required=True, id='field_password')
     >>> print a.html('Test')
-    <input class="field" id="field_password" name="password" placeholder="" type="password" value="Test"></input>
+    <input class="" id="field_password" name="password" type="password" value="Test"></input>
     """
 
 def test_hidden_field():
     """
     >>> a = HiddenField(name='id', id='field_id')
     >>> print a.html('Test')
-    <input class="field" id="field_id" name="id" placeholder="" type="hidden" value="Test"></input>
+    <input class="" id="field_id" name="id" type="hidden" value="Test"></input>
     """
 
 def test_list_field():
     """
     >>> a = ListField(name='list', id='field_list')
     >>> print a.html(['a', 'b'])
-    <input class="field" id="field_list" name="list" placeholder="" type="text" value="a b"></input>
+    <input class="" id="field_list" name="list" type="text" value="a b"></input>
     >>> print a.validate('a b')
     (True, ['a', 'b'])
     >>> print a.validate('')
@@ -192,14 +192,14 @@ def test_text_field():
     """
     >>> a = TextField(name='text', id='field_text')
     >>> print a.html('Test')
-    <textarea class="field" cols id="field_text" name="text" placeholder="" rows="4">Test</textarea>
+    <textarea class="" cols id="field_text" name="text" rows="4">Test</textarea>
     """
 
 def test_textlines_field():
     """
     >>> a = TextLinesField(name='list', id='field_list')
     >>> print a.html(['a', 'b'])
-    <textarea class="field" cols id="field_list" name="list" placeholder="" rows="4">a
+    <textarea class="" cols id="field_list" name="list" rows="4">a
     b</textarea>
     """
 
@@ -207,7 +207,7 @@ def test_bool_field():
     """
     >>> a = BooleanField(name='bool', id='field_bool')
     >>> print a.html('Test')
-    <input checked class="checkbox" id="field_bool" name="bool" placeholder="" type="checkbox"></input>
+    <input checked class="checkbox" id="field_bool" name="bool" type="checkbox"></input>
     >>> print a.validate('on')
     (True, True)
     >>> print a.validate('')
@@ -220,7 +220,7 @@ def test_int_field():
     """
     >>> a = IntField(name='int', id='field_int')
     >>> print a.html('Test')
-    <input class="field" id="field_int" name="int" placeholder="" type="number" value="Test"></input>
+    <input class="" id="field_int" name="int" type="number" value="Test"></input>
     >>> print a.validate('')
     (True, 0)
     >>> print a.validate(None)
@@ -231,7 +231,7 @@ def test_int_field():
     (True, 122)
     >>> a = BaseField(name='int', id='field_int', datatype=int)
     >>> print a.html('Test')
-    <input class="field" id="field_int" name="int" placeholder="" type="text" value="Test"></input>
+    <input class="" id="field_int" name="int" type="text" value="Test"></input>
     >>> print a.validate('122')
     (True, 122)
     """
@@ -241,7 +241,7 @@ def test_select_field():
     >>> choices = [('a', 'AAA'), ('b', 'BBB')]
     >>> a = SelectField(name='select', id='field_select', default='a', choices=choices, validators=[IS_IN_SET(choices)])
     >>> print a.html('a')
-    <select class="field" id="field_select" name="select" placeholder="">
+    <select class="" id="field_select" name="select">
     <option selected value="a">AAA</option>
     <option value="b">BBB</option>
     </select>
@@ -264,8 +264,8 @@ def test_radioselect_field():
     >>> choices = [('a', 'AAA'), ('b', 'BBB')]
     >>> a = RadioSelectField(name='select', id='field_select', default='a', choices=choices, validators=[IS_IN_SET(choices)])
     >>> print a.html('a')
-    <label class="field" placeholder=""><input checked id="field_select" name="select" type="radio" value="a"></input>AAA</label>
-    <label class="field" placeholder=""><input id="field_select" name="select" type="radio" value="b"></input>BBB</label>
+    <label class=""><input checked id="field_select" name="select" type="radio" value="a"></input>AAA</label>
+    <label class=""><input id="field_select" name="select" type="radio" value="b"></input>BBB</label>
     >>> print a.validate('')
     (True, 'a')
     >>> print a.validate('aaaaaaa')
@@ -278,14 +278,14 @@ def test_file_field():
     """
     >>> a = FileField(name='file', id='field_file')
     >>> print a.html('a')
-    <input class="field" id="field_file" name="file" placeholder="" type="file"></input>
+    <input class="" id="field_file" name="file" type="file"></input>
     """
     
 def test_time_field():
     """
     >>> a = TimeField(name='time', id='field_time')
     >>> print a.html(datetime.time(14, 30, 59))
-    <input class="field field_time" id="field_time" name="time" placeholder="" type="text" value="14:30:59"></input>
+    <input class="field_time" id="field_time" name="time" type="text" value="14:30:59"></input>
     >>> print a.validate('14:30:59')
     (True, datetime.time(14, 30, 59))
     >>> print a.validate('14:30')
@@ -299,7 +299,7 @@ def test_date_field():
     """
     >>> a = DateField(name='date', id='field_date')
     >>> print a.html(datetime.date(2009, 1, 1))
-    <input class="field field_date" id="field_date" name="date" placeholder="" type="text" value="2009-01-01"></input>
+    <input class="field_date" id="field_date" name="date" type="text" value="2009-01-01"></input>
     >>> print a.validate('2009-01-01')
     (True, datetime.date(2009, 1, 1))
     >>> print a.validate('2009/01/01')
@@ -311,7 +311,7 @@ def test_datetime_field():
     """
     >>> a = DateTimeField(name='datetime', id='field_datetime')
     >>> print a.html(datetime.datetime(2009, 9, 25, 14, 30, 59))
-    <input class="field field_datetime" id="field_datetime" name="datetime" placeholder="" type="text" value="2009-09-25 14:30:59"></input>
+    <input class="field_datetime" id="field_datetime" name="datetime" type="text" value="2009-09-25 14:30:59"></input>
     >>> print a.validate('2009-09-25 14:30:59')
     (True, datetime.datetime(2009, 9, 25, 14, 30, 59))
     >>> print a.validate('2009-09-25 14:30')
@@ -352,7 +352,7 @@ def test_build():
     <div class="control-group" id="div_field_title">
         <label class="control-label" for="field_title">Title::</label>
         <div class="controls">
-        <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
+        <input class="" id="field_title" name="title" type="text" value=""></input>
         <p class="help help-block"></p>
     </div>
     <BLANKLINE>
@@ -371,13 +371,14 @@ def test_form_hidden_field():
     >>> f = F()
     >>> print f
     <form action="" class="form-horizontal" method="POST">
-    <table class="table width100"><tbody>
+    <input class="" id="field_content" name="content" type="hidden" value=""></input>
+    <table class="table table-layout width100"><tbody>
     <tr>
         <td colspan="1" valign="top" width="100%">
             <div class="control-group" id="div_field_title">
                 <label class="control-label" for="field_title">Title:<span class="field_required">*</span></label>
                 <div class="controls">
-        <input class="field" id="field_title" name="title" placeholder="" type="text" value=""></input>
+        <input class="" id="field_title" name="title" type="text" value=""></input>
         <div class="help help-block">
     Title help string
     </div>
@@ -389,7 +390,6 @@ def test_form_hidden_field():
     </tr>
     <BLANKLINE>
     <tr>
-        <input class="field" id="field_content" name="content" placeholder="" type="hidden" value=""></input>
     </tr>
     <BLANKLINE>
     </tbody></table>
@@ -401,7 +401,80 @@ def test_form_hidden_field():
     </form>
     <BLANKLINE>
     """
-    
+
+def test_make_form():
+    """
+    >>> fields = [
+    ...     {'name':'str', 'type':'str', 'label':'String'},
+    ... ]
+    >>> from uliweb.form.layout import BootstrapLayout
+    >>> F = make_form(fields=fields, layout_class=BootstrapLayout)
+    >>> print F()
+    <form action="" class="form-horizontal" method="POST">
+    <div class="control-group" id="div_field_str">
+        <label class="control-label" for="field_str">String:</label>
+        <div class="controls">
+        <input class="" id="field_str" name="str" type="text" value=""></input>
+        <p class="help help-block"></p>
+    </div>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    <BLANKLINE>
+    <div class="form-actions">
+        <button class="btn btn-primary" name="submit" type="submit">Submit</button>
+    </div>
+    <BLANKLINE>
+    </form>
+    <BLANKLINE>
+    """
+
+def test_make_form_field():
+    """
+    >>> fields = [
+    ...     StringField('String', name='str'),
+    ... ]
+    >>> from uliweb.form.layout import BootstrapLayout
+    >>> F = make_form(fields=fields, layout_class=BootstrapLayout)
+    >>> print F()
+    <form action="" class="form-horizontal" method="POST">
+    <div class="control-group" id="div_field_str">
+        <label class="control-label" for="field_str">String:</label>
+        <div class="controls">
+        <input class="" id="field_str" name="str" type="text" value=""></input>
+        <p class="help help-block"></p>
+    </div>
+    <BLANKLINE>
+    </div>
+    <BLANKLINE>
+    <BLANKLINE>
+    <div class="form-actions">
+        <button class="btn btn-primary" name="submit" type="submit">Submit</button>
+    </div>
+    <BLANKLINE>
+    </form>
+    <BLANKLINE>
+    """
+
+def test_make_form_hidden():
+    """
+    >>> fields = [
+    ...     HiddenField('String', name='str'),
+    ...     {'name':'str1', 'type':'str', 'label':'String1', 'hidden':True},
+    ... ]
+    >>> from uliweb.form.layout import BootstrapLayout
+    >>> F = make_form(fields=fields, layout_class=BootstrapLayout)
+    >>> print F()
+    <form action="" class="form-horizontal" method="POST">
+    <input class="" id="field_str" name="str" type="hidden" value=""></input><input class="" id="field_str1" name="str1" type="hidden" value=""></input>
+    <div class="form-actions">
+        <button class="btn btn-primary" name="submit" type="submit">Submit</button>
+    </div>
+    <BLANKLINE>
+    </form>
+    <BLANKLINE>
+    """
+
 #if __name__ == '__main__':
 #    from uliweb.utils import date
 #    
@@ -413,3 +486,10 @@ def test_form_hidden_field():
 #        
 #    form = TForm()
 #    print form
+
+# fields = [
+#     {'name':'str', 'type':'str', 'label':'String'},
+# ]
+# from uliweb.form.layout import BootstrapLayout
+# F = make_form(fields=fields, layout_class=BootstrapLayout)
+# print F()
