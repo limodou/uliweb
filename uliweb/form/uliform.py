@@ -69,6 +69,7 @@ class FieldProxy(object):
         return self.get_label()
 
     def get_label(self, _class=None):
+
         if self.field.__class__ is BooleanField:
             delimeter = False
         else:
@@ -185,7 +186,7 @@ class BaseField(object):
             return ''
         if delimeter and DEFAULT_LABEL_DELIMETER:
             label += DEFAULT_LABEL_DELIMETER
-        if self.required:
+        if self.required and not self.static:
             if REQUIRED_CAPTION_AFTER:
                 label += str(Tag('span', REQUIRED_CAPTION, _class='field_required'))
             else:
