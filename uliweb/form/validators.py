@@ -104,3 +104,7 @@ def IS_URL(data):
     b = r_url.match(data)
     if not b:
         return _('The input value is not a valid url')
+
+def IS_NOT_EMPTY(data):
+    if not data or (isinstance(data, (str, unicode)) and not data.strip()):
+        return _('This field is required.')

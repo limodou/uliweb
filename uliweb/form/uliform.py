@@ -177,11 +177,12 @@ class BaseField(object):
                 build = self.build
             return str(build(name=self.name, value=value, id=self.id, **self.html_attrs))
 
-    def get_label(self, delimeter=True, **kwargs):
-        if self.label is None:
-            label = capitalize(self.name)
-        else:
-            label = self.label
+    def get_label(self, delimeter=True, label=None, **kwargs):
+        if label is None:
+            if self.label is None:
+                label = capitalize(self.name)
+            else:
+                label = self.label
         if not label:
             return ''
         if delimeter and DEFAULT_LABEL_DELIMETER:
@@ -237,7 +238,14 @@ class BaseField(object):
             return ''
         return u_str(data)
 
-    def validate(self, data):
+    def validate(self, data, **kwargs):
+        """
+        if 'rule' in kwargs, then validate extra rules
+
+        e.g.:
+            rule= {'required':True, 'minlength':6}
+        """
+
         if hasattr(data, 'stream'):
             data.file = data.stream
 
@@ -249,15 +257,26 @@ class BaseField(object):
         else:
             v = data
 #        if v is None:
-        if not v or (isinstance(v, (str, unicode)) and not v.strip()):
-            if not self.required:
+
+        rules = kwargs.get('rules', {})
+        need_required = rules.get('required', self.required)
+        msg = IS_NOT_EMPTY(v)
+        if need_required:
+            if msg:
+                return False, msg
+        else:
+            if msg:
                 return True, self.default
-#                if self.default is not None:
-#                    return True, self.default
-#                else:
-#                    return True, data
-            else:
-                return False, ERR_REQUIRED
+
+#         if not v or (isinstance(v, (str, unicode)) and not v.strip()):
+#             if not self.required:
+#                 return True, self.default
+# #                if self.default is not None:
+# #                    return True, self.default
+# #                else:
+# #                    return True, data
+#             else:
+#                 return False, ERR_REQUIRED
         try:
             if isinstance(data, list):
                 v = []
@@ -268,11 +287,26 @@ class BaseField(object):
                 data = self.to_python(data)
         except:
             return False, unicode(ERR_CONVERT) % (data, self.__class__.__name__)
-        for v in self.default_validators + self.validators:
+        for v in self.get_validators(rules):
             msg = v(data)
             if msg:
                 return False, msg
         return True, data
+
+    def get_validators(self, rules):
+        for v in self.default_validators + self.validators:
+            yield v
+
+        for n, v in rules.items():
+            if n == 'required':
+                continue
+            func = rules_mapping.get(n)
+            if func:
+                if not func.direct:
+                    func = func(v)
+                yield func
+            else:
+                raise Exception("Rule %s is not existed!" % n)
 
     def __property_config__(self, form_class, field_name):
         self.form_class = form_class
@@ -442,14 +476,14 @@ class BooleanField(BaseField):
         else:
             return ''
 
-    def validate(self, data):
+    def validate(self, data, **kwargs):
         '''
         None data means False, so BooleanField need to override validate()
         '''
         if data is None:
             return True, False
         else:
-            return super(BooleanField, self).validate(data)
+            return super(BooleanField, self).validate(data, **kwargs)
 
 class IntField(BaseField):
     default_build = Number
@@ -484,12 +518,11 @@ class SelectField(BaseField):
     default_build = Select
     type_name = 'select'
 
-    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', size=10, inline=False, **kwargs):
+    def __init__(self, label='', default=None, choices=None, required=False, validators=None, name='', html_attrs=None, help_string='', build=None, empty='', size=10, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.choices = choices or []
         self.empty = empty
         self.size = size
-        self.inline = inline
         if self.multiple:
             self._default = default or []
         else:
@@ -636,6 +669,31 @@ class FormBuild(object):
                 buf.append(str(t))
         return '\n'.join(buf)
 
+fields_mapping = {
+    'str':StringField,
+    'select':SelectField,
+    'text':TextField,
+    'unicode':UnicodeField,
+    'lines':TextLinesField,
+    'password':PasswordField,
+    'hidden':HiddenField,
+    'int':IntField,
+    'list':ListField,
+    'radios':RadioSelectField,
+    'image':ImageField,
+    'float':FloatField,
+    'file':FileField,
+    'bool':BooleanField,
+    'checkboxes':CheckboxSelectField,
+    'date':DateField,
+    'time':TimeField,
+    'datetime':DateTimeField,
+}
+
+rules_mapping = {
+    'required':IS_NOT_EMPTY,
+}
+
 class Form(object):
 
     __metaclass__ = FormMetaclass
@@ -715,7 +773,11 @@ class Form(object):
         if func and callable(func):
             self.validators.append(func)
 
-    def validate(self, *data):
+    def validate(self, *data, **kwargs):
+        """
+        You can pass rules={'field':{'required':True}}
+        to validate
+        """
         old_data = self.data.copy()
         all_data = {}
         for k, v in self.fields.items():
@@ -732,8 +794,11 @@ class Form(object):
 
         #validate and gather the result
         result = D({})
+        rules = kwargs.get('rules', {})
         for field_name, field in self.fields.items():
-            flag, value = field.validate(new_data[field_name])
+            #add field rule support
+            field_rules = rules.get(field_name, {})
+            flag, value = field.validate(new_data[field_name], rules=field_rules)
             if not flag:
                 if isinstance(value, dict):
                     errors.update(value)
@@ -816,26 +881,6 @@ class Form(object):
         result.post_html = self.post_html() if hasattr(self, 'post_html') else ''
         return result
 
-fields_mapping = {
-    'str':StringField,
-    'select':SelectField,
-    'text':TextField,
-    'unicode':UnicodeField,
-    'lines':TextLinesField,
-    'password':PasswordField,
-    'hidden':HiddenField,
-    'int':IntField,
-    'list':ListField,
-    'radios':RadioSelectField,
-    'image':ImageField,
-    'float':FloatField,
-    'file':FileField,
-    'bool':BooleanField,
-    'checkboxes':CheckboxSelectField,
-    'date':DateField,
-    'time':TimeField,
-    'datetime':DateTimeField,
-}
 
 def make_field(type, **kwargs):
     """

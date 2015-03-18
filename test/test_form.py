@@ -173,7 +173,7 @@ def test_list_field():
     """
     >>> a = ListField(name='list', id='field_list')
     >>> print a.html(['a', 'b'])
-    <input class="" id="field_list" name="list" type="text" value="a b"></input>
+    <input class="" id="field_list" name="list" type="text" value="a, b"></input>
     >>> print a.validate('a b')
     (True, ['a', 'b'])
     >>> print a.validate('')
@@ -475,6 +475,22 @@ def test_make_form_hidden():
     <BLANKLINE>
     """
 
+def test_rules():
+    """
+    >>> fields = [
+    ...     {'name':'str1', 'type':'str', 'label':'String1', 'hidden':True},
+    ... ]
+    >>> from uliweb.form.layout import BootstrapLayout
+    >>> F = make_form(fields=fields, layout_class=BootstrapLayout)
+    >>> f = F()
+    >>> rules = {'str1':{'required':True}}
+    >>> data = {'str1':''}
+    >>> f.validate(data, rules=rules)
+    False
+    >>> data = {'str1':'xxxx'}
+    >>> f.validate(data, rules=rules)
+    True
+    """
 #if __name__ == '__main__':
 #    from uliweb.utils import date
 #    
