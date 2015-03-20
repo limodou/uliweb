@@ -552,10 +552,13 @@ def request_url(req=None):
     from uliweb import request
     
     r = req or request
-    if r.query_string:
-        return r.path + '?' + r.query_string
+    if request:
+        if r.query_string:
+            return r.path + '?' + r.query_string
+        else:
+            return r.path
     else:
-        return r.path
+        return ''
 
 def flat_list(*alist):
     """

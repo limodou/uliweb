@@ -3,6 +3,7 @@ import os
 import cgi
 import datetime
 import time
+import copy
 from validators import *
 from uliweb.i18n import gettext_lazy as _
 from uliweb.core.html import Buf, Tag, begin_tag, u_str
@@ -10,6 +11,7 @@ from widgets import *
 from layout import *
 from uliweb.utils.storage import Storage
 from uliweb.utils import date
+from uliweb.utils.common import request_url
 
 DEFAULT_FORM_CLASS = 'form'
 REQUIRED_CAPTION = '*'
@@ -17,10 +19,10 @@ REQUIRED_CAPTION_AFTER = True
 DEFAULT_ENCODING = 'utf-8'
 DEFAULT_LABEL_DELIMETER = ':'
 
-ERR_REQUIRED = _('This field is required.')
 ERR_CONVERT = _("Can't convert %r to %s.")
 
 class ReservedWordError(Exception):pass
+class RuleNotFound(Exception):pass
 
 __id = 0
 
@@ -112,7 +114,7 @@ class BaseField(object):
     def __init__(self, label='', default=None, required=False, validators=None,
         name='', html_attrs=None, help_string='', build=None, datatype=None,
         multiple=False, idtype=None, static=False, placeholder='',
-        hidden=False, **kwargs):
+        hidden=False, rules=None, **kwargs):
         self.label = label
         self._default = default
         self.validators = validators or []
@@ -124,6 +126,8 @@ class BaseField(object):
         self.idtype = idtype
         self.static = static
         self.hidden = hidden
+        self.rules = rules or {}
+
         _cls = ''
         if '_class' in self.html_attrs:
             _cls = '_class'
@@ -148,6 +152,10 @@ class BaseField(object):
     def _get_default(self):
         return self._default
     default = property(_get_default)
+
+    def clone(self):
+        b = object.__new__(self.__class__)
+        b.__dict__ = copy.deepcopy(self.__dict__)
 
     def to_python(self, data):
         """
@@ -238,13 +246,15 @@ class BaseField(object):
             return ''
         return u_str(data)
 
-    def validate(self, data, **kwargs):
+    def validate(self, data, all_data=None):
         """
         if 'rule' in kwargs, then validate extra rules
 
         e.g.:
             rule= {'required':True, 'minlength':6}
         """
+
+        all_data = all_data or {}
 
         if hasattr(data, 'stream'):
             data.file = data.stream
@@ -258,25 +268,14 @@ class BaseField(object):
             v = data
 #        if v is None:
 
-        rules = kwargs.get('rules', {})
-        need_required = rules.get('required', self.required)
-        msg = IS_NOT_EMPTY(v)
-        if need_required:
+        msg = TEST_NOT_EMPTY()(v)
+        if self.required:
             if msg:
                 return False, msg
         else:
             if msg:
                 return True, self.default
 
-#         if not v or (isinstance(v, (str, unicode)) and not v.strip()):
-#             if not self.required:
-#                 return True, self.default
-# #                if self.default is not None:
-# #                    return True, self.default
-# #                else:
-# #                    return True, data
-#             else:
-#                 return False, ERR_REQUIRED
         try:
             if isinstance(data, list):
                 v = []
@@ -287,32 +286,65 @@ class BaseField(object):
                 data = self.to_python(data)
         except:
             return False, unicode(ERR_CONVERT) % (data, self.__class__.__name__)
-        for v in self.get_validators(rules):
-            msg = v(data)
+        for v in self.get_validators():
+            msg = v(data, all_data)
             if msg:
                 return False, msg
         return True, data
 
-    def get_validators(self, rules):
+    def get_validators(self):
         for v in self.default_validators + self.validators:
             yield v
-
-        for n, v in rules.items():
-            if n == 'required':
-                continue
-            func = rules_mapping.get(n)
-            if func:
-                if not func.direct:
-                    func = func(v)
-                yield func
-            else:
-                raise Exception("Rule %s is not existed!" % n)
 
     def __property_config__(self, form_class, field_name):
         self.form_class = form_class
         self.field_name = field_name
         if not self.name:
             self.name = field_name
+        self.init_rules(self.rules)
+
+    def init_rules(self, rules):
+        #initial rules
+
+        for k, v in rules.items():
+            rule_message = ''
+            x = k.split(':')
+            if isinstance(v, (tuple, list)):
+                rule_value = v[0]
+                rule_message = v[1]
+            else:
+                rule_value = v
+            if len(x) == 1:
+                front = True
+                end = True
+                rule_name = k
+            else:
+                rule_name = x[0]
+                if x[1] == 'front':
+                    front = True
+                    end = False
+                else:
+                    front = False
+                    end = True
+            if end:
+                if rule_name == 'required':
+                    self.required = True
+                validator_cls = rules_mapping.get(rule_name)
+                if validator_cls:
+                    validator = validator_cls(rule_value, message=rule_message, field=self)
+                    self.validators.append(validator)
+                    if not rule_message:
+                        rule_message = validator.get_message()
+                else:
+                    raise RuleNotFound('Rule is not found.')
+
+            if front:
+                r = self.form_class.front_rules['rules'].setdefault(self.name, {})
+                r[rule_name] = rule_value
+                if rule_message:
+                    m = self.form_class.front_rules['messages'].setdefault(self.name, {})
+                    m[rule_name] = rule_message
+
 
     def __get__(self, model_instance, model_class):
         if model_instance is None:
@@ -476,14 +508,14 @@ class BooleanField(BaseField):
         else:
             return ''
 
-    def validate(self, data, **kwargs):
+    def validate(self, data, all_data=None):
         '''
         None data means False, so BooleanField need to override validate()
         '''
         if data is None:
             return True, False
         else:
-            return super(BooleanField, self).validate(data, **kwargs)
+            return super(BooleanField, self).validate(data, all_data)
 
 class IntField(BaseField):
     default_build = Number
@@ -585,9 +617,9 @@ class FileField(BaseField):
         d = D({})
         d['filename'] = os.path.basename(data.filename)
         d['file'] = data.file
-#        data.file.seek(0, os.SEEK_END)
-#        d['length'] = data.file.tell()
-#        data.file.seek(0, os.SEEK_SET)
+        data.file.seek(0, os.SEEK_END)
+        d['size'] = data.file.tell()
+        data.file.seek(0, os.SEEK_SET)
         return d
 
     def html(self, data, py=True):
@@ -603,7 +635,7 @@ class ImageField(FileField):
     def __init__(self, label='', default='', required=False, validators=None, name='', html_attrs=None, help_string='', build=None, size=None, **kwargs):
         FileField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.size = size
-        self.validators.append(IS_IMAGE(self.size))
+        self.validators.append(TEST_IMAGE(next=TEST_IMAGE_SIZE(size)))
 
 class _BaseDatetimeField(StringField):
     time_func = 'to_date'
@@ -649,16 +681,25 @@ class FormMetaclass(type):
     def __init__(cls, name, bases, dct):
         cls.fields = {}
         cls.fields_list = []
+        form_rules = dct.get('rules', {})
 
         for base in bases[:1]:
             if hasattr(base, 'fields'):
                 for name, field in base.fields.iteritems():
-                    cls.add_field(name, field)
+                    new_field = field.clone()
+                    rules = form_rules.get(name)
+                    if rules:
+                        new_field.rules.update(rules)
+                    cls.add_field(name, new_field)
 
         fields_list = [(k, v) for k, v in dct.items() if isinstance(v, BaseField)]
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         for (field_name, obj) in fields_list:
+            rules = form_rules.get(field_name)
+            if rules:
+                obj.rules.update(rules)
             cls.add_field(field_name, obj)
+
 
 class FormBuild(object):
     def __str__(self):
@@ -691,7 +732,23 @@ fields_mapping = {
 }
 
 rules_mapping = {
-    'required':IS_NOT_EMPTY,
+    'required':TEST_NOT_EMPTY,
+    'email':TEST_EMAIL,
+    'url':TEST_URL,
+    'equalTo':TEST_EQUALTO,
+    'in':TEST_IN,
+    'image':TEST_IMAGE,
+    'minlength':TEST_MINLENGTH,
+    'maxlength':TEST_MAXLENGTH,
+    'rangelength':TEST_RANGELENGTH,
+    'min':TEST_MIN,
+    'max':TEST_MAX,
+    'range':TEST_RANGE,
+    'date':TEST_DATE,
+    'datetime':TEST_DATETIME,
+    'time':TEST_TIME,
+    'number':TEST_NUMBER,
+    'digits':TEST_DIGITS,
 }
 
 class Form(object):
@@ -708,12 +765,14 @@ class Form(object):
     form_title = None
     form_class = None
     form_id = None
+    rules = {}
+    front_rules = {'rules':{}, 'messages':{}}
 
     def __init__(self, action=None, method=None, buttons=None,
             validators=None, html_attrs=None, data=None, errors=None,
             idtype='name', title='', vars=None, layout=None,
             id=None, _class='', **kwargs):
-        self.form_action = action or self.form_action
+        self.form_action = action or self.form_action or request_url()
         self.form_method = method or self.form_method
         self.form_title = title or self.form_title
         self.form_class = _class or self.form_class
@@ -773,11 +832,7 @@ class Form(object):
         if func and callable(func):
             self.validators.append(func)
 
-    def validate(self, *data, **kwargs):
-        """
-        You can pass rules={'field':{'required':True}}
-        to validate
-        """
+    def validate(self, *data):
         old_data = self.data.copy()
         all_data = {}
         for k, v in self.fields.items():
@@ -793,12 +848,10 @@ class Form(object):
             new_data[field_name] = field.get_data(all_data)
 
         #validate and gather the result
-        result = D({})
-        rules = kwargs.get('rules', {})
+        # result = D({})
+        result = new_data.copy()
         for field_name, field in self.fields.items():
-            #add field rule support
-            field_rules = rules.get(field_name, {})
-            flag, value = field.validate(new_data[field_name], rules=field_rules)
+            flag, value = field.validate(new_data[field_name], result)
             if not flag:
                 if isinstance(value, dict):
                     errors.update(value)
@@ -890,7 +943,7 @@ def make_field(type, **kwargs):
     return cls(**kwargs)
 
 def make_form(fields=None, layout=None, layout_class=None, base_class=Form,
-              get_form_field=None, name=None, **kwargs):
+              get_form_field=None, name=None, rules=None, **kwargs):
     """
     Make a from according dict data:
 
@@ -941,6 +994,8 @@ def make_form(fields=None, layout=None, layout_class=None, base_class=Form,
         props['layout'] = layout
     if layout_class:
         props['layout_class'] = layout_class
+    if rules:
+        props['rules'] = rules
     layout_class_args = kwargs.pop('layout_class_args', None)
     if layout_class_args:
         props['layout_class_args'] = layout_class_args

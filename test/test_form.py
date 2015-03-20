@@ -61,17 +61,6 @@ def test_1():
     <input class="" id="field_title" name="title" type="text" value=""></input>
     """
 
-def test_IS_PAST_DATE():
-    """
-    >>> date = datetime.datetime(2011, 10, 12)
-    >>> f = IS_PAST_DATE(date)
-    >>> d = datetime.datetime(2011, 10, 12)
-    >>> f(d)
-    >>> f(datetime.datetime(2011, 10, 13))
-    'The date can not be greater than 2011-10-12 00:00:00'
-    >>> f(datetime.datetime(2011, 10, 11))
-    """
-    
 def test_select():
     """
     >>> from uliweb.form.widgets import Select
@@ -118,7 +107,7 @@ def test_string():
     >>> print a.get_label()
     <label for="field_title">Title:<span class="field_required">*</span></label>
     >>> a.validate('')
-    (False, gettext_lazy('This field is required.'))
+    (False, u'This field is required.')
     >>> a.validate('Hello')
     (True, 'Hello')
     >>> a.to_python('Hello')
@@ -146,7 +135,7 @@ def test_unicode_field():
     >>> print a.get_label()
     <label for="field_title">Title:<span class="field_required">*</span></label>
     >>> a.validate('')
-    (False, gettext_lazy('This field is required.'))
+    (False, u'This field is required.')
     >>> a.validate('Hello')
     (True, u'Hello')
     >>> a.to_python('Hello')
@@ -239,7 +228,7 @@ def test_int_field():
 def test_select_field():
     """
     >>> choices = [('a', 'AAA'), ('b', 'BBB')]
-    >>> a = SelectField(name='select', id='field_select', default='a', choices=choices, validators=[IS_IN_SET(choices)])
+    >>> a = SelectField(name='select', id='field_select', default='a', choices=choices, validators=[TEST_IN(choices)])
     >>> print a.html('a')
     <select class="" id="field_select" name="select">
     <option selected value="a">AAA</option>
@@ -249,7 +238,7 @@ def test_select_field():
     >>> print a.validate('')
     (True, 'a')
     >>> print a.validate('aaaaaaa')
-    (False, gettext_lazy('Select a valid choice. That choice is not one of the available choices.'))
+    (False, u'The value is not in choices.')
     >>> print a.validate('b')
     (True, 'b')
     >>> a = SelectField(name='select', id='field_select', choices=[(1, 'AAA'), (2, 'BBB')], datatype=int)
@@ -262,14 +251,14 @@ def test_select_field():
 def test_radioselect_field():
     """
     >>> choices = [('a', 'AAA'), ('b', 'BBB')]
-    >>> a = RadioSelectField(name='select', id='field_select', default='a', choices=choices, validators=[IS_IN_SET(choices)])
+    >>> a = RadioSelectField(name='select', id='field_select', default='a', choices=choices, validators=[TEST_IN(choices)])
     >>> print a.html('a')
     <label class=""><input checked id="field_select" name="select" type="radio" value="a"></input>AAA</label>
     <label class=""><input id="field_select" name="select" type="radio" value="b"></input>BBB</label>
     >>> print a.validate('')
     (True, 'a')
     >>> print a.validate('aaaaaaa')
-    (False, gettext_lazy('Select a valid choice. That choice is not one of the available choices.'))
+    (False, u'The value is not in choices.')
     >>> print a.validate('b')
     (True, 'b')
     """
@@ -480,32 +469,146 @@ def test_rules():
     >>> fields = [
     ...     {'name':'str1', 'type':'str', 'label':'String1', 'hidden':True},
     ... ]
+    >>> rules = {'str1':{'required':True}}
+    >>> from uliweb.form.layout import BootstrapLayout
+    >>> F = make_form(fields=fields, layout_class=BootstrapLayout, rules=rules)
+    >>> f = F()
+    >>> F.rules
+    {'str1': {'required': True}}
+    >>> data = {'str1':''}
+    >>> f.validate(data)
+    False
+    >>> data = {'str1':'xxxx'}
+    >>> f.validate(data)
+    True
+    """
+
+def test_field_rules():
+    """
+    >>> fields = [
+    ...     {'name':'str1', 'type':'str', 'label':'String1', 'hidden':True,
+    ...             'rules':{'required:front':True, 'url':True}},
+    ... ]
     >>> from uliweb.form.layout import BootstrapLayout
     >>> F = make_form(fields=fields, layout_class=BootstrapLayout)
     >>> f = F()
-    >>> rules = {'str1':{'required':True}}
-    >>> data = {'str1':''}
-    >>> f.validate(data, rules=rules)
-    False
+    >>> F.front_rules
+    {'rules': {'str1': {'url': True, 'required': True}}, 'messages': {'str1': {'url': u'Please enter a valid URL.', 'required': u'This field is required.'}}}
     >>> data = {'str1':'xxxx'}
-    >>> f.validate(data, rules=rules)
+    >>> f.validate(data)
+    False
+    >>> data = {'str1':'http://abc.com'}
+    >>> f.validate(data)
     True
     """
-#if __name__ == '__main__':
-#    from uliweb.utils import date
-#    
-#    class TForm(Form):
-#        layout_class = BootstrapTableLayout
-#        
-#        title = StringField(label='Title', required=True, help_string='Title help string')
-#        content = HiddenField(label='Content')
-#        
-#    form = TForm()
-#    print form
 
-# fields = [
-#     {'name':'str', 'type':'str', 'label':'String'},
-# ]
-# from uliweb.form.layout import BootstrapLayout
-# F = make_form(fields=fields, layout_class=BootstrapLayout)
-# print F()
+def test_rule_equalto():
+    """
+    >>> fields = [
+    ...     {'name':'str1', 'type':'str', 'label':'String1', 'hidden':True,
+    ...             'rules':{'equalTo':'str2'}},
+    ...     {'name':'str2', 'type':'str', 'label':'String2'},
+    ... ]
+    >>> from uliweb.form.layout import BootstrapLayout
+    >>> F = make_form(fields=fields, layout_class=BootstrapLayout)
+    >>> f = F()
+    >>> data = {'str1':'xxxx', 'str2':'yyyy'}
+    >>> f.validate(data)
+    False
+    >>> data = {'str1':'xxxx', 'str2':'xxxx'}
+    >>> f.validate(data)
+    True
+    """
+
+def test_validators():
+    """
+    >>> v = TEST_EMAIL()
+    >>> v.get_message()
+    u'Please enter a valid email address.'
+    >>> v.validate('abc')
+    False
+    >>> v.validate('abc@gmail.com')
+    True
+    >>> v = TEST_DATE()
+    >>> v.validate('2012-12-12')
+    True
+    >>> v.validate('abc')
+    False
+    >>> v = TEST_MIN(3)
+    >>> v.validate(2)
+    False
+    >>> v.validate(3)
+    True
+    >>> v.validate(4)
+    True
+    >>> v = TEST_MAX(3)
+    >>> v.validate(2)
+    True
+    >>> v.validate(3)
+    True
+    >>> v.validate(4)
+    False
+    >>> v = TEST_RANGE((2,3))
+    >>> v.validate(1)
+    False
+    >>> v.validate(2)
+    True
+    >>> v.validate(3)
+    True
+    >>> v.validate(4)
+    False
+    >>> v = TEST_MINLENGTH(3)
+    >>> v.validate('aa')
+    False
+    >>> v.validate('aaa')
+    True
+    >>> v.validate('aaaa')
+    True
+    >>> v = TEST_MAXLENGTH(3)
+    >>> v.validate('aa')
+    True
+    >>> v.validate('aaa')
+    True
+    >>> v.validate('aaaa')
+    False
+    >>> v = TEST_RANGELENGTH((2,3))
+    >>> v.get_message()
+    u'Please enter a value between 2 and 3 characters long.'
+    >>> v.validate('a')
+    False
+    >>> v.validate('aa')
+    True
+    >>> v.validate('aaa')
+    True
+    >>> v.validate('aaaa')
+    False
+    >>> v = TEST_NUMBER()
+    >>> v.validate('a')
+    False
+    >>> v.validate('1')
+    True
+    >>> v.validate('-1.1')
+    True
+    >>> v = TEST_DIGITS()
+    >>> v.validate('a')
+    False
+    >>> v.validate('1')
+    True
+    >>> v.validate('-1.1')
+    False
+    """
+
+if __name__ == '__main__':
+    fields = [
+        {'name':'str1', 'type':'str', 'label':'String1', 'hidden':True,
+                'rules':{'equalTo':('str2', 'String2')}},
+        {'name':'str2', 'type':'str', 'label':'String2'},
+    ]
+    from uliweb.form.layout import BootstrapLayout
+    F = make_form(fields=fields, layout_class=BootstrapLayout)
+    f = F()
+    print F.fields_list
+    data = {'str1':'xxxx', 'str2':'yyyy'}
+    print f.validate(data)
+    data = {'str1':'xxxx', 'str2':'xxxx'}
+    print f.validate(data)
