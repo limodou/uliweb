@@ -20,6 +20,7 @@
 from __future__ import absolute_import, division, print_function, with_statement
 
 import sys
+from time import time
 import datetime
 import linecache
 import os.path
@@ -556,7 +557,7 @@ class Template(object):
                 name.endswith(".js")
         self.autoescape = None
         self.namespace = loader.namespace if loader else {}
-        self.depends = set() #saving depends filenames such as extend, include
+        self.depends = {} #saving depends filenames such as extend, include, value is compile time
         reader = _TemplateReader(name, native_str(template_string))
         self.file = _File(self, _parse(reader, self, begin_tag=self.begin_tag,
                                        end_tag=self.end_tag, debug=self.debug,
@@ -573,6 +574,7 @@ class Template(object):
                 # "%s.generated.py" % self.name.replace('/', '_'),
                 self.name,
                 "exec", dont_inherit=True)
+            self.compiled_time = time()
         except Exception:
             formatted_code = _format_code(self.code).rstrip()
             if self.log:
@@ -642,7 +644,7 @@ class Template(object):
                 template = loader.load(chunk.name, skip=self.filename,
                                     skip_original=self.name)
                 #process depends
-                self.depends.add(template.filename)
+                self.depends[template.filename] = template.compiled_time
                 self.depends.update(template.depends)
                 if self.see:
                     self.see('extend', self.filename, template.filename)
@@ -651,8 +653,6 @@ class Template(object):
                     self.has_links = True
                 ancestors.extend(template._get_ancestors(loader))
         return ancestors
-
-from time import time
 
 class LRUTmplatesCacheDict(object):
     """ A dictionary-like object, supporting LRU caching semantics.
@@ -912,8 +912,11 @@ class Loader(object):
         return files
 
     def check_expiration(self, template):
-        for f in template.depends:
-            if f not in self.templates:
+        for f, compiled_time in template.depends.items():
+            t = self.templates.get(f)
+            if not t:
+                return f
+            if compiled_time != t.compiled_time:
                 return f
             # t = self.load(f)
             # x = self.check_expiration(t)
@@ -1142,7 +1145,7 @@ class _IncludeBlock(_Node):
 
     def find_named_blocks(self, loader, named_blocks):
         included = loader.load(self.name, self.template_name)
-        self.template.depends.add(included.filename)
+        self.template.depends[included.filename] = included.compiled_time
         if loader.see:
             loader.see('include', self.template.filename, included.filename)
         if included.has_links:
@@ -1151,7 +1154,7 @@ class _IncludeBlock(_Node):
 
     def see_named_blocks(self, loader, named_blocks, parent, see=None):
         included = loader.load(self.name, self.template_name)
-        self.template.depends.add(included.filename)
+        self.template.depends[included.filename] = included.compiled_time
         # if loader.see:
         #     loader.see('include', self.template.filename, included.filename)
         included.file.see_named_blocks(loader, named_blocks, parent, see)

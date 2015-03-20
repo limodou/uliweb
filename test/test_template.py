@@ -496,12 +496,12 @@ def test_depends():
     >>> dirs = [os.path.join(path, 'templates', x) for x in ['b', 'a']]
     >>> loader = Loader(dirs, False)
     >>> t = loader.load('parent.html')
-    >>> print (t.depends) # doctest:+ELLIPSIS
-    set(['.../a/new_tag.html', '.../a/layout.html', '.../b/layout.html'])
-    >>> print (loader.load('index.html').depends) # doctest:+ELLIPSIS
-    set(['.../a/layout.html', '.../b/layout.html'])
-    >>> print (loader.load('layout.html').depends) # doctest:+ELLIPSIS
-    set(['.../a/layout.html'])
+    >>> print (t.depends.keys()) # doctest:+ELLIPSIS
+    ['.../a/new_tag.html', '.../a/layout.html', '.../b/layout.html']
+    >>> print (loader.load('index.html').depends.keys()) # doctest:+ELLIPSIS
+    ['.../a/layout.html', '.../b/layout.html']
+    >>> print (loader.load('layout.html').depends.keys()) # doctest:+ELLIPSIS
+    ['.../a/layout.html']
     """
 
 def test_check_expiration():
