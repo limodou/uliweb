@@ -374,7 +374,7 @@ class CommandManager(Command):
     
 class ApplicationCommandManager(CommandManager):
     option_list = (
-        make_option('--help', action='store_true', dest='help',
+        make_option('-h', action='store_true', dest='help',
             help='show this help message and exit.'),
         make_option('-v', '--verbose', action='store_true', 
             help='Output the result in verbose mode.'),
