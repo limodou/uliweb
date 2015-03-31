@@ -359,7 +359,7 @@ def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
     
 def make_form_field(field, model, field_cls=None, builds_args_map=None):
     import uliweb.form as form
-    from uliweb.form.validators import IS_LENGTH_LESSTHAN
+    from uliweb.form.validators import TEST_MAXLENGTH
     
     model = get_model(model)
     field_type = None
@@ -472,7 +472,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
         if issubclass(prop.__class__, (orm.StringProperty, orm.CharProperty, orm.UnicodeProperty)):
             v = kwargs.setdefault('validators', [])
             if isinstance(prop.max_length, int):
-                v.append(IS_LENGTH_LESSTHAN(prop.max_length+1))
+                v.append(TEST_MAXLENGTH(prop.max_length))
         
         f = field_type(**kwargs)
     
