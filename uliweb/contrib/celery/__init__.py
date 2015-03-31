@@ -9,6 +9,7 @@ def after_init_apps(sender):
     app = Celery('uliweb')
 
     from celery.schedules import crontab
+    from uliweb import application
 
     celery_config = settings.CELERY
     for key in settings.CELERY.CELERYBEAT_SCHEDULE.keys():
@@ -19,8 +20,7 @@ def after_init_apps(sender):
                 **cron_args)
 
     # finding tasks in installed apps
-    installed_apps = [item[0] if isinstance(item,
-                                            tuple) else item for item in settings.GLOBAL.INSTALLED_APPS]
+    installed_apps = application.apps
 
     app.config_from_object(dict(settings.CELERY))
     app.autodiscover_tasks(lambda: installed_apps)
