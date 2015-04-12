@@ -79,7 +79,7 @@ class FileServing(object):
         convert_cls = convert_cls or self._filename_converter_cls
         return convert_cls.convert(filename)
         
-    def get_filename(self, filename, filesystem=False, convert=False):
+    def get_filename(self, filename, filesystem=False, convert=False, subpath=''):
         """
         Get the filename according to self.to_path, and if filesystem is False
         then return unicode filename, otherwise return filesystem encoded filename
@@ -87,6 +87,7 @@ class FileServing(object):
         @param filename: relative filename, it'll be combine with self.to_path
         @param filesystem: if True, then encoding the filename to filesystem
         @param convert: if True, then convert filename with FilenameConverter class
+        @param subpath: sub folder in to_path
         """
         from uliweb.utils.common import safe_unicode
         
@@ -98,8 +99,12 @@ class FileServing(object):
         else:
             _filename = filename
         nfile = safe_unicode(_filename, s.HTMLPAGE_ENCODING)
-        
-        f = os.path.normpath(os.path.join(application_path(self.to_path), nfile)).replace('\\', '/')
+
+        if subpath:
+            paths = [application_path(self.to_path), subpath, nfile]
+        else:
+            paths = [application_path(self.to_path), nfile]
+        f = os.path.normpath(os.path.join(*paths)).replace('\\', '/')
     
         if filesystem:
             return files.encode_filename(f, to_encoding=s.FILESYSTEM_ENCODING)
@@ -133,11 +138,11 @@ class FileServing(object):
             x_sendfile=xsend_flag, x_header_name=self.x_header_name, 
             x_filename=x_filename, real_filename=real_filename)
      
-    def save_file(self, filename, fobj, replace=False, convert=True):
+    def save_file(self, filename, fobj, replace=False, convert=True, subpath=''):
         from uliweb.utils import files
         
         #get full path and converted filename
-        fname = self.get_filename(filename, True, convert=convert)
+        fname = self.get_filename(filename, True, convert=convert, subpath=subpath)
         #save file and get the changed filename, because the filename maybe change when
         #there is duplicate filename, if replace=True, then the filename
         #will not changed
@@ -147,23 +152,24 @@ class FileServing(object):
         #create new filename according fname2 and filename, the result should be unicode
         return norm_filename(os.path.join(os.path.dirname(filename), files.unicode_filename(fname2, s.FILESYSTEM_ENCODING)))
     
-    def save_file_field(self, field, replace=False, filename=None, convert=True):
+    def save_file_field(self, field, replace=False, filename=None, convert=True, subpath=''):
         filename = filename or field.data.filename
-        fname = self.save_file(filename, field.data.file, replace, convert)
+        fname = self.save_file(filename, field.data.file, replace, convert, subpath=subpath)
         field.data.filename = fname
         return fname
             
-    def save_image_field(self, field, resize_to=None, replace=False, filename=None, convert=True):
+    def save_image_field(self, field, resize_to=None, replace=False, filename=None,
+                         convert=True, subpath=''):
         from uliweb.utils.image import resize_image
         if resize_to:
             field.data.file = resize_image(field.data.file, resize_to)
         filename = filename or field.data.filename
-        fname = self.save_file(filename, field.data.file, replace, convert)
+        fname = self.save_file(filename, field.data.file, replace, convert, subpath=subpath)
         field.data.filename = fname
         return fname
             
-    def delete_filename(self, filename):
-        f = self.get_filename(filename, filesystem=True, convert=False)
+    def delete_filename(self, filename, subpath=''):
+        f = self.get_filename(filename, filesystem=True, convert=False, subpath=subpath)
         if os.path.exists(f):
             try:
                 os.unlink(f)
@@ -229,17 +235,17 @@ def file_serving(filename, action='download', real_filename=None, x_sendfile=Non
 def filename_convert(filename, convert_cls=None):
     return get_backend().filename_convert(filename, convert_cls=convert_cls)
 
-def get_filename(filename, filesystem=False, convert=False):
-    return get_backend().get_filename(filename, filesystem, convert=convert)
+def get_filename(filename, filesystem=False, convert=False, subpath=''):
+    return get_backend().get_filename(filename, filesystem, convert=convert, subpath=subpath)
 
-def save_file(filename, fobj, replace=False, convert=True):
-    return get_backend().save_file(filename, fobj, replace, convert)
+def save_file(filename, fobj, replace=False, convert=True, subpath=''):
+    return get_backend().save_file(filename, fobj, replace, convert, subpath=subpath)
     
-def save_file_field(field, replace=False, filename=None, convert=True):
-    return get_backend().save_file_field(field, replace, filename, convert)
+def save_file_field(field, replace=False, filename=None, convert=True, subpath=''):
+    return get_backend().save_file_field(field, replace, filename, convert, subpath=subpath)
         
-def save_image_field(field, resize_to=None, replace=False, filename=None, convert=True):
-    return get_backend().save_image_field(field, resize_to, replace, filename, convert)
+def save_image_field(field, resize_to=None, replace=False, filename=None, convert=True, subpath=''):
+    return get_backend().save_image_field(field, resize_to, replace, filename, convert, subpath=subpath)
         
 def delete_filename(filename):
     return get_backend().delete_filename(filename)

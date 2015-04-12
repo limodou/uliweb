@@ -11,7 +11,7 @@ from widgets import *
 from layout import *
 from uliweb.utils.storage import Storage
 from uliweb.utils import date
-from uliweb.utils.common import request_url
+from uliweb.utils.common import request_url, safe_str, get_uuid
 
 DEFAULT_FORM_CLASS = 'form'
 REQUIRED_CAPTION = '*'
@@ -405,7 +405,7 @@ class HiddenField(StringField):
 class ListField(StringField):
     type_name = 'list'
 
-    def __init__(self, label='', default=None, required=False, validators=None, name='', delimeter=', ', html_attrs=None, help_string='', build=None, datatype=str, **kwargs):
+    def __init__(self, label='', default=None, required=False, validators=None, name='', delimeter=', ', html_attrs=None, help_string='', build=None, datatype=None, **kwargs):
         BaseField.__init__(self, label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, **kwargs)
         self.delimeter = delimeter
         self._default = default or []
@@ -415,9 +415,15 @@ class ListField(StringField):
         import re
 
         if issubclass(self.build, TextArea):
-            return [self.datatype(x) for x in data.splitlines()]
+            result = [x for x in data.splitlines()]
         else:
-            return [self.datatype(x) for x in re.split('[%s]+' % self.delimeter, data)]
+            result = [x for x in re.split('[%s]+' % self.delimeter, data)]
+        if self.datatype:
+            if self.datatype is str:
+                result = map(safe_str, result)
+            else:
+                result = map(self.datatype, result)
+        return result
 
     def to_html(self, data):
         if issubclass(self.build, TextArea):
@@ -681,23 +687,17 @@ class FormMetaclass(type):
     def __init__(cls, name, bases, dct):
         cls.fields = {}
         cls.fields_list = []
-        form_rules = dct.get('rules', {})
+        cls.rules = dct.get('rules', {})
 
         for base in bases[:1]:
             if hasattr(base, 'fields'):
                 for name, field in base.fields.iteritems():
                     new_field = field.clone()
-                    rules = form_rules.get(name)
-                    if rules:
-                        new_field.rules.update(rules)
                     cls.add_field(name, new_field)
 
         fields_list = [(k, v) for k, v in dct.items() if isinstance(v, BaseField)]
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
         for (field_name, obj) in fields_list:
-            rules = form_rules.get(field_name)
-            if rules:
-                obj.rules.update(rules)
             cls.add_field(field_name, obj)
 
 
@@ -764,7 +764,7 @@ class Form(object):
     form_buttons = None
     form_title = None
     form_class = None
-    form_id = None
+    form_id = 'form_' + get_uuid()[:5]
     rules = {}
     front_rules = {'rules':{}, 'messages':{}}
 
@@ -791,7 +791,6 @@ class Form(object):
 
         self.idtype = idtype
         self.layout = layout or self.layout
-        self.__class__.layout_class = get_form_layout_class(self.layout_class)
         self.vars = vars
         for name, obj in self.fields_list:
             obj.idtype = self.idtype
@@ -817,6 +816,9 @@ class Form(object):
         if isinstance(field, BaseField):
             check_reserved_word(field_name)
             cls.fields[field_name] = field
+            rules = cls.rules.get(field_name)
+            if rules:
+                field.rules.update(rules)
             field.__property_config__(cls, field_name)
             if attribute:
                 setattr(cls, field_name, field)
@@ -913,7 +915,7 @@ class Form(object):
             self.errors = errors
 
     def html(self):
-        cls = self.layout_class
+        cls = get_form_layout_class(self.layout_class)
         layout = cls(self, self.layout, **self.layout_class_args)
         pre_html = self.pre_html() if hasattr(self, 'pre_html') else ''
         body = layout.html()
@@ -922,7 +924,7 @@ class Form(object):
 
     @property
     def build(self):
-        cls = self.layout_class
+        cls = get_form_layout_class(self.layout_class)
         layout = cls(self, self.layout, **self.layout_class_args)
         result = FormBuild()
         result.pre_html = self.pre_html() if hasattr(self, 'pre_html') else ''
@@ -942,7 +944,7 @@ def make_field(type, **kwargs):
     cls = fields_mapping.get(type, StringField)
     return cls(**kwargs)
 
-def make_form(fields=None, layout=None, layout_class=None, base_class=Form,
+def make_form(fields=None, layout=None, layout_class=None, base_class=None,
               get_form_field=None, name=None, rules=None, **kwargs):
     """
     Make a from according dict data:
@@ -983,7 +985,7 @@ def make_form(fields=None, layout=None, layout_class=None, base_class=Form,
 
     #make fields
     props = SortedDict({})
-    for f in fields:
+    for f in fields or []:
         if isinstance(f, BaseField):
             props[f.name] = get_form_field(f.name, f) or f
         else:
@@ -1000,7 +1002,7 @@ def make_form(fields=None, layout=None, layout_class=None, base_class=Form,
     if layout_class_args:
         props['layout_class_args'] = layout_class_args
 
-    cls = type(name or 'MakeForm_', (base_class,), props)
+    cls = type(name or 'MakeForm_', (base_class or Form,), props)
     return cls
 
 def get_form(formcls):

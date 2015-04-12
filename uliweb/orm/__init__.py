@@ -503,6 +503,8 @@ def rawsql(query, ec=None):
     ec = ec or __default_engine__
     engine = engine_manager[ec]
     dialect = engine.engine.dialect
+    if isinstance(query, (str, unicode)):
+        return 'SQL: ' + query
     comp = query.compile(dialect=dialect)
     b = re_placeholder.search(comp.string)
     if b:
