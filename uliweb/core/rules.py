@@ -144,7 +144,7 @@ class Expose(object):
     def _fix_url(self, appname, rule):
         app_prefix = self._get_app_prefix(appname)
         if rule.startswith('/') and app_prefix:
-            url = os.path.normcase(os.path.join(app_prefix, rule.lstrip('/')).replace('\\', '/'))
+            url = os.path.normcase(os.path.join(app_prefix, rule.lstrip('/'))).replace('\\', '/')
         else:
             if rule.startswith('!'):
                 url = rule[1:]
