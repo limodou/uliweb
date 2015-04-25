@@ -10,8 +10,8 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'rawsql', 'Lazy', 'set_echo', 'Session', 'get_session', 'set_session',
     'CHAR', 'BLOB', 'TEXT', 'DECIMAL', 'Index', 'datetime', 'decimal',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
-    'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE', 'FILE', 'INT', 'DATE',
-    'TIME', 'DATETIME', 'FLOAT', 'BOOLEAN',
+    'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE', 'FILE', 'INT', 'SMALLINT', 'DATE',
+    'TIME', 'DATETIME', 'FLOAT', 'BOOLEAN', 'UUID', 'BINARY', 'VARBINARY',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
@@ -1533,7 +1533,40 @@ class CharProperty(Property):
 class StringProperty(CharProperty):
     type_name = 'VARCHAR'
     field_class = VARCHAR
-    
+
+class BinaryProperty(CharProperty):
+    type_name = 'BINARY'
+    field_class = BINARY
+    data_type = str
+
+    def _create_type(self):
+        f_type = self.type_class(**self.type_attrs)
+        return f_type
+
+class VarBinaryProperty(BinaryProperty):
+    type_name = 'VARBINARY'
+    field_class = VARBINARY
+
+class UUIDProperty(VarBinaryProperty):
+    type_name = 'UUID'
+    field_class = VARBINARY
+
+    def __init__(self, **kwds):
+        super(UUIDProperty, self).__init__(**kwds)
+        self.max_length = 16
+        self.auto_add = True
+
+    def default_value(self):
+        import uuid
+
+        u = uuid.uuid4()
+        return u.get_bytes()
+
+    def convert(self, value):
+        if value is None:
+            return ''
+        return value
+
 class FileProperty(StringProperty):
     def __init__(self, verbose_name=None, max_length=None, upload_to=None, upload_to_sub=None, **kwds):
         max_length = max_length or 255
@@ -1702,6 +1735,10 @@ class BigIntegerProperty(IntegerProperty):
     field_class = BigInteger
     type_name = 'BIGINT'
     
+class SmallIntegerProperty(IntegerProperty):
+    field_class = SmallInteger
+    type_name = 'SMALLINT'
+
 class FloatProperty(Property):
     """A float property."""
 
@@ -1857,7 +1894,7 @@ class ReferenceProperty(Property):
         
         #process data_type
         self.data_type = self.reference_field.data_type
-        
+
         field_class = self.reference_field.field_class
         if self.reference_field.max_length:
             f_type = field_class(self.reference_field.max_length)
@@ -3141,6 +3178,7 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
 
 FILE = FileProperty
 PICKLE = PickleProperty
+UUID = UUIDProperty
 
 _fields_mapping = {
     BIGINT:BigIntegerProperty,
@@ -3148,9 +3186,12 @@ _fields_mapping = {
     VARCHAR:StringProperty,
     CHAR:CharProperty,
     unicode: UnicodeProperty,
+    BINARY: BinaryProperty,
+    VARBINARY: VarBinaryProperty,
     TEXT: TextProperty,
     BLOB: BlobProperty,
     int:IntegerProperty,
+    SMALLINT: SmallIntegerProperty,
     INT:IntegerProperty,
     float:FloatProperty,
     FLOAT:FloatProperty,
@@ -3297,7 +3338,7 @@ class Model(object):
         """
         Get the changed property, it'll be used to save the object
         """
-        if self.id is None:
+        if self.id is None or self.id == '':
             d = {}
             for k, v in self.properties.items():
 #                if not isinstance(v, ManyToMany):
@@ -3307,7 +3348,7 @@ class Model(object):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
                         x = x.id
-                    elif x is None:
+                    elif x is None or (k=='id' and not x):
                         if isinstance(v, DateTimeProperty) and v.auto_now_add:
                             x = v.now()
                         elif (v.auto_add or (not v.auto and not v.auto_add)):
@@ -3398,8 +3439,9 @@ class Model(object):
                         old.update(d)
                     obj = do_(self.table.insert().values(**d), self.get_connection())
                     _saved = True
-                    
-                setattr(self, 'id', obj.inserted_primary_key[0])
+
+                if obj.inserted_primary_key:
+                    setattr(self, 'id', obj.inserted_primary_key[0])
                 
                 if _manytomany:
                     for k, v in _manytomany.items():
@@ -3940,8 +3982,11 @@ class Model(object):
                 if use_delay:
                     value = Lazy
                 else:
-                    value = prop.default_value()
-                    
+                    if name != 'id':
+                        value = prop.default_value()
+                    else:
+                        value = None
+
             prop.__set__(self, value)
 
         for prop in compounds:

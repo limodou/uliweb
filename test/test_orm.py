@@ -2556,46 +2556,68 @@ def test_to_column_info():
     [('string', 'VARCHAR'), ('char', 'CHAR'), ('file', 'VARCHAR'), ('uni', 'VARCHAR'), ('boolean', 'BOOL'), ('integer', 'INTEGER'), ('date1', 'DATETIME'), ('date2', 'DATE'), ('date3', 'TIME'), ('float', 'FLOAT'), ('decimal', 'DECIMAL'), ('reference', 'Reference'), ('other', 'ManyToMany'), ('one', 'OneToOne'), ('id', 'INTEGER')]
     """
 
-# db = get_connection('sqlite://')
-# db.echo = False
-# db.metadata.drop_all()
-# class User(Model):
-#     username = Field(CHAR, max_length=20)
-#     year = Field(int)
-# class Group(Model):
-#     name = Field(str, max_length=20)
-#     user = Reference(User)
-# a = User(username='limodou', year=5)
-# a.save()
-#
-# b = User(username='user', year=10)
-# b.save()
-#
-# c = User(username='abc', year=20)
-# c.save()
-#
-# g1 = Group(name='python', user=a)
-# g1.save()
-#
-# print list(User.all().join(Group, User.c.id==Group.c.user))
+def test_uuid_and_new_fields():
+    """
+    >>> from sqlalchemy.schema import CreateTable, CreateIndex
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     __tablename__ = 'test_user'
+    ...     id = Field(UUID, unique=True)
+    ...     username = Field(str)
+    ...     year = Field(SMALLINT)
+    >>> class Group(Model):
+    ...     __tablename__ = 'test_group'
+    ...     name = Field(str, max_length=20)
+    ...     user = Reference(User)
+    >>> engine = get_connection()
+    >>> t = User.table
+    >>> x = str(CreateTable(t).compile(dialect=engine.dialect)).strip()
+    >>> print x.replace('\\t', '').replace('\\n', '')
+    CREATE TABLE test_user (id VARBINARY, username VARCHAR(255), year SMALLINT, UNIQUE (id))
+    >>> x = str(CreateTable(Group.table).compile(dialect=engine.dialect)).strip()
+    >>> print x.replace('\\t', '').replace('\\n', '')
+    CREATE TABLE test_group (name VARCHAR(20), user VARBINARY(16), id INTEGER NOT NULL, PRIMARY KEY (id))
+    >>> a = User(username='limodou', year=5)
+    >>> a.save() # doctest:+ELLIPSIS
+    True
+    >>> u1 = User.get(User.c.username=='limodou') # doctest:+ELLIPSIS
+    >>> u1 # doctest:+ELLIPSIS
+    <User {'id':'...','username':u'limodou','year':5}>
+    >>> g1 = Group(name='python', user=a)
+    >>> g1.save()
+    True
+    >>> g2 = Group.get(1)
+    >>> g2.user.to_dict() == u1.to_dict()
+    True
+    """
 
-# db = get_connection('sqlite://')
-# db.echo = False
-# db.metadata.drop_all()
-# db.metadata.clear()
-# class User(Model):
-#     username = Field(CHAR, max_length=20)
-#     year = Field(int)
-#     users = ManyToMany(through='relation', through_reference_fieldname='user_b', through_reversed_fieldname='user')
-# class Relation(Model):
-#     user = Reference('user')
-#     user_b = Reference('user')
-#     year = Field(int)
-# a = User(username='limodou', year=5)
-# a.save()
+# if __name__ == '__main__':
+#     from sqlalchemy.schema import CreateTable, CreateIndex
+#     db = get_connection('sqlite://')
+#     db.echo = False
+#     db.metadata.drop_all()
+#     class User(Model):
+#         __tablename__ = 'test_user'
+#         id = Field(UUID, unique=True)
+#         username = Field(str)
+#         year = Field(SMALLINT)
+#     class Group(Model):
+#         __tablename__ = 'test_group'
+#         name = Field(str, max_length=20)
+#         user = Reference(User)
+#     engine = get_connection()
+#     t = User.table
+#     set_echo(True)
+#     x = str(CreateTable(t).compile(dialect=engine.dialect)).strip()
+#     print x.replace('\\t', '').replace('\\n', '')
+#     a = User(username='limodou', year=5)
+#     a.save() # doctest:+ELLIPSIS
 #
-# b = User(username='guest', year=5)
-# b.save()
-# r = Relation(user=a, user_b=b, year=20)
-# r.save()
-# print (a.users.all())
+#     print User.get(User.c.username=='limodou') # doctest:+ELLIPSIS
+#     g1 = Group(name='python', user=a)
+#     g1.save()
+#
+#     g2 = Group.get(1)
+#     print repr(g2.user)
