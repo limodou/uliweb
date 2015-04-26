@@ -505,21 +505,21 @@ def rawsql(query, ec=None):
     dialect = engine.engine.dialect
     if isinstance(query, (str, unicode)):
         return query
-    return str(query.compile(compile_kwargs={"literal_binds": True}))
-    # comp = query.compile(dialect=dialect)
-    # b = re_placeholder.search(comp.string)
-    # if b:
-    #     return comp.string % comp.params
-    # else:
-    #     if dialect.name == 'postgresql':
-    #         return comp.string
-    #     else:
-    #         params = []
-    #         for k in comp.positiontup:
-    #             v = comp.params[k]
-    #             params.append(repr(simple_value(v)))
-    #         line = comp.string.replace('?', '%s') % tuple(params)
-    #         return line.replace('\n', '')+';'
+    #return str(query.compile(compile_kwargs={"literal_binds": True})).replace('\n', '') + ';'
+    comp = query.compile(dialect=dialect)
+    b = re_placeholder.search(comp.string)
+    if b:
+        return comp.string % comp.params
+    else:
+        if dialect.name == 'postgresql':
+            return comp.string
+        else:
+            params = []
+            for k in comp.positiontup:
+                v = comp.params[k]
+                params.append(repr(simple_value(v)))
+            line = comp.string.replace('?', '%s') % tuple(params)
+            return line.replace('\n', '')+';'
     
 def get_engine_name(ec=None):
     """

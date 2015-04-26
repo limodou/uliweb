@@ -2495,8 +2495,8 @@ def test_none_condition():
     ...     __tablename__ = 'test_user'
     ...     username = Field(CHAR, fieldname='f_username', max_length=20)
     ...     year = Field(int, fieldname='f_year')
-    >>> print (User.c.username=='limodou') & None
-    test_user.f_username = :f_username_1
+    >>> print (User.c.username=='limodou') & None # doctest:+ELLIPSIS
+    test_user.f_username = :...username_1
     """
 
 def test_to_column_info():
