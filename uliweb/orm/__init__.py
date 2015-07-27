@@ -4055,3 +4055,24 @@ class Model(object):
     def get_columns_info(cls):
         for k, v in cls._fields_list:
             yield v.to_column_info()
+
+class PropsModel(Model):
+    '''
+    Model with a preset common PICKLE field name with props(properties), store arbitrary data with the format of json
+    '''
+    props = Field(PICKLE)
+
+    def get_props(self):
+        if not self.props:
+            props = {}
+        else:
+            props = json_.loads(self.props)
+        return props
+
+    def get_prop(self,key,default=None):
+        return self.get_props().get(key,default)
+
+    def set_prop(self,key,value):
+        props = self.get_props()
+        props[key] = value
+        self.props = json_.dumps(props)
