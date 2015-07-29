@@ -28,7 +28,7 @@ class BaseMailConnection(object):
         pass
    
 class EmailMessage(object):
-    def __init__(self, from_, to_,  subject, message, cc_=None,html=False, encoding='utf-8', attachments=None):
+    def __init__(self, from_, to_, subject, message, cc_=None,html=False, encoding='utf-8', attachments=None):
         from uliweb.utils.common import simple_value
         
         self.from_ = from_
@@ -111,6 +111,8 @@ class Mail(object):
         elif isinstance(cc_, (tuple, list)):
             cc_list = cc_
             cc_ = ','.join(cc_) #should be changed to string
+        else:
+            cc_list = None
         if cc_list:
             send_to += cc_list
         
