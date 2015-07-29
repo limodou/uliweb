@@ -2512,7 +2512,7 @@ def test_to_column_info():
     >>> class Test(Model):
     ...     string = StringProperty(max_length=40)
     ...     char = CharProperty(max_length=40)
-    ...     file = FileProperty(max_length=40)
+    ...     file = FileProperty(max_length=40, upload_to_sub='test')
     ...     uni = UnicodeProperty(max_length=40)
     ...     boolean = BooleanProperty()
     ...     integer = IntegerProperty()

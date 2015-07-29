@@ -11,7 +11,7 @@ class RegisterForm(Form):
 #    email = StringField(label=_('Email:'))
     next = HiddenField()
     
-    def validate_username(self, data):
+    def validate_username(self, data, all_data=None):
         from uliweb.orm import get_model
         
         User = get_model('user')
@@ -45,7 +45,7 @@ class ChangePasswordForm(Form):
         if all_data.password != all_data.password1:
             return {'password1' : _('Password is not right.')}
 
-    def validate_oldpassword(self, data):
+    def validate_oldpassword(self, data, all_data=None):
         from uliweb import request
         
         if not request.user.check_password(data):

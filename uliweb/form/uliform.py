@@ -851,7 +851,7 @@ class Form(object):
 
         #validate and gather the result
         # result = D({})
-        result = new_data.copy()
+        result = D(new_data.copy())
         for field_name, field in self.fields.items():
             flag, value = field.validate(new_data[field_name], result)
             if not flag:
