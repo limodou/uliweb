@@ -28,7 +28,7 @@ class BaseMailConnection(object):
         pass
    
 class EmailMessage(object):
-    def __init__(self, from_, to_, subject, message, html=False, encoding='utf-8', attachments=None):
+    def __init__(self, from_, to_,  subject, message, cc_=None,html=False, encoding='utf-8', attachments=None):
         from uliweb.utils.common import simple_value
         
         self.from_ = from_
@@ -42,6 +42,8 @@ class EmailMessage(object):
         self.msg = msg = MIMEMultipart()
         msg['From'] = from_
         msg['To'] = to_
+        if cc_:
+            msg['CC'] = cc_
         msg['Subject'] = Header(self.subject, self.encoding)
         if html:
             content_type = 'html'
@@ -96,7 +98,7 @@ class Mail(object):
         cls = import_attr(self.backend + '.MailConnection')
         self.con = cls(self)
         
-    def send_mail(self, from_, to_, subject, message, html=False, attachments=None):
+    def send_mail(self, from_, to_, subject, message, cc_=None, html=False, attachments=None):
         #process to_
         if isinstance(to_, (str, unicode)):
             send_to = to_.split(',')
@@ -104,8 +106,15 @@ class Mail(object):
             send_to = to_
             to_ = ','.join(send_to)
         
-        email = EmailMessage(from_, to_, subject, message, html=html, attachments=attachments)
+        if isinstance(cc_, (str, unicode)):
+            cc_list = cc_.split(',')
+        elif isinstance(cc_, (tuple, list)):
+            cc_list = cc_
+            cc_ = ','.join(cc_) #should be changed to string
+        if cc_list:
+            send_to += cc_list
+        
+        email = EmailMessage(from_, to_, subject, message, cc_=cc_, html=html, attachments=attachments)
         self.con.get_connection()
         self.con.send_mail(from_, send_to, email)
         self.con.close()
-        
