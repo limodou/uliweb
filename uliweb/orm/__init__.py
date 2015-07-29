@@ -12,11 +12,12 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE', 'FILE', 'INT', 'SMALLINT', 'DATE',
     'TIME', 'DATETIME', 'FLOAT', 'BOOLEAN', 'UUID', 'BINARY', 'VARBINARY',
+    'JSON',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
-    'PickleProperty', 'BigIntegerProperty', 'FileProperty',
+    'PickleProperty', 'BigIntegerProperty', 'FileProperty', 'JsonProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError', 'SaveError',
@@ -1624,6 +1625,25 @@ class PickleProperty(BlobProperty):
     def convert(self, value):
         return value
     
+class JsonProperty(TextProperty):
+    field_class = TEXT
+    data_type = None
+    type_name = 'JSON'
+
+    def get_value_for_datastore(self, model_instance):
+        from uliweb import json_dumps
+        return json_dumps(getattr(model_instance, self._attr_name(), None))
+
+    def make_value_from_datastore(self, value):
+        return self.convert_dump(value)
+
+    def convert_dump(self, v):
+        import json
+        return json.loads(v)
+
+    def convert(self, value):
+        return value
+
 class DateTimeProperty(Property):
     data_type = datetime.datetime
     field_class = DateTime
@@ -3180,6 +3200,7 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
 FILE = FileProperty
 PICKLE = PickleProperty
 UUID = UUIDProperty
+JSON = JsonProperty
 
 _fields_mapping = {
     BIGINT:BigIntegerProperty,
@@ -3200,6 +3221,7 @@ _fields_mapping = {
     BOOLEAN:BooleanProperty,
     datetime.datetime:DateTimeProperty,
     DATETIME:DateTimeProperty,
+    JSON:JsonProperty,
     datetime.date:DateProperty,
     DATE:DateProperty,
     datetime.time:TimeProperty,

@@ -1499,6 +1499,35 @@ def test_pickle():
     {}
     """
 
+def test_json():
+    """
+    Test auto and auto_add parameter of property
+
+    >>> db = get_connection('sqlite://')
+    >>> #db.echo = True
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(str, max_length=40)
+    ...     memo = Field(JSON, default={})
+    >>> a = User(username='limodou', memo={'age':30})
+    >>> a.save()
+    True
+    >>> print a.memo
+    {'age': 30}
+    >>> b = User.get(1)
+    >>> print b.memo
+    {u'age': 30}
+    >>> c = User(username='limodou')
+    >>> c.save()
+    True
+    >>> print c.memo
+    {}
+    >>> d = User.get(2)
+    >>> print c.memo
+    {}
+    """
+
 def test_default_query():
     """
     Test auto and auto_add parameter of property
@@ -1986,19 +2015,24 @@ def test_load_dump():
     ...     float = FloatProperty()
     ...     decimal = DecimalProperty()
     ...     pickle = PickleProperty()
-    >>> a = {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a': 1,'b': 2}, 'id':1}
+    ...     json = JsonProperty()
+    >>> a = {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a': 1,'b': 2}, 'json':{'a':1, 'b':['c', 'd']}, 'id':1}
     >>> b = Test.load(a, set_saved=False)
     >>> b.save(insert=True)
     True
     >>> b.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a': 1, 'b': 2}, 'id': 1}
-    >>> b.dump()
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': '200.02', 'boolean': 'True', 'integer': '200', 'pickle': '\\x80\\x02}q\\x01(U\\x01aK\\x01U\\x01bK\\x02u.', 'id': '1'}
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'json': '{"a":1,"b":["c","d"]}', 'boolean': True, 'integer': 200, 'pickle': {'a': 1, 'b': 2}, 'id': 1}
+    >>> b.dump() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': '200.02', 'json': '{"a":1,"b":["c","d"]}', 'boolean': 'True', 'integer': '200', 'pickle': '\\x80\\x02}q\\x01(U\\x01aK\\x01U\\x01bK\\x02u.', 'id': '1'}
     >>> b.dump(fields=['boolean', 'decimal'])
     {'decimal': '10.2', 'boolean': 'True', 'id': '1'}
     >>> b.pickle = {'a':[1,2,3]}
     >>> b.dump(fields=['pickle'])
     {'pickle': '\\x80\\x02}q\\x01U\\x01a]q\\x02(K\\x01K\\x02K\\x03es.', 'id': '1'}
+    >>> b.json
+    {'a': 1, 'b': ['c', 'd']}
+    >>> print b.dump(fields=['json'])['json']
+    {"a":1,"b":["c","d"]}
     >>> b.date1=Lazy
     >>> b.date2=Lazy
     >>> b.date3=Lazy
@@ -2584,7 +2618,7 @@ def test_uuid_and_new_fields():
     True
     >>> u1 = User.get(User.c.username=='limodou') # doctest:+ELLIPSIS
     >>> u1 # doctest:+ELLIPSIS
-    <User {'id':'...','username':u'limodou','year':5}>
+    <User {'id':...,'username':u'limodou','year':5}>
     >>> g1 = Group(name='python', user=a)
     >>> g1.save()
     True
@@ -2621,3 +2655,18 @@ def test_uuid_and_new_fields():
 #
 #     g2 = Group.get(1)
 #     print repr(g2.user)
+
+if __name__ == '__main__':
+    db = get_connection('sqlite://')
+    #db.echo = True
+    db.metadata.drop_all()
+    db.metadata.clear()
+    class User(Model):
+        username = Field(str, max_length=40)
+        memo = Field(JSON, default={})
+    a = User(username='limodou', memo={'age':30})
+    a.save()
+
+    print a.memo
+    b = User.get(1)
+    print b.memo
