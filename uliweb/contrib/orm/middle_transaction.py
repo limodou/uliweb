@@ -8,7 +8,6 @@ class TransactionMiddle(Middleware):
         self.settings = settings
         
     def process_request(self, request):
-        set_echo(False)
         Begin()
 
     def process_response(self, request, response):
