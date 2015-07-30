@@ -69,7 +69,7 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     include_apps=None, debug_console=True, settings_file=None, 
     local_settings_file=None, start=True, default_settings=None, 
     dispatcher_cls=None, dispatcher_kwargs=None, debug_cls=None, debug_kwargs=None, 
-    reuse=True, verbose=False):
+    reuse=True, verbose=False, pythonpath=None):
     """
     Make an application object
     """
@@ -92,12 +92,19 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     if not project_dir:
         project_dir = os.path.abspath(os.path.normpath(os.path.abspath(os.path.join(apps_dir, '..'))))
         
+    if pythonpath:
+        if isinstance(pythonpath, str):
+            pythonpath = pythonpath.split(';')
+        for x in pythonpath:
+            if x not in sys.path:
+                sys.path.insert(0, x)
+
     if project_dir not in sys.path:
         sys.path.insert(0, project_dir)
 
     if apps_dir not in sys.path:
         sys.path.insert(0, apps_dir)
-        
+
     install_config(apps_dir)
     
     application = app = dispatcher_cls(apps_dir=apps_dir, 
@@ -159,14 +166,15 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
 
 def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
     settings_file='', local_settings_file='', 
-    default_settings=None, dispatcher_cls=None, dispatcher_kwargs=None, reuse=True):
+    default_settings=None, dispatcher_cls=None, dispatcher_kwargs=None, reuse=True,
+    pythonpath=None):
     settings = {'ORM/AUTO_DOTRANSACTION':False}
     settings.update(default_settings or {})
     return make_application(apps_dir=apps_dir, project_dir=project_dir,
         include_apps=include_apps, debug_console=False, debug=False,
         settings_file=settings_file, local_settings_file=local_settings_file,
         start=False, default_settings=settings, dispatcher_cls=dispatcher_cls, 
-        dispatcher_kwargs=dispatcher_kwargs, reuse=reuse)
+        dispatcher_kwargs=dispatcher_kwargs, reuse=reuse, pythonpath=pythonpath)
 
 class MakeAppCommand(Command):
     name = 'makeapp'
@@ -721,8 +729,8 @@ register_command(MakeCmdCommand)
 
 class RunserverCommand(Command):
     name = 'runserver'
-    help = 'Start a new development server.'
-    args = ''
+    help = 'Start a new development server. And it can also startup an app without a whole project.'
+    args = '[appname appname ...]'
     option_list = (
         make_option('-h', dest='hostname', default='localhost',
             help='Hostname or IP.'),
@@ -754,17 +762,35 @@ class RunserverCommand(Command):
             help='Start uliweb server with coverage.'),
     )
     develop = False
+    check_apps_dirs = False
     
     def handle(self, options, global_options, *args):
         import logging
         from logging import StreamHandler
         from uliweb.utils.coloredlog import ColoredFormatter
-        
+        from uliweb.utils.common import check_apps_dir
+        import subprocess
+
         if self.develop:
             include_apps = ['plugs.develop']
         else:
             include_apps = []
-        
+
+        #add appname runable support, it'll automatically create a default project
+        #if you want to startup an app, it'll use a temp directory, default is
+        if args:
+            include_apps.extend(args)
+            old_apps_dir = os.path.abspath(global_options.apps_dir)
+            project_home_dir = os.path.join(os.path.expanduser('~'), '.uliweb')
+            if not os.path.exists(project_home_dir):
+                os.makedirs(project_home_dir)
+
+            subprocess.call('uliweb makeproject -y project', cwd=project_home_dir, shell=True)
+            global_options.project = os.path.join(project_home_dir, 'project')
+            global_options.apps_dir = os.path.join(global_options.project, 'apps')
+
+        check_apps_dir(global_options.apps_dir)
+
         extra_files = collect_files(global_options, global_options.apps_dir, self.get_apps(global_options, include_apps))
         
         if options.color:
@@ -781,10 +807,10 @@ class RunserverCommand(Command):
             setattr(StreamHandler, 'format', format)
             
         def get_app(debug_cls=None):
-            return make_application(options.debug, project_dir=global_options.project, 
+            return make_application(options.debug, project_dir=global_options.project,
                         include_apps=include_apps, settings_file=global_options.settings,
                         local_settings_file=global_options.local_settings, debug_cls=debug_cls,
-                        verbose=global_options.verbose)
+                        verbose=global_options.verbose, pythonpath=old_apps_dir)
 
         cov = None
         try:

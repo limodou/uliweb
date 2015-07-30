@@ -21,13 +21,13 @@ class TestMakeProject:
     def test_makeproject(self):
         from uliweb import manage
 
-        manage.call('uliweb makeproject -f test')
+        manage.call('uliweb makeproject -y test')
         assert os.path.exists('test')
         
     def test_makeapp(self):
         from uliweb import manage
         
-        manage.call('uliweb makeproject -f test')
+        manage.call('uliweb makeproject -y test')
         os.chdir('test')
         manage.call('uliweb makeapp Hello')
         os.chdir('..')
