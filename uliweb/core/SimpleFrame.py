@@ -948,8 +948,7 @@ class Dispatcher(object):
                 else:
                     tmpfile = args
                 response.template = tmpfile
-            content_type = response.content_type
-            
+
             #if debug mode, then display a default_template
             if self.debug:
                 d = ['default.html', self.default_template]
@@ -962,7 +961,7 @@ class Dispatcher(object):
             response = result
         #add generator support 2014-1-8
         elif isinstance(result, types.GeneratorType):
-            return Response(result, direct_passthrough=True, content_type='text/html;charset=utf-8')
+            return Response(result, direct_passthrough=True, content_type=response.content_type)
         else:
             response = Response(str(result), content_type='text/html')
         return response
