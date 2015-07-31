@@ -961,9 +961,19 @@ class Dispatcher(object):
             response = result
         #add generator support 2014-1-8
         elif isinstance(result, types.GeneratorType):
-            return Response(result, direct_passthrough=True, content_type=response.content_type)
+            #preprocess generator, so that it can get some code run at first
+            #such as response.content_type='application/json'
+            try:
+                x = next(result)
+            except StopIteration:
+                x = ''
+            def f(x):
+                yield x
+                for x in result:
+                    yield x
+            return Response(f(x), direct_passthrough=True, content_type=response.content_type)
         else:
-            response = Response(str(result), content_type='text/html')
+            response = Response(str(result), content_type=response.content_type)
         return response
     
     def get_view_env(self):
