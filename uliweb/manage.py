@@ -778,9 +778,9 @@ class RunserverCommand(Command):
 
         #add appname runable support, it'll automatically create a default project
         #if you want to startup an app, it'll use a temp directory, default is
+        old_apps_dir = os.path.abspath(global_options.apps_dir)
         if args:
             include_apps.extend(args)
-            old_apps_dir = os.path.abspath(global_options.apps_dir)
             project_home_dir = os.path.join(os.path.expanduser('~'), '.uliweb')
             if not os.path.exists(project_home_dir):
                 os.makedirs(project_home_dir)
