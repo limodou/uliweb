@@ -713,6 +713,10 @@ class Ini(SortedDict):
                     if self.writable:
                         _v.get()
                     else:
-                        v.__setitem__(_k, _v.get(), replace=True)
+                        try:
+                            v.__setitem__(_k, _v.get(), replace=True)
+                        except:
+                            print "Error ini key:", _k
+                            raise
                         del _v
         self._globals = SortedDict()
