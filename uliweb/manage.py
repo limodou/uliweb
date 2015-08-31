@@ -1231,8 +1231,12 @@ class ShellCommand(Command):
                 # app = NotebookApp.instance()
                 # app.initialize(['--ext', 'uliweb.utils.ipython_extension'] + args)
                 # app.start()
-                cmd = ' '.join(['ipython',
-                        'notebook', '--ext=uliweb.utils.ipython_extension'] + _args + args)
+
+                version = int(IPython.__version__.split('.')[0])
+                if version < 3:
+                    cmd = ' '.join(['ipython', 'notebook'] + args)
+                else:
+                    cmd = ' '.join(['jupyter', 'notebook'] + args)
                 os.environ.update({'LOCAL_SETTINGS':global_options.local_settings,
                        'SETTINGS':global_options.settings})
                 sub.call(cmd, shell=True, cwd=os.getcwd())

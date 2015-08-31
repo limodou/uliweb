@@ -21,6 +21,3 @@ def make_shell_env(**kwargs):
     env = {'application':app, 'settings':settings, 'functions':functions}
     return env
 
-def load_ipython_extension(ipython):
-    ipython.push(make_shell_env())
-

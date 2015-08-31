@@ -23,6 +23,7 @@ Uliweb Change Log
     any_key_1 = ('mapping_str', 'replacement')
     any_key_2 = ('mapping_str', 'replacement')
     ```
+* Change uliweb jupyter extension load mechanism from automatically to `%load_ext uliweb`
 
 0.4.1 Version
 -----------------

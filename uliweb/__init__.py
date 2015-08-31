@@ -30,4 +30,12 @@ class Middleware(object):
     def __init__(self, application, settings):
         self.application = application
         self.settings = settings
-        
+
+
+#jupyter extension support
+#you should use %load_ext uliweb to load it
+#it'll add settings, functions, application to global environment
+def load_ipython_extension(ipython):
+    from uliweb.utils.ipython_extension import make_shell_env
+    ipython.push(make_shell_env())
+
