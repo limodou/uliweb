@@ -2599,6 +2599,7 @@ def test_uuid_and_new_fields():
     >>> class User(Model):
     ...     __tablename__ = 'test_user'
     ...     id = Field(UUID, unique=True)
+    ...     sid = Field(UUID_B)
     ...     username = Field(str)
     ...     year = Field(SMALLINT)
     >>> class Group(Model):
@@ -2609,10 +2610,10 @@ def test_uuid_and_new_fields():
     >>> t = User.table
     >>> x = str(CreateTable(t).compile(dialect=engine.dialect)).strip()
     >>> print x.replace('\\t', '').replace('\\n', '')
-    CREATE TABLE test_user (id VARBINARY, username VARCHAR(255), year SMALLINT, UNIQUE (id))
+    CREATE TABLE test_user (id VARCHAR(32), sid VARBINARY(16), username VARCHAR(255), year SMALLINT, UNIQUE (id))
     >>> x = str(CreateTable(Group.table).compile(dialect=engine.dialect)).strip()
     >>> print x.replace('\\t', '').replace('\\n', '')
-    CREATE TABLE test_group (name VARCHAR(20), user VARBINARY(16), id INTEGER NOT NULL, PRIMARY KEY (id))
+    CREATE TABLE test_group (name VARCHAR(20), user VARCHAR(32), id INTEGER NOT NULL, PRIMARY KEY (id))
     >>> a = User(username='limodou', year=5)
     >>> a.save() # doctest:+ELLIPSIS
     True

@@ -12,12 +12,13 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE', 'FILE', 'INT', 'SMALLINT', 'DATE',
     'TIME', 'DATETIME', 'FLOAT', 'BOOLEAN', 'UUID', 'BINARY', 'VARBINARY',
-    'JSON',
+    'JSON', 'UUID_B',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
     'PickleProperty', 'BigIntegerProperty', 'FileProperty', 'JsonProperty',
+    'UUIDBinaryProperty', 'UUIDProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError', 'SaveError',
@@ -1542,19 +1543,22 @@ class BinaryProperty(CharProperty):
     data_type = str
 
     def _create_type(self):
-        f_type = self.type_class(**self.type_attrs)
+        if self.max_length:
+            f_type = self.type_class(self.max_length, **self.type_attrs)
+        else:
+            f_type = self.type_class(**self.type_attrs)
         return f_type
 
 class VarBinaryProperty(BinaryProperty):
     type_name = 'VARBINARY'
     field_class = VARBINARY
 
-class UUIDProperty(VarBinaryProperty):
-    type_name = 'UUID'
+class UUIDBinaryProperty(VarBinaryProperty):
+    type_name = 'UUID_B'
     field_class = VARBINARY
 
     def __init__(self, **kwds):
-        super(UUIDProperty, self).__init__(**kwds)
+        super(UUIDBinaryProperty, self).__init__(**kwds)
         self.max_length = 16
         self.auto_add = True
 
@@ -1563,6 +1567,26 @@ class UUIDProperty(VarBinaryProperty):
 
         u = uuid.uuid4()
         return u.get_bytes()
+
+    def convert(self, value):
+        if value is None:
+            return ''
+        return value
+
+class UUIDProperty(StringProperty):
+    type_name = 'UUID'
+    field_class = VARCHAR
+
+    def __init__(self, **kwds):
+        super(UUIDProperty, self).__init__(**kwds)
+        self.max_length = 32
+        self.auto_add = True
+
+    def default_value(self):
+        import uuid
+
+        u = uuid.uuid4()
+        return u.get_hex()[:self.max_length]
 
     def convert(self, value):
         if value is None:
@@ -3200,6 +3224,7 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
 FILE = FileProperty
 PICKLE = PickleProperty
 UUID = UUIDProperty
+UUID_B = UUIDBinaryProperty
 JSON = JsonProperty
 
 _fields_mapping = {
@@ -3228,6 +3253,8 @@ _fields_mapping = {
     TIME:TimeProperty,
     decimal.Decimal:DecimalProperty,
     DECIMAL:DecimalProperty,
+    UUID_B:UUIDBinaryProperty,
+    UUID:UUIDProperty
 }
 def Field(type, *args, **kwargs):
     t = _fields_mapping.get(type, type)
