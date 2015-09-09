@@ -21,10 +21,10 @@ def test_1():
     {'blog': {'model': <class 'uliweb.orm.Blog'>, 'created': None, 'model_path': 'blog.models.Blog', 'appname': 'blog'}, 'category': {'model': <class 'blog.models.Category'>, 'created': None, 'model_path': 'blog.models.Category', 'appname': 'blog'}}
     >>> Blog1 = get_model('blog')
     >>> Blog2 = get_model('blog', 'b')
-    >>> print 'blog2', Blog2, Blog2.table, Blog2.tablename, Blog2.get_engine_name(), Blog2.get_connection()
-    blog2 <class 'uliweb.orm.Blog'> blog blog b b
-    >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_connection()
-    blog1 <class 'blog.models.Blog'> blog blog default default
+    >>> print 'blog2', Blog2, Blog2.table, Blog2.tablename, Blog2.get_engine_name(), Blog2.get_session()
+    blog2 <class 'uliweb.orm.Blog'> blog blog b <Session engine_name:b, auto_transaction=None, auto_close=True>
+    >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_session()
+    blog1 <class 'blog.models.Blog'> blog blog default <Session engine_name:default, auto_transaction=None, auto_close=True>
     >>> r = Blog2.all().remove()
     >>> r = Blog1.all().remove()
     >>> b2 = Blog2(title='1', content='1')
@@ -248,8 +248,8 @@ def test_connection_duplication():
     >>> print engine_manager['c'].models
     {'blog': {'model': <class 'blog.models.Blog'>, 'created': None, 'model_path': 'blog.models.Blog', 'appname': 'blog'}}
     >>> Blog1 = get_model('blog', 'c')
-    >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_connection()
-    blog1 <class 'uliweb.orm.Blog'> blog blog c c
+    >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_session()
+    blog1 <class 'uliweb.orm.Blog'> blog blog c <Session engine_name:c, auto_transaction=None, auto_close=True>
     """
 
 def test_set_session():
@@ -259,8 +259,8 @@ def test_set_session():
     >>> s = Session('c')
     >>> set_session('default', s)
     >>> Blog1 = get_model('blog')
-    >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_connection()
-    blog1 <class 'blog.models.Blog'> blog blog default default
+    >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_session()
+    blog1 <class 'blog.models.Blog'> blog blog default <Session engine_name:c, auto_transaction=None, auto_close=True>
     >>> s = get_session('default')
     >>> print s
     <Session engine_name:c, auto_transaction=None, auto_close=True>

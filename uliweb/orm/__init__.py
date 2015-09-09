@@ -314,7 +314,7 @@ class Session(object):
     can also manage transcation
     """
     def __init__(self, engine_name=None, auto_transaction=None,
-        auto_close=True):
+        auto_close=True, post_commit=None, post_commit_once=None):
         """
         If auto_transaction is True, it'll automatically start transacation
         in web environment, it'll be commit or rollback after the request finished
@@ -327,6 +327,8 @@ class Session(object):
         self._conn = None
         self._trans = None
         self.local_cache = {}
+        self.post_commit = post_commit or []
+        self.post_commit_once = post_commit_once or []
 
     def __str__(self):
         return '<Session engine_name:%s, auto_transaction=%r, auto_close=%r>' % (
@@ -388,7 +390,24 @@ class Session(object):
         self._trans = None
         if self.auto_close:
             self._close()
-        
+
+        #add post commit hook
+        if self.post_commit:
+            if not isinstance(self.post_commit, (list, tuple)):
+                self.post_commit = [self.post_commit]
+            for c in self.post_commit:
+                c()
+
+        #add post commit once hook
+        if self.post_commit_once:
+            if not isinstance(self.post_commit_once, (list, tuple)):
+                post_commit_once = [self.post_commit_once]
+            else:
+                post_commit_once = self.post_commit_once
+            self.post_commit_once = []
+            for c in post_commit_once:
+                c()
+
     def in_transaction(self):
         if not self._conn:
             return False
@@ -478,8 +497,11 @@ def get_session(ec=None, create=True):
         raise Error("Connection %r should be existed engine name or Session object" % ec)
     return session
 
-def set_session(engine_name, session):
+def set_session(session=None, engine_name='default'):
+    if not session:
+        session = Session()
     engine_manager[engine_name].set_session(session)
+    return session
 
 def Reset(ec=None):
     session = get_session(ec, False)
@@ -1558,8 +1580,8 @@ class UUIDBinaryProperty(VarBinaryProperty):
     field_class = VARBINARY
 
     def __init__(self, **kwds):
+        kwds['max_length'] = 16
         super(UUIDBinaryProperty, self).__init__(**kwds)
-        self.max_length = 16
         self.auto_add = True
 
     def default_value(self):
@@ -1578,8 +1600,8 @@ class UUIDProperty(StringProperty):
     field_class = VARCHAR
 
     def __init__(self, **kwds):
+        kwds['max_length'] = 32
         super(UUIDProperty, self).__init__(**kwds)
-        self.max_length = 32
         self.auto_add = True
 
     def default_value(self):
@@ -2175,7 +2197,7 @@ class Result(object):
         self._join = []
         self._limit = None
         self._offset = None
-        self.connection = model.get_connection()
+        self.connection = model.get_session()
         
     def do_(self, query):
         global do_
@@ -2488,7 +2510,7 @@ class ReverseResult(Result):
         self._join = []
         self.distinct_field = None
         self._values_flag = False
-        self.connection = model.get_connection()
+        self.connection = model.get_session()
         
     def has(self, *objs):
         ids = get_objs_columns(objs)
@@ -2546,7 +2568,7 @@ class ManyResult(Result):
         self._offset = None
         self.distinct_field = None
         self._values_flag = False
-        self.connection = self.modela.get_connection()
+        self.connection = self.modela.get_session()
         self.kwargs = {}
         
     def all(self, cache=False):
@@ -3487,7 +3509,7 @@ class Model(object):
                     if callable(changed):
                         changed(self, created, self._old_values, d)
                         old.update(d)
-                    obj = do_(self.table.insert().values(**d), self.get_connection())
+                    obj = do_(self.table.insert().values(**d), self.get_session())
                     _saved = True
 
                 if obj.inserted_primary_key:
@@ -3532,7 +3554,7 @@ class Model(object):
                         if callable(changed):
                             changed(self, created, self._old_values, d)
                             old.update(d)
-                        result = do_(self.table.update(_cond).values(**d), self.get_connection())
+                        result = do_(self.table.update(_cond).values(**d), self.get_session())
                         _saved = True
                         if version:
                             if result.rowcount != 1:
@@ -3591,7 +3613,7 @@ class Model(object):
             setattr(self, delete_fieldname, True)
             self.save()
         else:
-            do_(self.table.delete(self.table.c.id==self.id), self.get_connection())
+            do_(self.table.delete(self.table.c.id==self.id), self.get_session())
             self.id = None
             self._old_values = {}
         if send_dispatch and get_dispatch_send() and self.__dispatch_enabled__:
@@ -3759,10 +3781,10 @@ class Model(object):
         cls.tablename = name
         
     @classmethod
-    def get_connection(cls):
+    def get_session(cls):
         if cls._connection:
             return cls._connection
-        return cls.get_engine_name()
+        return get_session(cls.get_engine_name())
         
     @classmethod
     def get_engine_name(cls):
@@ -3960,11 +3982,11 @@ class Model(object):
             condition = cls.c.id==condition
         elif isinstance(condition, (tuple, list)):
             condition = cls.c.id.in_(condition)
-        do_(cls.table.delete(condition, **kwargs), cls.get_connection())
+        do_(cls.table.delete(condition, **kwargs), cls.get_session())
             
     @classmethod
     def count(cls, condition=None, **kwargs):
-        count = do_(cls.table.count(condition, **kwargs), cls.get_connection()).scalar()
+        count = do_(cls.table.count(condition, **kwargs), cls.get_session()).scalar()
         return count
     
     @classmethod
