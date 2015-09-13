@@ -4,6 +4,9 @@
 
 from __future__ import print_function, absolute_import
 
+__all__ = ['Worker', 'Manager', 'make_log']
+__version__ = '0.1'
+
 import os
 import sys
 import time
@@ -43,6 +46,22 @@ def get_memory(pid):
         return mem
     return 0
 
+FORMAT = "[%(levelname)s - %(asctime)s - %(filename)s:%(lineno)s] - %(message)s"
+
+def make_log(log, log_filename, format=FORMAT, datafmt=None, max_bytes=1024*1024*50,
+             backup_count=5):
+    import logging.handlers
+
+    if isinstance(log, (str, unicode)):
+        log = logging.getLogger(log)
+
+    handler = logging.handlers.RotatingFileHandler(
+        log_filename, maxBytes=max_bytes, backupCount=backup_count)
+    fmt = logging.Formatter(format, datafmt)
+    handler.setFormatter(fmt)
+    log.addHandler(handler)
+    return log
+
 class Worker(object):
     _id = 1
 
@@ -78,18 +97,12 @@ class Worker(object):
         self.after_run()
 
     def init(self):
-        self.log.info('%s %d creating' % (self.name, self.pid))
+        self.log.info('%s %d created' % (self.name, self.pid))
 
     def run(self):
         self.log.info('%s %d running' % (self.name, self.pid))
         time.sleep(1)
         return True
-
-    def on_success(self, result):
-        pass
-
-    def on_failure(self):
-        pass
 
     def _run(self):
         while (not self.max_requests or
