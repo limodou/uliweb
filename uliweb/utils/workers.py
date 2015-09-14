@@ -72,14 +72,14 @@ class Worker(object):
                  timeout=None,
                  check_point=None,
                  name=None,
-                 *args, **kwargs):
+                 args=None, kwargs=None):
         self.log = log or default_log
         self.max_requests = max_requests
         self.soft_memory_limit = soft_memory_limit
         self.hard_memory_limit = hard_memory_limit
         self.timeout = timeout
-        self.args = args
-        self.kwargs = kwargs
+        self.args = args or ()
+        self.kwargs = kwargs or {}
         self.is_exit = None
         self.count = 0
         self.check_point = check_point
@@ -171,9 +171,10 @@ class Manager(object):
         self.wait_time = wait_time
 
     def init(self):
-        self.log.info('=============================')
-        self.log.info('%s Starting' % self.title)
-        self.log.info('=============================')
+        _len = len(self.title)
+        self.log.info('='*_len)
+        self.log.info('%s' % self.title)
+        self.log.info('='*_len)
         self.log.info('Daemon process %d' % self.pid)
         self.log.info('Check point %ds' % self.check_point)
 

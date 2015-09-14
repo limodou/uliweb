@@ -7,6 +7,7 @@ __local_timezone__ = None
 __timezones__ = SortedDict()
 
 class DateError(Exception):pass
+class TimeFormatError(Exception):pass
 
 DEFAULT_DATETIME_INPUT_FORMATS = (
     '%Y-%m-%d %H:%M:%S',     # '2006-10-25 14:30:59'
@@ -227,6 +228,28 @@ def to_string(dt, microsecond=False, timezone=True):
         if microsecond:
             format += '.%f'
         return dt.strftime(format)
+
+re_time = re.compile(r'(\d+)([s|ms|h|m])')
+def parse_time(t):
+    if isinstance(t, (str, unicode)):
+        b = re_time.match(t)
+        if b:
+            v, unit = int(b.group(1)), b.group(2)
+            if unit == 's':
+                return v*1000
+            elif unit == 'm':
+                return v*60*1000
+            elif unit == 'h':
+                return v*60*60*1000
+            else:
+                return v
+        else:
+            raise TimeFormatError(t)
+    elif isinstance(t, (int, long)):
+        return t
+    else:
+        raise TimeFormatError(t)
+
     
 #if __name__ == '__main__':
 #    GMT8 = timezone('GMT +8')
