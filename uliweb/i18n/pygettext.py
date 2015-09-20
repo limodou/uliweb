@@ -301,6 +301,9 @@ def _visit_pyfiles(list, dirname, names):
 
     if '.git' in names:
         names.remove('.git')
+
+    if 'static' in names:
+        names.remove('static')
     
     # add all *.py files to list
     list.extend(
@@ -806,7 +809,7 @@ def main():
             if filename.endswith('.html'):
                 from uliweb.core.template import template_file_py
                 from cStringIO import StringIO
-                text = template_file_py(filename, skip_extern=True)
+                text = template_file_py(filename, skip_extern=True, multilines=True)
                 fp = StringIO(text)
             else:
                 fp = open(filename)
@@ -872,7 +875,7 @@ def extrace_files(files, outputfile, opts=None, vars=None):
         docstrings = 0
         nodocstrings = {}
         toexclude = []
-    
+
     options = Options()
 
 #    make_escapes(options.escape)
@@ -899,7 +902,7 @@ def extrace_files(files, outputfile, opts=None, vars=None):
             from uliweb.core import template
             from cStringIO import StringIO
             from uliweb.core.template import template_file_py
-            text = template_file_py(filename, skip_extern=True, log=log)
+            text = template_file_py(filename, skip_extern=True, log=log, multilines=True)
             fp = StringIO(text)
             closep = 0
         else:
