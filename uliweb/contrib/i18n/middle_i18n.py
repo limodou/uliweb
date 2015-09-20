@@ -46,8 +46,7 @@ def get_language_from_request(request, settings):
     accept = request.environ.get('HTTP_ACCEPT_LANGUAGE', None)
     if not accept:
         if debug:
-            log.info('Detect from settings=%s, lang=%s' %
-                     ('LANGUAGE_CODE', lang))
+            log.info('Detect from settings of LANGUAGE_CODE=%s' % lang)
         return settings.I18N.get('LANGUAGE_CODE')
     languages = settings.I18N.get('SUPPORT_LANGUAGES', [])
     for accept_lang, unused in parse_accept_lang_header(accept):
@@ -65,7 +64,10 @@ def get_language_from_request(request, settings):
             return normalized
 
     #return default lanaguage
-    return settings.I18N.get('LANGUAGE_CODE')
+    lang = settings.I18N.get('LANGUAGE_CODE')
+    if debug:
+        log.info('Detect from settings of LANGUAGE_CODE=%s' % lang)
+    return lang
 
 def parse_accept_lang_header(lang_string):
     """
