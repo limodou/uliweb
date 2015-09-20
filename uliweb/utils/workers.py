@@ -139,13 +139,13 @@ class Worker(object):
         self.log.info ("%s %d received a signal %d" % (self.name, self.pid, signum))
 
     def reached_soft_memory_limit(self, mem):
-        if mem >= self.soft_memory_limit:
+        if self.soft_memory_limit and mem >= self.soft_memory_limit:
             return True
         else:
             return False
 
     def reached_hard_memory_limit(self, mem):
-        if mem >= self.hard_memory_limit:
+        if self.hard_memory_limit and mem >= self.hard_memory_limit:
             return True
         else:
             return False
@@ -165,6 +165,9 @@ class Manager(object):
 
         self.log = log or logging.getLogger(__name__)
         self.workers = workers
+        #reset log
+        for w in self.workers:
+            w.log = self.log
         self.is_exit = False
         self.check_point = check_point
         self.title = title
