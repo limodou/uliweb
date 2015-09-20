@@ -61,7 +61,7 @@ def get_language_from_request(request, settings):
         if normalized in languages:
             if debug:
                 log.info('Detect from HTTP Header=%s, lang=%s' %
-                         ('HTTP_ACCEPT_LANGUAGE', lang))
+                         ('HTTP_ACCEPT_LANGUAGE', normalized))
             return normalized
 
     #return default lanaguage
