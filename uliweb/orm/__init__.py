@@ -521,12 +521,18 @@ def default_post_do(sender, query, conn, usetime):
       
 re_placeholder = re.compile(r'%\(\w+\)s')
 def rawsql(query, ec=None):
+    """
+    ec could be engine name or engine instance
+    """
     if isinstance(query, Result):
         query = query.get_query()
 
     ec = ec or __default_engine__
-    engine = engine_manager[ec]
-    dialect = engine.engine.dialect
+    if isinstance(ec, (str, unicode)):
+        engine = engine_manager[ec]
+        dialect = engine.engine.dialect
+    else:
+        dialect = ec.dialect
     if isinstance(query, (str, unicode)):
         return query
     #return str(query.compile(compile_kwargs={"literal_binds": True})).replace('\n', '') + ';'
@@ -621,7 +627,8 @@ def do_(query, ec=None, args=None):
                 
     return result
 
-def save_file(result, filename, encoding='utf8', headers=None, convertors=None, visitor=None):
+def save_file(result, filename, encoding='utf8', headers=None,
+              convertors=None, visitor=None, **kwargs):
     """
     save query result to a csv file
     visitor can used to convert values, all value should be convert to string
@@ -661,9 +668,16 @@ def save_file(result, filename, encoding='utf8', headers=None, convertors=None, 
             return re.sub('\r\n|\r|\n', ' ', x)
         else:
             return x
-    
-    with open(filename, 'wb') as f:
-        w = csv.writer(f)
+
+    if isinstance(filename, (str, unicode)):
+        f = open(filename, 'wb')
+        need_close = True
+    else:
+        f = filename
+        need_close = False
+
+    try:
+        w = csv.writer(f, **kwargs)
         w.writerow([simple_value(convert_header(x), encoding=encoding) for x in result.keys()])
         for row in result:
             if visitor and callable(visitor):
@@ -672,6 +686,10 @@ def save_file(result, filename, encoding='utf8', headers=None, convertors=None, 
                 _row = [convert(k, v, row) for k, v in zip(result.keys(), row.values())]
             r = [simple_value(_r(x), encoding=encoding) for x in _row]
             w.writerow(r)
+    finally:
+        if need_close:
+            f.close()
+
     
 def Begin(ec=None):
     session = get_session(ec)
@@ -2404,7 +2422,8 @@ class Result(object):
         self.result = self.do_(query)
         return self.result
     
-    def save_file(self, filename, encoding='utf8', headers=None, convertors=None, display=True):
+    def save_file(self, filename, encoding='utf8', headers=None,
+                  convertors=None, display=True, **kwargs):
         """
         save result to a csv file.
         display = True will convert value according choices value
@@ -2421,7 +2440,8 @@ class Result(object):
                         return column.get_display_value(value)
                     convertors[column.name] = f
 
-        return save_file(self.run(), filename, encoding=encoding, headers=headers, convertors=convertors)
+        return save_file(self.run(), filename, encoding=encoding,
+                         headers=headers, convertors=convertors, **kwargs)
     
     def get_query(self, columns=None):
         #user can define default_query, and default_query 
@@ -3406,13 +3426,18 @@ class Model(object):
                 return str(v)
             return copy.deepcopy(v)
            
-    def _get_data(self):
+    def _get_data(self, fields=None, compare=True):
         """
         Get the changed property, it'll be used to save the object
+        If compare is False, then it'll include all data not only changed property
         """
+        fields = fields or []
         if self.id is None or self.id == '':
             d = {}
             for k, v in self.properties.items():
+                #test fields
+                if fields and k not in fields:
+                    continue
 #                if not isinstance(v, ManyToMany):
                 if v.property_type == 'compound':
                     continue
@@ -3433,6 +3458,8 @@ class Model(object):
             d = {}
             d['id'] = self.id
             for k, v in self.properties.items():
+                if fields and k not in fields:
+                    continue
                 if v.property_type == 'compound':
                     continue
                 t = self._old_values.get(k, None)
@@ -3442,8 +3469,9 @@ class Model(object):
                         x = x.id
                 else:
                     x = v.get_value_for_datastore(self, cached=True)
-                if t != self.field_str(x) and not x is Lazy:
-                    d[k] = x
+                if not x is Lazy:
+                    if (compare and t != self.field_str(x)) or not compare:
+                        d[k] = x
         
         return d
             
@@ -3618,7 +3646,38 @@ class Model(object):
             self._old_values = {}
         if send_dispatch and get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'post_delete', instance=self, signal=self.tablename)
-            
+
+    def create_sql(self, insert=False, version=False, version_fieldname=None,
+                   fields=None, ec=None):
+        """
+        Create sql statement, do not process manytomany
+        """
+        version_fieldname = version_fieldname or 'version'
+        #fix when d is empty, orm will not insert record bug 2013/04/07
+        if not self.id or insert:
+            d = self._get_data(fields, compare=False)
+            if d:
+                return rawsql(self.table.insert().values(**d),
+                              ec or self.get_engine_name())
+
+        else:
+            d = self._get_data(fields, compare=False)
+            _id = d.pop('id')
+            if d:
+                _cond = self.table.c.id == self.id
+                if version:
+                    version_field = self.table.c.get(version_fieldname)
+                    if version_field is None:
+                        raise KindError("version_fieldname %s is not existed in Model %s" % (version_fieldname, self.__class__.__name__))
+                    _version_value = getattr(self, version_fieldname, 0)
+                    # setattr(self, version_fieldname, _version_value+1)
+                    d[version_fieldname] = _version_value+1
+                    _cond = (version_field == _version_value) & _cond
+
+                return rawsql(self.table.update(_cond).values(**d),
+                              ec or self.get_engine_name())
+        return ''
+
     def __repr__(self):
         s = []
         for k, v in self._fields_list:

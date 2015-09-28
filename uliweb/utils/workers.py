@@ -114,15 +114,15 @@ class Worker(object):
                         ret = self.run()
                 else:
                     ret = self.run()
-                if ret:
-                    self.count += 1
-                if self.check_point:
-                    time.sleep(self.check_point)
             except TimeoutException as e:
-                self.is_exit = 'timeout'
-                return
+                self.log.info('Time out')
             except Exception as e:
                 self.log.exception(e)
+                return
+            finally:
+                self.count += 1
+                if self.check_point:
+                    time.sleep(self.check_point)
 
     def after_run(self):
         if self.is_exit == 'signal':

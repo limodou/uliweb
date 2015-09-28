@@ -744,7 +744,7 @@ def test_result():
     <Test {'username':u'limodou','year':10,'id':1}>
     """
     
-def test_save():
+def test_get_data():
     """
     >>> db = get_connection('sqlite://')
     >>> db.echo = False
@@ -755,6 +755,8 @@ def test_save():
     >>> a = Test(username='limodou')
     >>> a._get_data() # doctest:+ELLIPSIS
     {'username': u'limodou', 'year': datetime.datetime(...)}
+    >>> print a.create_sql() # doctest:+ELLIPSIS
+    INSERT INTO test (username, year) VALUES ('limodou', '...');
     >>> a.save()
     True
     >>> a.to_dict() # doctest:+ELLIPSIS
@@ -762,6 +764,14 @@ def test_save():
     >>> a.username = 'newuser'
     >>> a._get_data()
     {'username': u'newuser', 'id': 1}
+    >>> print a.create_sql() # doctest:+ELLIPSIS
+    UPDATE test SET username='newuser', year='...' WHERE test.id = 1;
+    >>> a._get_data(fields=['username', 'year'])
+    {'username': u'newuser', 'id': 1}
+    >>> a._get_data(fields=['username', 'year'], compare=False) # doctest:+ELLIPSIS
+    {'username': u'newuser', 'id': 1, 'year': datetime.datetime(...)}
+    >>> print a.create_sql(fields=['username'])
+    UPDATE test SET username='newuser' WHERE test.id = 1;
     """
     
 def test_without_id():
@@ -2626,6 +2636,37 @@ def test_uuid_and_new_fields():
     >>> g2 = Group.get(1)
     >>> g2.user.to_dict() == u1.to_dict()
     True
+    """
+
+def test_save_file():
+    """
+    >>> from uliweb.orm import Local
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(CHAR, max_length=20)
+    ...     year = Field(int)
+    >>> a = Test(username='limodou', year=0)
+    >>> a.save()
+    True
+    >>> b = Test(username='guest', year=10)
+    >>> b.save()
+    True
+    >>> from StringIO import StringIO
+    >>> buf = StringIO()
+    >>> Test.all().save_file(buf)
+    >>> print buf.getvalue().replace('\\r\\n', '\\n')
+    username,year,id
+    limodou,0,1
+    guest,10,2
+    <BLANKLINE>
+    >>> buf = StringIO()
+    >>> Test.all().values('username').save_file(buf)
+    >>> print buf.getvalue().replace('\\r\\n', '\\n')
+    username
+    limodou
+    guest
+    <BLANKLINE>
     """
 
 # if __name__ == '__main__':
