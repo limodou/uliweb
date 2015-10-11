@@ -61,7 +61,7 @@ from uliweb.utils import date as _date
 from uliweb.utils.common import (flat_list, classonlymethod, simple_value, 
     safe_str, import_attr)
 from sqlalchemy import *
-from sqlalchemy.sql import select, ColumnElement, text, true
+from sqlalchemy.sql import select, ColumnElement, text, true, and_
 from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
@@ -2334,9 +2334,9 @@ class Result(object):
         cond = true()
         for c in condition:
             if c is not None:
-                cond = c & cond
+                cond = and_(c, cond)
         if self.condition is not None:
-            self.condition = cond & self.condition
+            self.condition = and_(cond, self.condition)
         else:
             self.condition = cond
         return self
@@ -3107,7 +3107,7 @@ class ManyToMany(ReferenceProperty):
         cond = true()
         for c in condition:
             if c is not None:
-                cond = c & cond
+                cond = and_(c, cond)
         sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & cond)
         condition = self.model_class.c[self.reversed_fieldname].in_(sub_query)
         return condition
@@ -3116,7 +3116,7 @@ class ManyToMany(ReferenceProperty):
         cond = true()
         for c in condition:
             if c is not None:
-                cond = c & cond
+                cond = and_(c, cond)
         return (self.table.c[self.fielda] == self.model_class.c[self.reversed_fieldname]) & (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & cond
         
     def convert_dump(self, value):
@@ -3648,20 +3648,20 @@ class Model(object):
             dispatch.call(self.__class__, 'post_delete', instance=self, signal=self.tablename)
 
     def create_sql(self, insert=False, version=False, version_fieldname=None,
-                   fields=None, ec=None):
+                   fields=None, ec=None, compare=False):
         """
         Create sql statement, do not process manytomany
         """
         version_fieldname = version_fieldname or 'version'
         #fix when d is empty, orm will not insert record bug 2013/04/07
         if not self.id or insert:
-            d = self._get_data(fields, compare=False)
+            d = self._get_data(fields, compare=compare)
             if d:
                 return rawsql(self.table.insert().values(**d),
                               ec or self.get_engine_name())
 
         else:
-            d = self._get_data(fields, compare=False)
+            d = self._get_data(fields, compare=compare)
             _id = d.pop('id')
             if d:
                 _cond = self.table.c.id == self.id

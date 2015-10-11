@@ -2185,7 +2185,8 @@ class SimpleListView(object):
         return t
     
 class ListView(SimpleListView):
-    def __init__(self, model, condition=None, query=None, pageno=0, order_by=None, 
+    def __init__(self, model, condition=None, query=None, pageno=0, order_by=None,
+        group_by=None, having=None,
         fields=None, rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
         total_fields=None, template_data=None, default_column_width=100, 
@@ -2200,6 +2201,8 @@ class ListView(SimpleListView):
         self.condition = condition
         self.pageno = pageno
         self.order_by = order_by
+        self.group_by = group_by
+        self.having = having
         self.fields = fields
         self.rows_per_page = rows_per_page
         self.types_convert_map = types_convert_map or {}
@@ -2235,7 +2238,9 @@ class ListView(SimpleListView):
         if self._query is None or isinstance(self._query, (orm.Result, Select)): #query result
             offset = self.pageno*self.rows_per_page
             limit = self.rows_per_page
-            query = self.query_model(self.model, self.condition, offset=offset, limit=limit, order_by=self.order_by)
+            query = self.query_model(self.model, self.condition, group_by=self.group_by,
+                                     having=self.having,
+                                     offset=offset, limit=limit, order_by=self.order_by)
             if not self.manual:
                 self.total = self.count(query)
             # if isinstance(query, orm.Result):
@@ -2279,9 +2284,11 @@ class ListView(SimpleListView):
         """
         Query all records without limit and offset.
         """
-        return self.query_model(self.model, self.condition, order_by=self.order_by)
+        return self.query_model(self.model, self.condition, order_by=self.order_by,
+                                group_by=self.group_by, having=self.having)
     
-    def query_model(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
+    def query_model(self, model, condition=None, offset=None, limit=None,
+                    order_by=None, group_by=None, having=None, fields=None):
         """
         Query all records with limit and offset, it's used for pagination query.
         """
@@ -2306,10 +2313,16 @@ class ListView(SimpleListView):
                 query = query.limit(int(limit))
         if order_by is not None:
             if isinstance(order_by, (tuple, list)):
-                for order in order_by:
-                    query = query.order_by(order)
+                query = query.order_by(*order)
             else:
                 query = query.order_by(order_by)
+        if group_by is not None:
+            if isinstance(group_by, (tuple, list)):
+                query = query.group_by(*group_by)
+            else:
+                query = query.group_by(group_by)
+            if having is not None:
+                query = query.having(having)
         return query
         
     def get_table_info(self):
