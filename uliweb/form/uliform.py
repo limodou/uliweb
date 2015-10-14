@@ -937,11 +937,14 @@ class Form(object):
         return result
 
 
+def get_field_cls(type, default=None):
+    return fields_mapping.get(type, default or StringField)
+
 def make_field(type, **kwargs):
     """
     According field information creating Field instance
     """
-    cls = fields_mapping.get(type, StringField)
+    cls = get_field_cls(type)
     return cls(**kwargs)
 
 def make_form(fields=None, layout=None, layout_class=None, base_class=None,

@@ -38,3 +38,35 @@ def test_1():
     >>> print query.count()
     1
     """
+
+def test_multi_view():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Test(Model):
+    ...     username = Field(unicode)
+    ...     year = Field(int, default=30)
+    ...     birth = Field(datetime.date)
+    >>> a = Test(username='limodou', birth='2011-03-04')
+    >>> a.save()
+    True
+    >>> from uliweb.utils.generic import MultiView
+    >>> class MyView(MultiView):
+    ...     _model = 'test'
+    >>> view = MyView()
+    >>> fields = [
+    ... {'name':'username'}
+    ... ]
+    >>> c = {'username':'guest'}
+    >>> print str(view._get_query_condition(Test, fields=fields, query=c))
+    test.username = :username_1
+    >>> fields = [
+    ... {'name':'username', 'like':'%_%'},
+    ... {'name':'year', 'op':'ge'}
+    ... ]
+    >>> print rawsql(view._get_query_condition(Test, fields=fields, query=c))
+    test.username LIKE '%guest%'
+    >>> c = {'username':'guest', 'year':30}
+    >>> print rawsql(view._get_query_condition(Test, fields=fields, query=c))
+    test.year >= 30 AND test.username LIKE '%guest%'
+    """

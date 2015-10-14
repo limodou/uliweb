@@ -2569,33 +2569,33 @@ def test_to_column_info():
     ...     other = ManyToMany(Other)
     ...     one = OneToOne(One)
     >>> Test.string.to_column_info()
-    {'index': False, 'name': 'string', 'nullable': True, 'type': 'VARCHAR', 'type_name': 'VARCHAR(40)', 'fieldname': 'string', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'string', 'nullable': True, 'verbose_name': '', 'type_name': 'VARCHAR(40)', 'label': '', 'fieldname': 'string', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'VARCHAR', 'primary_key': False}
     >>> Test.char.to_column_info()
-    {'index': False, 'name': 'char', 'nullable': True, 'type': 'CHAR', 'type_name': 'CHAR(40)', 'fieldname': 'char', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'char', 'nullable': True, 'verbose_name': '', 'type_name': 'CHAR(40)', 'label': '', 'fieldname': 'char', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'CHAR', 'primary_key': False}
     >>> Test.file.to_column_info()
-    {'index': False, 'name': 'file', 'nullable': True, 'type': 'VARCHAR', 'type_name': 'VARCHAR(40)', 'fieldname': 'file', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'file', 'nullable': True, 'verbose_name': '', 'type_name': 'VARCHAR(40)', 'label': '', 'fieldname': 'file', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'VARCHAR', 'primary_key': False}
     >>> Test.uni.to_column_info()
-    {'index': False, 'name': 'uni', 'nullable': True, 'type': 'VARCHAR', 'type_name': 'VARCHAR(40)', 'fieldname': 'uni', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'uni', 'nullable': True, 'verbose_name': '', 'type_name': 'VARCHAR(40)', 'label': '', 'fieldname': 'uni', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'VARCHAR', 'primary_key': False}
     >>> Test.boolean.to_column_info()
-    {'index': False, 'name': 'boolean', 'nullable': True, 'type': 'BOOL', 'type_name': 'BOOL', 'fieldname': 'boolean', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'boolean', 'nullable': True, 'verbose_name': '', 'type_name': 'BOOL', 'label': '', 'fieldname': 'boolean', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'BOOL', 'primary_key': False}
     >>> Test.integer.to_column_info()
-    {'index': False, 'name': 'integer', 'nullable': True, 'type': 'INTEGER', 'type_name': 'INTEGER', 'fieldname': 'integer', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'integer', 'nullable': True, 'verbose_name': '', 'type_name': 'INTEGER', 'label': '', 'fieldname': 'integer', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'INTEGER', 'primary_key': False}
     >>> Test.date1.to_column_info()
-    {'index': False, 'name': 'date1', 'nullable': True, 'type': 'DATETIME', 'type_name': 'DATETIME', 'fieldname': 'date1', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'date1', 'nullable': True, 'verbose_name': '', 'type_name': 'DATETIME', 'label': '', 'fieldname': 'date1', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'DATETIME', 'primary_key': False}
     >>> Test.date2.to_column_info()
-    {'index': False, 'name': 'date2', 'nullable': True, 'type': 'DATE', 'type_name': 'DATE', 'fieldname': 'date2', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'date2', 'nullable': True, 'verbose_name': '', 'type_name': 'DATE', 'label': '', 'fieldname': 'date2', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'DATE', 'primary_key': False}
     >>> Test.date3.to_column_info()
-    {'index': False, 'name': 'date3', 'nullable': True, 'type': 'TIME', 'type_name': 'TIME', 'fieldname': 'date3', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'date3', 'nullable': True, 'verbose_name': '', 'type_name': 'TIME', 'label': '', 'fieldname': 'date3', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'TIME', 'primary_key': False}
     >>> Test.float.to_column_info()
-    {'index': False, 'name': 'float', 'nullable': True, 'type': 'FLOAT', 'type_name': 'FLOAT', 'fieldname': 'float', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'float', 'nullable': True, 'verbose_name': '', 'type_name': 'FLOAT', 'label': '', 'fieldname': 'float', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'FLOAT', 'primary_key': False}
     >>> Test.decimal.to_column_info()
-    {'index': False, 'name': 'decimal', 'nullable': True, 'type': 'DECIMAL', 'type_name': 'DECIMAL(10,2)', 'fieldname': 'decimal', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'decimal', 'nullable': True, 'verbose_name': '', 'type_name': 'DECIMAL(10,2)', 'label': '', 'fieldname': 'decimal', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'DECIMAL', 'primary_key': False}
     >>> Test.reference.to_column_info()
-    {'index': False, 'name': 'reference', 'nullable': True, 'type': 'Reference', 'type_name': 'INTEGER', 'fieldname': 'reference', 'server_default': None, 'autoincrement': False, 'relation': 'Reference(Test:id)', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'reference', 'nullable': True, 'verbose_name': '', 'type_name': 'INTEGER', 'label': '', 'fieldname': 'reference', 'server_default': None, 'autoincrement': False, 'relation': 'Reference(Test:id)', 'unique': False, 'type': 'Reference', 'primary_key': False}
     >>> Test.other.to_column_info()
-    {'index': False, 'name': 'other', 'nullable': True, 'type': 'ManyToMany', 'type_name': 'ManyToMany', 'fieldname': 'other', 'server_default': None, 'autoincrement': False, 'relation': 'ManyToMany(Test:id-Other:id)', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'other', 'nullable': True, 'verbose_name': '', 'type_name': 'ManyToMany', 'label': '', 'fieldname': 'other', 'server_default': None, 'autoincrement': False, 'relation': 'ManyToMany(Test:id-Other:id)', 'unique': False, 'type': 'ManyToMany', 'primary_key': False}
     >>> Test.one.to_column_info()
-    {'index': False, 'name': 'one', 'nullable': True, 'type': 'OneToOne', 'type_name': 'INTEGER', 'fieldname': 'one', 'server_default': None, 'autoincrement': False, 'relation': 'OneToOne(One:id)', 'unique': False, 'verbose_name': '', 'primary_key': False}
+    {'index': False, 'name': 'one', 'nullable': True, 'verbose_name': '', 'type_name': 'INTEGER', 'label': '', 'fieldname': 'one', 'server_default': None, 'autoincrement': False, 'relation': 'OneToOne(One:id)', 'unique': False, 'type': 'OneToOne', 'primary_key': False}
     >>> [(x['name'], x['type']) for x in Test.get_columns_info()]
     [('string', 'VARCHAR'), ('char', 'CHAR'), ('file', 'VARCHAR'), ('uni', 'VARCHAR'), ('boolean', 'BOOL'), ('integer', 'INTEGER'), ('date1', 'DATETIME'), ('date2', 'DATE'), ('date3', 'TIME'), ('float', 'FLOAT'), ('decimal', 'DECIMAL'), ('reference', 'Reference'), ('other', 'ManyToMany'), ('one', 'OneToOne'), ('id', 'INTEGER')]
     """

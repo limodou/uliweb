@@ -1,12 +1,11 @@
 #coding=utf-8
-from __future__ import with_statement
 from uliweb.i18n import gettext_lazy as _
 from uliweb.form import SelectField, BaseField
 import os, sys
 import logging
 import time
 import inspect
-from uliweb.orm import get_model, Model, Result, do_, Lazy
+from uliweb.orm import get_model, Model, Result, do_, Lazy, get_model_property
 import uliweb.orm as orm
 from uliweb import redirect, json, functions, UliwebError, Storage
 from sqlalchemy.sql import select, Select, func
@@ -16,6 +15,7 @@ from uliweb.utils.common import safe_unicode, safe_str
 from uliweb.core.html import Builder
 from uliweb.utils.sorteddict import SortedDict
 
+log = logging.getLogger(__name__)
 __default_fields_builds__ = {}
 class __default_value__(object):pass
 
@@ -341,11 +341,9 @@ def get_obj_url(obj):
     if hasattr(obj, 'get_url'):
         display = obj.get_url()
     else:
-        url_prefix = settings.get_var('MODEL_URL/'+obj.tablename)
-        if url_prefix:
-            if url_prefix.endswith('/'):
-                url_prefix = url_prefix[:-1]
-            display = str(Tag('a', unicode(obj), href=url_prefix+'/'+str(obj.id)))
+        url = settings.get_var('MODEL_URL/'+obj.tablename)
+        if url:
+            display = str(Tag('a', unicode(obj), href=url.format(obj.to_dict())))
         else:
             display = unicode(obj)
     return display
@@ -357,43 +355,79 @@ def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
     t.update(kwargs)
     return json_func(t)
     
-def make_form_field(field, model, field_cls=None, builds_args_map=None):
+def make_form_field(field, model=None, field_cls=None,
+                    use_default_value=True,
+                    builds_args_map=None):
+    """
+    make form field according field value
+    :param field: such as: str, Form Field instance, dict
+        if field is str type, it'll fetch property from model or str is like 'model.name'
+        it'll fetch property `name` from `model`
+    :param model: if field is str type, it'll may use model value to fetch property
+    :param field_cls: if not applied, it'll fetch from property, field_cls sould be Field class
+    :param builds_args_map:
+    :return: Field instance
+    """
     import uliweb.form as form
     from uliweb.form.validators import TEST_MAXLENGTH
-    
-    model = get_model(model)
-    field_type = None
-    if isinstance(field, (str, unicode)):
-        prop = getattr(model, field)
-        field = {'prop':prop}
-    elif 'field' in field and isinstance(field['field'], BaseField): #if the prop is already Form.BaseField, so just return it
-        return field['field']
-    
-    prop = field['prop']
 
-    if not prop:
-        raise UliwebError("Can't find property %s in Model(%r)" % (field['name'], model))
-    
-    label = field.get('verbose_name', None) or prop.verbose_name or prop.property_name
-    hint = field.get('hint', '') or prop.hint
-    placeholder = field.get('placeholder', '') or prop.placeholder
-    kwargs = dict(label=label, name=prop.property_name, 
-        required=prop.required, help_string=hint, placeholder=placeholder)
-    html_attrs = field.get('extra', {}).get('html_attrs', {}) or prop.extra.get('html_attrs', {})
-    kwargs['html_attrs'] = html_attrs
-    
-    v = prop.default_value()
-#    if v is not None:
-    kwargs['default'] = v
+    builds_args_map = builds_args_map or {}
+
+    if model:
+        model = get_model(model)
+
+    if isinstance(field, BaseField):
+        return field
+    if isinstance(field, dict) and 'field' in field and isinstance(field['field'], BaseField):
+        return field['field']
+
+    field_type = None
+    prop = None #model property if existed
+
+    #process prop
+    if isinstance(field, (str, unicode)):
+        field = {'name':field}
+
+    if isinstance(field, dict):
+        prop = field.get('prop')
+        if not prop and model:
+            #if there is field_name, then use it property class
+            field_name = field.get('field_name') or field['name']
+            prop = get_model_property(model, field_name)
+            #if existed field_cls, then it'll use it to create form field
+            if not prop and not field_cls:
+                raise UliwebError("Can't find property %s in Model(%r)" %
+                                  (field_name, model.__name__))
+    else:
+        raise UliwebError("Can't support this field %r type in make_form_field" % type(field))
+
+    default_kwargs = {}
+    if prop:
+        default_kwargs = {
+            'label':prop.label or prop.perperty_name,
+            'help_string':prop.hint,
+            'placeholder':prop.placeholder,
+            'html_attrs':prop.extra.get('html_attrs', {})
+        }
+    kwargs = {
+        'label':field.get('label') or field.get('verbose_name') or default_kwargs.get('label'),
+        'help_string':field.get('hint') or field.get('help_string') or default_kwargs.get('help_string'),
+        'placeholder':field.get('placeholder') or default_kwargs.get('placeholder'),
+        'html_attrs':field.get('extra', {}).get('html_attrs', {}) or default_kwargs.get('html_attrs')
+    }
+
+    if use_default_value:
+        v = prop.default_value()
+        kwargs['default'] = v
         
-    if field['static']:
+    if field.get('static'):
         field_type = form.StringField
         kwargs['required'] = False
         kwargs['static'] = True
         if prop.choices is not None:
             kwargs['choices'] = prop.get_choices()
         
-    if field['hidden']:
+    if field.get('hidden'):
         field_type = form.HiddenField
         
     if 'required' in field:
@@ -473,7 +507,7 @@ def make_form_field(field, model, field_cls=None, builds_args_map=None):
             v = kwargs.setdefault('validators', [])
             if isinstance(prop.max_length, int):
                 v.append(TEST_MAXLENGTH(prop.max_length))
-        
+
         f = field_type(**kwargs)
     
         return f
@@ -563,7 +597,6 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                         for _id in _ids:
                             _v = functions.get_cached_object(prop.reference_class, _id)
                             if not _v:
-                                log = logging.getLogger('uliweb.app')
                                 log.debug("Can't find object %s:%d" % (prop.reference_class.__name__, _id))
                                 _v = _id
                             query.append(_v)
@@ -625,13 +658,13 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
 
 def get_view_field(model, field_name, obj=None, types_convert_map=None, fields_convert_map=None, value=__default_value__):
     m = get_model(model)
-    field = getattr(m, field_name)
+    field = get_model_property(m, field_name)
     r = make_view_field(field, obj=obj, types_convert_map=types_convert_map, fields_convert_map=fields_convert_map, value=value)
     return r
     
 def get_field_display(model, field_name, obj=None, types_convert_map=None, fields_convert_map=None, value=__default_value__):
     m = get_model(model)
-    field = getattr(m, field_name)
+    field = get_model_property(m, field_name)
     return make_view_field(field, obj=obj, types_convert_map=types_convert_map, fields_convert_map=fields_convert_map, value=value)['display']
 
 def get_model_display(model, obj, fields=None, types_convert_map=None, fields_convert_map=None, data=None):
@@ -861,7 +894,6 @@ class AddView(object):
                 if 'flash' in functions:
                     functions.flash(self.success_msg)
                 else:
-                    log = logging.getLogger('uliweb.app')
                     log.debug("Can't find flash function in functions")
                     
             if self.ok_url:
@@ -871,7 +903,6 @@ class AddView(object):
                 return d
         
     def on_fail(self, d, json_result=False):
-        log = logging.getLogger('uliweb.app')
         log.debug(self.form.errors)
         if json_result:
             return to_json_result(False, self.form.errors.get('_') or self.fail_msg, self.on_fail_data(None, self.form.errors, d), json_func=self.json_func)
@@ -1040,9 +1071,6 @@ class EditView(AddView):
                 return d
             
     def on_fail(self, d, json_result=False):
-        import logging
-        
-        log = logging.getLogger('uliweb.app')
         log.debug(self.form.errors)
         if json_result:
             return to_json_result(False, self.fail_msg, self.on_fail_data(self.obj, self.form.errors, d), json_func=self.json_func)
@@ -2512,9 +2540,10 @@ class QueryView(object):
         f = []
         for field_name, prop in get_fields(self.model, self.fields, self.meta):
             d = prop.copy()
-            d['static'] = field_name in self.static_fields
-            d['hidden'] = field_name in self.hidden_fields
+            d['static'] = bool(field_name in self.static_fields)
+            d['hidden'] = bool(field_name in self.hidden_fields)
             d['required'] = False
+            d['field'] = prop.get('field')
             f.append(d)
         return f
     
@@ -2556,7 +2585,7 @@ class QueryView(object):
         #add layout support
         layout = self.get_layout()
         DummyForm.layout = layout
-        
+
         for f in self.get_fields():
             flag = False
             if self.get_form_field:
@@ -2594,4 +2623,4 @@ class QueryView(object):
             return self.form.data.copy()
         else:
             return {}
-        
+

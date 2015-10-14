@@ -21,4 +21,12 @@ def get_form(formcls):
             raise UliwebError("Can't find formcls name %s in settings.FORMS" % formcls)
     else:
         raise UliwebError("formcls should be Form class object or string path format, but %r found!" % formcls)
-        
+
+def startup_installed(sender):
+    from uliweb import settings
+    import uliweb.form.uliform as form
+    from uliweb.utils.common import import_attr
+
+    for k, v in settings.get_var('FORM_FIELDS_MAP', {}).items():
+        form.fields_mapping[k] = import_attr(v)
+

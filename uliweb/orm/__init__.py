@@ -28,7 +28,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
     'NotFound',
     'get_field_type', 'create_model', 'get_metadata', 'migrate_tables',
-    'print_model',
+    'print_model', 'get_model_property',
     ]
 
 __auto_create__ = False
@@ -549,7 +549,7 @@ def rawsql(query, ec=None):
                 v = comp.params[k]
                 params.append(repr(simple_value(v)))
             line = comp.string.replace('?', '%s') % tuple(params)
-            return line.replace('\n', '')+';'
+            return line.replace('\n', '')
     
 def get_engine_name(ec=None):
     """
@@ -619,7 +619,7 @@ def do_(query, ec=None, args=None):
                 print '(%s:%d:%s)' % v
             else:
                 print
-            print sql
+            print sql+';'
             if hasattr(Local, 'echo_args') and Local.echo_args['explain'] and sql:
                 r = conn.execute('explain '+sql).fetchone()
                 print '\n----\nExplain: %s' % ''.join(["%s=%r, " % (k, v) for k, v in r.items()])
@@ -1283,12 +1283,13 @@ class Property(object):
     property_type = 'column'   #Property type: 'column', 'compound', 'relation'
     server_default = None
     
-    def __init__(self, verbose_name=None, fieldname=None, default=None,
+    def __init__(self, label=None, verbose_name=None, fieldname=None, default=None,
         required=False, validators=None, choices=None, max_length=None, 
         hint='', auto=None, auto_add=None, type_class=None, type_attrs=None, 
         placeholder='', extra=None,
         sequence=False, **kwargs):
-        self.verbose_name = verbose_name
+        self.label = label or verbose_name
+        self.verbose_name = label or verbose_name
         self.property_name = None
         self.name = None
         self.fieldname = fieldname
@@ -1317,7 +1318,7 @@ class Property(object):
         Get common attributes and it'll used for Model.relationship clone process
         """
         d = {}
-        for k in ['verbose_name', 'required', 'hint', 'placeholder', 'choices',
+        for k in ['label', 'verbose_name', 'required', 'hint', 'placeholder', 'choices',
             'default', 'validators', 'max_length']:
             d[k] = getattr(self, k)
         return d
@@ -1527,6 +1528,7 @@ class Property(object):
     def to_column_info(self):
         d = {}
         d['verbose_name'] = self.verbose_name or ''
+        d['label'] = self.label or ''
         d['name'] = self.name
         d['fieldname'] = self.fieldname
         d['type'] = self.type_name
@@ -1546,11 +1548,11 @@ class CharProperty(Property):
     server_default=''
     type_name = 'CHAR'
     
-    def __init__(self, verbose_name=None, default=u'', max_length=None, **kwds):
+    def __init__(self, label=None, default=u'', max_length=None, **kwds):
         if __check_max_length__ and not max_length:
             raise BadPropertyTypeError("max_length parameter not passed for property %s" % self.__class__.__name__)
         max_length = max_length or 255
-        super(CharProperty, self).__init__(verbose_name, default=default, max_length=max_length, **kwds)
+        super(CharProperty, self).__init__(label, default=default, max_length=max_length, **kwds)
     
     def convert(self, value):
         if value is None:
@@ -1634,9 +1636,9 @@ class UUIDProperty(StringProperty):
         return value
 
 class FileProperty(StringProperty):
-    def __init__(self, verbose_name=None, max_length=None, upload_to=None, upload_to_sub=None, **kwds):
+    def __init__(self, label=None, max_length=None, upload_to=None, upload_to_sub=None, **kwds):
         max_length = max_length or 255
-        super(FileProperty, self).__init__(verbose_name, max_length=max_length, **kwds)
+        super(FileProperty, self).__init__(label, max_length=max_length, **kwds)
         self.upload_to = upload_to
         self.upload_to_sub = upload_to_sub
         
@@ -1648,8 +1650,8 @@ class TextProperty(Property):
     data_type = unicode
     type_name = 'TEXT'
 
-    def __init__(self, verbose_name=None, default=u'', **kwds):
-        super(TextProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
+    def __init__(self, label=None, default=u'', **kwds):
+        super(TextProperty, self).__init__(label, default=default, max_length=None, **kwds)
     
     def convert(self, value):
         if not value:
@@ -1664,8 +1666,8 @@ class BlobProperty(Property):
     data_type = str
     type_name = 'BLOB'
     
-    def __init__(self, verbose_name=None, default='', **kwds):
-        super(BlobProperty, self).__init__(verbose_name, default=default, max_length=None, **kwds)
+    def __init__(self, label=None, default='', **kwds):
+        super(BlobProperty, self).__init__(label, default=default, max_length=None, **kwds)
     
     def get_display_value(self, value):
         return repr(value)
@@ -1714,9 +1716,9 @@ class DateTimeProperty(Property):
     server_default = '0000-00-00 00:00:00'
     type_name = 'DATETIME'
     
-    def __init__(self, verbose_name=None, auto_now=False, auto_now_add=False,
+    def __init__(self, label=None, auto_now=False, auto_now_add=False,
             format=None, **kwds):
-        super(DateTimeProperty, self).__init__(verbose_name, **kwds)
+        super(DateTimeProperty, self).__init__(label, **kwds)
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
         self.format = format
@@ -1800,8 +1802,8 @@ class IntegerProperty(Property):
     server_default=text('0')
     type_name = 'INTEGER'
     
-    def __init__(self, verbose_name=None, default=0, **kwds):
-        super(IntegerProperty, self).__init__(verbose_name, default=default, **kwds)
+    def __init__(self, label=None, default=0, **kwds):
+        super(IntegerProperty, self).__init__(label, default=default, **kwds)
     
     def convert(self, value):
         if value == '':
@@ -1832,8 +1834,8 @@ class FloatProperty(Property):
     server_default=text('0')
     type_name = 'FLOAT'
     
-    def __init__(self, verbose_name=None, default=0.0, precision=None, **kwds):
-        super(FloatProperty, self).__init__(verbose_name, default=default, **kwds)
+    def __init__(self, label=None, default=0.0, precision=None, **kwds):
+        super(FloatProperty, self).__init__(label, default=default, **kwds)
         self.precision = precision
         
     def _create_type(self):
@@ -1864,8 +1866,8 @@ class DecimalProperty(Property):
     server_default=text('0.00')
     type_name = 'DECIMAL'
     
-    def __init__(self, verbose_name=None, default='0.0', precision=10, scale=2, **kwds):
-        super(DecimalProperty, self).__init__(verbose_name, default=default, **kwds)
+    def __init__(self, label=None, default='0.0', precision=10, scale=2, **kwds):
+        super(DecimalProperty, self).__init__(label, default=default, **kwds)
         self.precision = precision
         self.scale = scale
    
@@ -1900,8 +1902,8 @@ class BooleanProperty(Property):
     server_default=text('0')
     type_name = 'BOOL'
     
-    def __init__(self, verbose_name=None, default=False, **kwds):
-        super(BooleanProperty, self).__init__(verbose_name, default=default, **kwds)
+    def __init__(self, label=None, default=False, **kwds):
+        super(BooleanProperty, self).__init__(label, default=default, **kwds)
     
     def custom_validate(self, value):
         if value is not None and not isinstance(value, bool):
@@ -1924,20 +1926,20 @@ class ReferenceProperty(Property):
     field_class = PKCLASS()
     type_name = 'Reference'
 
-    def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
+    def __init__(self, reference_class=None, label=None, collection_name=None,
         reference_fieldname=None, required=False, engine_name=None, **attrs):
         """Construct ReferenceProperty.
 
         Args:
             reference_class: Which model class this property references.
-            verbose_name: User friendly name of property.
+            verbose_name or label: User friendly name of property.
             collection_name: If provided, alternate name of collection on
                 reference_class to store back references.    Use this to allow
                 a Model to have multiple fields which refer to the same class.
             reference_fieldname used to specify which fieldname of reference_class
                 should be referenced
         """
-        super(ReferenceProperty, self).__init__(verbose_name, **attrs)
+        super(ReferenceProperty, self).__init__(label, **attrs)
 
         self._collection_name = collection_name
         self.reference_fieldname = reference_fieldname or 'id'
@@ -2848,7 +2850,7 @@ class ManyResult(Result):
 class ManyToMany(ReferenceProperty):
     type_name = 'ManyToMany'
 
-    def __init__(self, reference_class=None, verbose_name=None, collection_name=None, 
+    def __init__(self, reference_class=None, label=None, collection_name=None,
         reference_fieldname=None, reversed_fieldname=None, required=False, through=None, 
         through_reference_fieldname=None, through_reversed_fieldname=None, 
         **attrs):
@@ -2863,7 +2865,7 @@ class ManyToMany(ReferenceProperty):
         """
             
         super(ManyToMany, self).__init__(reference_class=reference_class,
-            verbose_name=verbose_name, collection_name=collection_name, 
+            label=label, collection_name=collection_name,
             reference_fieldname=reference_fieldname, required=required, **attrs)
     
         self.reversed_fieldname = reversed_fieldname or 'id'
@@ -3127,6 +3129,7 @@ class ManyToMany(ReferenceProperty):
     def to_column_info(self):
         d = {}
         d['verbose_name'] = self.verbose_name or ''
+        d['label'] = self.label or ''
         d['name'] = self.name
         d['fieldname'] = self.fieldname
         d['type'] = self.type_name
@@ -3136,13 +3139,13 @@ class ManyToMany(ReferenceProperty):
         self._get_column_info(d)
         return d
 
-def SelfReferenceProperty(verbose_name=None, collection_name=None, **attrs):
+def SelfReferenceProperty(label=None, collection_name=None, **attrs):
     """Create a self reference.
     """
     if 'reference_class' in attrs:
         raise ConfigurationError(
                 'Do not provide reference_class to self-reference.')
-    return ReferenceProperty(_SELF_REFERENCE, verbose_name, collection_name, **attrs)
+    return ReferenceProperty(_SELF_REFERENCE, label, collection_name, **attrs)
 
 SelfReference = SelfReferenceProperty
 
@@ -3167,6 +3170,7 @@ class _ReverseReferenceProperty(Property):
         self._reference_id = reference_id   #A Reference(B) this is A's reference field
         self._reversed_id = reversed_id     #B's reference_field
         self.verbose_name = ''
+        self.label = ''
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
@@ -3308,6 +3312,15 @@ def get_field_type(_type):
     _t = eval(_type)
     return _fields_mapping.get(_t, _t)
 
+def get_model_property(model, name):
+    if '.' not in name:
+        prop = get_model(model).properties.get(name)
+    else:
+        _name, _field = name.split('.')
+        _model = get_model(_name)
+        prop = _model.properties.get(_field)
+    return prop
+
 class ModelReprDescriptor(object):
     def __get__(self, model_instance, model_class):
         def f():
@@ -3347,7 +3360,7 @@ class ModelReprDescriptor(object):
         for k, v in instance._fields_list:
             if not isinstance(v, ManyToMany):
                 info = v.to_column_info()
-                d = [info['verbose_name'], info['name'], info['type_name']]
+                d = [info['label'], info['name'], info['type_name']]
                 t = getattr(instance, k, None)
                 if isinstance(v, Reference) and t:
                     d.append('%s:%r:%s' % (v.reference_class.__name__, t.id, unicode(t)))
@@ -3479,7 +3492,7 @@ class Model(object):
         return bool(self.id) 
     
     def update(self, **data):
-        for k, v in data.iteritems():
+        for k, v in data.items():
             if k in self.properties:
                 if not isinstance(self.properties[k], ManyToMany):
                     x = self.properties[k].get_value_for_datastore(self)
@@ -3658,7 +3671,7 @@ class Model(object):
             d = self._get_data(fields, compare=compare)
             if d:
                 return rawsql(self.table.insert().values(**d),
-                              ec or self.get_engine_name())
+                              ec or self.get_engine_name()) + ';'
 
         else:
             d = self._get_data(fields, compare=compare)
@@ -3675,7 +3688,7 @@ class Model(object):
                     _cond = (version_field == _version_value) & _cond
 
                 return rawsql(self.table.update(_cond).values(**d),
-                              ec or self.get_engine_name())
+                              ec or self.get_engine_name()) + ';'
         return ''
 
     def __repr__(self):
