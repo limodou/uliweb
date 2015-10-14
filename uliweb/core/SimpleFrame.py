@@ -804,13 +804,10 @@ class Dispatcher(object):
             response = InternalServerError()
         log.exception(e)
         return response
-    
-    def prepare_request(self, request, rule):
+
+    def get_handler(self, endpoint):
         from uliweb.utils.common import safe_import
 
-        endpoint = rule.endpoint
-        #bind endpoint to request
-        request.rule = rule
         #get handler
         _klass = None
         if isinstance(endpoint, string_types):
@@ -823,22 +820,19 @@ class Dispatcher(object):
                 #if _klass is class method, then the mod should be Class
                 #so the real mod should be mod.__module__
                 mod = sys.modules[mod.__module__]
-                
-#            module, func = endpoint.rsplit('.', 1)
-#            #if the module contains a class name, then import the class
-#            #it set by expose()
-#            x, last = module.rsplit('.', 1)
-#            if last.startswith('views'):
-#                mod = __import__(module, {}, {}, [''])
-#                handler = getattr(mod, func)
-#            else:
-#                module = x
-#                mod = __import__(module, {}, {}, [''])
-#                _klass = getattr(mod, last)()
-#                handler = getattr(_klass, func)
+
         elif callable(endpoint):
             handler = endpoint
             mod = sys.modules[handler.__module__]
+
+        return _klass, mod, handler
+
+    def prepare_request(self, request, rule):
+        endpoint = rule.endpoint
+        #bind endpoint to request
+        request.rule = rule
+        #get handler
+        _klass, mod, handler = self.get_handler(endpoint)
         
         request.appname = ''
         for p in self.apps:

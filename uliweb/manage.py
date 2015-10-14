@@ -1269,7 +1269,9 @@ class FindCommand(Command):
             help='Find template file path according template filename.'),
         make_option('-u', '--url', dest='url', 
             help='Find views function path according url.'),
-        make_option('-c', '--static', dest='static', 
+        make_option('-U', '--search-url', dest='url_pattern',
+            help='Search url according url_pattern.'),
+        make_option('-c', '--static', dest='static',
             help='Find static file path according static filename.'),
         make_option('-m', '--model', dest='model', 
             help='Find model definition according model name.'),
@@ -1289,8 +1291,11 @@ class FindCommand(Command):
     
     def handle(self, options, global_options, *args):
         self.get_application(global_options)
+
         if options.url:
             self._find_url(options.url)
+        if options.url_pattern:
+            self._search_url(options.url_pattern)
         elif options.template:
             self._find_template(options.template, options.tree,
                     options.blocks, options.with_filename,
@@ -1305,17 +1310,40 @@ class FindCommand(Command):
     def _find_url(self, url):
         from uliweb.core.SimpleFrame import url_map
         from werkzeug.test import EnvironBuilder
-        from uliweb import NotFound
-        
+        from uliweb import NotFound, application
+
         builder = EnvironBuilder(url)
         env = builder.get_environ()
         
         url_adapter = url_map.bind_to_environ(env)
         try:
-            endpoint, values = url_adapter.match()
-            print '%s' % endpoint
+            rule, values = url_adapter.match(return_rule=True)
+            print rule.rule, '--->', rule.endpoint
+            mod, handler_cls, func = application.get_handler(rule.endpoint)
+            if func.__doc__:
+                print '\nDescription:', func.__doc__.strip()
         except NotFound:
             print 'Not Found'
+
+    def _search_url(self, pattern):
+        from uliweb.core.SimpleFrame import url_map
+        import fnmatch
+
+        urls = []
+        for r in url_map.iter_rules():
+            if r.methods:
+                methods = ' '.join(list(r.methods))
+            else:
+                methods = ''
+            urls.append((r.rule, methods, r.subdomain, r.endpoint))
+        urls.sort()
+
+        n = 0
+        for url in urls:
+            if fnmatch.fnmatch(url[0], pattern):
+                print url[0], '    ', url[3]
+                n += 1
+        print 'Total', n
 
     def _find_template(self, template, tree, blocks, with_filename,
                    source, comment):
