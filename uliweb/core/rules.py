@@ -105,13 +105,20 @@ def expose(rule=None, **kwargs):
         return rule
     else:
         return e
-    
+
 class Expose(object):
-    def __init__(self, rule=None, restful=False, replace=False, template=None, **kwargs):
+    def __init__(self, rule=None, restful=False, replace=False, template=None,
+                 skip=False, **kwargs):
         self.restful = restful
         self.replace = replace
         self.template = template
+        self.skip = skip
         if inspect.isfunction(rule) or inspect.isclass(rule):
+            if self.skip:
+                rule.__rule_skip__ = True
+                return
+            else:
+                rule.__rule_skip__ = False
             self.parse_level = 1
             self.rule = None
             self.kwargs = {}
@@ -183,6 +190,11 @@ class Expose(object):
     
     def parse(self, f):
         if inspect.isfunction(f) or inspect.ismethod(f):
+            if self.skip:
+                f.__rule_skip__ = True
+                return
+            else:
+                f.__rule_skip__ = False
             func, result = self.parse_function(f)
             a = __exposes__.setdefault(func, [])
             a.append(result)
@@ -199,7 +211,8 @@ class Expose(object):
         f.__exposed_url__ = prefix
         for name in dir(f):
             func = getattr(f, name)
-            if (inspect.ismethod(func) or inspect.isfunction(func)) and not name.startswith('_'):
+            if (inspect.ismethod(func) or inspect.isfunction(func)) and not name.startswith('_') \
+                    and not getattr(func, '__rule_skip__', None):
                 if hasattr(func, '__exposed__') and func.__exposed__:
                     new_endpoint = '.'.join([f.__module__, f.__name__, name])
                     if func.im_func in __exposes__:
@@ -210,17 +223,16 @@ class Expose(object):
                             if func.__no_rule__:
                                 rule = self._get_url(appname, prefix, func)
                             else:
+                                #check if the func has already rule
                                 _old = func.__old_rule__.get(v[2])
-                                keep = _old.startswith('!')
-                                if keep:
-                                    _old = _old[1:]
-                                if _old:
-                                    rule = os.path.join(prefix, _old).replace('\\', '/')
+                                #if keep, then it'll skip app prefix
+                                if _old.startswith('!'):
+                                    rule = _old[1:]
+                                    if not rule.startswith('/'):
+                                        raise ValueError("The rule of <!rule> definition should be start with '!/'")
+
                                 else:
-                                    rule = prefix
-                                #if rule has perfix of appname, then fix it, otherwise
-                                #maybe it's root url, e.g. /register
-                                if not keep:
+                                    rule = os.path.join(prefix, _old).replace('\\', '/')
                                     rule = self._fix_url(appname, rule)
 
                                 func.__old_rule__['clsname'] = clsname
@@ -238,7 +250,10 @@ class Expose(object):
                     else:
                         #maybe is subclass
                         v = copy.deepcopy(func.func_dict.get('__saved_rule__'))
-                        rule = self._get_url(appname, prefix, func)
+                        if func.func_dict.get('__fixed_url__'):
+                            rule = v[2]
+                        else:
+                            rule = self._get_url(appname, prefix, func)
                         rule = self._fix_route(rule)
                         if v and new_endpoint != v[1]:
                             if self.replace:
@@ -267,7 +282,8 @@ class Expose(object):
                     func.func_dict['__saved_rule__'] = list(x)
                     func.func_dict['__old_rule__'] = {'rule':rule, 'clsname':clsname}
                     func.func_dict['__template__'] = None
-                    
+                    func.func_dict['__fixed_url__'] = False
+
     def _get_url(self, appname, prefix, f):
         args = inspect.getargspec(f)[0]
         if args:
@@ -298,6 +314,7 @@ class Expose(object):
         else:
             self.rule = self._fix_route(self.rule)
             rule = self.rule
+        fixed_url = rule.startswith('!')
         rule = self._fix_url(appname, rule)
 
         #get endpoint
@@ -321,6 +338,7 @@ class Expose(object):
         f.func_dict['__old_rule__'][rule] = self.rule
         f.func_dict['__old_rule__']['clsname'] = clsname
         f.func_dict['__template__'] = self.template
+        f.func_dict['__fixed_url__'] = fixed_url
 
         kw = self.kwargs.copy()
         self._fix_kwargs(appname, kw)

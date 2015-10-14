@@ -43,11 +43,10 @@ def test_1():
     >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
     ...     print v[1], v[2]
     test_url.TestView.index /test
-    test_url.TestView.ttt /ttt
     test_url.TestView1.index /test/index
     test_url.TestView1.pnt /print
     test_url.TestView1.test /test/test
-    test_url.TestView1.ttt /test/ttt
+    test_url.TestView1.ttt /ttt
     test_url.view /
     test_url.view /hello
     """
@@ -201,11 +200,26 @@ def test_not_replace():
     >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
     ...     print v[1], v[2]
     test_url.TestView.index /test
-    test_url.TestView.ttt /ttt
     test_url.TestView1.index /test1/index
     test_url.TestView1.pnt /print
     test_url.TestView1.test /test1/test
-    test_url.TestView1.ttt /test1/ttt
+    test_url.TestView1.ttt /ttt
+    >>> @expose('/test2')
+    ... class TestView2(TestView):
+    ...     @expose('/print')
+    ...     def pnt(self):
+    ...         return {}
+    ...     @expose(skip=True)
+    ...     def test(self):
+    ...         pass
+    >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
+    ...     print v[1], v[2]
+    test_url.TestView.index /test
+    test_url.TestView1.index /test1/index
+    test_url.TestView1.test /test1/test
+    test_url.TestView2.index /test2/index
+    test_url.TestView2.pnt /print
+    test_url.TestView2.ttt /ttt
     """
 
 def test_subdomain():
@@ -257,7 +271,7 @@ def test_subdomain():
     test_url.TestView1.index /test/index {'subdomain': 'demo'}
     test_url.TestView1.pnt /print {'subdomain': 'demo'}
     test_url.TestView1.test /test/test {'subdomain': 'demo'}
-    test_url.TestView1.ttt /test/ttt {'subdomain': 'demo'}
+    test_url.TestView1.ttt /ttt {'subdomain': 'demo'}
     test_url.view / {}
     test_url.view /hello {}
     test_url.view /hello {'subdomain': 'www'}
@@ -384,3 +398,4 @@ def test_multi_expose():
 #
 # for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
 #     print v[1], v[2], v[3]
+
