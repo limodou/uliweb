@@ -270,9 +270,14 @@ def get_url_adapter(_domain_name):
         adapter = url_map.bind_to_environ(env)
     return adapter
 
+def _sub(matcher):
+    return '{%s}' % matcher.group().strip('<>').strip().split(':')[-1]
+
 def url_for(endpoint, **values):
+    from urlparse import urljoin
+
     point = rules.get_endpoint(endpoint)
-    
+
     #if the endpoint is string format, then find and replace
     #the module prefix with app alias which matched
     for k, v in __app_alias__.items():
@@ -282,13 +287,31 @@ def url_for(endpoint, **values):
         
     if point in rules.__url_names__:
         point = rules.__url_names__[point]
-        
+
     _domain_name = values.pop('_domain_name', 'default')
     _external = values.pop('_external', False)
     domain = application.domains.get(_domain_name, {})
     if not _external:
         _external = domain.get('display', False)
     adapter = get_url_adapter(_domain_name)
+
+    #process format
+    #it'll replace <argu> to {argu} so that you can use format
+    #to create url
+    _format = values.pop('_format', None)
+    if _format:
+        #then replace argument with {name} format
+        _rules = url_map._rules_by_endpoint.get(point)
+        if _rules:
+            rule = _rules[0]
+            url = re.sub(r'<.*?>', _sub, rule.rule)
+            if _external:
+                url = urljoin(domain.get('domain', ''), url)
+            return url
+        else:
+            raise ValueError("Can't found rule of endpoint %s" % point)
+
+
     return adapter.build(point, values, force_external=_external)
 
 def get_app_dir(app):

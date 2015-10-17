@@ -76,10 +76,11 @@ def set_urlroute_rules(rules=None):
 
 def get_endpoint(f):
     if inspect.ismethod(f):
-        if not f.im_self:    #instance method
-            clsname = f.im_class.__name__
-        else:                       #class method
-            clsname = f.im_self.__name__
+        # if not f.im_self:    #instance method
+        #     clsname = f.im_class.__name__
+        # else:                       #class method
+        #     clsname = f.im_self.__name__
+        clsname = f.im_class.__name__
         endpoint = '.'.join([f.im_class.__module__, clsname, f.__name__])
     elif inspect.isfunction(f):
         endpoint = '.'.join([f.__module__, f.__name__])

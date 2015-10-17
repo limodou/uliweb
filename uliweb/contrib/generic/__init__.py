@@ -1,5 +1,5 @@
 #coding=utf8
-from uliweb import functions
+from uliweb import functions, url_for
 import logging
 from forms import QueryForm
 
@@ -24,8 +24,7 @@ class MultiView(object):
     #query
     ######################################
     class _query_config(object):
-        url = ''
-        fields = _not_implemented()
+        fields = []
         #query field format
         # [
         #   {   'name':<name>,
@@ -38,27 +37,50 @@ class MultiView(object):
         #       'render': function(model, name, value, values) used to create condition
         #   }
         # ]
-        layout = _not_implemented()
-        url_func = 'list'
         form_cls = QueryForm
 
+    _query_parameters = ['fields', 'layout', 'form_cls']
+
     class _list_config(object):
-        condition = None
-        query = None
-        order_by = None
-        group_by = None
-        having = None
         pagination = True
-        fields = None
-        fields_convert_map = None
         id = 'listview_table'
         meta = 'Table'
 
-    _query_parameters = ['url', 'fields', 'layout', 'url_func', 'form_cls']
-    _list_parameters = ['condition', 'query', 'order_by', 'group_by', 'having',
+    _list_parameters = ['condition', 'order_by', 'group_by', 'having',
                         'pagination', 'fields', 'fields_convert_map', 'id',
                         'meta'
                         ]
+
+    class _view_config(object):
+        meta = 'DetailView'
+
+    _view_parameters = ['fields', 'fields_convert_map',
+                       'layout_class', 'layout',
+                       'meta'
+                       ]
+
+    class _add_config(object):
+        meta = 'AddForm'
+        version = False
+
+    _add_parameters = ['default_data', 'fields', 'static_fields',
+                        'fields_convert_map', 'hidden_fields',
+                        'layout_class', 'layout', 'rules',
+                        'file_replace', 'version',
+                        'meta'
+                       ]
+
+    class _add_config(object):
+        meta = 'EditForm'
+        version = False
+
+    _edit_parameters = ['default_data', 'fields', 'static_fields',
+                        'fields_convert_map', 'hidden_fields',
+                        'layout_class', 'layout', 'rules',
+                        'file_replace', 'version',
+                        'meta'
+                       ]
+
 
     @classmethod
     def _get_arg(cls, value, property_name, klass=None):
@@ -69,12 +91,6 @@ class MultiView(object):
         :return: value or property value, if not defined property, it'll raise Exception
         """
         return value if value is not None else getattr(klass or cls, property_name)
-
-    def _get_query_view(self, model=None, url=None, fields=None, layout=None, form_cls=None):
-        _fields = self._make_query_form_fields(model, fields)
-        query = functions.QueryView(model, ok_url=url, fields=_fields, layout=layout,
-                                    form_cls=form_cls)
-        return query
 
     def _make_form_field(self, model, field):
         from uliweb.utils.generic import make_form_field
@@ -98,12 +114,12 @@ class MultiView(object):
         else:
             raise ValueError("Field type is not right, should be str or dict, but %r found" % type(field))
 
-    def _make_query_form_fields(self, model, fields):
+    def _make_query_form_fields(self, model, parameters):
         _fields = []
-        for f in fields:
+        for f in parameters.get('fields') or []:
             name, field = self._make_form_field(model, f)
             _fields.append((name, field))
-        return _fields
+        parameters['fields'] = _fields
 
     def _make_like(self, column, format, value):
         """
@@ -198,18 +214,77 @@ class MultiView(object):
         if cond is not None:
             parameters['condition'] = cond
 
-    def _process_fields_convert_map(self, model, parameters):
-        #process field_convert_map, ListView doesn't support list type but dict
+    def _process_fields_convert_map(self, parameters, prefix=''):
+        """
+        process fields_convert_map, ListView doesn't support list type but dict
+
+        fields_convert_map should be define as list or dict
+        for list, it can be:
+            [name, name, ...]
+            [(name, func), (name, func), ...] if func is str, it'll be the property name of class
+        for dict, it can be:
+            {'name':func, ...}
+        :param model: model object
+        :param parameters:
+        :param prefix: it'll used to combine prefix+_convert_xxx to get convert function
+            from class
+        :return:
+        """
         if 'fields_convert_map' in parameters:
             _f = parameters.get('fields_convert_map')
-            if isinstance(_, list):
+            if isinstance(_f, list):
                 t = {}
                 for k in _f:
-                    t[k] = getattr(self, '_convert_{}'.format(k))
+                    if isinstance(k, str):
+                        t[k] = getattr(self, '{0}_convert_{1}'.format(prefix, k))
+                    elif isinstance(k, (tuple, list)):
+                        name = k[0]
+                        func = k[1]
+                        if isinstance(func, str):
+                            t[name] = getattr(self, '{0}_convert_{1}'.format(prefix, func))
+                        elif callable(func):
+                            t[name] = func
+                        else:
+                            raise ValueError("Fields convert function should be str or callable, but %r found" % type(func))
+                    else:
+                        raise ValueError("Fields convert element should be str or tuple or list, but %r found" % type(k))
+                parameters['fields_convert_map'] = t
+            elif isinstance(_f, dict):
+                t = {}
+                for k, v in _f.items():
+                    if isinstance(v, str):
+                        t[k] = getattr(self, '{0}_convert_{1}'.format(prefix, v))
+                    elif callable(v):
+                        t[k] = v
+                    else:
+                        raise ValueError("Fields convert function should be str or callable, but %r found" % type(func))
                 parameters['fields_convert_map'] = t
 
+    def _collect_parameters(self, para_list, parameters, meta_cls):
+        parameters = parameters or {}
 
-    def _get_list_view(self, model, condition, parameters, meta_cls, post_condition=None):
+        if isinstance(meta_cls, str):
+            meta_cls = getattr(self, meta_cls)
+        meta = meta_cls()
+
+        para = {}
+        for k in para_list:
+            try:
+                para[k] = getattr(meta, k, None)
+            except NotImplementedError:
+                raise ValueError("Property %s is not implemented yet in class %r" % (k, meta_cls.__name__))
+
+        para.update(parameters)
+        return para
+
+    @classmethod
+    def _get_model(cls, model=None):
+        return functions.get_model(cls._get_arg(model, '_model'))
+
+
+
+    def _get_list_view(self, model, condition, parameters, config, post_condition=None,
+                       prefix_of_convert_func_name=''):
         """
         :param model:
         :param fields_convert_map: it's different from ListView
@@ -217,17 +292,9 @@ class MultiView(object):
         :return:
         """
         para = self._collect_parameters(self._list_parameters, parameters,
-                                        meta_cls or self._list_config)
+                                        config or self._list_config)
 
-        #process field_convert_map, ListView doesn't support list type but dict
-        _fields_convert_map = para.get('fields_convert_map')
-
-        if _fields_convert_map:
-            if isinstance(_fields_convert_map, list):
-                t = {}
-                for k in _fields_convert_map:
-                    t[k] = getattr(self, '_convert_{}'.format(k))
-                para['fields_convert_map'] = t
+        self._process_fields_convert_map(para, prefix=prefix_of_convert_func_name)
 
         #process condition
         self._process_condition(model, condition, para, post_condition)
@@ -236,37 +303,9 @@ class MultiView(object):
         view =  functions.ListView(model, **para)
         return view
 
-    def _get_url(self, function='', url='', **kwargs):
-        def _f(func=function, url=url, kwargs=kwargs):
-            from uliweb import url_for
 
-            kwargs = kwargs or {}
-            if func:
-                return url_for(getattr(self.__class__, function, **kwargs))
-            else:
-                return url_for(url, **kwargs)
-        return _f
 
-    def _collect_parameters(self, para_list, parameters, meta_cls):
-        if parameters:
-            _g = parameters.get
-            def _get(key):
-                return self._get_arg(_g(key), key, meta_cls or self)
-        else:
-            if isinstance(meta_cls, str):
-                meta_cls = getattr(self, meta_cls)
-            meta = meta_cls()
-            def _get(key):
-                return getattr(meta, key, None)
 
-        para = {}
-        for k in para_list:
-            para[k] = _get(k)
-        return para
-
-    @classmethod
-    def _get_model(cls, model=None):
-        return functions.get_model(cls._get_arg(model, '_model'))
 
     def _default_query(self, model, parameters=None, meta_cls=None):
         """
@@ -279,25 +318,26 @@ class MultiView(object):
         if not parameters and not meta_cls:
             return None, None
 
-        para = self._collect_parameters(self._query_parameters, parameters, meta_cls)
+        #get model
+        model = self._get_model(model)
 
-        log.debug("Query config parameters is %r", para)
+        para = self._collect_parameters(self._query_parameters, parameters, meta_cls)
 
         #get query
         layout = para['layout']
         if not layout:
             layout = []
-            for x in para['fields']:
+            for x in para.get('fields') or {}:
                 if isinstance(x, str):
                     layout.append(x)
                 else:
                     layout.append(x['name'])
 
-        query = self._get_query_view(model=model,
-                         url=self._get_url(function=para['url_func'], url=para['url']),
-                         fields=para['fields'],
-                         layout=layout,
-                         form_cls=para['form_cls'])
+        self._make_query_form_fields(model, para)
+
+        log.debug("Query config parameters is %r", para)
+
+        query = functions.QueryView(model, **para)
 
         #get query value
         query_value = query.run()
@@ -310,27 +350,25 @@ class MultiView(object):
 
 
     def _default_list(self, model=None,
+                      query_parameters=None,
                       query_config=None,
-                      query_config_name=None,
+                      list_parameters=None,
                       list_config=None,
-                      list_config_name=None,
                       post_condition=None):
         from uliweb import request, json
 
-        #get parameters
-        _model = self._get_arg(model, '_model')
-
         #get model
-        model = functions.get_model(_model)
+        model = self._get_model(model)
 
         #get query instance and condition
-        query_inst, _cond = self._default_query(model, query_config, query_config_name)
+        query_inst, _cond = self._default_query(model, query_parameters, query_config)
 
         #get list view
         view = self._get_list_view(model=model,
                                    condition=_cond,
-                                   parameters=list_config,
-                                   meta_cls=list_config_name)
+                                   parameters=list_parameters,
+                                   config=list_config)
+
         if 'data' in request.values:
             return json(view.json())
         else:
@@ -341,3 +379,55 @@ class MultiView(object):
                 result.update({'query_form':''})
             result.update({'table':view})
             return result
+
+    def _default_view(self, model=None, obj=None,
+                    config=None, **parameters):
+        para = self._collect_parameters(self._view_parameters, parameters, config)
+
+        self._process_fields_convert_map(para)
+
+        view = functions.DetailView(self._get_model(model),
+                                    obj=obj,
+                                    **para)
+        return view.run()
+
+    def _default_add(self, model=None, ok_url=None,
+                    config=None, json_result=False, **parameters):
+        para = self._collect_parameters(self._edit_parameters, parameters, config)
+        para['ok_url'] = ok_url
+
+        self._process_fields_convert_map(para)
+
+        json_result = self._get_arg(json_result, 'json_result', config)
+        view = functions.EditView(self._get_model(model),
+                                    obj=obj,
+                                    **para)
+        return view.run(json_result=json_result)
+
+    def _default_edit(self, model=None, ok_url=None, obj=None,
+                    config=None, json_result=False, **parameters):
+        para = self._collect_parameters(self._edit_parameters, parameters, config)
+        para['ok_url'] = ok_url
+
+        self._process_fields_convert_map(para)
+
+        json_result = self._get_arg(json_result, 'json_result', config)
+        view = functions.EditView(self._get_model(model),
+                                    obj=obj,
+                                    **para)
+        return view.run(json_result=json_result)
+
+
+
+
+
+    def _list(self, *args, **kwargs):
+        return self._default_list(query_config='_query_config',
+                                  list_config='_list_config', *args, **kwargs)
+
+
+    def _view(self, *args, **kwargs):
+        return self._default_view(config='_view_config', *args, **kwargs)
+
+    def _edit(self, *args, **kwargs):
+        return self._default_edit(config='_edit_config', *args, **kwargs)

@@ -407,65 +407,65 @@ def make_form_field(field, model=None, field_cls=None,
             'label':prop.label or prop.perperty_name,
             'help_string':prop.hint,
             'placeholder':prop.placeholder,
-            'html_attrs':prop.extra.get('html_attrs', {})
+            'html_attrs':prop.extra.get('html_attrs', {}),
+            'required':prop.required,
         }
     kwargs = {
         'label':field.get('label') or field.get('verbose_name') or default_kwargs.get('label'),
         'help_string':field.get('hint') or field.get('help_string') or default_kwargs.get('help_string'),
         'placeholder':field.get('placeholder') or default_kwargs.get('placeholder'),
-        'html_attrs':field.get('extra', {}).get('html_attrs', {}) or default_kwargs.get('html_attrs')
+        'html_attrs':field.get('extra', {}).get('html_attrs', {}) or default_kwargs.get('html_attrs'),
+        'required':field.get('required', False) if 'required' in field else default_kwargs.get('required', False)
     }
 
     if use_default_value:
         v = prop.default_value()
         kwargs['default'] = v
-        
+
     if field.get('static'):
         field_type = form.StringField
         kwargs['required'] = False
         kwargs['static'] = True
         if prop.choices is not None:
             kwargs['choices'] = prop.get_choices()
-        
+
     if field.get('hidden'):
         field_type = form.HiddenField
-        
-    if 'required' in field:
-        kwargs['required'] = field['required']
         
     if field_cls:
         field_type = field_cls
     elif not field_type:
         cls = prop.__class__
-        if cls is orm.BlobProperty:
+        type_name = prop.type_name
+        if type_name == 'BLOG':
             pass
-        elif cls is orm.TextProperty:
+        elif type_name in ('TEXT', 'JSON'):
             field_type = form.TextField
-        elif cls is orm.CharProperty or cls is orm.StringProperty:
+        elif type_name in ('CHAR', 'VARCHAR', 'UUID'):
             if prop.choices is not None:
                 field_type = form.SelectField
                 kwargs['choices'] = prop.get_choices()
             else:
                 field_type = form.UnicodeField
-        elif cls is orm.BooleanProperty:
+        elif type_name == 'BOOL':
             field_type = form.BooleanField
-        elif cls is orm.DateProperty:
+        elif type_name == 'DATE':
 #            if not prop.auto_now and not prop.auto_now_add:
             field_type = form.DateField
-        elif cls is orm.TimeProperty:
+        elif type_name == 'TIME':
 #            if not prop.auto_now and not prop.auto_now_add:
             field_type = form.TimeField
-        elif cls is orm.DateTimeProperty:
+        elif type_name == 'DATETIME':
 #            if not prop.auto_now and not prop.auto_now_add:
             field_type = form.DateTimeField
-        elif cls is orm.DecimalProperty:
+        elif type_name == 'DECIMAL':
             field_type = form.StringField
             if prop.choices is not None:
                 field_type = form.SelectField
                 kwargs['choices'] = prop.get_choices()
-        elif cls is orm.FloatProperty:
+        elif type_name == 'FLOAT':
             field_type = form.FloatField
-        elif cls is orm.IntegerProperty:
+        elif type_name == 'INTEGER':
             if 'autoincrement' not in prop.kwargs:
                 if prop.choices is not None:
                     field_type = form.SelectField
@@ -473,20 +473,21 @@ def make_form_field(field, model=None, field_cls=None,
                     kwargs['datetype'] = int
                 else:
                     field_type = form.IntField
-        elif cls is orm.ManyToMany:
+        elif type_name == 'ManyToMany':
             kwargs['model'] = prop.reference_class
             field_type = ManyToManySelectField
-        elif cls is orm.ReferenceProperty or cls is orm.OneToOne:
+        elif type_name in ('Reference', 'OneToOne'):
             #field_type = form.IntField
             kwargs['model'] = prop.reference_class
             kwargs['value_field'] = prop.reference_fieldname
             field_type = ReferenceSelectField
-        elif cls is orm.FileProperty:
+        elif type_name == 'FILE':
             field_type = form.FileField
             kwargs['upload_to'] = prop.upload_to
             kwargs['upload_to_sub'] = prop.upload_to_sub
         else:
-            raise Exception, "Can't support the Property [%s=%s]" % (field['name'], prop.__class__.__name__)
+            raise ValueError("Can't support the Property [%s=%s]" %
+                             (field['name'], prop.__class__.__name__))
        
     if field_type:
         build_args = builds_args_map.get(field_type, {})
@@ -875,6 +876,24 @@ class AddView(object):
         else:
             return errors
 
+    def get_url(self, obj):
+        #guess ok_url kwargs, it could be (id) or (obj)
+        if callable(self.ok_url):
+            args = inspect.getargspec(self.ok_url).args()
+            if len(args) != 1:
+                raise ValueError("ok_url function argument should be only one, but it's empty or larger then 1")
+            k = args[0]
+            if k == 'id':
+                kwargs = {'id':obj.id}
+            elif k == 'obj':
+                kwargs = {'obj':obj}
+            else:
+                raise ValueError("ok_url function argument should be id or obj, but {} found".format(k))
+        else:
+            kwargs = {}
+        url = get_url(self.ok_url, **kwargs)
+        return url
+
     def on_success(self, d, json_result=False):
         from uliweb import response
 
@@ -897,7 +916,7 @@ class AddView(object):
                     log.debug("Can't find flash function in functions")
                     
             if self.ok_url:
-                return redirect(get_url(self.ok_url, id=obj.id))
+                return redirect(self.get_url(obj))
             else:
                 response.template = self.ok_template
                 return d
@@ -1065,7 +1084,7 @@ class EditView(AddView):
             if self.use_flash:
                 functions.flash(msg)
             if self.ok_url:
-                return redirect(get_url(self.ok_url, self.obj.id))
+                return redirect(self.get_url(self.obj))
             else:
                 response.template = self.ok_template
                 return d
@@ -1404,8 +1423,8 @@ class DetailView(object):
 class DeleteView(object):
     success_msg = _('The object has been deleted successfully!')
 
-    def __init__(self, model, ok_url='', fail_url='', condition=None, obj=None, 
-        pre_delete=None, post_delete=None, validator=None, json_func=None, 
+    def __init__(self, model, ok_url='', fail_url='', condition=None, obj=None,
+        pre_delete=None, post_delete=None, validator=None, json_func=None,
         use_flash=True, use_delete_fieldname=None, success_data=None,
         fail_data=None):
         self.model = get_model(model)
@@ -1449,7 +1468,7 @@ class DeleteView(object):
         else:
             if self.use_flash:
                 functions.flash(self.success_msg)
-            return redirect(self.ok_url)
+            return redirect(get_url(self.ok_url))
     
     def on_success_data(self, obj, data):
         if callable(self.success_data):
@@ -2341,7 +2360,7 @@ class ListView(SimpleListView):
                 query = query.limit(int(limit))
         if order_by is not None:
             if isinstance(order_by, (tuple, list)):
-                query = query.order_by(*order)
+                query = query.order_by(*order_by)
             else:
                 query = query.order_by(order_by)
         if group_by is not None:
@@ -2507,7 +2526,7 @@ class QueryView(object):
     builds_args_map = {}
     meta = 'QueryForm'
     
-    def __init__(self, model, ok_url, form=None, success_msg=None, fail_msg=None, 
+    def __init__(self, model, ok_url=None, form=None, success_msg=None, fail_msg=None,
         data=None, fields=None, form_cls=None, form_args=None,
         static_fields=None, hidden_fields=None, post_created_form=None, 
         layout=None, get_form_field=None, links=None):

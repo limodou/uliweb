@@ -384,18 +384,38 @@ def test_multi_expose():
 
     """
 
-# rules.clear_rules()
-# rules.__app_rules__ = {'__main__':{'prefix':'/demo'}}
-#
-# @expose('/test')
-# class TestView(object):
-#     def index(self):
-#         return {}
-#
-#     @expose('/admin/hello')
-#     def hello(self):
-#         pass
-#
-# for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
-#     print v[1], v[2], v[3]
+def init_env():
+    class Application(object):
+        domains = {'default': {'domain':'', 'display':False, 'url_prefix':''}}
+    application = Application()
+    import uliweb.core.SimpleFrame as frame
+    frame.application = application
+    init_urls(frame.url_map, application.domains)
 
+def init_urls(url_map, domains):
+    for v in rules.merge_rules():
+        appname, endpoint, url, kw = v
+        static = kw.pop('static', None)
+        if static:
+            domain_name = 'static'
+        else:
+            domain_name = 'default'
+        domain = domains.get(domain_name, {})
+        url_prefix = domain.get('url_prefix', '')
+        _url = url_prefix + url
+
+        rules.add_rule(url_map, _url, endpoint, **kw)
+
+
+def test_url_for_format():
+    """
+    >>> rules.clear_rules()
+    >>> def view(name, value):pass
+    >>> f = expose('/view/<name>/<int:value>')(view)
+    >>> init_env()
+    >>> from uliweb import url_for
+    >>> url_for(view, name='abc', value='123')
+    '/view/abc/123'
+    >>> url_for(view, _format=True)
+    '/view/{name}/{value}'
+    """
