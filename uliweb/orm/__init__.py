@@ -1146,7 +1146,11 @@ def reflect_model(table):
     field_type_map = {'VARCHAR':'str', 'INTEGER':'int', 'FLOAT':'float'}
 
     code = ['class {}(Model):'.format(table.name.title())]
-    code.append('    """\n    Description:\n    """\n')
+    code.append('''    """
+    Description:
+    """
+
+    __tablename__ = '{}'\n'''.format(table.name))
 
     columns = SortedDict()
     #write columns
@@ -1158,7 +1162,7 @@ def reflect_model(table):
 
         if type_name in ('char', 'varchar'):
             kwargs['max_length'] = column_type.length
-        elif type_name in ('text', 'blob', 'integer', 'float'):
+        elif type_name in ('text', 'blob', 'integer', 'float', 'bigint'):
             pass
         elif type_name in ('decimal', 'float'):
             kwargs['precision'] = v.type.precision
@@ -1173,7 +1177,7 @@ def reflect_model(table):
         elif type_name in ('tinyint', 'boolean'):
             field_type = 'bool'
         else:
-            raise ValueError("Don't support column [{0}] for type [{1}]".format(k, type_name))
+            raise ValueError("Don't support column [{0}] for type [{1}] when parsing {2}".format(k, type_name, table.name))
 
         if v.primary_key:
             kwargs['primary_key'] = True
