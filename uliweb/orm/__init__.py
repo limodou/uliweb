@@ -26,7 +26,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'begin_sql_monitor', 'close_sql_monitor', 'set_model_config', 'text',
     'get_object', 'get_cached_object',
     'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
-    'NotFound',
+    'NotFound', 'reflect_model',
     'get_field_type', 'create_model', 'get_metadata', 'migrate_tables',
     'print_model', 'get_model_property',
     ]
@@ -1136,6 +1136,99 @@ def begin_sql_monitor(key_length=70, record_details=False):
 def close_sql_monitor(monitor):
     dispatch.unbind('post_do', monitor.post_do)
     monitor.close()
+
+def reflect_model(table):
+    """
+    Write table to Model code
+    """
+    from uliweb.utils.sorteddict import SortedDict
+
+    field_type_map = {'VARCHAR':'str', 'INTEGER':'int', 'FLOAT':'float'}
+
+    code = ['class {}(Model):'.format(table.name.title())]
+    code.append('    """\n    Description:\n    """\n')
+
+    columns = SortedDict()
+    #write columns
+    for k, v in table.columns.items():
+        column_type = v.type
+        type_name = column_type.__class__.__name__.lower()
+        kwargs = SortedDict()
+        field_type = type_name.upper()
+
+        if type_name in ('char', 'varchar'):
+            kwargs['max_length'] = column_type.length
+        elif type_name in ('text', 'blob', 'integer', 'float'):
+            pass
+        elif type_name in ('decimal', 'float'):
+            kwargs['precision'] = v.type.precision
+            kwargs['scale'] = v.type.scale
+        elif type_name == 'numeric':
+            field_type = 'DECIMAL'
+            kwargs['precision'] = v.type.precision
+            kwargs['scale'] = v.type.scale
+        elif type_name in ('datetime', 'date', 'time'):
+            pass
+        #for tinyint will be treated as bool
+        elif type_name in ('tinyint', 'boolean'):
+            field_type = 'bool'
+        else:
+            raise ValueError("Don't support column [{0}] for type [{1}]".format(k, type_name))
+
+        if v.primary_key:
+            kwargs['primary_key'] = True
+            if v.autoincrement:
+                kwargs['autoincrement'] = True
+        if not v.nullable:
+            kwargs['nullable'] = False
+        if v.server_default:
+            server_default = eval(str(v.server_default.arg))
+            kwargs['server_default'] = server_default
+        if v.index:
+            kwargs['index'] = True
+        if v.unique:
+            kwargs['unique'] = True
+
+        #convert field_type to common python data type
+        field_type = field_type_map.get(field_type, field_type)
+        columns[k] = field_type, kwargs
+
+    indexes = []
+    for index in table.indexes:
+        cols = list(index.columns)
+        _len = len(cols)
+        #if only one column it'll be set to Property
+        if _len == 1:
+            column_name = cols[0].name
+            d = {'index':True}
+            if index.unique:
+                d['unique'] = index.unique
+            columns[column_name][1].update(d)
+        else:
+            indexes.append({'name':index.name, 'columns':[x.name for x in index.columns],
+                            'unique':index.unique})
+
+    #output columns text
+    for k, v in columns.items():
+        kwargs = ', '.join([v[0]] + ['{0}={1!r}'.format(x, y) for x, y in v[1].items()])
+        txt = " "*4 + "{0} = Field({1})".format(k, kwargs)
+        code.append(txt)
+
+    #output index text
+    if indexes:
+        code.append("""
+    @classmethod
+    def OnInit(cls):""")
+    for index in indexes:
+        buf = []
+        buf.append(index['name'])
+        for c in index['columns']:
+            buf.append('cls.c.{}'.format(c))
+        if index['unique']:
+            buf.append('unique=True')
+        code.append(' '*8 + 'Index({})'.format(', '.join(buf)))
+
+    return '\n'.join(code)
 
 def get_migrate_script(context, tables, metadata, engine_name=None):
     from alembic.autogenerate.api import compare_metadata, _produce_net_changes, \
@@ -3274,32 +3367,46 @@ UUID_B = UUIDBinaryProperty
 JSON = JsonProperty
 
 _fields_mapping = {
+    'bigint':BigIntegerProperty,
     BIGINT:BigIntegerProperty,
     str:StringProperty,
+    'varchar':StringProperty,
     VARCHAR:StringProperty,
+    'char':CharProperty,
     CHAR:CharProperty,
     unicode: UnicodeProperty,
+    'binary': BinaryProperty,
     BINARY: BinaryProperty,
+    'varbinary': VarBinaryProperty,
     VARBINARY: VarBinaryProperty,
+    'text': TextProperty,
     TEXT: TextProperty,
+    'blob': BlobProperty,
     BLOB: BlobProperty,
     int:IntegerProperty,
+    'smallint': SmallIntegerProperty,
     SMALLINT: SmallIntegerProperty,
     INT:IntegerProperty,
     float:FloatProperty,
     FLOAT:FloatProperty,
     bool:BooleanProperty,
     BOOLEAN:BooleanProperty,
+    'datetime':DateTimeProperty,
     datetime.datetime:DateTimeProperty,
     DATETIME:DateTimeProperty,
+    'json':JsonProperty,
     JSON:JsonProperty,
     datetime.date:DateProperty,
+    'date':DateProperty,
     DATE:DateProperty,
     datetime.time:TimeProperty,
+    'time':TimeProperty,
     TIME:TimeProperty,
+    'decimal':DecimalProperty,
     decimal.Decimal:DecimalProperty,
     DECIMAL:DecimalProperty,
     UUID_B:UUIDBinaryProperty,
+    'uuid':UUIDProperty,
     UUID:UUIDProperty
 }
 def Field(type, *args, **kwargs):
@@ -3309,8 +3416,11 @@ def Field(type, *args, **kwargs):
 def get_field_type(_type):
     assert isinstance(_type, (str, unicode))
 
-    _t = eval(_type)
-    return _fields_mapping.get(_t, _t)
+    t = _fields_mapping.get(_type)
+    if not t:
+        _t = eval(_type)
+        t = _fields_mapping.get(_t, _t)
+    return t
 
 def get_model_property(model, name):
     if '.' not in name:

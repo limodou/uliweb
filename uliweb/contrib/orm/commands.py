@@ -1079,3 +1079,32 @@ class AlembicCommand(SQLCommandMixin, CommandManager):
         cmds = get_commands(subcommands)
         return cmds
     
+class ReflectCommand(SQLCommandMixin, Command):
+    name = 'reflectdb'
+    args = '<tablename, tablename, ...>'
+    help = 'Reflect database tables to Uliweb model class code.'
+
+    def handle(self, options, global_options, *args):
+        from sqlalchemy import Table
+        from uliweb.orm import reflect_model
+
+        engine = get_engine(options, global_options)
+
+        insp = Inspector.from_engine(engine)
+        if not args:
+            tables = insp.get_table_names()
+        else:
+            tables = args
+
+        print '#coding=utf8'
+        print 'from uliweb.orm import *'
+        print 'from uliweb.i18n import ugettext_lazy as _'
+        print 'from uliweb.utils.common import get_var'
+        print '\n'
+
+        meta = engine.metadata
+        for name in tables:
+            table = Table(name, meta)
+            insp.reflecttable(table, None)
+            print reflect_model(table)
+            print '\n'

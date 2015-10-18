@@ -2334,7 +2334,64 @@ def test_createtable():
     >>> a1.save()
     True
     """
-    
+
+def test_reflect_model():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> set_server_default(False)
+    >>> class Test(Model):
+    ...     username = Field(str, index=True, unique=True)
+    ...     email = Field(str, unique=True, server_default='')
+    ...     year = Field(int, server_default=20)
+    ...     bool = Field(bool)
+    ...     datetime_type = Field(datetime.datetime)
+    ...     date_type = Field(datetime.date)
+    ...     time_type = Field(datetime.time)
+    ...     float = Field(float)
+    ...     decimal = Field(DECIMAL, precision=2, scale=1)
+    ...     text = Field(TEXT)
+    ...     blob = Field(BLOB)
+    ...     pickle = Field(PICKLE)
+    ...     uuid = Field(UUID)
+    ...     json = Field(JSON)
+    ...
+    ...     @classmethod
+    ...     def OnInit(cls):
+    ...         Index('test_idx', cls.c.username, cls.c.email, unique=True)
+    >>> from sqlalchemy.engine.reflection import Inspector
+    >>> from sqlalchemy import Table, MetaData
+    >>> insp = Inspector.from_engine(db)
+    >>> meta = MetaData()
+    >>> table = Table('test', meta)
+    >>> insp.reflecttable(table, None)
+    >>> print reflect_model(table)
+    class Test(Model):
+        \"\"\"
+        Description:
+        \"\"\"
+    <BLANKLINE>
+        username = Field(str, max_length=255, index=True, unique=1)
+        email = Field(str, max_length=255, server_default='')
+        year = Field(int, server_default=20)
+        bool = Field(bool)
+        datetime_type = Field(DATETIME)
+        date_type = Field(DATE)
+        time_type = Field(TIME)
+        float = Field(float)
+        decimal = Field(DECIMAL, precision=2, scale=1)
+        text = Field(TEXT)
+        blob = Field(BLOB)
+        pickle = Field(BLOB)
+        uuid = Field(str, max_length=32)
+        json = Field(TEXT)
+        id = Field(int, primary_key=True, autoincrement=True, nullable=False)
+    <BLANKLINE>
+        @classmethod
+        def OnInit(cls):
+            Index(test_idx, cls.c.username, cls.c.email, unique=True)
+        """
+
 def test_reference_server_default():
     """
     >>> db = get_connection('sqlite://')
@@ -2610,8 +2667,8 @@ def test_uuid_and_new_fields():
     ...     __tablename__ = 'test_user'
     ...     id = Field(UUID, unique=True)
     ...     sid = Field(UUID_B)
-    ...     username = Field(str)
-    ...     year = Field(SMALLINT)
+    ...     username = Field(str, server_default='')
+    ...     year = Field(SMALLINT, server_default='0')
     >>> class Group(Model):
     ...     __tablename__ = 'test_group'
     ...     name = Field(str, max_length=20)
@@ -2620,7 +2677,7 @@ def test_uuid_and_new_fields():
     >>> t = User.table
     >>> x = str(CreateTable(t).compile(dialect=engine.dialect)).strip()
     >>> print x.replace('\\t', '').replace('\\n', '')
-    CREATE TABLE test_user (id VARCHAR(32), sid VARBINARY(16), username VARCHAR(255), year SMALLINT, UNIQUE (id))
+    CREATE TABLE test_user (id VARCHAR(32), sid VARBINARY(16), username VARCHAR(255) DEFAULT '', year SMALLINT DEFAULT '0', UNIQUE (id))
     >>> x = str(CreateTable(Group.table).compile(dialect=engine.dialect)).strip()
     >>> print x.replace('\\t', '').replace('\\n', '')
     CREATE TABLE test_group (name VARCHAR(20), user VARCHAR(32), id INTEGER NOT NULL, PRIMARY KEY (id))
