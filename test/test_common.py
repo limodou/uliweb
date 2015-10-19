@@ -61,3 +61,24 @@ def test_get_configrable_object():
     >>> print get_configrable_object('a', 'TEST').__name__
     import_attr
     """
+
+def test_format_size():
+    """
+    >>> from uliweb.utils.common import format_size
+    >>> format_size(23)
+    '23B'
+    >>> format_size(1026)
+    '1KB'
+    >>> format_size(2*1024*1024+500)
+    '2MB'
+    >>> format_size(2*1024*1024*1024+500)
+    '2GB'
+    >>> format_size(20*1024*1024*1024+500)
+    '20GB'
+    >>> format_size(200*1024*1024*1024+500)
+    '200GB'
+    >>> format_size(2000*1024*1024*1024+500)
+    '2000GB'
+    >>> format_size(20000*1024*1024*1024+500)
+    '20000GB'
+    """

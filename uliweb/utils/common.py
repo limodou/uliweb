@@ -717,6 +717,30 @@ def get_configrable_object(key, section, cls=None):
     else:
         raise UliwebError("Key %r should be subclass of %r object or string path format!" % (key, cls))
 
+def format_size(size):
+    """
+    Convert size to XB, XKB, XMB, XGB
+    :param size: length value
+    :return: string value with size unit
+    """
+    units = ['B', 'KB', 'MB', 'GB']
+    unit = ''
+    n = size
+    old_n = n
+    value = size
+    for i in units:
+        old_n = n
+        x, y = divmod(n, 1024)
+        if x == 0:
+            unit = i
+            value = y
+            break
+
+        n = x
+        unit = i
+        value = old_n
+    return str(value)+unit
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:

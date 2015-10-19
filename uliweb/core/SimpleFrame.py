@@ -693,8 +693,9 @@ class Dispatcher(object):
         for h, v in s.get_var('LOG.Handlers', {}).items():
             handler_cls = v.get('class', Handler)
             handler_args = v.get('args', _args)
+            handler_kwargs = v.get('kwargs', {})
             
-            handler = import_attr(handler_cls)(*handler_args)
+            handler = import_attr(handler_cls)(*handler_args, **handler_kwargs)
             if v.get('level'):
                 handler.setLevel(_get_level(v.get('level')))
             
