@@ -1105,6 +1105,10 @@ class ReflectCommand(SQLCommandMixin, Command):
         meta = engine.metadata
         for name in tables:
             table = Table(name, meta)
-            insp.reflecttable(table, None)
-            print reflect_model(table)
-            print '\n'
+            try:
+                insp.reflecttable(table, None)
+                print reflect_model(table)
+                print '\n'
+            except Exception as e:
+                import traceback
+                traceback.print_exc()

@@ -1150,7 +1150,7 @@ def reflect_model(table):
     Description:
     """
 
-    __tablename__ = '{}'\n'''.format(table.name))
+    __tablename__ = '{}' '''.format(table.name))
 
     columns = SortedDict()
     #write columns
@@ -1164,13 +1164,24 @@ def reflect_model(table):
             kwargs['max_length'] = column_type.length
         elif type_name in ('text', 'blob', 'integer', 'float', 'bigint'):
             pass
+        elif type_name in ('clob',):
+            field_type = 'TEXT'
         elif type_name in ('decimal', 'float'):
             kwargs['precision'] = v.type.precision
             kwargs['scale'] = v.type.scale
+        elif type_name == 'number':
+            if v.type.scale:
+                kwargs['precision'] = v.type.precision
+                kwargs['scale'] = v.type.scale
+                field_type = 'DECIMAL'
+            else:
+                field_type = 'int'
         elif type_name == 'numeric':
             field_type = 'DECIMAL'
             kwargs['precision'] = v.type.precision
             kwargs['scale'] = v.type.scale
+        elif type_name in ('timestamp',):
+            field_type = 'DATETIME'
         elif type_name in ('datetime', 'date', 'time'):
             pass
         #for tinyint will be treated as bool
@@ -1197,6 +1208,10 @@ def reflect_model(table):
         field_type = field_type_map.get(field_type, field_type)
         columns[k] = field_type, kwargs
 
+    #process id
+    if 'id' not in columns:
+        code.append('    __without_id__ = True\n')
+        
     indexes = []
     for index in table.indexes:
         cols = list(index.columns)
