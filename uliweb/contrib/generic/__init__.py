@@ -70,7 +70,7 @@ class MultiView(object):
                         'meta'
                        ]
 
-    class _add_config(object):
+    class _edit_config(object):
         meta = 'EditForm'
         version = False
 
@@ -114,12 +114,12 @@ class MultiView(object):
         else:
             raise ValueError("Field type is not right, should be str or dict, but %r found" % type(field))
 
-    def _make_query_form_fields(self, model, parameters):
+    def _make_query_form_fields(self, model, condition_fields):
         _fields = []
-        for f in parameters.get('fields') or []:
+        for f in condition_fields or []:
             name, field = self._make_form_field(model, f)
             _fields.append((name, field))
-        parameters['fields'] = _fields
+        return _fields
 
     def _make_like(self, column, format, value):
         """
@@ -170,7 +170,9 @@ class MultiView(object):
         condition = true()
 
         for v in fields:
-            if not isinstance(v, dict):
+            if isinstance(v, (tuple, list)):
+                v = {'name':v[0]}
+            elif not isinstance(v, dict):
                 v = {'name':v}
             name = v['name']
             if name in values:
@@ -322,6 +324,7 @@ class MultiView(object):
         model = self._get_model(model)
 
         para = self._collect_parameters(self._query_parameters, parameters, meta_cls)
+        condition_fields = para.pop('fields', [])
 
         #get query
         layout = para['layout']
@@ -333,7 +336,7 @@ class MultiView(object):
                 else:
                     layout.append(x['name'])
 
-        self._make_query_form_fields(model, para)
+        para['fields'] = self._make_query_form_fields(model, condition_fields)
 
         log.debug("Query config parameters is %r", para)
 
@@ -343,7 +346,7 @@ class MultiView(object):
         query_value = query.run()
 
         #get query condition
-        condition = self._get_query_condition(model, fields=para['fields'],
+        condition = self._get_query_condition(model, fields=condition_fields,
                                               values=query_value)
 
         return query, condition
