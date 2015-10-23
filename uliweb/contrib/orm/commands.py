@@ -76,12 +76,18 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
         raise
 
     all_meta = MetaData()
-    all_meta.reflect(bind=engine.engine)
     meta = engine.metadata
+    insp = Inspector.from_engine(engine.engine)
 
+    def get_table(tablename):
+        table = Table(tablename, all_meta)
+        insp.reflecttable(table, None)
+        return table
+
+    all_tables = insp.get_table_names()
     if apps:
         t = {}
-        for tablename, table in all_meta.tables.items():
+        for tablename in all_tables:
             if tablename in meta.tables:
                 table = meta.tables[tablename]
                 if hasattr(table, '__appname__') and table.__appname__ in apps:
@@ -90,12 +96,17 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
     elif tables:
         t = {}
         for tablename in tables:
-            if tablename in all_meta.tables:
+            if tablename in all_tables:
                 if tablename in meta.tables:
                     table = meta.tables[tablename]
                 else:
-                    table = all_meta.tables[tablename]
-                    table.__appname__ = 'UNKNOWN'
+                    try:
+                        table = get_table(tablename)
+                        table.__appname__ = 'UNKNOWN'
+                    except Exception as e:
+                        import traceback
+                        traceback.print_exc()
+                        continue
                 t[tables_map.get(tablename, tablename)] = table
                 table.__mapping_only__ = tables_mapping_only.get(tablename, False)
             else:
@@ -104,12 +115,18 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
         t = {}
         if not all:
             all_meta = engine.metadata
-        for tablename, m in all_meta.tables.items():
+            all_tables = meta.tables.keys()
+        for tablename in all_tables:
             if tablename in meta:
                 table = meta.tables[tablename]
             else:
-                table = all_meta.tables[tablename]
-                table.__appname__ = 'UNKNOWN'
+                try:
+                    table = get_table(tablename)
+                    table.__appname__ = 'UNKNOWN'
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    continue
             t[tables_map.get(tablename, tablename)] = table
             table.__mapping_only__ = tables_mapping_only.get(tablename, False)
     return t
