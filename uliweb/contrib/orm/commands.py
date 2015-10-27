@@ -177,22 +177,70 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None,
   
     return 'OK (%d/%lfs)' % (n, time()-b)
 
+class ProcessManager(object):
+    def __init__(self, size=None):
+        from multiprocessing import cpu_count
+
+        self.size = size or cpu_count()
+        self.pids = {}
+
+    def __call__(self, func, *args, **kwargs):
+        from uliweb import orm
+
+        self.clear()
+        if len(self.pids) == self.size:
+            pid, status = os.wait()
+            if pid in self.pids:
+                del self.pids[pid]
+        pid = os.fork()
+        if pid == 0:
+            orm.get_session(create=True)
+            orm.Begin()
+            try:
+                func(*args, **kwargs)
+                orm.Commit()
+            except:
+                orm.Rollback()
+            orm.get_session().close()
+            os._exit(0)
+        else:
+            self.pids[pid] = func, args, kwargs
+
+    def clear(self):
+        import psutil
+
+        for pid in self.pids.keys():
+            if not psutil.pid_exists(pid):
+                del self.pids[pid]
+
+    def join(self):
+        import psutil
+
+        self.clear()
+        for pid in self.pids.keys():
+            p = psutil.Process(pid)
+            p.wait()
+
 def load_table(table, filename, con, delimiter=',', format=None, 
     encoding='utf-8', delete=True, bulk=100, engine_name=None):
     import csv
     from uliweb.utils.date import to_date, to_datetime
-    
+
     if not os.path.exists(filename):
         return "Skipped (data not found)"
 
     table = reflect_table(con, table.name)
     
     if delete:
-        do_(table.delete(), engine_name)
-    
+        table.drop(con)
+        table.create(con)
+        # do_(table.drop(), engine_name)
+        # do_(table.create(), engine_name)
+
     b = time()
     bulk = max(1, bulk)
     f = fin = open(filename, 'rb')
+
     try:
         first_line = f.readline()
         if first_line.startswith('#'):
@@ -236,12 +284,12 @@ def load_table(table, filename, con, delimiter=',', format=None,
                     count = 0
                     buf = []
             except:
-                log.error('Error: Line %d' % n)
+                log.error('Error: Line %d of %s' % (n, filename))
                 raise
         
         if buf:
             do_(table.insert(), engine_name, args=buf)
-            
+
         return 'OK (%d/%lfs)' % (n, time()-b)
     finally:
         f.close()
@@ -628,6 +676,8 @@ class LoadCommand(SQLCommandMixin, Command):
             help='Bulk number of insert. Default is 100.'),
         make_option('-t', '--text', dest='text', action='store_true', default=False,
             help='Load files in text format.'),
+        make_option('-m', '--multi', dest='multi', type='int', default=1,
+            help='Processes number which to load tables. Default is 1.'),
         make_option('--delimiter', dest='delimiter', default=',',
             help='delimiter character used in text file. Default is ",".'),
         make_option('--encoding', dest='encoding', default='utf-8',
@@ -685,6 +735,26 @@ are you sure to load data""" % options.engine
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings, all=options.all))
         _len = len(tables)
+
+        def _f(table, filename, msg):
+            session = orm.get_session()
+            if session:
+                session.close()
+            orm.Begin()
+            try:
+                result = load_table(table, filename, engine, delimiter=options.delimiter,
+                    format=format, encoding=options.encoding, delete=ans=='Y',
+                    bulk=int(options.bulk), engine_name=engine.engine_name)
+                if global_options.verbose:
+                    print msg, result
+                orm.Commit()
+            except:
+                import traceback
+                traceback.print_exc()
+                orm.Rollback()
+
+        manager = ProcessManager(options.multi)
+
         for i, (name, t) in enumerate(tables):
             if hasattr(t, '__mapping_only__') and t.__mapping_only__:
                 if global_options.verbose:
@@ -692,7 +762,7 @@ are you sure to load data""" % options.engine
                     print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
                 continue
             if global_options.verbose:
-                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len)),
+                msg = '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
             try:
                 orm.Begin()
                 filename = os.path.join(path, name+'.txt')
@@ -700,16 +770,17 @@ are you sure to load data""" % options.engine
                     format = 'txt'
                 else:
                     format = None
-                t = load_table(t, filename, engine, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding,
-                    bulk=int(options.bulk), engine_name=engine.engine_name)
-                orm.Commit()
-                if global_options.verbose:
-                    print t
-                
+
+                    #fork process to run
+                    if sys.platform != 'win32' and options.multi>1:
+                        manager(_f, t, filename, msg)
+                    else:
+                        _f(t, filename, msg)
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
                 orm.Rollback()
+
+        manager.join()
 
         if options.zipfile:
             shutil.rmtree(path)
@@ -725,6 +796,8 @@ class LoadTableCommand(SQLCommandMixin, Command):
             help='Bulk number of insert.'),
         make_option('-t', '--text', dest='text', action='store_true', default=False,
             help='Load files in text format.'),
+        make_option('-m', '--multi', dest='multi', type='int', default=1,
+            help='Processes number which to load tables. Default is 1.'),
         make_option('--delimiter', dest='delimiter', default=',',
             help='delimiter character used in text file. Default is ",".'),
         make_option('--encoding', dest='encoding', default='utf-8',
@@ -777,7 +850,24 @@ are you sure to load data""" % (options.engine, ','.join(args))
             settings_file=global_options.settings, tables=args,
             local_settings_file=global_options.local_settings))
         _len = len(tables)
-        
+
+        def _f(table, filename, msg):
+            session = orm.get_session()
+            if session:
+                session.close()
+            orm.Begin()
+            try:
+                result = load_table(table, filename, engine, delimiter=options.delimiter,
+                    format=format, encoding=options.encoding, delete=ans=='Y',
+                    bulk=int(options.bulk), engine_name=engine.engine_name)
+                if global_options.verbose:
+                    print msg, result
+                orm.Commit()
+            except:
+                orm.Rollback()
+
+        manager = ProcessManager(options.multi)
+
         for i, (name, t) in enumerate(tables):
             if t.__mapping_only__:
                 if global_options.verbose:
@@ -785,23 +875,23 @@ are you sure to load data""" % (options.engine, ','.join(args))
                     print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
                 continue
             if global_options.verbose:
-                print '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len)),
+                msg = '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
             try:
-                orm.Begin()
                 filename = os.path.join(path, name+'.txt')
                 if options.text:
                     format = 'txt'
                 else:
                     format = None
-                t = load_table(t, filename, engine, delimiter=options.delimiter, 
-                    format=format, encoding=options.encoding, delete=ans=='Y', 
-                    bulk=int(options.bulk), engine_name=engine.engine_name)
-                orm.Commit()
-                if global_options.verbose:
-                    print t
+
+                    #fork process to run
+                    if sys.platform != 'win32' and options.multi>1:
+                        manager(_f, t, filename, msg)
+                    else:
+                        _f(t, filename, msg)
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
-                orm.Rollback()
+
+        manager.join()
 
         if options.zipfile:
             shutil.rmtree(path)
