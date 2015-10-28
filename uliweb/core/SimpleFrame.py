@@ -1032,7 +1032,7 @@ class Dispatcher(object):
             
     def collect_modules(self, check_view=True):
         modules = {}
-        views = set()
+        views = []
         settings = []
 
         inifile = pkg.resource_filename('uliweb.core', 'default_settings.ini')
@@ -1051,9 +1051,11 @@ class Dispatcher(object):
                         if not fnmatch.fnmatch(f, pattern):
                             continue
                     if subfolder:
-                        views.add('.'.join([appname, subfolder, fname]))
+                        _view = '.'.join([appname, subfolder, fname])
                     else:
-                        views.add('.'.join([appname, fname]))
+                        _view = '.'.join([appname, fname])
+                    if _view not in views:
+                        views.append(_view)
 
         for p in self.apps:
             path = get_app_dir(p)
@@ -1078,7 +1080,7 @@ class Dispatcher(object):
         if os.path.exists(local_set_ini):
             settings.append(('', local_set_ini))
         
-        modules['views'] = list(views)
+        modules['views'] = views
         modules['settings'] = settings
         return modules
     
