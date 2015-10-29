@@ -257,7 +257,8 @@ def test_set_session():
     >>> app = make_simple_application(project_dir='.')
     >>> import uliweb.orm as orm
     >>> s = Session('c')
-    >>> set_session('default', s)
+    >>> set_session(s, 'default') # doctest: +ELLIPSIS
+    <uliweb.orm.Session object at ...>
     >>> Blog1 = get_model('blog')
     >>> print 'blog1', Blog1, Blog1.table, Blog1.tablename, Blog1.get_engine_name(), Blog1.get_session()
     blog1 <class 'blog.models.Blog'> blog blog default <Session engine_name:c, auto_transaction=None, auto_close=True>

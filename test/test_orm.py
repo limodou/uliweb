@@ -1394,21 +1394,21 @@ def test_many2many_save_and_update():
     []
     >>> g1.users = ['limodou', 'test']
     >>> print Group.users.get_value_for_datastore(g1, cached=True)
-    ['limodou', 'test']
+    [u'limodou', u'test']
     >>> g1.save()
     True
     >>> print Group.users.get_value_for_datastore(g1, cached=True)
-    ['limodou', 'test']
+    [u'limodou', u'test']
     >>> g2 = Group(name='perl', users=['user'])
     >>> g2.save()
     True
     >>> print Group.users.get_value_for_datastore(g2, cached=True)
-    ['user']
+    [u'user']
     >>> g2.users = ['limodou']
     >>> g2.save()
     True
     >>> print Group.users.get_value_for_datastore(g2, cached=True)
-    ['limodou']
+    [u'limodou']
     >>> print g2.users.ids()
     [u'limodou']
     >>> print Group.users.get_value_for_datastore(g2)
@@ -2365,12 +2365,13 @@ def test_reflect_model():
     >>> meta = MetaData()
     >>> table = Table('test', meta)
     >>> insp.reflecttable(table, None)
-    >>> print reflect_model(table)
+    >>> print reflect_model(table) # doctest: +REPORT_UDIFF
     class Test(Model):
         \"\"\"
         Description:
         \"\"\"
     <BLANKLINE>
+        __tablename__ = 'test'
         username = Field(str, max_length=255, index=True, unique=1)
         email = Field(str, max_length=255, server_default='')
         year = Field(int, server_default=20)
@@ -2390,7 +2391,7 @@ def test_reflect_model():
         @classmethod
         def OnInit(cls):
             Index(test_idx, cls.c.username, cls.c.email, unique=True)
-        """
+    """
 
 def test_reference_server_default():
     """
@@ -2456,7 +2457,9 @@ def test_primary_key():
     ...     year = Field(int)
     ...     version = Field(int)
     >>> Test.properties.keys()
-    ['username', 'version', 'user_id', 'id', 'year']
+    ['username', 'version', 'user_id', 'year']
+    >>> print Test._key
+    <IntegerProperty 'type':<type 'int'>, 'verbose_name':None, 'name':'user_id', 'fieldname':'user_id', 'default':0, 'required':False, 'validator':[], 'chocies':None, 'max_length':None, 'kwargs':{'autoincrement': True, 'primary_key': True}>
     """
 
 def test_get_object():
@@ -2665,7 +2668,7 @@ def test_uuid_and_new_fields():
     >>> db.metadata.drop_all()
     >>> class User(Model):
     ...     __tablename__ = 'test_user'
-    ...     id = Field(UUID, unique=True)
+    ...     id = Field(UUID, primary_key=True, unique=True)
     ...     sid = Field(UUID_B)
     ...     username = Field(str, server_default='')
     ...     year = Field(SMALLINT, server_default='0')
@@ -2677,7 +2680,7 @@ def test_uuid_and_new_fields():
     >>> t = User.table
     >>> x = str(CreateTable(t).compile(dialect=engine.dialect)).strip()
     >>> print x.replace('\\t', '').replace('\\n', '')
-    CREATE TABLE test_user (id VARCHAR(32), sid VARBINARY(16), username VARCHAR(255) DEFAULT '', year SMALLINT DEFAULT '0', UNIQUE (id))
+    CREATE TABLE test_user (id VARCHAR(32), sid VARBINARY(16), username VARCHAR(255) DEFAULT '', year SMALLINT DEFAULT '0', PRIMARY KEY (id), UNIQUE (id))
     >>> x = str(CreateTable(Group.table).compile(dialect=engine.dialect)).strip()
     >>> print x.replace('\\t', '').replace('\\n', '')
     CREATE TABLE test_group (name VARCHAR(20), user VARCHAR(32), id INTEGER NOT NULL, PRIMARY KEY (id))
@@ -2726,6 +2729,28 @@ def test_save_file():
     <BLANKLINE>
     """
 
+def test_derive():
+    """
+    >>> from uliweb import orm
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> set_auto_create(False)
+    >>> orm.__models__ = {}
+    >>> from sqlalchemy import *
+    >>> class User(Model):
+    ...     _primary_field = 'username'
+    ...     username = Field(unicode)
+    ...     year = Field(int, default=30)
+    ...     birth = Field(datetime.date)
+    >>> class User1(User):
+    ...     age = Field(int)
+    >>> print User1.properties.keys()
+    ['username', 'age', 'birth', 'year']
+    >>> print User1._primary_field
+    username
+    """
+
+
 # if __name__ == '__main__':
 #     from sqlalchemy.schema import CreateTable, CreateIndex
 #     db = get_connection('sqlite://')
@@ -2756,16 +2781,18 @@ def test_save_file():
 #     print repr(g2.user)
 
 if __name__ == '__main__':
+    from uliweb import orm
     db = get_connection('sqlite://')
-    #db.echo = True
     db.metadata.drop_all()
-    db.metadata.clear()
+    set_auto_create(False)
+    orm.__models__ = {}
+    from sqlalchemy import *
     class User(Model):
-        username = Field(str, max_length=40)
-        memo = Field(JSON, default={})
-    a = User(username='limodou', memo={'age':30})
-    a.save()
-
-    print a.memo
-    b = User.get(1)
-    print b.memo
+        _primary_field = 'username'
+        username = Field(unicode)
+        year = Field(int, default=30)
+        birth = Field(datetime.date)
+    class User1(User):
+        age = Field(int)
+    print User1.properties.keys()
+    print User1._primary_field

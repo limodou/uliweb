@@ -1150,10 +1150,11 @@ def reflect_model(table):
     Description:
     """
 
-    __tablename__ = '{}' '''.format(table.name))
+    __tablename__ = '{}\''''.format(table.name))
 
     columns = SortedDict()
     #write columns
+    _primary_key = None
     for k, v in table.columns.items():
         column_type = v.type
         type_name = column_type.__class__.__name__.lower()
@@ -1192,6 +1193,7 @@ def reflect_model(table):
 
         if v.primary_key:
             kwargs['primary_key'] = True
+            _primary_key = k
             if v.autoincrement:
                 kwargs['autoincrement'] = True
         if not v.nullable:
@@ -1211,6 +1213,8 @@ def reflect_model(table):
     #process id
     if 'id' not in columns:
         code.append('    __without_id__ = True\n')
+    # if _primary_key:
+    #     code.append('    _primary_field = {}'.format(_primary_key))
         
     indexes = []
     for index in table.indexes:
@@ -1327,10 +1331,16 @@ class ModelMetaclass(type):
         cls._collection_names = {}
 
         defined = set()
+        _primary_keys = []
         is_replace = dct.get('__replace__')
         for base in bases:
+            if not hasattr(cls, '_primary_field') and hasattr(base, '_primary_field'):
+                cls._primary_field = base._primary_field
             if hasattr(base, 'properties') and not is_replace:
                 cls.properties.update(base.properties)
+                if cls._primary_field in cls.properties:
+                    _primary_keys.append(cls._primary_field)
+
 
         is_config = dct.get('__config__', True)
         cls._manytomany = {}
@@ -1342,6 +1352,13 @@ class ModelMetaclass(type):
                 
                 if isinstance(attr, ManyToMany):
                     cls._manytomany[attr_name] = attr
+
+                #process primary
+                if 'primary_key' in attr.kwargs:
+                    _primary_keys.append(attr_name)
+                elif cls._primary_field and cls._primary_field == attr_name:
+                    _primary_keys.append(attr_name)
+
          
         #if there is already defined primary_key, the id will not be primary_key
         #enable multi primary
@@ -1352,12 +1369,24 @@ class ModelMetaclass(type):
         #if there is already has primary key, then id will not created 
         #change in 0.2.6 version
         without_id = getattr(cls, '__without_id__', False)
-        if 'id' not in cls.properties and not without_id:
+        if 'id' not in cls.properties and not without_id and len(_primary_keys)==0:
             cls.properties['id'] = f = Field(PKTYPE(), autoincrement=True, 
                 primary_key=True, default=None, nullable=False, server_default=None)
             if not __lazy_model_init__:
                 f.__property_config__(cls, 'id')
             setattr(cls, 'id', f)
+
+            _primary_keys.append('id')
+
+        #check if primary is more than one
+        if len(_primary_keys) > 1:
+            raise BadPropertyTypeError("Primary field chould be only one support, but {!r} found".format(_primary_keys))
+        else:
+            if len(_primary_keys) == 1:
+                #set _key as primary property
+                _p_key = _primary_keys[0]
+                cls._key = getattr(cls, _p_key)
+                cls._primary_field = _p_key
 
         fields_list = [(k, v) for k, v in cls.properties.items()]
         fields_list.sort(lambda x, y: cmp(x[1].creation_counter, y[1].creation_counter))
@@ -1494,8 +1523,8 @@ class Property(object):
     def get_lazy(self, model_instance, name, default=None):
         v = self.get_attr(model_instance, name, default)
         if v is Lazy:
-            _id = getattr(model_instance, 'id')
-            if not _id:
+            _key = getattr(model_instance, model_instance._primary_field)
+            if not _key:
                 raise BadValueError('Instance is not a validate object of Model %s, ID property is not found' % model_class.__name__)
             model_instance.refresh()
             v = self.get_attr(model_instance, name, default)
@@ -2054,11 +2083,14 @@ class ReferenceProperty(Property):
         super(ReferenceProperty, self).__init__(label, **attrs)
 
         self._collection_name = collection_name
-        self.reference_fieldname = reference_fieldname or 'id'
+        if reference_class and isinstance(reference_class, type) and issubclass(reference_class, Model):
+            self.reference_fieldname = reference_fieldname or reference_class._primary_field
+        else:
+            self.reference_fieldname = reference_fieldname
         self.required = required
         self.engine_name = engine_name
         self.reference_class = reference_class
-        
+
         if __lazy_model_init__:
             if inspect.isclass(self.reference_class) and issubclass(self.reference_class, Model):
                 warnings.simplefilter('default')
@@ -2117,6 +2149,7 @@ class ReferenceProperty(Property):
         else:
             self.reference_class = get_model(self.reference_class, self.engine_name,
                                              signal=False)
+        self.reference_fieldname = self.reference_fieldname or self.reference_class._primary_field
         self.collection_name = self.reference_class.get_collection_name(model_class.tablename, self._collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
             _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
@@ -2277,24 +2310,26 @@ class OneToOne(ReferenceProperty):
         else:
             self.reference_class = get_model(self.reference_class, self.engine_name,
                                              signal=False)
+        self.reference_fieldname = self.reference_fieldname or self.reference_class._primary_field
 
         self.collection_name = self._collection_name
         if self.collection_name is None:
             self.collection_name = '%s' % (model_class.tablename)
-        if hasattr(self.reference_class, self.collection_name):
-            raise DuplicatePropertyError('Class %s already has property %s'
-                 % (self.reference_class.__name__, self.collection_name))
+        #enable reenter 2015/10/29
+        # if hasattr(self.reference_class, self.collection_name):
+        #     raise DuplicatePropertyError('Class %s already has property %s'
+        #          % (self.reference_class.__name__, self.collection_name))
         setattr(self.reference_class, self.collection_name,
             _OneToOneReverseReferenceProperty(model_class, property_name,
                             self._id_attr_name(), self.collection_name))
         #append to reference_class._onetoone
         self.reference_class._onetoone[self.collection_name] = model_class
 
-def get_objs_columns(objs, field='id'):
-    ids = []
+def get_objs_columns(objs, field=None, model=None):
+    keys = []
     new_objs = []
     if isinstance(objs, (str, unicode)):
-        objs = [int(x) for x in objs.split(',')]
+        objs = [x for x in objs.split(',')]
     for x in objs:
         if not x:
             continue
@@ -2303,14 +2338,21 @@ def get_objs_columns(objs, field='id'):
         else:
             new_objs.append(x)
             
+    if model and field:
+        prop = getattr(model, field)
+    else:
+        prop = None
     for o in new_objs:
         if not isinstance(o, Model):
-            _id = o
+            if prop:
+                key = prop.validate(o)
+            else:
+                key = o
         else:
-            _id = o.get_datastore_value(field)
-        if _id not in ids:
-            ids.append(_id)
-    return ids
+            key = o.get_datastore_value(field or o._primary_field)
+        if key not in keys:
+            keys.append(key)
+    return keys
 
 class Result(object):
     def __init__(self, model=None, condition=None, *args, **kwargs):
@@ -2418,11 +2460,8 @@ class Result(object):
         return self
 
     def get(self, condition=None):
-        if isinstance(condition, (int, long)):
-            return self.filter(self.model.c.id==condition).one()
-        else:
-            return self.filter(condition).one()
-    
+        self.filter(self.model.c[self.model._primary_key]==condition).one()
+
     def count(self):
         """
         If result is True, then the count will process result set , if
@@ -2471,8 +2510,8 @@ class Result(object):
         if args:
             args = flat_list(args)
             if args:
-                if 'id' not in args:
-                    args.append('id')
+                if self.model._primary_field and self.model._primary_field not in args:
+                    args.append(self.model._primary_field)
                 self.funcs.append(('with_only_columns', ([self.get_column(self.model, x) for x in args],), kwargs))
         return self
         
@@ -2647,25 +2686,30 @@ class ReverseResult(Result):
         self.connection = model.get_session()
         
     def has(self, *objs):
-        ids = get_objs_columns(objs)
+        keys = get_objs_columns(objs)
         
-        if not ids:
+        if not keys:
             return False
 
-        return self.model.filter(self.condition, self.model.table.c['id'].in_(ids)).any()
+        return self.model.filter(self.condition, self.model.table.c[self.model._primary_field].in_(keys)).any()
 
     def ids(self):
         query = select([self.model.c['id']], self.condition)
         ids = [x[0] for x in self.do_(query)]
         return ids
     
+    def keys(self):
+        query = select([self.model.c[self.model._primary_field]], self.condition)
+        keys = [x[0] for x in self.do_(query)]
+        return keys
+
     def clear(self, *objs):
         """
         Clear the third relationship table, but not the ModelA or ModelB
         """
         if objs:
-            ids = get_objs_columns(objs)
-            self.do_(self.model.table.delete(self.condition & self.model.table.c['id'].in_(ids)))
+            keys = get_objs_columns(objs)
+            self.do_(self.model.table.delete(self.condition & self.model.table.c[self.model._primary_field].in_(keys)))
         else:
             self.do_(self.model.table.delete(self.condition))
     
@@ -2710,7 +2754,7 @@ class ManyResult(Result):
         can use cache to return objects
         """
         if cache:
-            return [get_object(self.modelb, obj_id, cache=True, use_local=True) for obj_id in self.ids(True)]
+            return [get_object(self.modelb, obj_id, cache=True, use_local=True) for obj_id in self.keys(True)]
         else:
             return self
 
@@ -2769,17 +2813,29 @@ class ManyResult(Result):
             setattr(self.instance, key, ids)
         return ids
     
+    def keys(self, cache=False):
+        key = self.store_key
+        keys = getattr(self.instance, key, None)
+        if not cache or keys is None or keys is Lazy:
+            if self.valuea is None:
+                return []
+            query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
+            keys = [x[0] for x in self.do_(query)]
+        if cache:
+            setattr(self.instance, key, keys)
+        return keys
+
     def update(self, *objs):
         """
         Update the third relationship table, but not the ModelA or ModelB
         """
-        ids = self.ids()
-        new_ids = get_objs_columns(objs, self.realfieldb)
+        keys = self.keys()
+        new_keys = get_objs_columns(objs, self.realfieldb)
 
         modified = False
-        for v in new_ids:
-            if v in ids:    #the id has been existed, so don't insert new record
-                ids.remove(v)
+        for v in new_keys:
+            if v in keys:    #the id has been existed, so don't insert new record
+                keys.remove(v)
             else:
                 d = {self.fielda:self.valuea, self.fieldb:v}
                 if self.through_model:
@@ -2789,12 +2845,12 @@ class ManyResult(Result):
                     self.do_(self.table.insert().values(**d))
                 modified = True
                 
-        if ids: #if there are still ids, so delete them
-            self.clear(*ids)
+        if keys: #if there are still keys, so delete them
+            self.clear(*keys)
             modified = True
         
         #cache [] to _STORED_attr_name
-        setattr(self.instance, self.store_key, new_ids)
+        setattr(self.instance, self.store_key, new_keys)
         
         return modified
             
@@ -2803,8 +2859,8 @@ class ManyResult(Result):
         Clear the third relationship table, but not the ModelA or ModelB
         """
         if objs:
-            ids = get_objs_columns(objs, self.realfieldb)
-            self.do_(self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(ids))))
+            keys = get_objs_columns(objs, self.realfieldb)
+            self.do_(self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(keys))))
         else:
             self.do_(self.table.delete(self.table.c[self.fielda]==self.valuea))
         #cache [] to _STORED_attr_name
@@ -2829,22 +2885,22 @@ class ManyResult(Result):
         return len(list(row)) > 0
 
     def has(self, *objs):
-        ids = get_objs_columns(objs, self.realfieldb)
+        keys = get_objs_columns(objs, self.realfieldb)
         
-        if not ids:
+        if not keys:
             return False
         
         row = self.do_(select([text('*')], 
             (self.table.c[self.fielda]==self.valuea) & 
-            (self.table.c[self.fieldb].in_(ids))).limit(1))
+            (self.table.c[self.fieldb].in_(keys))).limit(1))
         return len(list(row)) > 0
         
     def fields(self, *args, **kwargs):
         if args:
             args = flat_list(args)
             if args:
-                if 'id' not in args and 'id' in self.modelb.c:
-                    args.append(self.modelb.c.id)
+                if self.modelb._primary_field and self.modelb._primary_field not in args:
+                    args.append(self.modelb.c[self.modelb._primary_field])
                 self.funcs.append(('with_only_columns', ([self.get_column(self.modelb, x) for x in args],), kwargs))
         return self
 
@@ -2980,7 +3036,7 @@ class ManyToMany(ReferenceProperty):
             label=label, collection_name=collection_name,
             reference_fieldname=reference_fieldname, required=required, **attrs)
     
-        self.reversed_fieldname = reversed_fieldname or 'id'
+        self.reversed_fieldname = reversed_fieldname
         self.through = through
 
         self.through_reference_fieldname = through_reference_fieldname
@@ -3122,6 +3178,8 @@ class ManyToMany(ReferenceProperty):
         else:
             self.reference_class = get_model(self.reference_class, self.engine_name,
                                              signal=False)
+        self.reference_fieldname = self.reference_fieldname or self.reference_class._primary_field
+        self.reversed_fieldname = self.reversed_fieldname or self.reference_class._primary_field
 
         self.tablename = '%s_%s_%s' % (model_class.tablename, self.reference_class.tablename, property_name)
         self.collection_name = self.reference_class.get_collection_name(model_class.tablename, self._collection_name, model_class.tablename)
@@ -3135,7 +3193,7 @@ class ManyToMany(ReferenceProperty):
 #            if not _id:
 #                raise BadValueError('Instance is not a validate object of Model %s, ID property is not found' % model_instance.__class__.__name__)
             result = getattr(model_instance, self.name)
-            v = result.ids(True)
+            v = result.keys(True)
             setattr(model_instance, name, v)
             
             #2014/3/1 save value to Model_instance._old_values
@@ -3168,14 +3226,14 @@ class ManyToMany(ReferenceProperty):
             return
         
         if value and value is not Lazy:
-            value = get_objs_columns(value, self.reference_fieldname)
+            value = get_objs_columns(value, self.reference_fieldname, model=self.reference_class)
         setattr(model_instance, self._attr_name(), value)
     
     def get_value_for_datastore(self, model_instance, cached=False):
         """Get key of reference rather than reference itself."""
         value = getattr(model_instance, self._attr_name(), None)
         if not cached:
-            value = getattr(model_instance, self.property_name).ids()
+            value = getattr(model_instance, self.property_name).keys()
             setattr(model_instance, self._attr_name(), value)
         return value
     
@@ -3192,8 +3250,8 @@ class ManyToMany(ReferenceProperty):
         if not objs:
             return self.table.c[self.fielda]!=self.table.c[self.fielda]
         else:
-            ids = get_objs_columns(objs, self.reference_fieldname)
-            sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fieldb].in_(ids)))
+            keys = get_objs_columns(objs, self.reference_fieldname)
+            sub_query = select([self.table.c[self.fielda]], (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fieldb].in_(keys)))
             condition = self.model_class.c[self.reversed_fieldname].in_(sub_query)
             return condition
          
@@ -3204,8 +3262,8 @@ class ManyToMany(ReferenceProperty):
         if not objs:
             return self.table.c[self.fielda]!=self.table.c[self.fielda]
         else:
-            ids = get_objs_columns(objs, self.reference_fieldname)
-            return (self.table.c[self.fielda] == self.model_class.c[self.reversed_fieldname]) & (self.table.c[self.fieldb].in_(ids))
+            keys = get_objs_columns(objs, self.reference_fieldname)
+            return (self.table.c[self.fielda] == self.model_class.c[self.reversed_fieldname]) & (self.table.c[self.fieldb].in_(keys))
    
     def join_right_in(self, *objs):
         """
@@ -3214,8 +3272,8 @@ class ManyToMany(ReferenceProperty):
         if not objs:
             return self.table.c[self.fielda]!=self.table.c[self.fielda]
         else:
-            ids = get_objs_columns(objs, self.reference_fieldname)
-            return (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fielda].in_(ids))
+            keys = get_objs_columns(objs, self.reference_fieldname)
+            return (self.table.c[self.fieldb] == self.reference_class.c[self.reference_fieldname]) & (self.table.c[self.fielda].in_(keys))
     
     def filter(self, *condition):
         cond = true()
@@ -3510,6 +3568,8 @@ class Model(object):
     _bind = True
     _bound_classname = ''
     _base_class = None
+    _primary_field = None
+    _key = None #primary key property
     
     _lock = threading.Lock()
     _c_lock = threading.Lock()
@@ -3574,7 +3634,7 @@ class Model(object):
         If compare is False, then it'll include all data not only changed property
         """
         fields = fields or []
-        if self.id is None or self.id == '':
+        if self._key is None or self._key == '':
             d = {}
             for k, v in self.properties.items():
                 #test fields
@@ -3587,7 +3647,7 @@ class Model(object):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
                         x = x.id
-                    elif x is None or (k=='id' and not x):
+                    elif x is None or (k==self._primary_field and not x):
                         if isinstance(v, DateTimeProperty) and v.auto_now_add:
                             x = v.now()
                         elif (v.auto_add or (not v.auto and not v.auto_add)):
@@ -3598,7 +3658,7 @@ class Model(object):
                     d[k] = x
         else:
             d = {}
-            d['id'] = self.id
+            d[self._primary_field] = self._key
             for k, v in self.properties.items():
                 if fields and k not in fields:
                     continue
@@ -3682,8 +3742,8 @@ class Model(object):
                     obj = do_(self.table.insert().values(**d), self.get_session())
                     _saved = True
 
-                if obj.inserted_primary_key:
-                    setattr(self, 'id', obj.inserted_primary_key[0])
+                if obj.inserted_primary_key and self._primary_field:
+                    setattr(self, self._primary_field, obj.inserted_primary_key[0])
                 
                 if _manytomany:
                     for k, v in _manytomany.items():
@@ -3691,7 +3751,7 @@ class Model(object):
                             _saved = getattr(self, k).update(v) or _saved
                 
             else:
-                _id = d.pop('id')
+                _id = d.pop(self._primary_field)
                 if d:
                     old = d.copy()
                     if get_dispatch_send() and self.__dispatch_enabled__:
@@ -3700,7 +3760,7 @@ class Model(object):
                     #process auto_now
                     _manytomany = {}
                     for k, v in self.properties.items():
-                        if v.property_type == 'compound' or k == 'id':
+                        if v.property_type == 'compound' or k == self._primary_field:
                             continue
                         if not isinstance(v, ManyToMany):
                             if isinstance(v, DateTimeProperty) and v.auto_now and k not in d:
@@ -3783,8 +3843,8 @@ class Model(object):
             setattr(self, delete_fieldname, True)
             self.save()
         else:
-            do_(self.table.delete(self.table.c.id==self.id), self.get_session())
-            self.id = None
+            do_(self.table.delete(self.table.c[self._primary_field]==self._key), self.get_session())
+            self._key = None
             self._old_values = {}
         if send_dispatch and get_dispatch_send() and self.__dispatch_enabled__:
             dispatch.call(self.__class__, 'post_delete', instance=self, signal=self.tablename)
@@ -3796,7 +3856,7 @@ class Model(object):
         """
         version_fieldname = version_fieldname or 'version'
         #fix when d is empty, orm will not insert record bug 2013/04/07
-        if not self.id or insert:
+        if not self._key or insert:
             d = self._get_data(fields, compare=compare)
             if d:
                 return rawsql(self.table.insert().values(**d),
@@ -3804,9 +3864,9 @@ class Model(object):
 
         else:
             d = self._get_data(fields, compare=compare)
-            _id = d.pop('id')
+            _key = d.pop(self._primary_field)
             if d:
-                _cond = self.table.c.id == self.id
+                _cond = self.table.c[self._primary_field] == self._key
                 if version:
                     version_field = self.table.c.get(version_fieldname)
                     if version_field is None:
@@ -4042,6 +4102,11 @@ class Model(object):
                     if func:
                         func(cls)
 
+                #add auto_create support for testing 2015.10.29
+                if not __lazy_model_init__:
+                    for k, v in cls.properties.items():
+                        v.__property_config__(cls, k)
+
                 for k, f in cls._fields_list:
                     c = f.create(cls)
                     if c is not None:
@@ -4255,7 +4320,7 @@ class Model(object):
                 if use_delay:
                     value = Lazy
                 else:
-                    if name != 'id':
+                    if name != self._primary_field:
                         value = prop.default_value()
                     else:
                         value = None
@@ -4279,9 +4344,9 @@ class Model(object):
         """
         exclude = exclude or []
         d = {}
-        if fields and 'id' not in fields:
+        if fields and self._primary_field not in fields:
             fields = list(fields)
-            fields.append('id')
+            fields.append(self._primary_field)
         for k, v in self.properties.items():
             if ((not fields) or (k in fields)) and (not exclude or (k not in exclude)):
                 if not isinstance(v, ManyToMany):
@@ -4295,8 +4360,8 @@ class Model(object):
                 else:
                     if fields:
                        d[k] = ','.join([str(x) for x in getattr(self, v._lazy_value(), [])])
-        if d and 'id' not in d and 'id' in self.properties:
-            d['id'] = str(self.id)
+        if self._primary_field and d and self._primary_field not in d:
+            d[self._primary_field] = str(self._key)
         return d
         
     @classmethod
