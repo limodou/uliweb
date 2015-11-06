@@ -978,18 +978,20 @@ class Dispatcher(object):
         elif isinstance(result, (Response, BaseResponse)):
             response = result
         #add generator support 2014-1-8
-        elif isinstance(result, types.GeneratorType):
+        elif isinstance(result, types.GeneratorType) or hasattr(result, '__iter__'):
             #preprocess generator, so that it can get some code run at first
             #such as response.content_type='application/json'
+            result_iter = iter(result)
             try:
-                x = next(result)
+                x = result_iter.next()
             except StopIteration:
                 x = ''
             def f(x):
                 yield x
-                for x in result:
+                for x in result_iter:
                     yield x
-            return Response(f(x), direct_passthrough=True, content_type=response.content_type)
+            return Response(f(x), direct_passthrough=True, headers=response.headers,
+                            content_type=response.content_type)
         else:
             response = Response(str(result), content_type=response.content_type)
         return response
