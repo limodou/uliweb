@@ -384,8 +384,8 @@ class Writer(object):
 
 class Reader(object):
     def __init__(self, template_file, sheet_name, input_file,
-                 use_merge=False,
-                 merge_keys=None, merge_left_join=True, merge_verbose=False):
+                 use_merge=False, merge_keys=None, merge_left_join=True,
+                 merge_verbose=False, callback=None):
         """
 
         :param template_file:
@@ -395,18 +395,32 @@ class Reader(object):
                 第一个为文件名,后面的为sheet页名称,'*'表示通配符,如果和sheet_name相同,则可以仅为字符串
 
                 如果input_file中不存在指定的Sheet,则自动取所有sheets
+        :param use_merge: If use Merge to combine multiple data
+        :param merge_keys: keys parameter used in Merge
+        :param merge_left_join: left_join parameter used in Merge
+        :param merge_verbose: verbose parameter used in Merge
+        :param callback: callback function used after combine data, the callback function
+                should be:
+
+                ```
+                def func(row_data):
+                ```
         :return:
         """
         self.template_file = template_file
         self.sheet_name = sheet_name
         self.input_file = input_file
         self.result = None
+        self.callback = callback
         if use_merge:
             self.merge = Merge(keys=merge_keys, left_join=merge_left_join, verbose=merge_verbose)
         else:
             self.merge = False
 
         self.init()
+
+        if self.callback:
+            self.callback(self.result)
 
     def init(self):
         template = self.get_template()
