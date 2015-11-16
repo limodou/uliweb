@@ -404,7 +404,7 @@ def make_form_field(field, model=None, field_cls=None,
     default_kwargs = {}
     if prop:
         default_kwargs = {
-            'label':prop.label or prop.perperty_name,
+            'label':prop.label or prop.property_name,
             'help_string':prop.hint,
             'placeholder':prop.placeholder,
             'html_attrs':prop.extra.get('html_attrs', {}),
@@ -880,17 +880,17 @@ class AddView(object):
         #guess ok_url kwargs, it could be (id) or (obj)
         if callable(self.ok_url):
             args = inspect.getargspec(self.ok_url).args()
-            if len(args) != 1:
-                raise ValueError("ok_url function argument should be only one, but it's empty or larger then 1")
-            k = args[0]
-            if k == 'id':
-                kwargs = {'id':obj.id}
-            elif k == 'obj':
-                kwargs = {'obj':obj}
-            else:
-                raise ValueError("ok_url function argument should be id or obj, but {} found".format(k))
-        else:
             kwargs = {}
+            _dict = obj.to_dict()
+            for k in args:
+                if k in _dict:
+                    kwargs[k] = _dict[k]
+                elif k == 'obj':
+                    kwargs['obj'] = obj
+                else:
+                    raise ValueError("ok_url function argument {} can't be found in object".format(k))
+        else:
+            kwargs = obj.to_dict()
         url = get_url(self.ok_url, **kwargs)
         return url
 

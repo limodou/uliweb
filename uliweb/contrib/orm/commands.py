@@ -876,6 +876,8 @@ are you sure to load data""" % (options.engine, ','.join(args))
                 continue
             if global_options.verbose:
                 msg = '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
+            else:
+                msg = ''
             try:
                 filename = os.path.join(path, name+'.txt')
                 if options.text:

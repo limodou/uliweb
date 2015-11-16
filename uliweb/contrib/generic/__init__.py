@@ -23,7 +23,7 @@ class MultiView(object):
     ######################################
     #query
     ######################################
-    class _query_config(object):
+    class QueryConfig(object):
         fields = []
         #query field format
         # [
@@ -41,7 +41,7 @@ class MultiView(object):
 
     _query_parameters = ['fields', 'layout', 'form_cls']
 
-    class _list_config(object):
+    class ListConfig(object):
         pagination = True
         id = 'listview_table'
         meta = 'Table'
@@ -51,7 +51,7 @@ class MultiView(object):
                         'meta'
                         ]
 
-    class _view_config(object):
+    class ViewConfig(object):
         meta = 'DetailView'
 
     _view_parameters = ['fields', 'fields_convert_map',
@@ -59,7 +59,7 @@ class MultiView(object):
                        'meta'
                        ]
 
-    class _add_config(object):
+    class AddConfig(object):
         meta = 'AddForm'
         version = False
 
@@ -70,7 +70,7 @@ class MultiView(object):
                         'meta'
                        ]
 
-    class _edit_config(object):
+    class EditConfig(object):
         meta = 'EditForm'
         version = False
 
@@ -283,9 +283,12 @@ class MultiView(object):
     def _get_model(cls, model=None):
         return functions.get_model(cls._get_arg(model, '_model'))
 
+    @classmethod
+    def _get_object(cls, key, model=None):
+        _model = cls._get_model(model)
+        return _model.get(key)
 
-
-    def _get_list_view(self, model, condition, parameters, config, post_condition=None,
+    def _get_list_view(self, model, condition=None, parameters=None, config=None, post_condition=None,
                        prefix_of_convert_func_name=''):
         """
         :param model:
@@ -294,7 +297,7 @@ class MultiView(object):
         :return:
         """
         para = self._collect_parameters(self._list_parameters, parameters,
-                                        config or self._list_config)
+                                        config or self.ListConfig)
 
         self._process_fields_convert_map(para, prefix=prefix_of_convert_func_name)
 
@@ -352,11 +355,11 @@ class MultiView(object):
         return query, condition
 
 
-    def _default_list(self, model=None,
+    def _list(self, model=None,
                       query_parameters=None,
-                      query_config=None,
+                      query_config='QueryConfig',
                       list_parameters=None,
-                      list_config=None,
+                      list_config='ListConfig',
                       post_condition=None):
         from uliweb import request, json
 
@@ -383,8 +386,8 @@ class MultiView(object):
             result.update({'table':view})
             return result
 
-    def _default_view(self, model=None, obj=None,
-                    config=None, **parameters):
+    def _view(self, model=None, obj=None,
+                    config='ViewConfig', **parameters):
         para = self._collect_parameters(self._view_parameters, parameters, config)
 
         self._process_fields_convert_map(para)
@@ -394,8 +397,20 @@ class MultiView(object):
                                     **para)
         return view.run()
 
-    def _default_add(self, model=None, ok_url=None,
-                    config=None, json_result=False, **parameters):
+    def _add(self, model=None, ok_url=None,
+                    config='AddConfig', json_result=False, **parameters):
+        para = self._collect_parameters(self._edit_parameters, parameters, config)
+        para['ok_url'] = ok_url
+
+        self._process_fields_convert_map(para)
+
+        json_result = self._get_arg(json_result, 'json_result', config)
+        view = functions.AddView(self._get_model(model),
+                                    **para)
+        return view.run(json_result=json_result)
+
+    def _edit(self, model=None, ok_url=None, obj=None,
+                    config='EditConfig', json_result=False, **parameters):
         para = self._collect_parameters(self._edit_parameters, parameters, config)
         para['ok_url'] = ok_url
 
@@ -407,30 +422,5 @@ class MultiView(object):
                                     **para)
         return view.run(json_result=json_result)
 
-    def _default_edit(self, model=None, ok_url=None, obj=None,
-                    config=None, json_result=False, **parameters):
-        para = self._collect_parameters(self._edit_parameters, parameters, config)
-        para['ok_url'] = ok_url
-
-        self._process_fields_convert_map(para)
-
-        json_result = self._get_arg(json_result, 'json_result', config)
-        view = functions.EditView(self._get_model(model),
-                                    obj=obj,
-                                    **para)
-        return view.run(json_result=json_result)
 
 
-
-
-
-    def _list(self, *args, **kwargs):
-        return self._default_list(query_config='_query_config',
-                                  list_config='_list_config', *args, **kwargs)
-
-
-    def _view(self, *args, **kwargs):
-        return self._default_view(config='_view_config', *args, **kwargs)
-
-    def _edit(self, *args, **kwargs):
-        return self._default_edit(config='_edit_config', *args, **kwargs)

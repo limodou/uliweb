@@ -21,7 +21,7 @@ def _date(cell, data, f, _var=None, _sh=None):
 def _link(cell, data, text, _var=None, _sh=None):
     t = text.format(_var)
     cell.value = data
-    cell.hyperlink = '#'+t
+    cell.hyperlink = t
     return cell.value
 
 def _validate_list(cell, data, _list, blank=True, _var=None, _sh=None):
@@ -32,7 +32,7 @@ def _validate_list(cell, data, _list, blank=True, _var=None, _sh=None):
     return cell.value
 
 env = {'date':_date, 'datetime':datetime, 'link':_link,
-       'validate':_validate_list}
+       'validate_list':_validate_list}
 
 class Converter(object):
     """
@@ -81,6 +81,7 @@ class Converter(object):
 class WriteTemplate(object):
     def __init__(self, sheet):
         self.sheet = sheet
+        self.size = (len(sheet.rows), len(sheet.columns))
         self.template = self.get_template()
         self.row = 0
 
@@ -183,6 +184,15 @@ class WriteTemplate(object):
             self.row += 1
             v['row'] = self.row
             self.write_single(sheet, v)
+
+        i = self.row
+        while i < self.size[0] + 1:
+            for j in range(self.size[1]):
+                cell = sheet.cell(row=i, column=j+1)
+                cell.value = None
+            i += 1
+        self.sheet._garbage_collect()
+
 
     def write_line(self, sheet, row, data):
         """
@@ -409,7 +419,12 @@ class Reader(object):
         """
         self.template_file = template_file
         self.sheet_name = sheet_name
-        self.input_file = input_file
+        if isinstance(input_file, (str, unicode)):
+            self.input_file = [input_file]
+        elif isinstance(input_file, (tuple, list)):
+            self.input_file = input_file
+        else:
+            raise ValueError("input_file parameter should be tuple or list, but {!r} found".format(type(input_file)))
         self.result = None
         self.callback = callback
         if use_merge:
