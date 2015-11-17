@@ -285,6 +285,11 @@ class ReadTemplate(WriteTemplate):
             template_cols = self.template[0]['cols']
         else:
             template_cols = template_row['cols']
+
+        #check if length of template_cols great than row, then match failed
+        if len(template_cols)>len(row):
+            return False
+
         for c in template_cols:
             #如果坐标大于模板最大长度，则表示不匹配，则退出
             text = c['value']
