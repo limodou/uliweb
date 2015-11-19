@@ -2468,7 +2468,8 @@ class SelectListView(ListView):
             #     self.total = self.count(query)
         return query
 
-    def query_model(self, model, condition=None, offset=None, limit=None, order_by=None, fields=None):
+    def query_model(self, model, condition=None, offset=None, limit=None,
+                    group_by=None, having=None, order_by=None, fields=None):
         """
         Query all records with limit and offset, it's used for pagination query.
         """
@@ -2493,6 +2494,13 @@ class SelectListView(ListView):
                     query = query.order_by(order)
             else:
                 query = query.order_by(order_by)
+        if group_by is not None:
+            if isinstance(group_by, (tuple, list)):
+                query = query.group_by(*group_by)
+            else:
+                query = query.group_by(group_by)
+            if having is not None:
+                query = query.having(having)
         return query
     
     def object(self, record, json_result=False):
