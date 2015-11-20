@@ -2027,7 +2027,7 @@ def test_load_dump():
     ...     pickle = PickleProperty()
     ...     json = JsonProperty()
     >>> a = {'date1': '2009-01-01 14:00:05', 'date3': '14:00:00', 'date2': '2009-01-01', 'string': 'limodou', 'decimal': '10.2', 'float': 200.02, 'boolean': True, 'integer': 200, 'pickle': {'a': 1,'b': 2}, 'json':{'a':1, 'b':['c', 'd']}, 'id':1}
-    >>> b = Test.load(a, set_saved=False)
+    >>> b = Test(**a)
     >>> b.save(insert=True)
     True
     >>> b.to_dict() # doctest:+ELLIPSIS, +NORMALIZE_WHITESPACE
@@ -2748,8 +2748,134 @@ def test_derive():
     ['username', 'age', 'birth', 'year']
     >>> print User1._primary_field
     username
+    >>> set_auto_create(True)
     """
 
+def test_primary_1():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode, primary_key=True)
+    ...     year = Field(int, default=30)
+    >>> print User.properties.keys()
+    ['username', 'year']
+    >>> print User._primary_field
+    username
+    >>> u = User(username='guest')
+    >>> set_echo(True)
+    >>> u.save() # doctest:+ELLIPSIS
+    <BLANKLINE>
+    ===>>>>> [default] (<...)
+    INSERT INTO user (username, year) VALUES ('guest', 30);
+    ===<<<<< time used ...
+    <BLANKLINE>
+    True
+    >>> u.year = 24
+    >>> u.save() # doctest:+ELLIPSIS
+    <BLANKLINE>
+    ===>>>>> [default] (<...)
+    UPDATE user SET year=24 WHERE user.username = 'guest';
+    ===<<<<< time used ...
+    <BLANKLINE>
+    True
+    >>> set_echo(False)
+    """
+
+def test_primary_2():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class Group(Model):
+    ...     name = Field(unicode, primary_key=True)
+    >>> class User(Model):
+    ...     username = Field(unicode, primary_key=True)
+    ...     year = Field(int, default=30)
+    ...     group = Reference('group')
+    >>> g = Group(name='group')
+    >>> g.save()
+    True
+    >>> u = User(username='guest', group=g)
+    >>> u.save()
+    True
+    >>> u1 = User.get('guest')
+    >>> u1
+    <User {'username':u'guest','year':30,'group':<ReferenceProperty:group>}>
+    >>> print u1.group
+    group
+    """
+
+def test_primary_3():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode, primary_key=True)
+    ...     year = Field(int, default=30)
+    >>> class Group(Model):
+    ...     name = Field(unicode, primary_key=True)
+    ...     users = ManyToMany('user')
+    >>> g = Group(name='group')
+    >>> g.save()
+    True
+    >>> u = User(username='guest')
+    >>> u.save()
+    True
+    >>> g.users.add(u)
+    True
+    >>> u1 = User.get('guest')
+    >>> u1
+    <User {'username':u'guest','year':30}>
+    >>> print u1.group_set.keys()
+    [u'group']
+    >>> g1 = Group.get('group')
+    >>> g1
+    <Group {'name':u'group'}>
+    >>> g1.users.keys()
+    [u'guest']
+    >>> g1.users.remove()
+    >>> g1.users.keys()
+    []
+    """
+
+def test_primary_4():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode, primary_key=True)
+    ...     year = Field(int, default=30)
+    >>> class Group(Model):
+    ...     name = Field(unicode, primary_key=True)
+    ...     users = ManyToMany('user', through='usergrouprel')
+    >>> class UserGroupRel(Model):
+    ...     user = Reference('user')
+    ...     group = Reference('group')
+    >>> g = Group(name='group')
+    >>> g.save()
+    True
+    >>> u = User(username='guest')
+    >>> u.save()
+    True
+    >>> g.users.add(u)
+    True
+    >>> u1 = User.get('guest')
+    >>> u1
+    <User {'username':u'guest','year':30}>
+    >>> print u1.group_set.keys()
+    [u'group']
+    >>> g1 = Group.get('group')
+    >>> g1
+    <Group {'name':u'group'}>
+    >>> g1.users.keys()
+    [u'guest']
+    >>> g1.users.remove()
+    >>> g1.users.keys()
+    []
+    >>> User.remove()
+    >>> User.count()
+    0
+    """
 
 # if __name__ == '__main__':
 #     from sqlalchemy.schema import CreateTable, CreateIndex
@@ -2784,15 +2910,27 @@ if __name__ == '__main__':
     from uliweb import orm
     db = get_connection('sqlite://')
     db.metadata.drop_all()
-    set_auto_create(False)
-    orm.__models__ = {}
-    from sqlalchemy import *
     class User(Model):
-        _primary_field = 'username'
-        username = Field(unicode)
+        username = Field(unicode, primary_key=True)
         year = Field(int, default=30)
-        birth = Field(datetime.date)
-    class User1(User):
-        age = Field(int)
-    print User1.properties.keys()
-    print User1._primary_field
+    class Group(Model):
+        name = Field(unicode, primary_key=True)
+        users = ManyToMany('user', through='usergrouprel')
+    class UserGroupRel(Model):
+        user = Reference('user')
+        group = Reference('group')
+    g = Group(name='group')
+    print g.save()
+    User = get_model('user')
+    User.create()
+    u = User(username='guest')
+    u.save()
+    g.users.add(u)
+    u1 = User.get('guest')
+    print u1
+    print u1.group_set.keys()
+    g1 = Group.get('group')
+    print g1
+    print g1.users.keys()
+    g1.users.remove()
+    print g1.users.keys()

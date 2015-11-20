@@ -313,6 +313,8 @@ def test_model_config_app():
     [default] Creating [5/6, uliweb] user...SKIPPED(Mapping Table)
     [default] Creating [6/6, uliweb] usergroup...EXISTED
     """
+
+
 # app = make_simple_application(project_dir='.', reuse=False)
 # set_echo(True)
 # M = get_model('model_config')

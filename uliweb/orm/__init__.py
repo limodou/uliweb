@@ -80,13 +80,13 @@ Local.echo_func = sys.stdout.write
 
 class Error(Exception):pass
 class NotFound(Error):
-    def __init__(self, message, model, id):
+    def __init__(self, message, model, key):
         self.message = message
         self.model = model
-        self.id = id
+        self.key = key
         
     def __str__(self):
-        return "%s(%s) instance can't be found" % (self.model.__name__, str(self.id))
+        return "{0}({1}) instance can't be found".format(self.model.__name__, str(self.key))
 class ModelNotFound(Error):pass
 class ReservedWordError(Error):pass
 class ModelInstanceError(Error):pass
@@ -1542,7 +1542,6 @@ class Property(object):
     def __set__(self, model_instance, value):
         if model_instance is None:
             return
-        
         value = self.validate(value)
         #add value to model_instance._changed_value, so that you can test if
         #a object really need to save
@@ -2460,7 +2459,10 @@ class Result(object):
         return self
 
     def get(self, condition=None):
-        self.filter(self.model.c[self.model._primary_key]==condition).one()
+        if isinstance(condition, ColumnElement):
+            self.filter(condition).one()
+        else:
+            self.filter(self.model.c[self._primary_field]==condition).one()
 
     def count(self):
         """
@@ -3179,8 +3181,7 @@ class ManyToMany(ReferenceProperty):
             self.reference_class = get_model(self.reference_class, self.engine_name,
                                              signal=False)
         self.reference_fieldname = self.reference_fieldname or self.reference_class._primary_field
-        self.reversed_fieldname = self.reversed_fieldname or self.reference_class._primary_field
-
+        self.reversed_fieldname = self.reversed_fieldname or model_class._primary_field
         self.tablename = '%s_%s_%s' % (model_class.tablename, self.reference_class.tablename, property_name)
         self.collection_name = self.reference_class.get_collection_name(model_class.tablename, self._collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
@@ -3550,7 +3551,7 @@ class ModelReprDescriptor(object):
                 d = [info['label'], info['name'], info['type_name']]
                 t = getattr(instance, k, None)
                 if isinstance(v, Reference) and t:
-                    d.append('%s:%r:%s' % (v.reference_class.__name__, t.id, unicode(t)))
+                    d.append('%s:%r:%s' % (v.reference_class.__name__, t._key, unicode(t)))
                 else:
                     d.append(t)
                 s.append(d)
@@ -3580,6 +3581,7 @@ class Model(object):
     def __init__(self, **kwargs):
         self._old_values = {}
         self._load(kwargs, from_='')
+        self._saved = False
         
     def set_saved(self):
         self._old_values = self.to_dict()
@@ -3588,6 +3590,7 @@ class Model(object):
                 t = v.get_value_for_datastore(self, cached=True)
                 if not t is Lazy:
                     self._old_values[k] = t
+        self._saved = True
         
     def to_dict(self, fields=None, convert=True, manytomany=False):
         d = {}
@@ -3598,7 +3601,7 @@ class Model(object):
             if not isinstance(v, ManyToMany):
                 t = v.get_value_for_datastore(self)
                 if isinstance(t, Model):
-                    t = t.id
+                    t = t._key
                 if convert:
                     d[k] = self.field_str(t)
                 else:
@@ -3646,7 +3649,7 @@ class Model(object):
                 if not isinstance(v, ManyToMany):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
-                        x = x.id
+                        x = x._key
                     elif x is None or (k==self._primary_field and not x):
                         if isinstance(v, DateTimeProperty) and v.auto_now_add:
                             x = v.now()
@@ -3668,7 +3671,7 @@ class Model(object):
                 if not isinstance(v, ManyToMany):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
-                        x = x.id
+                        x = x._key
                 else:
                     x = v.get_value_for_datastore(self, cached=True)
                 if not x is Lazy:
@@ -3678,7 +3681,7 @@ class Model(object):
         return d
             
     def is_saved(self):
-        return bool(self.id) 
+        return self._saved
     
     def update(self, **data):
         for k, v in data.items():
@@ -3714,8 +3717,8 @@ class Model(object):
         version_fieldname = version_fieldname or 'version'
         d = self._get_data()
         #fix when d is empty, orm will not insert record bug 2013/04/07
-        if d or not self.id or insert:
-            if not self.id or insert:
+        if d or not self._saved or insert:
+            if insert or not self._saved:
                 created = True
                 old = d.copy()
                 
@@ -3771,7 +3774,7 @@ class Model(object):
                             if k in d:
                                 _manytomany[k] = d.pop(k)
                     if d:
-                        _cond = self.table.c.id == self.id
+                        _cond = self.table.c[self._primary_field] == self._key
                         if version:
                             version_field = self.table.c.get(version_fieldname)
                             if version_field is None:
@@ -3787,17 +3790,28 @@ class Model(object):
                         result = do_(self.table.update(_cond).values(**d), self.get_session())
                         _saved = True
                         if version:
-                            if result.rowcount != 1:
+                            if result.rowcount == 0:
                                 _saved = False
                                 if version_exception:
-                                    raise SaveError("The record %s:%d has been saved by others, current version is %d" % (self.tablename, self.id, _version_value))
+                                    raise SaveError("The record {0}:{1} has been saved by others, current version is {2}".format(
+                                        self.tablename, self._key, _version_value))
                             else:
                                 setattr(self, version_fieldname, d[version_fieldname])
+                        elif result.rowcount == 0:
+                            _saved = False
+                            # raise NotFound("The record can't be found!", self.tablename, self._key)
                       
                     if _manytomany:
                         for k, v in _manytomany.items():
                             if v is not None:
                                 _saved = getattr(self, k).update(v) or _saved
+
+                # else:
+                #     #check if the field is primary_key, true will raise Exception
+                #     #2015/11/20 limodou
+                #     raise ValueError("You can't only change primary key '{}'.".format(self._primary_field))
+
+
             if _saved:
                 for k, v in d.items():
                     x = self.properties[k].get_value_for_datastore(self)
@@ -3809,7 +3823,7 @@ class Model(object):
                 
                 if callable(saved):
                     saved(self, created, self._old_values, old)
-                    
+
         return _saved
 
     def put(self, *args, **kwargs):
@@ -3886,7 +3900,7 @@ class Model(object):
             if not isinstance(v, ManyToMany):
                 t = getattr(self, k, None)
                 if isinstance(v, Reference) and t:
-                    s.append('%r:<%s:%d>' % (k, v.__class__.__name__, t.id))
+                    s.append('{0!r}:<{1}:{2}>'.format(k, v.__class__.__name__, t._key))
                 else:
                     s.append('%r:%r' % (k, t))
         if self.__class__._base_class:
@@ -3896,10 +3910,10 @@ class Model(object):
         return ('<%s {' % clsname) + ','.join(s) + '}>'
     
     def __str__(self):
-        return str(self.id)
+        return str(self._key)
     
     def __unicode__(self):
-        return str(self.id)
+        return str(self._key)
 
     def get_display_value(self, field_name, value=None):
         return self.properties[field_name].get_display_value(value or getattr(self, field_name))
@@ -4198,12 +4212,17 @@ class Model(object):
         if condition is not None:
             _cond = condition
         else:
-            if isinstance(id, (int, long)):
-                _cond = cls.c.id==id
-            elif isinstance(id, (str, unicode)) and id.isdigit():
-                _cond = cls.c.id==int(id)
-            else:
+            if isinstance(id, ColumnElement):
                 _cond = id
+            else:
+                _cond = cls.c[cls._primary_field] == id
+            #todo
+            # if isinstance(id, (int, long)):
+            #     _cond = cls.c.id==id
+            # elif isinstance(id, (str, unicode)) and id.isdigit():
+            #     _cond = cls.c.id==int(id)
+            # else:
+            #     _cond = id
 
         #if there is no cached object, then just fetch from database
         obj = cls.filter(_cond, **kwargs).fields(*(fields or [])).one()
@@ -4244,10 +4263,11 @@ class Model(object):
             
     @classonlymethod
     def remove(cls, condition=None, **kwargs):
-        if isinstance(condition, (int, long)):
-            condition = cls.c.id==condition
-        elif isinstance(condition, (tuple, list)):
-            condition = cls.c.id.in_(condition)
+        if isinstance(condition, (tuple, list)):
+            condition = cls.c[cls._primary_field].in_(condition)
+        elif condition and not isinstance(condition, ColumnElement):
+            condition = cls.c[cls._primary_field]==condition
+        #todo
         do_(cls.table.delete(condition, **kwargs), cls.get_session())
             
     @classmethod
@@ -4260,7 +4280,7 @@ class Model(object):
         return Result(cls, **kwargs).filter(*condition).any()
     
     @classmethod
-    def load(cls, values, set_saved=True, from_='db'):
+    def load(cls, values, from_='db'):
         if isinstance(values, (list, tuple)):
             d = cls._data_prepare(values)
         elif isinstance(values, dict):
@@ -4268,13 +4288,9 @@ class Model(object):
         else:
             raise BadValueError("Can't support the data type %r" % values)
         
-#        if 'id' not in d or not d['id']:
-#            raise BadValueError("ID property must be existed or could not be empty.")
-        
         o = cls()
         o._load(d, use_delay=True, from_=from_)
-        if set_saved:
-            o.set_saved()
+        o.set_saved()
             
         return o
     
@@ -4282,14 +4298,14 @@ class Model(object):
         """
         Re get the instance of current id
         """
-        cond = self.c.id==self.id
+        cond = self.c[self._primary_field]==self._key
         query = self.filter(cond, **kwargs)
         if not fields:
             fields = list(self.table.c)
         
         v = query.values_one(*fields)
         if not v:
-            raise NotFound('Instance <%s:%d> can not be found' % (self.tablename, self.id))
+            raise NotFound('Instance <{0}:{1}> can not be found'.format(self.tablename, self._key))
         
         d = self._data_prepare(v.items())
         self.update(**d)
@@ -4355,7 +4371,7 @@ class Model(object):
                         self.refresh()
                         t = v.get_value_for_datastore(self)
                     if isinstance(t, Model):
-                        t = t.id
+                        t = t._key
                     d[k] = v.to_str(t)
                 else:
                     if fields:
