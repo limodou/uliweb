@@ -620,8 +620,10 @@ class Dispatcher(object):
         rules.set_urlroute_rules(dict(settings.get('URL_ROUTE', {})))
 
         Dispatcher.env = self._prepare_env()
-        Dispatcher.template_dirs = self.get_template_dirs()
-        Dispatcher.template_loader = self.install_template_loader(Dispatcher.template_dirs)
+        #install template_dirs and taglibs_dirs
+        self.get_template_dirs()
+        #install template_loader and taglibs_loader
+        self.install_template_loader()
 
         #begin to start apps
         self.install_apps()
@@ -765,15 +767,25 @@ class Dispatcher(object):
                 return path
         return None
     
-    def install_template_loader(self, dirs):
+    def install_template_loader(self):
         Loader = import_attr(settings.get_var('TEMPLATE_PROCESSOR/loader'))
         args = settings.get_var('TEMPLATE')
+
+        if settings.get_var('TABLIBS/enabled'):
+            taglibs_loader = import_attr(
+                settings.get_var('TABLIBS/loader'))
+            Dispatcher.taglibs_loader = taglibs_loader(tags_dir=Dispatcher.taglibs_dirs)
+        else:
+            Dispatcher.taglibs_loader = None
 
         if self.debug:
             args['check_modified_time'] = True
             args['log'] = log
             args['debug'] = settings.get_var('GLOBAL/DEBUG_TEMPLATE', False)
-        return Loader(dirs, **args)
+        Dispatcher.template_loader = Loader(Dispatcher.template_dirs,
+                                            taglibs_loader=Dispatcher.taglibs_loader,
+                                            **args)
+
 
     def template(self, filename, vars=None, env=None, default_template=None):
         vars = vars or {}
@@ -1281,13 +1293,20 @@ class Dispatcher(object):
                         return True
                     
         template_dirs = [os.path.join(self.project_dir, x) for x in settings.GLOBAL.TEMPLATE_DIRS or []]
+        taglibs_dirs = []
         for p in reversed(self.apps):
-            path = os.path.join(get_app_dir(p), 'templates')
+            app_path = get_app_dir(p)
+            path = os.path.join(app_path, 'templates')
             if if_not_empty(path):
                 template_dirs.append(path)
-                
-        return template_dirs
-    
+
+            path = os.path.join(app_path, 'taglibs')
+            if if_not_empty(path):
+                taglibs_dirs.append(path)
+
+        Dispatcher.template_dirs = template_dirs
+        Dispatcher.taglibs_dirs = taglibs_dirs
+
     def get_templateplugins_dirs(self):
         return [os.path.join(get_app_dir(p), 'template_plugins') for p in self.apps]
     

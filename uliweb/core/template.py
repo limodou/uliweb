@@ -755,7 +755,7 @@ class Loader(object):
                  tmp_dir='tmp/templates_temp', begin_tag=BEGIN_TAG,
                  end_tag=END_TAG, debug=False, see=None, max_size=None,
                  _compile=None, check_modified_time=False, skip_extern=False,
-                 log=None, multilines=False, comment=True):
+                 log=None, multilines=False, comment=True, taglibs_loader=None):
         self.dirs = dirs
         self.namespace = namespace or {}
         self.cache = cache
@@ -774,6 +774,7 @@ class Loader(object):
         self.log = log
         self.multilines = multilines
         self.comment = comment
+        self.taglibs_loader = taglibs_loader
 
         #init tmp_dir
         if self.cache and self.use_tmp and self.tmp_dir:
@@ -869,12 +870,21 @@ class Loader(object):
                 if filename:
                     return filename
 
+    def _process_tags(self, text):
+        from .taglibs import parse
+
+        return parse(text, loader=self.taglibs_loader)
+
     def _create_template(self, name, filename, _compile=None, see=None, layout=None):
         if not os.path.exists(filename):
             raise ParseError("The file %s is not existed." % filename)
 
         with open(filename, 'rb') as f:
             text = f.read()
+
+            #add tag convert support 2015/11/21 limodou
+            text = self._process_tags(text)
+
             #if layout is not empty and there is no {{extend}} exsited
             if layout:
                 if not r_extend.match(text):
