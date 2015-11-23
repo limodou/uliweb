@@ -309,8 +309,11 @@ class ReadTemplate(WriteTemplate):
             for c in row['cols']:
                 if c['field']:
                     cell = sheet.cell(row=line, column=c['col'])
-                    if cell.value:
-                        d[c['field']] = cell.value
+                    if isinstance(cell.value, (str, unicode)):
+                        v = cell.value.strip()
+                    else:
+                        v = cell.value
+                    d[c['field']] = v
             return d
 
         def _subs(line, subs, nextrow):
