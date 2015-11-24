@@ -191,11 +191,12 @@ class Expose(object):
     
     def parse(self, f):
         if inspect.isfunction(f) or inspect.ismethod(f):
-            if self.skip:
-                f.__rule_skip__ = True
-                return
-            else:
-                f.__rule_skip__ = False
+            if getattr(f, '__rule_skip__', None):
+                if self.skip:
+                    f.__rule_skip__ = True
+                    return
+                else:
+                    f.__rule_skip__ = False
             func, result = self.parse_function(f)
             a = __exposes__.setdefault(func, [])
             a.append(result)
