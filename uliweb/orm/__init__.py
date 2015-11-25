@@ -1354,6 +1354,9 @@ class ModelMetaclass(type):
                     cls._manytomany[attr_name] = attr
 
                 #process primary
+                #remove attr_name first if it's in _primary_keys
+                if attr_name in _primary_keys:
+                    _primary_keys.remove(attr_name)
                 if 'primary_key' in attr.kwargs:
                     _primary_keys.append(attr_name)
                 elif cls._primary_field and cls._primary_field == attr_name:

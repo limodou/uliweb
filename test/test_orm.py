@@ -2906,6 +2906,18 @@ def test_primary_4():
 #     g2 = Group.get(1)
 #     print repr(g2.user)
 
+
+def test_primary_5():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode, primary_key=True)
+    ...     year = Field(int, default=30)
+    >>> class MyUser(User):
+    ...     username = Field(unicode, max_length=30)
+    """
+
 if __name__ == '__main__':
     from uliweb import orm
     db = get_connection('sqlite://')
