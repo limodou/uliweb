@@ -35,18 +35,6 @@ def link(env, links, to='toplinks', **kwargs):
     else:
         env['bottomlinks'].extend(links)
 
-def head_link(env, links, **kwargs):
-    if not isinstance(links, (tuple, list)):
-        links = [links]
-    if kwargs:
-        new_links = []
-        for x in links:
-            kw = {'value':x}
-            kw.update(kwargs)
-            new_links.append(kw)
-        links = new_links
-    env['headlinks'].extend(links)
-
 def htmlmerge(text, env):
     m = HtmlMerge(text, env)
     return  m()
@@ -55,11 +43,6 @@ def use(env, plugin, *args, **kwargs):
     toplinks, bottomlinks = find(plugin, *args, **kwargs)
     env['toplinks'].extend(toplinks)
     env['bottomlinks'].extend(bottomlinks)
-
-def head(env, plugin, *args, **kwargs):
-    toplinks, bottomlinks = find(plugin, *args, **kwargs)
-    env['headlinks'].extend(toplinks)
-    env['headlinks'].extend(bottomlinks)
 
 def find(plugin, *args, **kwargs):
     from uliweb.core.SimpleFrame import get_app_dir
@@ -205,9 +188,9 @@ class HtmlMerge(object):
                 head = ''
                 start, end = 0, 0
             result = self.assemble(self._clean_collection(links))
-            if result['toplinks'] or result['bottomlinks'] or result['headlinks']:
+            if result['toplinks'] or result['bottomlinks']:
                 top = result['toplinks'] or ''
-                bottom = result['bottomlinks'] + result['headlinks'] or ''
+                bottom = result['bottomlinks'] or ''
                 top_start, bottom_start = self.cal_position(self.text, top, bottom,
                     len(head), start)
                 
@@ -298,21 +281,5 @@ class HtmlMerge(object):
                 else:
                     result.append(link)
 
-        s = []
-        for link, kw in links['headlinks'].items():
-            _link = kw.pop('link', link)
-            if link.endswith('.js') or link.endswith('.css'):
-                s.append(_link)
-
-        if s:
-            headlinks = '''
-<script>
-head.load(%s);
-</script>
-''' % ','.join(['"%s"' % x for x in s])
-        else:
-            headlinks = ''
-
-        return {'toplinks':'\n'.join(toplinks), 'bottomlinks':'\n'.join(bottomlinks),
-                'headlinks':headlinks}
+        return {'toplinks':'\n'.join(toplinks), 'bottomlinks':'\n'.join(bottomlinks)}
 
