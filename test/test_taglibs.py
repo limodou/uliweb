@@ -87,9 +87,10 @@ def test_5():
 #     <a active="active" title="Data"></a>
 # </t:breadcrumb>"""
 
-t = """<t:breadcrumb>
-    <a href="#" title="Home">Home</a>
-</t:breadcrumb>"""
+t = """<t:form_input_field name="title" label="label" required="required">
+    <input type="text" value="value" placeholder="placeholder" help="help"></input>
+</t:form_input_field>
+"""
 
 # tags = {'breadcrumb':"""<ul class="breadcrumb">
 #     {%for i, li in enumerate(a):
@@ -108,9 +109,36 @@ t = """<t:breadcrumb>
 #     {%pass%}
 # </ul>"""}
 
-tags = {'breadcrumb':"""
-{%<< xml(a)%}
+import logging
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger()
+
+tags = {'form_input_field':"""
+{%name=_attrs['name']%}
+
+<div class="control-group" id="div_field_{%=name%}">
+    {%if _attrs.get('label'):%}
+    <label class="control-label" for="field_{%=name%}">{%=_attrs['label']%}
+        {%if _attrs.get('required'):%}
+        :<span class="field_required">*</span>
+        {%pass%}
+    </label>
+    {%pass%}
+    <div class="controls">
+        {%
+            type = input['_attrs'].pop('type', 'text')
+            help = input['_attrs'].pop('help', '')
+        %}
+        <input id="field_{%=name%}"
+               name="{%=name%}"
+               type="{%=type%}"
+               {%=to_attrs(input['_attrs'])%}></input>
+        {%if help:%}
+        <p class="help help-block">{%<< help%}</p>
+        {%pass%}
+    </div>
+</div>
 """}
 loader = Loader(tags)
 print parse_xml(t)
-print parse(t, loader)
+print parse(t, loader, log=log)

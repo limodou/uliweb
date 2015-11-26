@@ -23,6 +23,7 @@ except ImportError:  # pragma no cover
     except ImportError:
         OrderedDict = dict
 from uliweb.core.template import LRUTmplatesCacheDict
+from uliweb.utils.common import safe_str
 
 try:  # pragma no cover
     _basestring = basestring
@@ -161,7 +162,7 @@ def _to_attrs(attrs, args=None, **kwargs):
     for k, v in kwargs.items():
         value = attrs.setdefault(k, '')
         attrs[k] = value + ' ' + v
-    return ' '.join(['{0}="{1}"'.format(k, v) for k, v in attrs.items()])
+    return ' '.join(['{0}="{1}"'.format(k, safe_str(v)) for k, v in attrs.items()])
 
 def _unparse(input_dict):
     return unparse(input_dict, child_only=True)
@@ -201,7 +202,7 @@ class Loader(object):
         return bool(self.tags or self.tags_dir)
 
 
-def process_tag(data, tag, loader):
+def process_tag(data, tag, loader, log=None):
     from uliweb.core.template import template
 
     t = loader.find(tag)
@@ -210,11 +211,11 @@ def process_tag(data, tag, loader):
 
     env = {'to_attrs':_to_attrs, 'xml':_unparse, 'xml_full':_unparse_full}
 
-    return template(t, data, env=env, begin_tag='{%', end_tag='%}')
+    return template(t, data, env=env, begin_tag='{%', end_tag='%}', log=log, multilines=True)
 
 
 
-def parse(text, loader=None, namespace='t', begin_position=0, end_position=None):
+def parse(text, loader=None, namespace='t', begin_position=0, end_position=None, log=None):
     if not loader or not loader.available():
         return text
     r_tag = re.compile(r'<{0}:([a-zA-Z\._0-9]+?)[^>]*>(.*)</{0}:\1>'.format(namespace), re.I|re.M|re.S)
@@ -235,7 +236,7 @@ def parse(text, loader=None, namespace='t', begin_position=0, end_position=None)
         new_txt = parse(text, loader=loader, namespace=namespace, 
             begin_position=b.span(2)[0], end_position=b.span(2)[1])
         data = parse_xml(''.join([begin_txt, new_txt, end_txt]), attr_prefix='')
-        result.append(process_tag(data[tag_name], tag_name, loader))
+        result.append(process_tag(data[tag_name], tag_name, loader, log=log))
 
         start = span[1]
     result.append(text[start:end_position])
