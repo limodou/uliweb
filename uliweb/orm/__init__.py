@@ -1848,7 +1848,8 @@ class JsonProperty(TextProperty):
 
     def convert_dump(self, v):
         import json
-        return json.loads(v)
+        if v:
+            return json.loads(v)
 
     def convert(self, value):
         return value

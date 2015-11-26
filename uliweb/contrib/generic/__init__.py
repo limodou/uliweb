@@ -397,16 +397,11 @@ class MultiView(object):
                                     **para)
         return view.run()
 
-    def _add(self, model=None, ok_url=None,
-                    config='AddConfig', json_result=False, **parameters):
-        para = self._collect_parameters(self._edit_parameters, parameters, config)
-        para['ok_url'] = ok_url
+    def _add(self, model, json_result=False, **kwargs):
 
-        self._process_fields_convert_map(para)
+        self._process_fields_convert_map(kwargs)
 
-        json_result = self._get_arg(json_result, 'json_result', config)
-        view = functions.AddView(self._get_model(model),
-                                    **para)
+        view = functions.AddView(model, **kwargs)
         return view.run(json_result=json_result)
 
     def _edit(self, model=None, ok_url=None, obj=None,
