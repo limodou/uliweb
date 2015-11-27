@@ -539,11 +539,11 @@ def pretty_dict(d, leading=' ', newline='\n', indent=0, tabstop=4, process=None)
         if process:
             k, v = process(k, v)
         if isinstance(v, dict):
-            yield '%s%s : %s' % (indent*tabstop*leading, k, newline)
+            yield '%s%s : %s' % (indent*tabstop*leading, simple_value(k), newline)
             for x in pretty_dict(v, leading=leading, newline=newline, indent=indent+1, tabstop=tabstop):
                 yield x
             continue
-        yield '%s%s : %s%s' % (indent*tabstop*leading, k, simple_value(v), newline)
+        yield '%s%s : %s%s' % (indent*tabstop*leading, simple_value(k), simple_value(v), newline)
 
 def request_url(req=None):
     """
