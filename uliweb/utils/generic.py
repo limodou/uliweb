@@ -2539,7 +2539,7 @@ class QueryView(object):
         static_fields=None, hidden_fields=None, post_created_form=None, 
         layout=None, get_form_field=None, links=None):
 
-        self.model = model
+        self.model = functions.get_model(model)
         self.ok_url = ok_url
         self.form = form
         if success_msg:
@@ -2547,6 +2547,7 @@ class QueryView(object):
         if fail_msg:
             self.fail_msg = fail_msg
         self.data = data or {}
+        self.result = {}
         self.get_form_field = get_form_field
         
         #default_data used for create object
@@ -2564,15 +2565,15 @@ class QueryView(object):
         self.layout = layout
         
     def get_fields(self):
-        f = []
-        for field_name, prop in get_fields(self.model, self.fields, self.meta):
-            d = prop.copy()
+        fields = []
+        for f in self.fields:
+            d = self._make_form_field(self.model, f)
+            field_name = d['name']
             d['static'] = bool(field_name in self.static_fields)
             d['hidden'] = bool(field_name in self.hidden_fields)
             d['required'] = False
-            d['field'] = prop.get('field')
-            f.append(d)
-        return f
+            fields.append(d)
+        return fields
     
     def get_layout(self):
         if self.layout:
@@ -2581,7 +2582,16 @@ class QueryView(object):
             m = getattr(self.model, self.meta)
             if hasattr(m, 'layout'):
                 return getattr(m, 'layout')
-    
+
+        layout = []
+        for x in self.fields:
+            if isinstance(x, str):
+                layout.append(x)
+            else:
+                layout.append(x['name'])
+        self.layout = layout
+        return self.layout
+
     def make_form(self):
         import uliweb.form as form
         from uliweb.form.layout import QueryLayout
@@ -2634,9 +2644,6 @@ class QueryView(object):
     def run(self):
         from uliweb import request
         
-        if isinstance(self.model, str):
-            self.model = get_model(self.model)
-            
         if not self.form:
             self.form = self.make_form()
         
@@ -2644,10 +2651,157 @@ class QueryView(object):
         if flag:
 #            d = self.default_data.copy()
             if self.data:
-                for k, v in self.data.iteritems():
+                for k, v in self.data.items():
                     if not self.form.data.get(k):
                         self.form.data[k] = v
-            return self.form.data.copy()
+            self.result = self.form.data.copy()
         else:
-            return {}
+            self.result = {}
+        return self.result
 
+    def _make_form_field(self, model, field):
+        from uliweb.utils.generic import make_form_field
+        from uliweb.form import get_field_cls
+
+        if isinstance(field, str):
+            d = {'name':field, 'field':make_form_field(field, model, use_default_value=False)}
+        elif isinstance(field, dict):
+            d = field
+            if 'field' not in field:
+                _type = field.get('type')
+                if _type:
+                    field_cls = get_field_cls(_type)
+                else:
+                    field_cls = None
+                field['extra'] = field.get('kwargs', {})
+                d['field'] = make_form_field(field, model=model,
+                                                      use_default_value=False,
+                                                      field_cls=field_cls)
+        elif isinstance(field, (tuple, list)):
+            d = {'name':field[0], 'field':field[1]}
+        else:
+            raise ValueError("Field type is not right, should be str or dict, but %r found" % type(field))
+
+        # if 'prop' not in d:
+        #     if hasattr(model, d['name']):
+        #         d['prop'] = getattr(model, d['name'])
+        #     else:
+        #         d['prop'] = None
+        return d
+
+    def _make_like(self, column, format, value):
+        """
+        make like condition
+        :param column: column object
+        :param format: '%_' '_%' '%_%'
+        :param value: column value
+        :return: condition object
+        """
+        c = []
+        if format.startswith('%'):
+            c.append('%')
+        c.append(value)
+        if format.endswith('%'):
+            c.append('%')
+        return column.like(''.join(c))
+
+    def _make_op(self, column, op, value):
+        """
+        make op condition
+        :param column: column object
+        :param op: gt >, lt <, ge >=, ne !=, le <=, eq ==, in in_,
+        :param value: volumn value
+        :return: condition object
+        """
+        if not op:
+            return None
+        if op == 'gt':
+            return column>value
+        elif op == 'lt':
+            return column<value
+        elif op == 'ge':
+            return column>=value
+        elif op == 'le':
+            return column<=value
+        elif op == 'eq':
+            return column==value
+        elif op == 'ne':
+            return column!=value
+        elif op == 'in':
+            return column.in_(value)
+        else:
+            raise KeyError('Not support this op[%s] value' % op)
+
+    def _get_query_condition(self, model, fields, values):
+        from sqlalchemy import true, and_
+
+        condition = true()
+
+        for v in fields:
+            if isinstance(v, (tuple, list)):
+                v = {'name':v[0]}
+            elif not isinstance(v, dict):
+                v = {'name':v}
+            name = v['name']
+            if name in values:
+                render = v.get('render')
+                value = values[name]
+                if not value:
+                    continue
+                _cond = None
+                if render:
+                    _cond = render(model, name, value, values)
+                else:
+                    column = model.c[name]
+                    if 'like' in v:
+                        _cond = self._make_like(column, v['like'], value)
+                    elif 'op' in v:
+                        _cond = self._make_op(column, v['op'], value)
+                    else:
+                        if isinstance(value, (tuple, list)):
+                            _cond = column.in_(value)
+                        else:
+                            _cond = column==value
+                if _cond is not None:
+                    condition = and_(_cond, condition)
+
+        log.debug("condition=%s", condition)
+        return condition
+
+    def get_condition(self, values=None):
+        from sqlalchemy import true, and_
+
+        values = values or self.result
+        condition = true()
+        model = self.model
+
+        for v in self.fields:
+            if isinstance(v, (tuple, list)):
+                v = {'name':v[0]}
+            elif not isinstance(v, dict):
+                v = {'name':v}
+            name = v['name']
+            if name in values:
+                render = v.get('render')
+                value = values[name]
+                if not value:
+                    continue
+                _cond = None
+                if render:
+                    _cond = render(model, name, value, values)
+                else:
+                    column = model.c[name]
+                    if 'like' in v:
+                        _cond = self._make_like(column, v['like'], value)
+                    elif 'op' in v:
+                        _cond = self._make_op(column, v['op'], value)
+                    else:
+                        if isinstance(value, (tuple, list)):
+                            _cond = column.in_(value)
+                        else:
+                            _cond = column==value
+                if _cond is not None:
+                    condition = and_(_cond, condition)
+
+        log.debug("condition=%s", condition)
+        return condition
