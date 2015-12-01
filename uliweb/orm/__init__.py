@@ -1473,7 +1473,11 @@ class Property(object):
         kwargs['index'] = self.kwargs.get('index', False)
         kwargs['unique'] = self.kwargs.get('unique', False)
         #nullable default change to False
-        kwargs['nullable'] = self.kwargs.get('nullable', __nullable__)
+        #primary key will not nullable by default 2015/12/1 limodou
+        if kwargs['primary_key']:
+            kwargs['nullable'] = False
+        else:
+            kwargs['nullable'] = self.kwargs.get('nullable', __nullable__)
         if __server_default__:
             kwargs['server_default' ] = self.kwargs.get('server_default', self.server_default)
         else:
