@@ -2587,6 +2587,8 @@ class QueryView(object):
         for x in self.fields:
             if isinstance(x, str):
                 layout.append(x)
+            elif isinstance(x, (tuple, list)):
+                layout.append(x[0])
             else:
                 layout.append(x['name'])
         self.layout = layout
