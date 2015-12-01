@@ -1276,7 +1276,22 @@ class Dispatcher(object):
         m.sort()
             
         return [x[1] for x in m]
-    
+
+    def get_config(self, config_filename):
+        """
+        Collection all config file in all available apps, and merge them into ini object
+        :return: ini object
+        """
+        x = pyini.Ini(lazy=True, basepath=os.path.join(self.project_dir, 'apps'))
+        for p in reversed(self.apps):
+            app_path = get_app_dir(p)
+            filename = os.path.join(app_path, config_filename)
+            if os.path.exists(filename):
+                x.read(filename)
+
+        x.freeze()
+        return x
+
     def get_template_dirs(self):
         """
         Get templates directory from apps, but in reversed order, so the same named template
