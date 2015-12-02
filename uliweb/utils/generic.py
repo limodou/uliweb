@@ -2658,7 +2658,7 @@ class QueryView(object):
                         self.form.data[k] = v
             self.result = self.form.data.copy()
         else:
-            self.result = {}
+            self.result = self.form.data
         return self.result
 
     def _make_form_field(self, model, field):
@@ -2689,6 +2689,8 @@ class QueryView(object):
         #         d['prop'] = getattr(model, d['name'])
         #     else:
         #         d['prop'] = None
+
+        d['field'].required = False
         return d
 
     def _make_like(self, column, format, value):
