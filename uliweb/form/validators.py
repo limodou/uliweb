@@ -21,7 +21,7 @@ class Validator(object):
             message = unicode(self.message)
         else:
             message = self.message
-        return message % self.extra
+        return message.format(**self.extra)
 
     def validate(self, data, all_data=None):
         return True
@@ -81,7 +81,7 @@ class TEST_IMAGE(Validator):
             data.file.seek(0)
 
 class TEST_IMAGE_SIZE(Validator):
-    default_message = _('The image file size exceeds the limit %(size)r.')
+    default_message = _('The image file size exceeds the limit {size!r}.')
 
     def init(self):
         super(TEST_IMAGE_SIZE, self).init()
@@ -97,7 +97,7 @@ class TEST_IMAGE_SIZE(Validator):
             return True
 
 class TEST_EQUALTO(Validator):
-    default_message = _('Please enter the same value to %(target)s.')
+    default_message = _('Please enter the same value to {target}.')
 
     def init(self):
         super(TEST_EQUALTO, self).init()
@@ -111,7 +111,7 @@ class TEST_EQUALTO(Validator):
         return data == all_data.get(self.args)
 
 class TEST_MINLENGTH(Validator):
-    default_message = _('Please enter at least %(minlength)d characters.')
+    default_message = _('Please enter at least {minlength} characters.')
 
     def init(self):
         super(TEST_MINLENGTH, self).init()
@@ -121,7 +121,7 @@ class TEST_MINLENGTH(Validator):
         return len(data)>=self.args
 
 class TEST_MAXLENGTH(Validator):
-    default_message = _('Please enter no more than %(maxlength)d characters.')
+    default_message = _('Please enter no more than {maxlength} characters.')
 
     def init(self):
         super(TEST_MAXLENGTH, self).init()
@@ -131,7 +131,7 @@ class TEST_MAXLENGTH(Validator):
         return len(data)<=self.args
 
 class TEST_RANGELENGTH(Validator):
-    default_message = _('Please enter a value between %(minlength)d and %(maxlength)d characters long.')
+    default_message = _('Please enter a value between {minlength} and {maxlength} characters long.')
 
     def init(self):
         super(TEST_RANGELENGTH, self).init()
@@ -142,7 +142,7 @@ class TEST_RANGELENGTH(Validator):
         return self.args[0] <= _len <= self.args[1]
 
 class TEST_MIN(Validator):
-    default_message = _('Please enter a value greater than or equal to %(min)d.')
+    default_message = _('Please enter a value greater than or equal to {min}.')
 
     def init(self):
         super(TEST_MIN, self).init()
@@ -152,7 +152,7 @@ class TEST_MIN(Validator):
         return data>=self.args
 
 class TEST_MAX(Validator):
-    default_message = _('Please enter a value less than or equal to %(max)d.')
+    default_message = _('Please enter a value less than or equal to {max}.')
 
     def init(self):
         super(TEST_MAX, self).init()

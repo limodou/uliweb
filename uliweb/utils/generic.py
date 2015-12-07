@@ -19,6 +19,25 @@ log = logging.getLogger(__name__)
 __default_fields_builds__ = {}
 class __default_value__(object):pass
 
+from uliweb.form.validators import Validator
+class TEST_DUPLICATE(Validator):
+    default_message = _('The entry is duplicate.')
+
+    def init(self):
+        super(TEST_DUPLICATE, self).init()
+        self.model = self.args['model']
+        self.field = self.args['field']
+        self.condition = self.args.get('condition')
+
+    def validate(self, data, all_data=None):
+        if self.condition is not None:
+            if self.model.filter(self.field == data).filter(self.condition).any():
+                return False
+        else:
+            if self.model.filter(self.field == data).any():
+                return False
+        return True
+
 def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
     if not __default_fields_builds__:
         from uliweb import settings
