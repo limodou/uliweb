@@ -61,7 +61,7 @@ from uliweb.utils import date as _date
 from uliweb.utils.common import (flat_list, classonlymethod, simple_value, 
     safe_str, import_attr)
 from sqlalchemy import *
-from sqlalchemy.sql import select, ColumnElement, text, true, and_
+from sqlalchemy.sql import select, ColumnElement, text, true, and_, false
 from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
@@ -2447,6 +2447,12 @@ class Result(object):
     def all(self):
         return self
 
+    def empty(self):
+        """
+        return empty query set
+        """
+        return self.filter(false())
+
     def join(self, model, cond, isouter=False):
         _join = None
         model = get_model(model, engine_name=self.model.get_engine_name(),
@@ -4265,6 +4271,10 @@ class Model(object):
     def all(cls, **kwargs):
         return Result(cls, **kwargs)
         
+    @classmethod
+    def empty(cls, **kwargs):
+        return Result(cls, **kwargs).filter(false())
+
     @classmethod
     def filter(cls, *condition, **kwargs):
         return Result(cls, **kwargs).filter(*condition)

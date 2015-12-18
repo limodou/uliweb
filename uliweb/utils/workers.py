@@ -74,7 +74,7 @@ class Worker(object):
                  name=None,
                  args=None, kwargs=None):
         self.log = log or default_log
-        self.max_requests = max_requests
+        self.max_requests = max_requests or sys.maxint
         self.soft_memory_limit = soft_memory_limit
         self.hard_memory_limit = hard_memory_limit
         self.timeout = timeout
@@ -131,12 +131,15 @@ class Worker(object):
             self.log.info("%s %d cancelled by reaching timeout %ds" %
                           (self.name, self.pid, self.timeout))
         else:
-            self.log.info('%s %d cancelled by reaching max requests count [%d]' % (
+            self.log.info('%s %d cancelled by reaching max requests count [%d]'
+                          ' or exception occorred' % (
+
                 self.name, self.pid, self.max_requests))
 
     def signal_handler(self, signum, frame):
         self.is_exit = 'signal'
         self.log.info ("%s %d received a signal %d" % (self.name, self.pid, signum))
+        sys.exit(0)
 
     def reached_soft_memory_limit(self, mem):
         if self.soft_memory_limit and mem >= self.soft_memory_limit:
@@ -195,7 +198,7 @@ class Manager(object):
         pids = {}
 
         try:
-            while not self.is_exit:
+            while 1:
                 for i, worker in enumerate(self.workers):
                     pid = pids.get(i)
                     create = False
@@ -251,8 +254,8 @@ class Manager(object):
             os.kill(pid, sig)
 
     def signal_handler(self, signum, frame):
-        self.is_exit = True
         self.log.info ("Process %d received a signal %d" % (self.pid, signum))
+        sys.exit(0)
 
 
 if __name__ == '__main__':

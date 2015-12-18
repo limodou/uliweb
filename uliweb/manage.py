@@ -1507,7 +1507,9 @@ def collect_files(options, apps_dir, apps):
                 ext = os.path.splitext(fpath)[1]
                 if ext in ['.py', '.ini']:
                     files.append(fpath)
-    
+                if ext == '.html' and 'taglibs' in fpath:
+                    files.append(fpath)
+
     from uliweb import get_app_dir
     for p in apps:
         path = get_app_dir(p)

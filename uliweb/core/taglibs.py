@@ -187,13 +187,12 @@ class Loader(object):
                 if self.cache.has(tag_file):
                     return self.cache[tag_file]
                 else:
-                    if not os.path.exists(tag_file):
-                        raise ValueError("Tag {} template file {} can't be found".format(tag, tag_file))
-                    else:
+                    if os.path.exists(tag_file):
                         with open(tag_file) as f:
                             text = f.read()
                             self.cache.set(tag_file, text)
                         return text
+            raise ValueError("Tag {} template file {} can't be found".format(tag, tag_file))
 
         else:
             raise ValueError("Tag {} can't be found".format(tag))
