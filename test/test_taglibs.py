@@ -88,7 +88,11 @@ def test_5():
 # </t:breadcrumb>"""
 
 t = """<t:form_input_field name="title" label="label" required="required">
-    <input type="text" value="value" placeholder="placeholder" help="help"></input>
+    <input type="text" value="value" placeholder="placeholder" help="help">
+    <![CDATA[
+    <h3>CDATA</h3>
+    ]]>
+    </input>
 </t:form_input_field>
 """
 
