@@ -16,12 +16,12 @@ class TransactionMiddle(Middleware):
             return response
         finally:
             CommitAll()
-                
+
             #add post_commit process
             if hasattr(response, 'post_commit') and response.post_commit:
                 response.post_commit()
                 
-            if hasattr(res, 'post_commit') and res.post_commit:
+            if response is not res and hasattr(res, 'post_commit') and res.post_commit:
                 res.post_commit()
             
     def process_exception(self, request, exception):
