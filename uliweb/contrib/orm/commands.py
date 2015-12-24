@@ -761,6 +761,7 @@ are you sure to load data""" % options.engine
                     msg = 'SKIPPED(Mapping Table)'
                     print '[%s] Loading %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
                 continue
+            msg = ''
             if global_options.verbose:
                 msg = '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
             try:
