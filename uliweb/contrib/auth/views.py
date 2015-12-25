@@ -44,7 +44,10 @@ def register():
     if request.method == 'POST':
         flag = form.validate(request.params)
         if flag:
-            f, d = create_user(username=form.username.data, password=form.password.data)
+            from uliweb import settings
+            f, d = create_user(username=form.username.data,
+                password=form.password.data,
+                auth_type=settings.AUTH.AUTH_TYPE_DEFAULT)
             if f:
                 #add auto login support 2012/03/23
                 login(d)
