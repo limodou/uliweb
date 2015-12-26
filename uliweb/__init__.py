@@ -7,7 +7,7 @@ __author__ = 'limodou'
 __author_email__ = 'limodou@gmail.com'
 __url__ = 'https://github.com/limodou/uliweb'
 __license__ = 'BSD'
-version = __version__ = '0.4.1'
+version = __version__ = '0.5b'
 
 import os, sys
 workpath = os.path.dirname(__file__)
@@ -36,6 +36,7 @@ class Middleware(object):
 #you should use %load_ext uliweb to load it
 #it'll add settings, functions, application to global environment
 def load_ipython_extension(ipython):
-    from uliweb.utils.ipython_extension import make_shell_env
+    from uliweb.utils.ipython_extension import make_shell_env, patch_ipython
+    patch_ipython()
     ipython.push(make_shell_env())
 

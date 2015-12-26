@@ -21,3 +21,20 @@ def make_shell_env(**kwargs):
     env = {'application':app, 'settings':settings, 'functions':functions}
     return env
 
+def patch_ipython():
+    from IPython.lib import pretty
+    import IPython.core.formatters as formatters
+
+    def _safe_get_formatter_method(obj, name):
+        """Safely get a formatter method
+
+        Enable classes formatter method
+        """
+        method = pretty._safe_getattr(obj, name, None)
+        if callable(method):
+            # obj claims to have repr method...
+            if callable(pretty._safe_getattr(obj, '_ipython_canary_method_should_not_exist_', None)):
+                # ...but don't trust proxy objects that claim to have everything
+                return None
+            return method
+    formatters._safe_get_formatter_method = _safe_get_formatter_method
