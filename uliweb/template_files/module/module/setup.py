@@ -1,3 +1,5 @@
+#import uliweb
+#from uliweb.utils.setup import setup
 import re
 import os
 

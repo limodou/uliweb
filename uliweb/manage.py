@@ -273,6 +273,53 @@ class MakeProjectCommand(Command):
             os.rename(os.path.join(project_name, '.gitignore.template'), os.path.join(project_name, '.gitignore'))
 register_command(MakeProjectCommand)
 
+class MakeModuleCommand(Command):
+    name = 'makemodule'
+    help = 'Create a new uliweb module directory according the module name'
+    args = 'module_name'
+    check_apps_dirs = False
+
+    def handle(self, options, global_options, *args):
+        from uliweb.utils.common import extract_dirs
+        from uliweb.core.template import template_file
+
+        if not args:
+            module_name = ''
+            while not module_name:
+                module_name = raw_input('Please enter module name:')
+        else:
+            module_name = args[0]
+
+        if not module_name.startswith('uliweb-'):
+            print 'Please use "uliweb-xxx" to name the module'
+            return
+
+        ans = '-1'
+        if os.path.exists(module_name):
+            if global_options.yes:
+                ans = 'y'
+            while ans not in ('y', 'n'):
+                ans = raw_input('The module directory has been existed, do you want to overwrite it?(y/n)[n]')
+                if not ans:
+                    ans = 'n'
+        else:
+            ans = 'y'
+        if ans == 'y':
+            extract_dirs('uliweb', 'template_files/module', module_name,
+                         verbose=global_options.verbose)
+            #template setup.py
+            setup_file = os.path.join(module_name, 'setup.py')
+            text = template_file(setup_file, {'module_name':module_name})
+            with open(setup_file, 'w') as f:
+                f.write(text)
+            #rename .gitignore.template to .gitignore
+            os.rename(os.path.join(module_name, '.gitignore.template'),
+                      os.path.join(module_name, '.gitignore'))
+            #rename module/module to module_name/module_name
+            os.rename(os.path.join(module_name, 'module'),
+                      os.path.join(module_name, module_name.replace('-', '_')))
+register_command(MakeModuleCommand)
+
 class SupportCommand(Command):
     name = 'support'
     help = 'Add special support to existed project, such as: gae, dotcloud, sae, bae, fcgi, heroku, tornado, gevent, gevent-socketio'
