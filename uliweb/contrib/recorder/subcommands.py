@@ -1,6 +1,6 @@
 import os
 from optparse import make_option
-from uliweb.core.commands import Command
+from uliweb.core.commands import Command, get_answer
 
 class ClearCommand(Command):
     name = 'clear'

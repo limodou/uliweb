@@ -898,7 +898,7 @@ class AddView(object):
     def get_url(self, obj):
         #guess ok_url kwargs, it could be (id) or (obj)
         if callable(self.ok_url):
-            args = inspect.getargspec(self.ok_url).args()
+            args = inspect.getargspec(self.ok_url).args
             kwargs = {}
             _dict = obj.to_dict()
             for k in args:

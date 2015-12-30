@@ -754,13 +754,13 @@ class Dispatcher(object):
         """
         get_file will search from apps directory
         """
-        if os.path.exists(filename):
-            return filename
         dirs = self.apps
         if dir:
             fname = os.path.join(dir, filename)
         else:
             fname = filename
+        if os.path.exists(fname):
+            return fname
         for d in reversed(dirs):
             path = pkg.resource_filename(d, fname)
             if os.path.exists(path):
