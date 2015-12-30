@@ -1236,14 +1236,7 @@ class ShellCommand(Command):
         if global_options.project not in sys.path:
             sys.path.insert(0, global_options.project)
 
-        app = application
-        while app:
-            if isinstance(app, Dispatcher):
-                break
-            else:
-                app = app.app
-        
-        env = {'application':app, 'settings':settings, 'functions':functions}
+        env = {'application':application, 'settings':settings, 'functions':functions}
         return env
     
     def handle(self, options, global_options, *args):

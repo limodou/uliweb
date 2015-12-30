@@ -158,11 +158,13 @@ class Command(object):
     def get_application(self, global_options, default_settings=None):
         from uliweb.manage import make_simple_application
 
-        return make_simple_application(project_dir=global_options.project,
+        app = make_simple_application(project_dir=global_options.project,
             settings_file=global_options.settings, 
             local_settings_file=global_options.local_settings,
             default_settings=default_settings
             )
+        from uliweb import application
+        return application
         
     def run_from_argv(self, prog, subcommand, global_options, argv):
         """

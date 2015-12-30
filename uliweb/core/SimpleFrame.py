@@ -754,13 +754,13 @@ class Dispatcher(object):
         """
         get_file will search from apps directory
         """
+        if os.path.exists(filename):
+            return filename
         dirs = self.apps
         if dir:
             fname = os.path.join(dir, filename)
         else:
             fname = filename
-        if os.path.exists(fname):
-            return fname
         for d in reversed(dirs):
             path = pkg.resource_filename(d, fname)
             if os.path.exists(path):
@@ -796,7 +796,15 @@ class Dispatcher(object):
 
     def render(self, templatefile, vars, env=None, default_template=None, content_type='text/html', status=200):
         return Response(self.template(templatefile, vars, env, default_template=default_template), status=status, content_type=content_type)
-    
+
+    def parse_tag_xml(self, xml):
+        from uliweb.core.taglibs import parse_xml
+        return parse_xml(xml)
+
+    def parse_tag(self, xml):
+        from uliweb.core.taglibs import parse
+        return parse(xml, self.taglibs_loader)
+
     def _page_not_found(self, description=None, **kwargs):
         description = 'The requested URL "{{=url}}" was not found on the server.'
         text = """<h1>Page Not Found</h1>
