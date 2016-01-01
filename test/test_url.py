@@ -209,7 +209,6 @@ def test_not_replace():
     ...     @expose('/print')
     ...     def pnt(self):
     ...         return {}
-    ...     @expose(skip=True)
     ...     def test(self):
     ...         pass
     >>> for v in sorted(rules.merge_rules(), key=lambda x:(x[1], x[2])):
@@ -219,6 +218,7 @@ def test_not_replace():
     test_url.TestView1.test /test1/test
     test_url.TestView2.index /test2/index
     test_url.TestView2.pnt /print
+    test_url.TestView2.test /test2/test
     test_url.TestView2.ttt /ttt
     """
 
@@ -338,7 +338,7 @@ def test_url_route():
     >>> rules.set_app_rules()
     >>> rules.set_urlroute_rules({'0':
     ...     ('/test', '/demo'),
-    ...     '1':('(/hhhh)', r'/name\\1')
+    ...     '1':('(/hhhh)', r'/name\\1'),
     ... })
     >>> def view():pass
     >>> f = expose('/hello')(view)

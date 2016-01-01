@@ -787,15 +787,19 @@ class Dispatcher(object):
                                             **args)
 
 
-    def template(self, filename, vars=None, env=None, default_template=None):
+    def template(self, filename, vars=None, env=None, default_template=None, layout=None):
         vars = vars or {}
         env = env or self.get_view_env()
         
-        t = self.template_loader.load(filename, default_template=default_template)
+        t = self.template_loader.load(filename, layout=layout,
+                                      default_template=default_template)
         return t.generate(vars, env)
 
-    def render(self, templatefile, vars, env=None, default_template=None, content_type='text/html', status=200):
-        return Response(self.template(templatefile, vars, env, default_template=default_template), status=status, content_type=content_type)
+    def render(self, templatefile, vars, env=None, default_template=None,
+               content_type='text/html', status=200, layout=None):
+        return Response(self.template(templatefile, vars, env,
+                                      default_template=default_template, layout=layout),
+                        status=status, content_type=content_type)
 
     def parse_tag_xml(self, xml):
         from uliweb.core.taglibs import parse_xml
@@ -969,6 +973,16 @@ class Dispatcher(object):
 
         if isinstance(result, dict):
             result = Storage(result)
+            if hasattr(response, 'layout'):
+                _layout = response.layout
+            else:
+                _layout = handler.func_dict.get('__layout__')
+            if _layout:
+                layout = _layout
+                if callable(layout):
+                    layout = layout()
+            else:
+                layout = None
             if hasattr(response, 'template'):
                 tmpfile = response.template
             else:
@@ -992,7 +1006,7 @@ class Dispatcher(object):
                 d = ['default.html', self.default_template]
             else:
                 d = None
-            response.write(self.template(tmpfile, result, env, default_template=d))
+            response.write(self.template(tmpfile, result, env, default_template=d, layout=layout))
         elif isinstance(result, string_types):
             response.write(result)
         elif isinstance(result, (Response, BaseResponse)):

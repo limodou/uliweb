@@ -109,17 +109,12 @@ def expose(rule=None, **kwargs):
 
 class Expose(object):
     def __init__(self, rule=None, restful=False, replace=False, template=None,
-                 skip=False, **kwargs):
+                 layout=None, **kwargs):
         self.restful = restful
         self.replace = replace
         self.template = template
-        self.skip = skip
+        self.layout = layout
         if inspect.isfunction(rule) or inspect.isclass(rule):
-            if self.skip:
-                rule.__rule_skip__ = True
-                return
-            else:
-                rule.__rule_skip__ = False
             self.parse_level = 1
             self.rule = None
             self.kwargs = {}
@@ -191,11 +186,6 @@ class Expose(object):
     
     def parse(self, f):
         if inspect.isfunction(f) or inspect.ismethod(f):
-            if self.skip:
-                f.func_dict['__rule_skip__'] = True
-                return
-            else:
-                f.func_dict['__rule_skip__'] = False
             func, result = self.parse_function(f)
             a = __exposes__.setdefault(func, [])
             a.append(result)
@@ -212,8 +202,7 @@ class Expose(object):
         f.__exposed_url__ = prefix
         for name in dir(f):
             func = getattr(f, name)
-            if (inspect.ismethod(func) or inspect.isfunction(func)) and not name.startswith('_') \
-                    and not getattr(func, '__rule_skip__', None):
+            if (inspect.ismethod(func) or inspect.isfunction(func)) and not name.startswith('_'):
                 if hasattr(func, '__exposed__') and func.__exposed__:
                     new_endpoint = '.'.join([f.__module__, f.__name__, name])
                     if func.im_func in __exposes__:
@@ -283,6 +272,7 @@ class Expose(object):
                     func.func_dict['__saved_rule__'] = list(x)
                     func.func_dict['__old_rule__'] = {'rule':rule, 'clsname':clsname}
                     func.func_dict['__template__'] = None
+                    func.func_dict['__layout__'] = None
                     func.func_dict['__fixed_url__'] = False
 
     def _get_url(self, appname, prefix, f):
@@ -339,6 +329,7 @@ class Expose(object):
         f.func_dict['__old_rule__'][rule] = self.rule
         f.func_dict['__old_rule__']['clsname'] = clsname
         f.func_dict['__template__'] = self.template
+        f.func_dict['__layout__'] = self.layout
         f.func_dict['__fixed_url__'] = fixed_url
 
         kw = self.kwargs.copy()
