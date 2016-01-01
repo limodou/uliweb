@@ -322,7 +322,7 @@ register_command(MakeModuleCommand)
 
 class SupportCommand(Command):
     name = 'support'
-    help = 'Add special support to existed project, such as: gae, dotcloud, sae, bae, fcgi, heroku, tornado, gevent, gevent-socketio'
+    help = 'Add special support to existed project, such as: tornado, gevent, gevent-socketio'
     args = 'supported_type'
     check_apps_dirs = True
 
