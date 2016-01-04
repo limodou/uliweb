@@ -527,7 +527,59 @@ class ExportStaticCommand(Command):
                 print 'Compress %s to %s' % (sfile, dfile)
             return True
 register_command(ExportStaticCommand)
-    
+
+
+class ExportconfigjsCommand(Command):
+    #change the name to real command name, such as makeapp, makeproject, etc.
+    name = 'exportconfigjs'
+    #command line parameters definition
+    option_list = (
+        make_option('-d', '--directory', dest='directory', default='.',
+            help='Output config.js to this directory.'),
+        make_option('-a', '--app', dest='app', default='',
+            help='Output config.js to this appname/static.'),
+    )
+    #help information
+    help = 'Export requirejs config.js. If no filename, it will be config.js'
+    #args information, used to display show the command usage message
+    args = '[filename]'
+    #if True, it'll check the current directory should has apps directory
+    check_apps_dirs = True
+    #if True, it'll check args parameters should be valid apps name
+    check_apps = False
+    #if True, it'll skip not predefined parameters in options_list, otherwise it'll
+    #complain not the right parameters of the command, it'll used in subcommands or
+    #passing extra parameters to a special command
+    skip_options = False
+    #if inherit the base class option_list, default True is inherit
+    options_inherit = True
+
+
+    def handle(self, options, global_options, *args):
+        self.get_application(global_options)
+
+        from uliweb import application, settings, get_app_dir
+
+        if args:
+            fname = args[0]
+        else:
+            fname = 'config.js'
+        filename = application.get_file(fname, dir='template_files')
+        path = []
+        if options.app:
+            path.append(os.path.join(get_app_dir(options.app), 'static'))
+        path.append(options.directory)
+        path.append(fname)
+        o_filename = os.path.join(*path)
+        dir = os.path.dirname(o_filename)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        with open(o_filename, 'w') as f:
+            f.write(application.template(filename, {'modules':settings.UI_MODULES}))
+        print 'Output config file to {}'.format(o_filename)
+register_command(ExportconfigjsCommand)
+
+
 class ExportCommand(Command):
     name = 'export'
     help = 'Export all installed apps or specified module source files to output directory.'
