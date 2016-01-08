@@ -9,6 +9,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from pprint import pprint
 from copy import deepcopy
 import datetime
+from uliweb.utils.common import safe_unicode
 
 re_filter = re.compile(r'(\w+)(?:\((.*?)\))?')
 
@@ -19,7 +20,7 @@ def _date(cell, data, f, _var=None, _sh=None):
     return cell.value
 
 def _link(cell, data, text, _var=None, _sh=None):
-    t = text.format(_var)
+    t = safe_unicode(text).format(**_var)
     cell.value = data
     cell.hyperlink = t
     return cell.value
@@ -53,11 +54,11 @@ class Converter(object):
                 if '(' in c:
                     b = re_filter.match(c)
                     if b:
-                        f = '{0}(cell, value, {1}, _var=_var, _sh=_sh)'.format(b.group(1), b.group(2))
+                        f = u'{0}(cell, value, {1}, _var=_var, _sh=_sh)'.format(b.group(1), b.group(2))
                     else:
                         raise ValueError("Filter {} format is not right.".format(c))
                 else:
-                    f = '{}(cell, value, _var=_var, _sh=_sh)'.format(c)
+                    f = u'{}(cell, value, _var=_var, _sh=_sh)'.format(c)
                 self.filter.append(f)
 
     def __call__(self, cell, data, env, sheet=None):
