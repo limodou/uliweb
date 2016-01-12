@@ -76,7 +76,13 @@ class MultiView(object):
         """
         :param model:
         :return: (query, condition)
+
+        Default use QueryForm
         """
+        QueryForm = functions.get_form('QueryForm')
+
+        if 'form_cls' not in kwargs:
+            kwargs['form_cls'] = QueryForm
         query = functions.QueryView(model, **kwargs)
         return query
 

@@ -2610,7 +2610,7 @@ class QueryView(object):
                 layout.append(x[0])
             else:
                 layout.append(x['name'])
-        self.layout = layout
+        self.layout = [tuple(layout)]
         return self.layout
 
     def make_form(self):
