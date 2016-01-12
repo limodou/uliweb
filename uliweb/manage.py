@@ -558,7 +558,7 @@ class ExportconfigjsCommand(Command):
     def handle(self, options, global_options, *args):
         self.get_application(global_options)
 
-        from uliweb import application, settings, get_app_dir
+        from uliweb import application, get_app_dir
 
         if args:
             fname = args[0]
@@ -574,8 +574,10 @@ class ExportconfigjsCommand(Command):
         dir = os.path.dirname(o_filename)
         if not os.path.exists(dir):
             os.makedirs(dir)
+
+        ini = application.get_config('ui_modules.ini')
         with open(o_filename, 'w') as f:
-            f.write(application.template(filename, {'modules':settings.UI_MODULES}))
+            f.write(application.template(filename, {'modules':ini.UI_MODULES}))
         print 'Output config file to {}'.format(o_filename)
 register_command(ExportconfigjsCommand)
 
