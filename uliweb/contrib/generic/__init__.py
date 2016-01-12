@@ -108,6 +108,11 @@ class MultiView(object):
 
         if 'data' in request.values:
             return json(view.json())
+        elif 'download' in request.GET:
+            filename = download_filename or 'download.xls'
+            kwargs.setdefault('action', 'download')
+            kwargs.setdefault('timeout', 0)
+            return view.download(filename, **kwargs)
         else:
             result = view.run()
             if queryview:
@@ -139,4 +144,34 @@ class MultiView(object):
         view = functions.DeleteView(model, obj=obj, **kwargs)
         return view.run(json_result=json_result)
 
+    def _select_list(self, queryview=None, download_filename=None, **kwargs):
+        from uliweb import request, json
 
+        if queryview:
+            queryview.run()
+            condition = queryview.get_condition()
+        else:
+            condition = None
+
+        if 'condition' in kwargs:
+            condition = and_(condition, kwargs['condition'])
+            kwargs['condition'] = condition
+        else:
+            kwargs['condition'] = condition
+
+        view = functions.SelectListView(**kwargs)
+        if 'data' in request.values:
+            return json(view.json())
+        elif 'download' in request.GET:
+            filename = download_filename or 'download.xls'
+            kwargs.setdefault('action', 'download')
+            kwargs.setdefault('timeout', 0)
+            return view.download(filename, **kwargs)
+        else:
+            result = view.run()
+            if queryview:
+                result.update({'query_form':queryview.form})
+            else:
+                result.update({'query_form':''})
+            result.update({'table':view})
+            return result
