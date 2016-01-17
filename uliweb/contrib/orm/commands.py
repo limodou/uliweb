@@ -1196,7 +1196,7 @@ class ReflectCommand(SQLCommandMixin, Command):
 
     def handle(self, options, global_options, *args):
         from sqlalchemy import Table
-        from uliweb.orm import reflect_model
+        from uliweb.orm import reflect_table_model
 
         engine = get_engine(options, global_options)
 
@@ -1217,7 +1217,7 @@ class ReflectCommand(SQLCommandMixin, Command):
             table = Table(name, meta)
             try:
                 insp.reflecttable(table, None)
-                print reflect_model(table)
+                print reflect_table_model(table)
                 print '\n'
             except Exception as e:
                 import traceback

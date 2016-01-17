@@ -2296,7 +2296,7 @@ class ListView(SimpleListView):
         
         if not self.id:
             self.id = self.model.tablename
-        
+
         #create table header
         self.table_info = self.get_table_info()
         

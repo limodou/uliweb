@@ -26,7 +26,7 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'begin_sql_monitor', 'close_sql_monitor', 'set_model_config', 'text',
     'get_object', 'get_cached_object',
     'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
-    'NotFound', 'reflect_model',
+    'NotFound', 'reflect_table',
     'get_field_type', 'create_model', 'get_metadata', 'migrate_tables',
     'print_model', 'get_model_property',
     ]
@@ -1137,21 +1137,34 @@ def close_sql_monitor(monitor):
     dispatch.unbind('post_do', monitor.post_do)
     monitor.close()
 
-def reflect_model(table):
+def reflect_table(tablename, engine_name='default'):
+    from sqlalchemy.engine.reflection import Inspector
+    from sqlalchemy import MetaData, Table
+
+    if isinstance(engine_name, (str, unicode)):
+        engine = engine_manager[engine_name].engine
+    else:
+        engine = engine_name
+    if not isinstance(tablename, Table):
+        meta = MetaData()
+        table = Table(tablename, meta)
+        insp = Inspector.from_engine(engine)
+        insp.reflecttable(table, None)
+        return table
+    else:
+        return tablename
+
+def reflect_table_data(table, engine_name='default'):
     """
     Write table to Model code
     """
+    table = reflect_table(table, engine_name)
+
     from uliweb.utils.sorteddict import SortedDict
 
     field_type_map = {'VARCHAR':'str', 'INTEGER':'int', 'FLOAT':'float'}
 
-    code = ['class {}(Model):'.format(table.name.title())]
-    code.append('''    """
-    Description:
-    """
-
-    __tablename__ = '{}\''''.format(table.name))
-
+    meta = {}
     columns = SortedDict()
     #write columns
     _primary_key = None
@@ -1210,12 +1223,8 @@ def reflect_model(table):
         field_type = field_type_map.get(field_type, field_type)
         columns[k] = field_type, kwargs
 
-    #process id
-    if 'id' not in columns:
-        code.append('    __without_id__ = True\n')
-    # if _primary_key:
-    #     code.append('    _primary_field = {}'.format(_primary_key))
-        
+    meta['columns'] = columns
+
     indexes = []
     for index in table.indexes:
         cols = list(index.columns)
@@ -1231,18 +1240,42 @@ def reflect_model(table):
             indexes.append({'name':index.name, 'columns':[x.name for x in index.columns],
                             'unique':index.unique})
 
+    meta['indexes'] = indexes
+    return meta
+
+def reflect_table_model(table, engine_name='default'):
+    """
+    Write table to Model code
+    """
+    table = reflect_table(table, engine_name)
+
+    meta = reflect_table_data(table)
+
+    code = ['class {}(Model):'.format(table.name.title())]
+    code.append('''    """
+    Description:
+    """
+
+    __tablename__ = '{}\''''.format(table.name))
+
+    #process id
+    if 'id' not in meta['columns']:
+        code.append('    __without_id__ = True\n')
+    # if _primary_key:
+    #     code.append('    _primary_field = {}'.format(_primary_key))
+        
     #output columns text
-    for k, v in columns.items():
+    for k, v in meta['columns'].items():
         kwargs = ', '.join([v[0]] + ['{0}={1!r}'.format(x, y) for x, y in v[1].items()])
         txt = " "*4 + "{0} = Field({1})".format(k, kwargs)
         code.append(txt)
 
     #output index text
-    if indexes:
+    if meta['indexes']:
         code.append("""
     @classmethod
     def OnInit(cls):""")
-    for index in indexes:
+    for index in meta['indexes']:
         buf = []
         buf.append(index['name'])
         for c in index['columns']:
