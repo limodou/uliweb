@@ -170,6 +170,36 @@ def _unparse(input_dict):
 def _unparse_full(tag_name, input_dict):
     return unparse(input_dict, child_only=False, tag_name=tag_name)
 
+def _get_list(v):
+    v = v or []
+    if not isinstance(v, (tuple, list)):
+        return [v]
+    else:
+        return v
+
+def _get_options(v):
+    d = {}
+    for x in _get_list(v):
+        d[x['_attrs']['name']] = x['_text']
+    return d
+
+def _has_attr(v, attr):
+    if not v:
+        return False
+    return attr in v.get('_attrs', {})
+
+def _get_attr(v, attr=None):
+    if not v:
+        return ''
+    if not attr:
+        return v.get('_attrs', {})
+    return v.get('_attrs', {}).get(attr, '')
+
+def _get_text(v):
+    if not v:
+        return ''
+    return v.get('_text', '')
+
 class Loader(object):
     def __init__(self, tags=None, tags_dir=None, max_size=None, check_modified_time=False):
         self.tags = tags or {}
@@ -208,7 +238,9 @@ def process_tag(data, tag, loader, log=None):
     if not t:
         raise ValueError("Tag {} can't be found".format(tag))
 
-    env = {'to_attrs':_to_attrs, 'xml':_unparse, 'xml_full':_unparse_full}
+    env = {'to_attrs':_to_attrs, 'xml':_unparse, 'xml_full':_unparse_full,
+           'get_list':_get_list, 'get_options':_get_options, 'has_attr':_has_attr,
+           'get_attr':_get_attr, 'get_text':_get_text}
 
     return template(t, data, env=env, begin_tag='{%', end_tag='%}', log=log, multilines=True)
 
