@@ -157,7 +157,7 @@ def json(data, **json_kwargs):
     from uliweb import request
 
     if 'content_type' not in json_kwargs:
-        if request.accept_mimetypes.accept_json:
+        if 'application/json' in [x.strip() for x in request.headers['Accept'].split(',')]:
             json_kwargs['content_type'] = 'application/json; charset=utf-8'
         else:
             json_kwargs['content_type'] = 'text/plain; charset=utf-8'
