@@ -30,6 +30,9 @@ from uliweb import UliwebError
 #from rules import Mapping, add_rule
 from . import rules
 
+CONTENT_TYPE_JSON = 'application/json; charset=utf-8'
+CONTENT_TYPE_TEXT = 'text/plain; charset=utf-8'
+
 try:
     set
 except:
@@ -158,9 +161,9 @@ def json(data, **json_kwargs):
 
     if 'content_type' not in json_kwargs:
         if 'application/json' in [x.strip() for x in request.headers['Accept'].split(',')]:
-            json_kwargs['content_type'] = 'application/json; charset=utf-8'
+            json_kwargs['content_type'] = CONTENT_TYPE_JSON
         else:
-            json_kwargs['content_type'] = 'text/plain; charset=utf-8'
+            json_kwargs['content_type'] = CONTENT_TYPE_TEXT
         
     if callable(data):
         @wraps(data)

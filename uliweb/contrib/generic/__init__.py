@@ -88,7 +88,7 @@ class MultiView(object):
 
 
     def _list(self, model, queryview=None, **kwargs):
-        from uliweb import request, json
+        from uliweb import request, json, CONTENT_TYPE_JSON
         from sqlalchemy import and_
 
         if queryview:
@@ -107,7 +107,7 @@ class MultiView(object):
         view = self._list_view(model=model, **kwargs)
 
         if 'data' in request.values:
-            return json(view.json())
+            return json(view.json(), content_type=CONTENT_TYPE_JSON)
         elif 'download' in request.GET:
             filename = download_filename or 'download.xls'
             kwargs.setdefault('action', 'download')
