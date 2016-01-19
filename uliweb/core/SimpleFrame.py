@@ -154,8 +154,13 @@ def function(fname, *args, **kwargs):
         raise UliwebError("Can't find the function [%s] in settings" % fname)
  
 def json(data, **json_kwargs):
+    from uliweb import request
+
     if 'content_type' not in json_kwargs:
-        json_kwargs['content_type'] = 'application/json; charset=utf-8'
+        if request.accept_mimetypes.accept_json:
+            json_kwargs['content_type'] = 'application/json; charset=utf-8'
+        else:
+            json_kwargs['content_type'] = 'text/plain; charset=utf-8'
         
     if callable(data):
         @wraps(data)
