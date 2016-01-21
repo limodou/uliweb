@@ -157,21 +157,28 @@ def function(fname, *args, **kwargs):
         raise UliwebError("Can't find the function [%s] in settings" % fname)
  
 def json(data, **json_kwargs):
-    from uliweb import request
+    def set_content_type():
+        from uliweb import request
 
-    if 'content_type' not in json_kwargs:
-        if 'application/json' in [x.strip() for x in request.headers['Accept'].split(',')]:
-            json_kwargs['content_type'] = CONTENT_TYPE_JSON
-        else:
-            json_kwargs['content_type'] = CONTENT_TYPE_TEXT
-        
+        if 'content_type' not in json_kwargs:
+            Accept = request.headers['Accept']
+            if Accept == '*/*':
+                json_kwargs['content_type'] = CONTENT_TYPE_JSON
+            else:
+                if 'application/json' in [x.strip() for x in request.headers['Accept'].split(',')]:
+                    json_kwargs['content_type'] = CONTENT_TYPE_JSON
+                else:
+                    json_kwargs['content_type'] = CONTENT_TYPE_TEXT
+
     if callable(data):
         @wraps(data)
         def f(*arg, **kwargs):
+            set_content_type()
             ret = data(*arg, **kwargs)
             return Response(json_dumps(ret), **json_kwargs)
         return f
     else:
+        set_content_type()
         return Response(json_dumps(data), **json_kwargs)
     
 def jsonp(data, **json_kwargs):
