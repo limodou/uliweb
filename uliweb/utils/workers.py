@@ -91,6 +91,8 @@ class Worker(object):
 
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
+        signal.signal(signal.SIGUSR1, self.signal_handler_usr1)
+        signal.signal(signal.SIGUSR2, self.signal_handler_usr2)
 
         self.init()
         self._run()
@@ -137,6 +139,18 @@ class Worker(object):
                 self.name, self.pid, self.max_requests))
 
     def signal_handler(self, signum, frame):
+        self.is_exit = 'signal'
+        self.log.info ("%s %d received a signal %d" % (self.name, self.pid, signum))
+        sys.exit(0)
+
+    def signal_handler_usr1(self, signum, frame):
+        """hard memory limit"""
+        self.is_exit = 'signal'
+        self.log.info ("%s %d received a signal %d" % (self.name, self.pid, signum))
+        sys.exit(0)
+
+    def signal_handler_usr2(self, signum, frame):
+        """soft memory limit"""
         self.is_exit = 'signal'
         self.log.info ("%s %d received a signal %d" % (self.name, self.pid, signum))
         sys.exit(0)
@@ -226,11 +240,11 @@ class Manager(object):
                         try:
                             mem = get_memory(pid)
                             if worker.reached_hard_memory_limit(mem):
+                                self.kill_child(pid, signal.SIGUSR1)
                                 self.log.info('%s %d memory is %dM reaches hard memory limit %dM will be killed.' % (
                                     worker.name, pid, mem, worker.hard_memory_limit))
-                                self.kill_child(pid, signal.SIGKILL)
                             elif worker.reached_soft_memory_limit(mem):
-                                self.kill_child(pid, signal.SIGTERM)
+                                self.kill_child(pid, signal.SIGUSR2)
                                 self.log.info('%s %d memory is %dM reaches soft memory limit %dM will be cannelled.' % (
                                     worker.name, pid, mem, worker.soft_memory_limit))
                         except Exception as e:
