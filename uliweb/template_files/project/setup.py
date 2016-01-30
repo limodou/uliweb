@@ -85,7 +85,7 @@ setup(
     description='{{=project_name}}',
     long_description=desc(),
     package_dir = {'{{=project_name}}':'apps'},
-    packages = ['{{=project_name.replace('-', '_')}}'],
+    packages = ["{{=project_name.replace('-', '_')}}"],
     include_package_data=True,
     zip_safe=False,
     platforms='any',
