@@ -265,10 +265,12 @@ class MakeProjectCommand(Command):
         if ans == 'y':
             extract_dirs('uliweb', 'template_files/project', project_name, verbose=global_options.verbose)
             #template setup.py
-            setup_file = os.path.join(project_name, 'setup.py')
+            setup_file = os.path.join(project_name, 'setup.py.template')
             text = template_file(setup_file, {'project_name':project_name})
-            with open(setup_file, 'w') as f:
+            setup_file_py = os.path.join(project_name, 'setup.py')
+            with open(setup_file_py, 'w') as f:
                 f.write(text)
+            os.unlink(setup_file)
             #rename .gitignore.template to .gitignore
             os.rename(os.path.join(project_name, '.gitignore.template'), os.path.join(project_name, '.gitignore'))
 register_command(MakeProjectCommand)
@@ -308,10 +310,12 @@ class MakeModuleCommand(Command):
             extract_dirs('uliweb', 'template_files/module', module_name,
                          verbose=global_options.verbose)
             #template setup.py
-            setup_file = os.path.join(module_name, 'setup.py')
+            setup_file = os.path.join(module_name, 'setup.py.template')
             text = template_file(setup_file, {'module_name':module_name})
-            with open(setup_file, 'w') as f:
+            setup_file_py = os.path.join(module_name, 'setup.py')
+            with open(setup_file_py, 'w') as f:
                 f.write(text)
+            os.unlink(setup_file)
             #rename .gitignore.template to .gitignore
             os.rename(os.path.join(module_name, '.gitignore.template'),
                       os.path.join(module_name, '.gitignore'))
