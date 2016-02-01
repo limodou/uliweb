@@ -12,7 +12,7 @@ import sys
 import time
 import signal
 import logging
-import psutil
+from .process import pid_exists, wait_pid
 
 default_log = logging.getLogger(__name__)
 
@@ -39,9 +39,10 @@ class Timeout():
 
 def get_memory(pid):
     # return the memory usage in MB
-    _pid, status = os.waitpid(pid, os.WNOHANG)
-    if _pid == 0:
-        process = psutil.Process(pid)
+    from psutil import Process
+
+    if pid_exists(pid):
+        process = Process(pid)
         mem = process.memory_info().rss / float(1024*1024)
         return mem
     return 0
@@ -95,7 +96,13 @@ class Worker(object):
         signal.signal(signal.SIGUSR2, self.signal_handler_usr2)
 
         self.init()
-        self._run()
+        try:
+            self._run()
+            self.on_finished()
+        except Exception as e:
+            self.log.exception(e)
+            self.on_exception(e)
+
         self.after_run()
 
     def init(self):
@@ -106,9 +113,15 @@ class Worker(object):
         time.sleep(1)
         return True
 
+    def on_exception(self, e):
+        pass
+
+    def on_finished(self):
+        pass
+
     def _run(self):
         while (not self.max_requests or
-                   (self.max_requests and self.count < self.max_requests)) and \
+                   (self.max_requests and self.count <= self.max_requests)) and \
                 not self.is_exit:
             try:
                 if self.timeout:
@@ -118,9 +131,6 @@ class Worker(object):
                     ret = self.run()
             except TimeoutException as e:
                 self.log.info('Time out')
-            except Exception as e:
-                self.log.exception(e)
-                return
             finally:
                 self.count += 1
                 if self.check_point:
@@ -132,28 +142,31 @@ class Worker(object):
         elif self.is_exit == 'timeout':
             self.log.info("%s %d cancelled by reaching timeout %ds" %
                           (self.name, self.pid, self.timeout))
-        else:
-            self.log.info('%s %d cancelled by reaching max requests count [%d]'
-                          ' or exception occorred' % (
-
+        elif self.is_exit == 'quit':
+            self.log.info("%s %d quit!" % (self.name, self.pid))
+        elif self.max_requests and self.count>self.max_requests:
+            self.log.info('%s %d cancelled by reaching max requests count [%d]' % (
                 self.name, self.pid, self.max_requests))
+        else:
+            self.log.info('%s %d cancelled by exception occorred' % (
+                self.name, self.pid))
 
     def signal_handler(self, signum, frame):
         self.is_exit = 'signal'
         self.log.info ("%s %d received a signal %d" % (self.name, self.pid, signum))
-        sys.exit(0)
+        os._exit(0)
 
     def signal_handler_usr1(self, signum, frame):
         """hard memory limit"""
         self.is_exit = 'signal'
         self.log.info ("%s %d received a signal %d" % (self.name, self.pid, signum))
-        sys.exit(0)
+        os._exit(0)
 
     def signal_handler_usr2(self, signum, frame):
         """soft memory limit"""
         self.is_exit = 'signal'
         self.log.info ("%s %d received a signal %d" % (self.name, self.pid, signum))
-        sys.exit(0)
+        os._exit(0)
 
     def reached_soft_memory_limit(self, mem):
         if self.soft_memory_limit and mem >= self.soft_memory_limit:
@@ -169,7 +182,7 @@ class Worker(object):
 
 class Manager(object):
     def __init__(self, workers, log=None, check_point=10,
-                 title='Workers Daemon', wait_time=3):
+                 title='Workers Daemon', wait_time=3, daemon=False):
         """
         :param workers: a list of workers
         :param log: log object
@@ -189,6 +202,7 @@ class Manager(object):
         self.check_point = check_point
         self.title = title
         self.wait_time = wait_time
+        self.daemon = daemon
 
     def init(self):
         _len = len(self.title)
@@ -208,84 +222,70 @@ class Manager(object):
         self.run()
         self.after_run()
 
+    def join(self):
+        for child in self.pids.values():
+            if pid_exists(child):
+                wait_pid(child)
+
     def run(self):
-        pids = {}
+        self.pids = pids = {}
 
-        try:
-            while 1:
-                for i, worker in enumerate(self.workers):
-                    pid = pids.get(i)
-                    create = False
-                    if not pid:
+        while 1:
+            for i, worker in enumerate(self.workers):
+                pid = pids.get(i)
+                create = False
+                if not pid:
+                    create = True
+                else:
+                    if not pid_exists(pid):
+                        self.log.info('%s %d is not existed any more.' % (worker.name, pid))
                         create = True
-                    else:
-                        if not psutil.pid_exists(pid):
-                            self.log.info('%s %d is not existed any more.' % (worker.name, pid))
-                            create = True
 
-                    if create:
-                        pid = os.fork()
-                        #main
-                        if pid:
-                            pids[i] = pid
-                        #child
-                        else:
-                            try:
-                                worker.start()
-                            except Exception as e:
-                                self.log.exception(e)
-                            finally:
-                                sys.exit(0)
+                if create:
+                    pid = os.fork()
+                    #main
+                    if pid:
+                        pids[i] = pid
+                    #child
                     else:
                         try:
-                            mem = get_memory(pid)
-                            if worker.reached_hard_memory_limit(mem):
-                                self.kill_child(pid, signal.SIGUSR1)
-                                self.log.info('%s %d memory is %dM reaches hard memory limit %dM will be killed.' % (
-                                    worker.name, pid, mem, worker.hard_memory_limit))
-                            elif worker.reached_soft_memory_limit(mem):
-                                self.kill_child(pid, signal.SIGUSR2)
-                                self.log.info('%s %d memory is %dM reaches soft memory limit %dM will be cannelled.' % (
-                                    worker.name, pid, mem, worker.soft_memory_limit))
+                            worker.start()
                         except Exception as e:
-                            self.log.info(e)
+                            self.log.exception(e)
+                        sys.exit(0)
+                else:
+                    try:
+                        mem = get_memory(pid)
+                        if worker.reached_hard_memory_limit(mem):
+                            self.kill_child(pid, signal.SIGUSR1)
+                            self.log.info('%s %d memory is %dM reaches hard memory limit %dM will be killed.' % (
+                                worker.name, pid, mem, worker.hard_memory_limit))
+                        elif worker.reached_soft_memory_limit(mem):
+                            self.kill_child(pid, signal.SIGUSR2)
+                            self.log.info('%s %d memory is %dM reaches soft memory limit %dM will be cannelled.' % (
+                                worker.name, pid, mem, worker.soft_memory_limit))
+                    except Exception as e:
+                        self.log.info(e)
 
-                time.sleep(self.check_point)
+            if not self.daemon:
+                return
 
-            for i, pid in pids.items():
-                self.kill_child(pid)
-            time.sleep(self.wait_time)
-            self.log.info('Main process %s quit.' % self.pid)
+            time.sleep(self.check_point)
 
-        except KeyboardInterrupt:
-            self.log.info ('Main process %d received Ctrl+C, quit' % os.getpid())
 
     def after_run(self):
         pass
 
     def kill_child(self, pid, sig=signal.SIGTERM):
-        if psutil.pid_exists(pid):
+        if pid_exists(pid):
             os.kill(pid, sig)
+            wait_pid(pid, 3, lambda x:os.kill(x, signal.SIGKILL))
+            wait_pid(pid, 2)
 
     def signal_handler(self, signum, frame):
         self.log.info ("Process %d received a signal %d" % (self.pid, signum))
+        for child in self.pids.values():
+            self.kill_child(child)
         sys.exit(0)
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-
-    class NewWorker(Worker):
-        def run(self):
-            s = []
-            for i in range(50000):
-                s.append(str(i))
-            print ('result=', len(s))
-            time.sleep(1)
-            return True
-
-    workers = [Worker(max_requests=2),
-               NewWorker(max_requests=2, timeout=5, name='NewWorker',
-                         soft_memory_limit=5, hard_memory_limit=10)]
-    manager = Manager(workers, check_point=1)
-    manager.start()

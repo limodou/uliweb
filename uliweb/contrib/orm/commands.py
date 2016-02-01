@@ -12,6 +12,7 @@ from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
 from uliweb.orm import get_connection, set_auto_set_model, do_
 from time import time
+from .load_table_file import load_table_file
 
 def get_engine(options, global_options):
     from uliweb.manage import make_simple_application
@@ -177,49 +178,49 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None,
   
     return 'OK (%d/%lfs)' % (n, time()-b)
 
-class ProcessManager(object):
-    def __init__(self, size=None):
-        from multiprocessing import cpu_count
-
-        self.size = size or cpu_count()
-        self.pids = {}
-
-    def __call__(self, func, *args, **kwargs):
-        from uliweb import orm
-
-        self.clear()
-        if len(self.pids) == self.size:
-            pid, status = os.wait()
-            if pid in self.pids:
-                del self.pids[pid]
-        pid = os.fork()
-        if pid == 0:
-            orm.get_session(create=True)
-            orm.Begin()
-            try:
-                func(*args, **kwargs)
-                orm.Commit()
-            except:
-                orm.Rollback()
-            orm.get_session().close()
-            os._exit(0)
-        else:
-            self.pids[pid] = func, args, kwargs
-
-    def clear(self):
-        import psutil
-
-        for pid in self.pids.keys():
-            if not psutil.pid_exists(pid):
-                del self.pids[pid]
-
-    def join(self):
-        import psutil
-
-        self.clear()
-        for pid in self.pids.keys():
-            p = psutil.Process(pid)
-            p.wait()
+# class ProcessManager(object):
+#     def __init__(self, size=None):
+#         from multiprocessing import cpu_count
+#
+#         self.size = size or cpu_count()
+#         self.pids = {}
+#
+#     def __call__(self, func, *args, **kwargs):
+#         from uliweb import orm
+#
+#         self.clear()
+#         if len(self.pids) == self.size:
+#             pid, status = os.wait()
+#             if pid in self.pids:
+#                 del self.pids[pid]
+#         pid = os.fork()
+#         if pid == 0:
+#             orm.get_session(create=True)
+#             orm.Begin()
+#             try:
+#                 func(*args, **kwargs)
+#                 orm.Commit()
+#             except:
+#                 orm.Rollback()
+#             orm.get_session().close()
+#             os._exit(0)
+#         else:
+#             self.pids[pid] = func, args, kwargs
+#
+#     def clear(self):
+#         import psutil
+#
+#         for pid in self.pids.keys():
+#             if not psutil.pid_exists(pid):
+#                 del self.pids[pid]
+#
+#     def join(self):
+#         import psutil
+#
+#         self.clear()
+#         for pid in self.pids.keys():
+#             p = psutil.Process(pid)
+#             p.wait()
 
 def load_table(table, filename, con, delimiter=',', format=None, 
     encoding='utf-8', delete=True, bulk=100, engine_name=None):
@@ -232,10 +233,8 @@ def load_table(table, filename, con, delimiter=',', format=None,
     table = reflect_table(con, table.name)
     
     if delete:
-        table.drop(con)
+        table.drop(con, checkfirst=True)
         table.create(con)
-        # do_(table.drop(), engine_name)
-        # do_(table.create(), engine_name)
 
     b = time()
     bulk = max(1, bulk)
@@ -753,8 +752,6 @@ are you sure to load data""" % options.engine
                 traceback.print_exc()
                 orm.Rollback()
 
-        manager = ProcessManager(options.multi)
-
         for i, (name, t) in enumerate(tables):
             if hasattr(t, '__mapping_only__') and t.__mapping_only__:
                 if global_options.verbose:
@@ -774,14 +771,12 @@ are you sure to load data""" % options.engine
 
                     #fork process to run
                     if sys.platform != 'win32' and options.multi>1:
-                        manager(_f, t, filename, msg)
+                        load_table_file(t, filename, options.multi, bulk=options.bulk)
                     else:
                         _f(t, filename, msg)
             except:
                 log.exception("There are something wrong when loading table [%s]" % name)
                 orm.Rollback()
-
-        manager.join()
 
         if options.zipfile:
             shutil.rmtree(path)
@@ -793,7 +788,7 @@ class LoadTableCommand(SQLCommandMixin, Command):
     option_list = (
         make_option('-d', dest='dir', default='./data',
             help='Directory of data files.'),
-        make_option('-b', dest='bulk', default='100',
+        make_option('-b', dest='bulk', default='100', type='int',
             help='Bulk number of insert.'),
         make_option('-t', '--text', dest='text', action='store_true', default=False,
             help='Load files in text format.'),
@@ -867,8 +862,6 @@ are you sure to load data""" % (options.engine, ','.join(args))
             except:
                 orm.Rollback()
 
-        manager = ProcessManager(options.multi)
-
         for i, (name, t) in enumerate(tables):
             if t.__mapping_only__:
                 if global_options.verbose:
@@ -879,22 +872,19 @@ are you sure to load data""" % (options.engine, ','.join(args))
                 msg = '[%s] Loading %s...' % (options.engine, show_table(name, t, i, _len))
             else:
                 msg = ''
-            try:
-                filename = os.path.join(path, name+'.txt')
-                if options.text:
-                    format = 'txt'
+
+            filename = os.path.join(path, name+'.txt')
+            if options.text:
+                format = 'txt'
+            else:
+                format = None
+
+                #fork process to run
+                if sys.platform != 'win32' and options.multi>1 and format != 'txt':
+                    load_table_file(t, filename, options.multi, bulk=options.bulk,
+                                    engine=engine, delete=ans=='Y')
                 else:
-                    format = None
-
-                    #fork process to run
-                    if sys.platform != 'win32' and options.multi>1:
-                        manager(_f, t, filename, msg)
-                    else:
-                        _f(t, filename, msg)
-            except:
-                log.exception("There are something wrong when loading table [%s]" % name)
-
-        manager.join()
+                    _f(t, filename, msg)
 
         if options.zipfile:
             shutil.rmtree(path)

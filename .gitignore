@@ -4,3 +4,7 @@
 _git
 *.pyo
 *egg*
+build
+dist
+test/.*
+test/coverage_output
