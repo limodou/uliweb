@@ -2335,7 +2335,7 @@ def test_createtable():
     True
     """
 
-def test_reflect_model():
+def test_reflect_table():
     """
     >>> db = get_connection('sqlite://')
     >>> db.metadata.drop_all()
@@ -2365,7 +2365,7 @@ def test_reflect_model():
     >>> meta = MetaData()
     >>> table = Table('test', meta)
     >>> insp.reflecttable(table, None)
-    >>> print reflect_model(table) # doctest: +REPORT_UDIFF
+    >>> print reflect_table_model(table) # doctest: +REPORT_UDIFF
     class Test(Model):
         \"\"\"
         Description:
@@ -2680,7 +2680,7 @@ def test_uuid_and_new_fields():
     >>> t = User.table
     >>> x = str(CreateTable(t).compile(dialect=engine.dialect)).strip()
     >>> print x.replace('\\t', '').replace('\\n', '')
-    CREATE TABLE test_user (id VARCHAR(32), sid VARBINARY(16), username VARCHAR(255) DEFAULT '', year SMALLINT DEFAULT '0', PRIMARY KEY (id), UNIQUE (id))
+    CREATE TABLE test_user (id VARCHAR(32) NOT NULL, sid VARBINARY(16), username VARCHAR(255) DEFAULT '', year SMALLINT DEFAULT '0', PRIMARY KEY (id), UNIQUE (id))
     >>> x = str(CreateTable(Group.table).compile(dialect=engine.dialect)).strip()
     >>> print x.replace('\\t', '').replace('\\n', '')
     CREATE TABLE test_group (name VARCHAR(20), user VARCHAR(32), id INTEGER NOT NULL, PRIMARY KEY (id))
@@ -2918,31 +2918,69 @@ def test_primary_5():
     ...     username = Field(unicode, max_length=30)
     """
 
+def test_bulk():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode, primary_key=True)
+    ...     year = Field(int, default=30)
+    >>> b = Bulk()
+    >>> b.prepare('insert', User.table.insert().values(username='username', year='year'))
+    >>> b.put('insert', username='u1', year=12)
+    >>> b.put('insert', username='u2', year=13)
+    >>> b.close()
+    >>> print list(User.all())
+    [<User {'username':u'u1','year':12}>, <User {'username':u'u2','year':13}>]
+    >>> b = Bulk()
+    >>> b.prepare('update', User.table.update().values(username='username', year='year').where(User.c.username=='username'))
+    >>> b.put('update', username='u3', year=22, username_1='u1')
+    >>> b.put('update', username='u4', year=23, username_1='u2')
+    >>> b.close()
+    >>> print list(User.all())
+    [<User {'username':u'u3','year':22}>, <User {'username':u'u4','year':23}>]
+    >>> b = Bulk()
+    >>> b.prepare('select', User.table.select().where(User.c.username=='username'))
+    >>> print b.do_('select', username='u3').fetchone()
+    (u'u3', 22)
+    >>> b.prepare('delete', User.table.delete().where(User.c.username=='username'))
+    >>> b.put('delete', username='u3')
+    >>> b.put('delete', username='u4')
+    >>> b.close()
+    >>> print User.count()
+    0
+    """
 if __name__ == '__main__':
     from uliweb import orm
-    db = get_connection('sqlite://')
-    db.metadata.drop_all()
-    class User(Model):
-        username = Field(unicode, primary_key=True)
-        year = Field(int, default=30)
-    class Group(Model):
-        name = Field(unicode, primary_key=True)
-        users = ManyToMany('user', through='usergrouprel')
-    class UserGroupRel(Model):
-        user = Reference('user')
-        group = Reference('group')
-    g = Group(name='group')
-    print g.save()
-    User = get_model('user')
-    User.create()
-    u = User(username='guest')
-    u.save()
-    g.users.add(u)
-    u1 = User.get('guest')
-    print u1
-    print u1.group_set.keys()
-    g1 = Group.get('group')
-    print g1
-    print g1.users.keys()
-    g1.users.remove()
-    print g1.users.keys()
+    # db = get_connection('sqlite://')
+    # db.metadata.drop_all()
+    # class User(Model):
+    #     username = Field(unicode, primary_key=True)
+    #     year = Field(int, default=30)
+    #
+    # Bulk = orm.Bulk
+    # b = Bulk()
+    # b.prepare('insert', User.table.insert().values(username='username', year='year'))
+    # b.put('insert', username='u1', year=12)
+    # b.put('insert', username='u2', year=13)
+    # b.close()
+    #
+    # print list(User.all())
+    #
+    # b = Bulk()
+    # b.prepare('update', User.table.update().values(username='username', year='year').where(User.c.username=='username'))
+    # b.put('update', username='u3', year=22, username_1='u1')
+    # b.put('update', username='u4', year=23, username_1='u2')
+    # b.close()
+    #
+    # print list(User.all())
+    #
+    # b = Bulk()
+    # b.prepare('select', User.table.select().where(User.c.username=='username'))
+    # print b.do_('select', username='u3').fetchone()
+    #
+    # b.prepare('delete', User.table.delete().where(User.c.username=='username'))
+    # b.put('delete', username='u3')
+    # b.put('delete', username='u4')
+    # b.close()
+    # print User.count()

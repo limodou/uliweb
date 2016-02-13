@@ -26,9 +26,9 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'begin_sql_monitor', 'close_sql_monitor', 'set_model_config', 'text',
     'get_object', 'get_cached_object',
     'set_server_default', 'set_nullable', 'set_manytomany_index_reverse',
-    'NotFound', 'reflect_table',
+    'NotFound', 'reflect_table', 'reflect_table_data', 'reflect_table_model',
     'get_field_type', 'create_model', 'get_metadata', 'migrate_tables',
-    'print_model', 'get_model_property',
+    'print_model', 'get_model_property', 'Bulk',
     ]
 
 __auto_create__ = False
@@ -4459,3 +4459,89 @@ class Model(object):
     def get_columns_info(cls):
         for k, v in cls._fields_list:
             yield v.to_column_info()
+
+class Bulk(object):
+    """
+    Used to create bulk update and insert according sql statement
+
+    e.g.
+
+        b = Bulk(transcation=False, size=10, engine_name=None)
+        b.add(name, table.insert().values({'field':'field',...}))
+        b.add(name, table.update().values({'field':'field',...}).where(condition))
+        b.put(name, values)
+        b.close()
+    """
+    def __init__(self, transcation=False, size=1, engine_name=None):
+        self.transcation = transcation
+        self.size = size
+        self.engine_name= engine_name or __default_engine__
+        if isinstance(self.engine_name, (str, unicode)):
+            self.engine = engine_manager[self.engine_name].engine
+        else:
+            self.engine = engine_name
+
+        self.sqles = {}
+
+        if self.transcation:
+            Begin(self.engine_name)
+
+    def prepare(self, name, sql):
+        try:
+            x = sql.compile(dialect=self.engine.dialect)
+            fields = []
+            for i in x.positiontup:
+                n = i.split('_')[0]
+                if n in fields:
+                    fields.append(i)
+                else:
+                    fields.append(n)
+            self.sqles[name] = {'fields':fields, 'raw_sql':unicode(x), 'data':[]}
+        except:
+            if self.transcation:
+                Rollback(self.engine_name)
+            raise
+
+    def do_(self, name, **values):
+        try:
+            sql = self.sqles[name]
+            d = [values[x] for x in sql['fields']]
+            return do_(sql['raw_sql'], args=d)
+        except:
+            if self.transcation:
+                Rollback(self.engine_name)
+            raise
+
+    def put(self, name, **values):
+        """
+        Put data to cach, if reached size value, it'll execute at once.
+        """
+        try:
+            sql = self.sqles[name]
+            data = sql['data']
+            d = [values[x] for x in sql['fields']]
+            data.append(d)
+            if self.size and len(data) >= self.size:
+                do_(sql['raw_sql'], args=data)
+                sql['data'] = []
+        except:
+            if self.transcation:
+                Rollback(self.engine_name)
+            raise
+
+    def close(self):
+        try:
+            for name, d in self.sqles.items():
+                if d['data']:
+                    do_(d['raw_sql'], args=d['data'])
+
+            if self.transcation:
+                Commit(self.engine_name)
+        except:
+            if self.transcation:
+                Rollback(self.engine_name)
+            raise
+
+
+
+
