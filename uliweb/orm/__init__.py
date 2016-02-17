@@ -4491,16 +4491,22 @@ class Bulk(object):
             x = sql.compile(dialect=self.engine.dialect)
             fields = []
             for i in x.positiontup:
-                n = i.split('_')[0]
-                if n in fields:
-                    fields.append(i)
+                n, tail = i.rsplit('_', 1)
+                if tail.isdigit():
+                    if n in fields:
+                        fields.append(i)
+                    else:
+                        fields.append(n)
                 else:
-                    fields.append(n)
+                    fields.append(i)
             self.sqles[name] = {'fields':fields, 'raw_sql':unicode(x), 'data':[]}
         except:
             if self.transcation:
                 Rollback(self.engine_name)
             raise
+
+    def get_sql(self, name):
+        return self.sqles[name]['raw_sql']
 
     def do_(self, name, **values):
         try:
