@@ -2925,30 +2925,35 @@ def test_bulk():
     >>> class User(Model):
     ...     username = Field(unicode, primary_key=True)
     ...     year = Field(int, default=30)
+    ...     nick_name = Field(str, max_length=30)
     >>> b = Bulk()
     >>> b.prepare('insert', User.table.insert().values(username='username', year='year'))
     >>> b.put('insert', username='u1', year=12)
     >>> b.put('insert', username='u2', year=13)
     >>> b.close()
     >>> print list(User.all())
-    [<User {'username':u'u1','year':12}>, <User {'username':u'u2','year':13}>]
+    [<User {'username':u'u1','year':12,'nick_name':u''}>, <User {'username':u'u2','year':13,'nick_name':u''}>]
     >>> b = Bulk()
     >>> b.prepare('update', User.table.update().values(username='username', year='year').where(User.c.username=='username'))
     >>> b.put('update', username='u3', year=22, username_1='u1')
     >>> b.put('update', username='u4', year=23, username_1='u2')
     >>> b.close()
     >>> print list(User.all())
-    [<User {'username':u'u3','year':22}>, <User {'username':u'u4','year':23}>]
+    [<User {'username':u'u3','year':22,'nick_name':u''}>, <User {'username':u'u4','year':23,'nick_name':u''}>]
     >>> b = Bulk()
     >>> b.prepare('select', User.table.select().where(User.c.username=='username'))
     >>> print b.do_('select', username='u3').fetchone()
-    (u'u3', 22)
+    (u'u3', 22, None)
     >>> b.prepare('delete', User.table.delete().where(User.c.username=='username'))
     >>> b.put('delete', username='u3')
     >>> b.put('delete', username='u4')
     >>> b.close()
     >>> print User.count()
     0
+    >>> from sqlalchemy import select
+    >>> b.prepare('select_2', select([User.c.nick_name, User.c.username]).where(User.c.nick_name=='nick_name'))
+    >>> print b.sqles['select_2']['fields']
+    [u'nick_name']
     """
 if __name__ == '__main__':
     from uliweb import orm
