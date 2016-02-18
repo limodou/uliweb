@@ -35,7 +35,7 @@ class Timeout():
         signal.alarm(0)    # disable alarm
 
     def raise_timeout(self, *args):
-        raise TimeoutException()
+        raise TimeoutException("Timeout {}s".format(self.sec))
 
 def get_memory(pid):
     # return the memory usage in MB
