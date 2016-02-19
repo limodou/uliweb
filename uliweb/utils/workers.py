@@ -38,11 +38,15 @@ class Timeout():
         raise TimeoutException("Timeout {}s".format(self.sec))
 
 def get_memory(pid):
-    # return the memory usage in MB
-    from psutil import Process
+    # return the memory usage in MB, psutil should be 4.0 version
+    from psutil import Process, __version__
+
+    # if __version__ < '4.0.0':
+    #     raise Exception('psutil module should be 4.0.0 version at least.')
 
     if pid_exists(pid):
         process = Process(pid)
+        # mem = process.memory_full_info().uss / float(1024*1024)
         mem = process.memory_info().rss / float(1024*1024)
         return mem
     return 0

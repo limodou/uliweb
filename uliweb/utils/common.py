@@ -748,6 +748,21 @@ def format_size(size):
         value = old_n
     return str(value)+unit
 
+def convert_bytes(n):
+    """
+    Convert a size number to 'K', 'M', .etc
+    """
+    symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+    prefix = {}
+    for i, s in enumerate(symbols):
+        prefix[s] = 1 << (i + 1) * 10
+    for s in reversed(symbols):
+        if n >= prefix[s]:
+            value = float(n) / prefix[s]
+            return '%.1f%s' % (value, s)
+    return "%sB" % n
+
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:
