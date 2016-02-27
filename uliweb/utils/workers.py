@@ -136,7 +136,9 @@ class Worker(object):
             except TimeoutException as e:
                 self.log.info('Time out')
             finally:
-                self.count += 1
+                # !important
+                # count shoud be calculated by child class
+                # self.count += 1
                 if self.check_point:
                     time.sleep(self.check_point)
 
@@ -241,6 +243,8 @@ class Manager(object):
                 if not pid:
                     create = True
                 else:
+                    #reap child process !important
+                    os.waitpid(pid, os.WNOHANG)
                     if not pid_exists(pid):
                         self.log.info('%s %d is not existed any more.' % (worker.name, pid))
                         create = True
