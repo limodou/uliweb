@@ -2668,6 +2668,9 @@ class Result(object):
             if self._having:
                 query = query.having(*self._having)
         return query
+
+    def __str__(self):
+        return rawsql(self.get_query())
     
     def load(self, values):
         if self._values_flag:

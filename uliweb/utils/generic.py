@@ -17,6 +17,7 @@ from uliweb.utils.sorteddict import SortedDict
 
 log = logging.getLogger(__name__)
 __default_fields_builds__ = {}
+max_reference_field_count = 100
 class __default_value__(object):pass
 
 from uliweb.form.validators import Validator
@@ -128,6 +129,11 @@ class ReferenceSelectField(SelectField):
                         query = query.order_by(f)
             if self.condition is not None:
                 query = query.filter(self.condition)
+            #test query count if large than 100 then output log
+            _count = query.count()
+            if _count > max_reference_field_count:
+                log.error('ReferenceSelectField query [{}] count is {} great than {}'.format(
+                            str(query), _count, max_reference_field_count))
             if self.group_field:
                 query = query.order_by(model.c[self.group_field].asc())
             if self.group_field:
