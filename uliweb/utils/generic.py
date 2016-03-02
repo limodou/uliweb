@@ -72,9 +72,17 @@ def get_sort_field(model, sort_field='sort', order_name='asc'):
         order_by = []
         orders = request.values.getlist('order')
         for i, f in enumerate(sort_fields):
+            _order = 'asc'
+            if not orders:
+                if f.endswith('.asc') or f.endswith('.desc'):
+                    f, _order = f.rsplit('.', 1)
+                else:
+                    continue
             field = get_field(f)
             if field is not None:
-                if orders[i] == 'asc':
+                if orders:
+                    _order = orders[i]
+                if _order == 'asc':
                     order_by.append(field)
                 else:
                     order_by.append(field.desc())
