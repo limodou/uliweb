@@ -84,12 +84,13 @@ def find(plugin, *args, **kwargs):
                     c[t] = [x.format(**config) for x in c[t]]
             mod = c
         else:
-            for p in app.apps:
+            for p in reversed(app.apps):
                 if not is_pyfile_exist(os.path.join(get_app_dir(p), 'template_plugins'), plugin):
                     continue
                 module = '.'.join([p, 'template_plugins', plugin])
                 try:
                     mod = __import__(module, fromlist=['*'])
+                    break
                 except ImportError as e:
                     log.exception(e)
                     mod = None
