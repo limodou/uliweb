@@ -172,12 +172,13 @@ class BaseField(object):
         """
         Convert data to html value format.
         """
+
         if py:
             value = self.to_html(data)
         else:
             value = data
         if self.static:
-            return str('<span class="value">%s</span>' % value)
+            return str('<span class="value">%s</span>' % safe_str(value))
         else:
             if self.hidden:
                 build = Hidden

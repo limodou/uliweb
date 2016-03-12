@@ -289,6 +289,8 @@ class Manager(object):
             os.kill(pid, sig)
             wait_pid(pid, 3, lambda x:os.kill(x, signal.SIGKILL))
             wait_pid(pid, 2)
+        #remove pid
+        self.pids.pop(pid, None)
 
     def signal_handler(self, signum, frame):
         self.log.info ("Process %d received a signal %d" % (self.pid, signum))
