@@ -138,7 +138,10 @@ class ReferenceSelectField(SelectField):
             if self.condition is not None:
                 query = query.filter(self.condition)
             #test query count if large than 100 then output log
-            _count = query.count()
+            if isinstance(query, (list, tuple)):
+                _count = len(query)
+            else:
+                _count = query.count()
             if _count > max_reference_field_count:
                 log.error('ReferenceSelectField query [{}] count is {} great than {}'.format(
                             str(query), _count, max_reference_field_count))
