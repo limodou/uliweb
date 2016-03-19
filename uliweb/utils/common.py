@@ -413,6 +413,8 @@ def expand_path(path):
     use pkg_resources to get the path of the package
     
     update: 0.2.5 changed from ${} to $[]
+
+    Also apply with os.path.expandvars(os.path.expanduser(path))
     """
     from uliweb import application
     
@@ -422,7 +424,8 @@ def expand_path(path):
             return application.apps_dir
         else:
             return pkg.resource_filename(txt, '')
-    return re.sub(r_expand_path, replace, path)
+    p = re.sub(r_expand_path, replace, path)
+    return os.path.expandvars(os.path.expanduser(path))
 
 def date_in(d, dates):
     """

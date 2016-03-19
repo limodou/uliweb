@@ -231,6 +231,9 @@ def to_string(dt, microsecond=False, timezone=True):
 
 re_time = re.compile(r'(\d+)([s|ms|h|m])')
 def parse_time(t):
+    """
+    Parse string time format to microsecond
+    """
     if isinstance(t, (str, unicode)):
         b = re_time.match(t)
         if b:

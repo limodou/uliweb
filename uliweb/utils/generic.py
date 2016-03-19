@@ -983,16 +983,18 @@ class AddView(object):
         return data
     
     def execute(self, json_result=False):
+        import copy
+
         flag = self._post_protect()
         if flag:
             flag = self.form.validate(*self._get_data())
             
         if flag:
-            d = self.default_data.copy()
+            d = copy.deepcopy(self.default_data)
             d.update(self.form.data)
             return self.on_success(d, json_result)
         else:
-            d = self.template_data.copy()
+            d = copy.deepcopy(self.template_data)
             data = self.prepare_static_data(self.form.data)
             self._pre_protect(data)
             self.form.bind(data)
