@@ -43,28 +43,28 @@ def test_2():
     <button class="btn btn-primary">Submit</button>
     """
 
-def test_3():
-    """
-    >>> t = \"\"\"
-    ... Text
-    ... <t:panel a="b">
-    ... <head>head</head>
-    ... <t:button class="primary">Submit</t:button>
-    ... </t:panel>
-    ... End\"\"\"
-    >>> print parse(t, loader) # doctest: +REPORT_UDIFF
-    <BLANKLINE>
-    Text
-    <div a="b" class=" panel">
-      <div class="panel-head">
-        <h3>head</h3>
-    <BLANKLINE>
-            <button class="btn btn-primary">Submit</button>
-    <BLANKLINE>
-      </div>
-    </div>
-    End
-    """
+# def test_3():
+#     """
+#     >>> t = \"\"\"
+#     ... Text
+#     ... <t:panel a="b">
+#     ... <head>head</head>
+#     ... <t:button class="primary">Submit</t:button>
+#     ... </t:panel>
+#     ... End\"\"\"
+#     >>> print parse(t, loader) # doctest: +REPORT_UDIFF
+#     <BLANKLINE>
+#     Text
+#     <div a="b" class=" panel">
+#       <div class="panel-head">
+#         <h3>head</h3>
+#     <BLANKLINE>
+#             <button class="btn btn-primary">Submit</button>
+#     <BLANKLINE>
+#       </div>
+#     </div>
+#     End
+#     """
 
 def test_4():
     """
@@ -78,6 +78,28 @@ def test_5():
     >>> t = '<t:bs.button>Submit</t:bs.button>'
     >>> print parse(t, loader)
     <button class="btn">Submit</button>
+    <BLANKLINE>
+    """
+
+def test_6():
+    """
+    >>> t = \"\"\"<t:form_input_field name="title" label="label" required="required">
+    ...     <input type="text" value="value" placeholder="placeholder" help="help">
+    ...     <![CDATA[
+    ...     <h3>CDATA</h3>
+    ...     ]]>
+    ...     </input>
+    ... </t:form_input_field>
+    ... \"\"\"
+    >>> print parse_xml(t)
+    OrderedDict([(u'form_input_field', {u'input': {'_text': u'<h3>CDATA</h3>', '_attrs': OrderedDict([(u'type', u'text'), (u'value', u'value'), (u'placeholder', u'placeholder'), (u'help', u'help')])}, '_text': u'', '_attrs': OrderedDict([(u'name', u'title'), (u'label', u'label'), (u'required', u'required')])})])
+    """
+
+def test_7():
+    """
+    >>> t = '<t:bs.button class="{{<< 123}}">Submit</t:bs.button>'
+    >>> print parse(t, loader)
+    <button class="btn btn-{{<< 123}}">Submit</button>
     <BLANKLINE>
     """
 
@@ -146,3 +168,5 @@ def test_5():
 # loader = Loader(tags)
 # print parse_xml(t)
 # print parse(t, loader, log=log)
+
+
