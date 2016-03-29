@@ -95,9 +95,33 @@ def test_6():
     OrderedDict([(u'form_input_field', {u'input': {'_text': u'<h3>CDATA</h3>', '_attrs': OrderedDict([(u'type', u'text'), (u'value', u'value'), (u'placeholder', u'placeholder'), (u'help', u'help')])}, '_text': u'', '_attrs': OrderedDict([(u'name', u'title'), (u'label', u'label'), (u'required', u'required')])})])
     """
 
+def test_6_1():
+    """
+    >>> t = \"\"\"<t:form_input_field name="title" label="label" required="required">
+    ...     <input type="text" value="value" placeholder="placeholder" help="help">
+    ...     <![[
+    ...     <h3>CDATA</h3>
+    ...     ]]>
+    ...     </input>
+    ... </t:form_input_field>
+    ... \"\"\"
+    >>> print parse_xml(t)
+    OrderedDict([(u'form_input_field', {u'input': {'_text': u'<h3>CDATA</h3>', '_attrs': OrderedDict([(u'type', u'text'), (u'value', u'value'), (u'placeholder', u'placeholder'), (u'help', u'help')])}, '_text': u'', '_attrs': OrderedDict([(u'name', u'title'), (u'label', u'label'), (u'required', u'required')])})])
+    """
+
 def test_7():
     """
     >>> t = '<t:bs.button class="{{<< 123}}">Submit</t:bs.button>'
+    >>> print parse(t, loader)
+    <button class="btn btn-{{<< 123}}">Submit</button>
+    <BLANKLINE>
+    """
+
+def test_8():
+    """
+    >>> t = \'\'\'<t:bs.button class="{{<< 123}}">Submit
+    ... <!-- <a href="#">aaa</a> -->
+    ... </t:bs.button>\'\'\'
     >>> print parse(t, loader)
     <button class="btn btn-{{<< 123}}">Submit</button>
     <BLANKLINE>

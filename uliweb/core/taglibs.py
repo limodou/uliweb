@@ -246,6 +246,19 @@ class ParseXML(object):
                         self.pos = end_pos + 3
                     else:
                         raise ParseError("<![CDATA[ is not completed!")
+                elif self.match('<![['):
+                    end_pos = self.text.find(']]>', self.pos+4)
+                    if end_pos != -1:
+                        self.top['_text'] += self.decode(self.text[self.pos+4:end_pos].strip())
+                        self.pos = end_pos + 3
+                    else:
+                        raise ParseError("<![[ is not completed!")
+                elif self.match('<!--'):
+                    end_pos = self.text.find('-->', self.pos+4)
+                    if end_pos != -1:
+                        self.pos = end_pos + 3
+                    else:
+                        raise ParseError("Comment is not completed!")
                 else:
                     self.parse_begin_tag()
             else:
