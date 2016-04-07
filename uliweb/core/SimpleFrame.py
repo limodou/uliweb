@@ -161,14 +161,17 @@ def json(data, **json_kwargs):
         from uliweb import request
 
         if 'content_type' not in json_kwargs:
-            Accept = request.headers['Accept']
-            if Accept == '*/*':
-                json_kwargs['content_type'] = CONTENT_TYPE_JSON
-            else:
-                if 'application/json' in [x.strip() for x in request.headers['Accept'].split(',')]:
+            if request and 'Accept' in request.headers:
+                Accept = request.headers['Accept']
+                if Accept == '*/*':
                     json_kwargs['content_type'] = CONTENT_TYPE_JSON
                 else:
-                    json_kwargs['content_type'] = CONTENT_TYPE_TEXT
+                    if 'application/json' in [x.strip() for x in request.headers['Accept'].split(',')]:
+                        json_kwargs['content_type'] = CONTENT_TYPE_JSON
+                    else:
+                        json_kwargs['content_type'] = CONTENT_TYPE_TEXT
+            else:
+                json_kwargs['content_type'] = CONTENT_TYPE_TEXT
 
     if callable(data):
         @wraps(data)

@@ -92,6 +92,7 @@ def find(plugin, *args, **kwargs):
                     mod = __import__(module, fromlist=['*'])
                     break
                 except ImportError as e:
+                    log.info('Module path is {}'.format(os.path.join(get_app_dir(p), 'template_plugins', plugin)))
                     log.exception(e)
                     mod = None
         if mod:
