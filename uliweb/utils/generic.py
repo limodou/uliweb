@@ -482,7 +482,12 @@ def make_form_field(field, model=None, field_cls=None,
                 field_type = form.SelectField
                 kwargs['choices'] = prop.get_choices()
             else:
-                field_type = form.UnicodeField
+                if cls.__name__ == 'FileProperty':
+                    field_type = form.FileField
+                    kwargs['upload_to'] = prop.upload_to
+                    kwargs['upload_to_sub'] = prop.upload_to_sub
+                else:
+                    field_type = form.UnicodeField
         elif type_name == 'BOOL':
             field_type = form.BooleanField
         elif type_name == 'DATE':
@@ -517,10 +522,6 @@ def make_form_field(field, model=None, field_cls=None,
             kwargs['model'] = prop.reference_class
             kwargs['value_field'] = prop.reference_fieldname
             field_type = ReferenceSelectField
-        elif type_name == 'FILE':
-            field_type = form.FileField
-            kwargs['upload_to'] = prop.upload_to
-            kwargs['upload_to_sub'] = prop.upload_to_sub
         else:
             raise ValueError("Can't support the Property [%s=%s]" %
                              (field['name'], prop.__class__.__name__))
@@ -832,7 +833,7 @@ class AddView(object):
                     flag = True
             if not flag:
                 field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
-            
+
             if field:
                 DummyForm.add_field(f['name'], field, True)
         
