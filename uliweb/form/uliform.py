@@ -777,7 +777,6 @@ class Form(object):
         self.form_method = method or self.form_method
         self.form_title = title or self.form_title
         self.form_class = _class or self.form_class
-        self.form_id = id or self.form_id
         self.kwargs = kwargs
         buttons = buttons or self.form_buttons or [str(Button(value=_('Submit'), _class="btn btn-primary", name="submit", type="submit"))]
         if buttons:
@@ -802,11 +801,8 @@ class Form(object):
         if 'class' not in self.html_attrs:
             self.html_attrs['class'] = ''
 
-        if self.form_id:
-            self.html_attrs['id'] = self.form_id
-
         self.form_class = self.html_attrs.get('class')
-        self.form_id = self.html_attrs.get('id')
+        self.form_id = id or self.html_attrs.get('id') or self.form_id
 
         self.bind(data or {}, errors or {})
         self.__init_validators()
