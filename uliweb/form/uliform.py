@@ -156,6 +156,7 @@ class BaseField(object):
     def clone(self):
         b = object.__new__(self.__class__)
         b.__dict__ = copy.deepcopy(self.__dict__)
+        return b
 
     def to_python(self, data):
         """
