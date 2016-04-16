@@ -11,6 +11,8 @@ class DirCommand(Command):
             help='Only matches extension. E.g. .txt'),
         make_option('-x', '--exclude_extensions', dest='exclude_extensions', action='append', default=[],
             help='Not matches extension.'),
+        make_option('-r', '--recursion', dest='recursion', action='store_true', default=False,
+            help='Recursion the directory.'),
         make_option('-d', '--days', dest='days', type='int', default=7,
             help='Delta days before now.'),
     )
@@ -22,23 +24,24 @@ class DirCommand(Command):
         for d in args:
             self.clean_dir(d, extensions=options.extensions,
                            exclude_extensions=options.exclude_extensions,
-                           days=options.days,
+                           days=options.days, recursion=options.recursion,
                            verbose=global_options.verbose)
 
-    def clean_dir(self, dir, extensions, exclude_extensions, days, verbose=False):
+    def clean_dir(self, dir, extensions, exclude_extensions, recursion, days, verbose=False):
         from uliweb.utils.common import walk_dirs
         import datetime
         from uliweb.utils import date
 
-        if verbose:
-            print 'Clean {}...'.format(dir)
         now = date.now()
         i = 0
-        for f in walk_dirs(dir, include_ext=extensions, exclude_ext=exclude_extensions):
+        for f in walk_dirs(dir, include_ext=extensions, exclude_ext=exclude_extensions,
+                           recursion=recursion, file_only=True):
             t = datetime.datetime.fromtimestamp(os.path.getmtime(f))
             if not days or (days and (now-t).days >= days):
                 try:
                     os.unlink(f)
+                    if verbose:
+                        print 'Clean filename {}...'.format(f)
                     i += 1
                 except:
                     import traceback
