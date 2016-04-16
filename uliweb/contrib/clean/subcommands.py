@@ -8,7 +8,9 @@ class DirCommand(Command):
     help = 'Clear all files or file patterns in dirs.'
     option_list = (
         make_option('-e', '--extension', dest='extensions', action='append', default=[],
-            help='Only matches extension.'),
+            help='Only matches extension. E.g. .txt'),
+        make_option('-x', '--exclude_extensions', dest='exclude_extensions', action='append', default=[],
+            help='Not matches extension.'),
         make_option('-d', '--days', dest='days', type='int', default=7,
             help='Delta days before now.'),
     )
@@ -19,10 +21,11 @@ class DirCommand(Command):
 
         for d in args:
             self.clean_dir(d, extensions=options.extensions,
+                           exclude_extensions=options.exclude_extensions,
                            days=options.days,
                            verbose=global_options.verbose)
 
-    def clean_dir(self, dir, extensions, days, verbose=False):
+    def clean_dir(self, dir, extensions, exclude_extensions, days, verbose=False):
         from uliweb.utils.common import walk_dirs
         import datetime
         from uliweb.utils import date
@@ -30,14 +33,17 @@ class DirCommand(Command):
         if verbose:
             print 'Clean {}...'.format(dir)
         now = date.now()
-        for f in walk_dirs(dir, include_ext=extensions):
+        i = 0
+        for f in walk_dirs(dir, include_ext=extensions, exclude_ext=exclude_extensions):
             t = datetime.datetime.fromtimestamp(os.path.getmtime(f))
             if not days or (days and (now-t).days >= days):
                 try:
                     os.unlink(f)
+                    i += 1
                 except:
                     import traceback
                     traceback.print_exc()
+        print 'Cleaned {} files'.format(i)
 
 
 class ModelCommand(Command):
