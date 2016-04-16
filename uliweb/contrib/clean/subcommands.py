@@ -35,7 +35,7 @@ class DirCommand(Command):
         now = date.now()
         i = 0
         for f in walk_dirs(dir, include_ext=extensions, exclude_ext=exclude_extensions,
-                           recursion=recursion, file_only=True):
+                           recursion=recursion, file_only=True, use_default_pattern=False):
             t = datetime.datetime.fromtimestamp(os.path.getmtime(f))
             if not days or (days and (now-t).days >= days):
                 try:

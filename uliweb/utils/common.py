@@ -145,7 +145,7 @@ def match(f, patterns):
             return True
         
 def walk_dirs(path, include=None, include_ext=None, exclude=None,
-        exclude_ext=None, recursion=True, file_only=False):
+        exclude_ext=None, recursion=True, file_only=False, use_default_pattern=True):
     """
     path directory path
     resursion True will extract all sub module of mod
@@ -161,7 +161,7 @@ def walk_dirs(path, include=None, include_ext=None, exclude=None,
         raise StopIteration
 
     for r in os.listdir(path):
-        if match(r, exclude) or r in default_exclude:
+        if match(r, exclude) or (use_default_pattern and r in default_exclude):
             continue
         if include and r not in include:
             continue
@@ -175,7 +175,7 @@ def walk_dirs(path, include=None, include_ext=None, exclude=None,
                     yield os.path.normpath(f).replace('\\', '/')
         else:
             ext = os.path.splitext(fpath)[1]
-            if ext in exclude_ext or ext in default_exclude_ext:
+            if ext in exclude_ext or (use_default_pattern and ext in default_exclude_ext):
                 continue
             if include_ext and ext not in include_ext:
                 continue
