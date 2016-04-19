@@ -4319,7 +4319,7 @@ class Model(object):
     def remove(cls, condition=None, **kwargs):
         if isinstance(condition, (tuple, list)):
             condition = cls.c[cls._primary_field].in_(condition)
-        elif condition and not isinstance(condition, ColumnElement):
+        elif condition is not None and not isinstance(condition, ColumnElement):
             condition = cls.c[cls._primary_field]==condition
         #todo
         do_(cls.table.delete(condition, **kwargs), cls.get_session())
