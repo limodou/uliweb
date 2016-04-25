@@ -3768,7 +3768,8 @@ class Model(object):
         d = self._get_data()
         #fix when d is empty, orm will not insert record bug 2013/04/07
         if d or not self._saved or insert:
-            if insert or not self._saved:
+            _id = d.get(self._primary_field, None)
+            if insert or not self._saved or not _id:
                 created = True
                 old = d.copy()
                 
@@ -3795,9 +3796,9 @@ class Model(object):
                     obj = do_(self.table.insert().values(**d), self.get_session())
                     _saved = True
 
-                if obj.inserted_primary_key and self._primary_field:
-                    setattr(self, self._primary_field, obj.inserted_primary_key[0])
-                
+                    if obj.inserted_primary_key and self._primary_field:
+                        setattr(self, self._primary_field, obj.inserted_primary_key[0])
+
                 if _manytomany:
                     for k, v in _manytomany.items():
                         if v:

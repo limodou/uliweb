@@ -2989,3 +2989,13 @@ if __name__ == '__main__':
     # b.put('delete', username='u4')
     # b.close()
     # print User.count()
+
+    db = get_connection('sqlite://')
+    db.metadata.drop_all()
+    class User(Model):
+        username = Field(unicode, primary_key=True)
+        year = Field(int, default=30)
+    print User.properties.keys()
+    print User._primary_field
+    u = User(username='guest')
+    u.save() # doctest:+ELLIPSIS
