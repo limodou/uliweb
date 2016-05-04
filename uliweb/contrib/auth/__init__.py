@@ -2,6 +2,7 @@ from uliweb.orm import get_model
 import logging
 from uliweb.i18n import ugettext_lazy as _
 from uliweb import functions
+from uliweb.utils.common import import_attr
 
 log = logging.getLogger('uliweb.app')
 
@@ -41,8 +42,13 @@ def check_password(raw_password, enc_password):
     Returns a boolean of whether the raw_password was correct. Handles
     encryption formats behind the scenes.
     """
-    algo, salt, hsh = enc_password.split('$')
-    return hsh == get_hexdigest(algo, salt, raw_password)
+    l = enc_password.split('$')
+    #only password of built-in user can split to 3
+    if len(l)==3:
+        algo, salt, hsh = l.split('$')
+        return hsh == get_hexdigest(algo, salt, raw_password)
+    else:
+        return False
 
 def encrypt_password(raw_password):
     import random
@@ -53,7 +59,7 @@ def encrypt_password(raw_password):
 
 def _get_auth_key():
     from uliweb import settings
-    
+
     return settings.AUTH.AUTH_KEY
 
 def get_user():
@@ -61,7 +67,7 @@ def get_user():
     return user
     """
     from uliweb import request
-    
+
     session_key = _get_auth_key()
     user_id = request.session.get(session_key)
     if user_id:
@@ -84,8 +90,8 @@ def create_user(username, password, **kwargs):
     except Exception, e:
         log.exception(e)
         return False, {'_': "Creating user failed!"}
-    
-def authenticate(username, password):
+
+def authenticate_builtin(username, password):
     User = get_model('user')
     if isinstance(username, (str, unicode)):
         user = User.get(User.c.username==username)
@@ -99,15 +105,69 @@ def authenticate(username, password):
     else:
         return False, {'username': _('Username is not existed!')}
 
+def authenticate(username, password, auth_type=None):
+    from uliweb import settings
+
+    auth_type = auth_type or settings.AUTH.AUTHENTICATE_DEFAULT_AUTH_TYPE
+
+    if not auth_type:
+        return authenticate_builtin(username, password)
+    elif isinstance(auth_type,int):
+        auth = settings.AUTH.AUTH_TYPE.get(auth_type,{})
+        func_path = auth.get('authenticate')
+        if func_path:
+            func = import_attr(func_path)
+            f,d = func(username, password)
+            log.info("auth_type:%s(%s) result: %s %s"%(auth["type"],auth["type_caption"],f,d))
+            if f:
+                log.info("log in successfully!")
+                return f,d
+    elif isinstance(auth_type,str):
+        for auth in settings.AUTH.AUTH_TYPE.values:
+            if auth.get('type')==auth_type:
+                func_path = auth.get('authenticate')
+                if func_path:
+                    func = import_attr(func_path)
+                    f,d = func(username, password)
+                    log.info("auth_type:%s(%s) result: %s %s"%(auth["type"],auth["type_caption"],f,d))
+                    if f:
+                        log.info("log in successfully!")
+                        return f,d
+    elif isinstance(auth_type,list):
+        for t in auth_type:
+            if isinstance(auth_type,int):
+                auth = settings.AUTH.AUTH_TYPE.get(t,{})
+                func_path = auth.get('authenticate')
+                if func_path:
+                    func = import_attr(func_path)
+                    f,d = func(username, password)
+                    log.info("auth_type:%s(%s) result: %s %s"%(auth["type"],auth["type_caption"],f,d))
+                    if f:
+                        log.info("log in successfully!")
+                        return f,d
+            elif isinstance(t,str):
+                for auth in settings.AUTH.AUTH_TYPE.values:
+                    if auth.get('type')==t:
+                        func_path = auth.get('authenticate')
+                        if func_path:
+                            func = import_attr(func_path)
+                            f,d = func(username, password)
+                            log.info("auth_type:%s(%s) result: %s %s"%(auth["type"],auth["type_caption"],f,d))
+                            if f:
+                                log.info("log in successfully!")
+                                return f,d
+
+    return False, None
+
 def login(username):
     """
     return user
     """
     from uliweb.utils.date import now
-    from uliweb import request 
-    
+    from uliweb import request
+
     User = get_model('user')
-    
+
     if isinstance(username, (str, unicode)):
         user = User.get(User.c.username==username)
     else:
@@ -117,35 +177,33 @@ def login(username):
     request.session[_get_auth_key()] = user.id
     request.user = user
     return True
-    
+
 def logout():
     """
     Remove the authenticated user's ID from the request.
     """
     from uliweb import request
-    
+
     request.session.delete()
     request.user = None
     return True
 
 def require_login(f=None, next=None):
     from uliweb.utils.common import wraps
-    
+
     def _login(next=None):
         from uliweb import request, Redirect, url_for
-        
+
         if not request.user:
             path = functions.request_url()
             Redirect(next or url_for('login', next=path))
-    
+
     if not f:
         _login(next=next)
         return
-    
+
     @wraps(f)
     def _f(*args, **kwargs):
         _login(next=next)
         return f(*args, **kwargs)
     return _f
-
-    
