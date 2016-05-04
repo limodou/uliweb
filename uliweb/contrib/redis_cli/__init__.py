@@ -35,7 +35,23 @@ def get_redis(**options):
             log.exception(e)
             client = None
     return client
-  
+
+def get_lock(key, value=None, expiry_time=60):
+    """Get a distribute lock"""
+    from uliweb.utils.common import get_uuid
+
+    redis = get_redis()
+    value = value or get_uuid()
+    return redis.set(key, value, ex=expiry_time, nx=True)
+
+def set_lock(key, value=None, expiry_time=60):
+    """Force to set a distribute lock"""
+    from uliweb.utils.common import get_uuid
+
+    redis = get_redis()
+    value = value or get_uuid()
+    return redis.set(key, value, ex=expiry_time, xx=True)
+
 re_compare_op = re.compile(r'^[><=]+')
 def after_init_apps(sender):
     """
