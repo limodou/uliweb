@@ -17,7 +17,7 @@ class User(Model):
     active = Field(bool, verbose_name=_('Active Status'))
     locked = Field(bool, verbose_name=_('Lock Status'))
     deleted = Field(bool, verbose_name=_('Deleted'))
-    auth_type = Field(int, default=get_var('AUTH/AUTH_TYPE_DEFAULT'), verbose_name=_('Auth type'))
+    auth_type = Field(int, default=get_var('AUTH/AUTH_TYPE_BUILTIN'), verbose_name=_('Auth type'))
 
     def set_password(self, raw_password):
         self.password = encrypt_password(raw_password)
