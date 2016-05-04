@@ -4,7 +4,7 @@ from uliweb.i18n import ugettext_lazy as _
 from uliweb import functions
 from uliweb.utils.common import import_attr
 
-log = logging.getLogger('uliweb.app')
+log = logging.getLogger(__name__)
 
 def get_hexdigest(algorithm, salt, raw_password):
     """
@@ -87,11 +87,11 @@ def create_user(username, password, **kwargs):
         user.set_password(password)
         user.save()
         return True, user
-    except Exception, e:
+    except Exception as e:
         log.exception(e)
         return False, {'_': "Creating user failed!"}
 
-def authenticate_builtin(username, password):
+def default_authenticate(username, password):
     User = get_model('user')
     if isinstance(username, (str, unicode)):
         user = User.get(User.c.username==username)
@@ -108,56 +108,24 @@ def authenticate_builtin(username, password):
 def authenticate(username, password, auth_type=None):
     from uliweb import settings
 
-    auth_type = auth_type or settings.AUTH.AUTHENTICATE_DEFAULT_AUTH_TYPE
+    auth_type = auth_type or settings.AUTH.AUTH_DEFAULT_TYPE
 
-    if not auth_type:
-        return authenticate_builtin(username, password)
-    elif isinstance(auth_type,int):
-        auth = settings.AUTH.AUTH_TYPE.get(auth_type,{})
-        func_path = auth.get('authenticate')
-        if func_path:
-            func = import_attr(func_path)
-            f,d = func(username, password)
-            log.info("auth_type:%s(%s) result: %s %s"%(auth["type"],auth["type_caption"],f,d))
-            if f:
-                log.info("log in successfully!")
-                return f,d
-    elif isinstance(auth_type,str):
-        for auth in settings.AUTH.AUTH_TYPE.values:
-            if auth.get('type')==auth_type:
-                func_path = auth.get('authenticate')
-                if func_path:
-                    func = import_attr(func_path)
-                    f,d = func(username, password)
-                    log.info("auth_type:%s(%s) result: %s %s"%(auth["type"],auth["type_caption"],f,d))
-                    if f:
-                        log.info("log in successfully!")
-                        return f,d
-    elif isinstance(auth_type,list):
-        for t in auth_type:
-            if isinstance(auth_type,int):
-                auth = settings.AUTH.AUTH_TYPE.get(t,{})
-                func_path = auth.get('authenticate')
-                if func_path:
-                    func = import_attr(func_path)
-                    f,d = func(username, password)
-                    log.info("auth_type:%s(%s) result: %s %s"%(auth["type"],auth["type_caption"],f,d))
-                    if f:
-                        log.info("log in successfully!")
-                        return f,d
-            elif isinstance(t,str):
-                for auth in settings.AUTH.AUTH_TYPE.values:
-                    if auth.get('type')==t:
-                        func_path = auth.get('authenticate')
-                        if func_path:
-                            func = import_attr(func_path)
-                            f,d = func(username, password)
-                            log.info("auth_type:%s(%s) result: %s %s"%(auth["type"],auth["type_caption"],f,d))
-                            if f:
-                                log.info("log in successfully!")
-                                return f,d
+    err_msg = ''
+    if not isinstance(auth_type, (list, tuple)):
+        auth_type = list(auth_type)
 
-    return False, None
+    for t in auth_type:
+        if t in settings.AUTH_CONFIG:
+            func_path = settings.AUTH_CONFIG[t].get('authenticate')
+            if func_path:
+                func = import_attr(func_path)
+                f, d = func(username, password)
+                if f:
+                    return f, d
+                else:
+                    err_msg = d
+
+    return False, {'username':err_msg}
 
 def login(username):
     """
