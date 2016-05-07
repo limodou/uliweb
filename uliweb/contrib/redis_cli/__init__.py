@@ -1,4 +1,5 @@
 import re
+import time
 __connection_pool__ = None
 
 def get_redis(**options):
@@ -132,3 +133,28 @@ return n
         return r[0]
 
     return 0
+
+def mbrpoplpush(lists, deslist, timeout=0):
+
+    redis = get_redis()
+    if redis:
+        text = """
+local ret
+for i, k in pairs(KEYS) do
+    ret = redis.call('rpoplpush', k, ARGV[1])
+    if ret then
+        return {k, ret}
+    end
+end
+"""
+        script = redis.register_script(text)
+
+        end = time.time() + timeout
+        while 1:
+            r = script(keys=lists, args=[deslist], client=redis)
+            if r:
+                return r
+            if time.time() < end:
+                time.sleep(.001)
+            else:
+                break
