@@ -121,9 +121,13 @@ def authenticate(username, password, auth_type=None):
                 func = import_attr(func_path)
                 f, d = func(username, password)
                 if f:
+                    log.info("login successfully, auth_type: %s"%(t))
                     return f, d
                 else:
+                    log.error("fail to login, auth_type: %s, err: %s"%(t,d))
                     err_msg = d
+        else:
+            log.error("auth_type %s not in config"%(t))
 
     return False, {'username':err_msg}
 
