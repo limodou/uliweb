@@ -112,7 +112,7 @@ def authenticate(username, password, auth_type=None):
 
     err_msg = ''
     if not isinstance(auth_type, (list, tuple)):
-        auth_type = list(auth_type)
+        auth_type = [auth_type]
 
     for t in auth_type:
         if t in settings.AUTH_CONFIG:
