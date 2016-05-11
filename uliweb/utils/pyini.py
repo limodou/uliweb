@@ -177,12 +177,17 @@ def eval_value(value, globals, locals, encoding, include_env):
             print_exc()
             v = m.group()
         return v
-    
+
     if isinstance(value, (str, unicode)):
         if include_env:
             v = r_var_env.sub(sub_, value)
         else:
             v = r_var.sub(sub_, value)
+    elif isinstance(value, EvalValue):
+        if include_env:
+            v = r_var_env.sub(sub_, value.value)
+        else:
+            v = r_var.sub(sub_, value.value)
     else:
         v = value
         

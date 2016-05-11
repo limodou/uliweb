@@ -490,6 +490,7 @@ def test_env_var_1():
     ... a = '$TEST/ok'
     ... c = '${TEST}ok'
     ... b = $OK
+    ... d = {'name_$TEST':'$OK'}
     ... \"\"\")
     >>> x = Ini()
     >>> x.set_filename('test.ini')
@@ -501,6 +502,8 @@ def test_env_var_1():
     3
     >>> print repr(x.default.c)
     'testok'
+    >>> print repr(x.default.d)
+    {'name_test': '3'}
     >>> x = Ini()
     >>> buf = StringIO(\"\"\"
     ... [default]
