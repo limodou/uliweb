@@ -52,10 +52,12 @@ class DirCommand(Command):
 class ModelCommand(Command):
     name = 'model'
     args = 'model [,...]'
-    help = 'Clear all models.'
+    help = 'Clear all models. Model should has clear_data(days, cont) method.'
     option_list = (
         make_option('-d', '--days', dest='days', type='int', default=7,
             help='Delta days before now.'),
+        make_option('-c', '--count', dest='count', type='int', default=5000,
+            help='Records count of cleaning at one time. Default is 5000.'),
     )
 
     def handle(self, options, global_options, *args):
@@ -64,19 +66,51 @@ class ModelCommand(Command):
 
         for d in args:
             self.clean_model(d,
-                           days=options.days,
-                           verbose=global_options.verbose)
+                       days=options.days,
+                       count=options.count,
+                       verbose=global_options.verbose)
 
-    def clean_model(self, model, days, verbose=False):
+    def clean_model(self, model, days, count, verbose=False):
         from uliweb import functions
         import time
+        import logging
+        import types
+        from uliweb.orm import Begin, Commit, Rollback
+
+        log = logging.getLogger(__name__)
 
         if verbose:
-            print 'Clean {}...'.format(model)
+            print 'Clean {}, days={}, count={} ...'.format(model, days, count)
         M = functions.get_model(model)
         if hasattr(M, 'clear_data'):
             b = time.time()
-            M.clear_data(days)
-            print 'Used {} seconds to clean the {}'.format(time.time()-b, model)
+            t = 0
+            Begin()
+            try:
+                ret = M.clear_data(days, count)
+                Commit()
+            except Exception as e:
+                Rollback()
+                log.exception(e)
+                return
+
+            if isinstance(ret, types.GeneratorType):
+                while 1:
+                    Begin()
+                    try:
+                        n = ret.next()
+                        t += n
+                        Commit()
+                    except StopIteration:
+                        break
+                    except Exception as e:
+                        Rollback()
+                        log.exception(e)
+                        break
+            else:
+                t = ret
+
+
+            print 'Used {} seconds to clean the {}, total records is {}'.format(time.time()-b, model, t)
         else:
             print 'There is no clear_data() function defined for {}'.format(model)
