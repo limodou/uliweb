@@ -488,7 +488,7 @@ class SqlTableCommand(SQLCommandMixin, Command):
             if t.__mapping_only__:
                 continue
             if options.dialect:
-                dialect = create_engine('{}://'.format(options.dialect)).dialect
+                dialect = create_engine('{}://'.format(options.dialect), strategy="mock", executor=None).dialect
             else:
                 dialect = engine.dialect
             print "%s;" % str(CreateTable(t).compile(dialect=dialect)).rstrip()
