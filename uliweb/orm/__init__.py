@@ -1154,15 +1154,16 @@ def reflect_table(tablename, engine_name='default'):
     else:
         return tablename
 
-def reflect_table_data(table, engine_name='default'):
+def reflect_table_data(table, mapping=None, engine_name='default'):
     """
-    Write table to Model code
+    Write table to Model dict
     """
     table = reflect_table(table, engine_name)
+    mapping = mapping or {}
 
     from uliweb.utils.sorteddict import SortedDict
 
-    field_type_map = {'VARCHAR':'str', 'INTEGER':'int', 'FLOAT':'float'}
+    field_type_map = {'VARCHAR':'str', 'VARCHAR2':'str', 'INTEGER':'int', 'FLOAT':'float'}
 
     meta = {}
     columns = SortedDict()
@@ -1226,6 +1227,7 @@ def reflect_table_data(table, engine_name='default'):
     meta['columns'] = columns
 
     indexes = []
+    indexes_names = []
     for index in table.indexes:
         cols = list(index.columns)
         _len = len(cols)
@@ -1237,18 +1239,20 @@ def reflect_table_data(table, engine_name='default'):
                 d['unique'] = index.unique
             columns[column_name][1].update(d)
         else:
-            indexes.append({'name':index.name, 'columns':[x.name for x in index.columns],
+            if not index.name in indexes_names:
+                indexes.append({'name':index.name, 'columns':[x.name for x in index.columns],
                             'unique':index.unique})
+                indexes_names.append(index.name)
 
     meta['indexes'] = indexes
     return meta
 
-def reflect_table_model(table, engine_name='default'):
+def reflect_table_model(table, mapping=None, without_id=False, engine_name='default'):
     """
-    Write table to Model code
+    Write table to Model class
     """
     table = reflect_table(table, engine_name)
-
+    mapping = mapping or {}
     meta = reflect_table_data(table)
 
     code = ['class {}(Model):'.format(table.name.title())]
@@ -1259,14 +1263,18 @@ def reflect_table_model(table, engine_name='default'):
     __tablename__ = '{}\''''.format(table.name))
 
     #process id
-    if 'id' not in meta['columns']:
+    if 'id' not in meta['columns'] and without_id:
         code.append('    __without_id__ = True\n')
     # if _primary_key:
     #     code.append('    _primary_field = {}'.format(_primary_key))
         
     #output columns text
     for k, v in meta['columns'].items():
-        kwargs = ', '.join([v[0]] + ['{0}={1!r}'.format(x, y) for x, y in v[1].items()])
+        kw = v[1].items()
+        x_v = mapping.get(v[0])
+        if x_v:
+            kw.append(('type_class', x_v))
+        kwargs = ', '.join([v[0]] + ['{0}={1!r}'.format(x, y) for x, y in kw])
         txt = " "*4 + "{0} = Field({1})".format(k, kwargs)
         code.append(txt)
 
@@ -3971,7 +3979,7 @@ class Model(object):
         
     def get_datastore_value(self, field_name):
         return self.properties[field_name].get_value_for_datastore(self)
-           
+
     #classmethod========================================================
 
     @classmethod

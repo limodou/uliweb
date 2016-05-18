@@ -438,7 +438,7 @@ class DropTableCommand(SQLCommandMixin, Command):
             if global_options.verbose:
                 print '[%s] Dropping %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
 
-class SQLCommand(SQLCommandMixin, Command):
+class SqlCommand(SQLCommandMixin, Command):
     name = 'sql'
     args = '<appname, appname, ...>'
     help = 'Display the table creation sql statement. If no apps, then process the whole database.'
@@ -460,16 +460,26 @@ class SQLCommand(SQLCommandMixin, Command):
             for x in t.indexes:
                 print "%s;" % CreateIndex(x)
             
-class SQLTableCommand(SQLCommandMixin, Command):
+class SqlTableCommand(SQLCommandMixin, Command):
     name = 'sqltable'
     args = '<tablename, tablename, ...>'
     help = 'Display the table creation sql statement.'
-    
+    option_list = (
+        make_option('-o', dest='output_dir', default='./data',
+            help='Output the data files to this directory.'),
+        make_option('-d', '--dialect', dest='dialect',
+            help='Which dialect will be used to output create sql.'),
+    )
+
     def handle(self, options, global_options, *args):
         from sqlalchemy.schema import CreateTable, CreateIndex
-        
+        from sqlalchemy import create_engine
+
+        if options.dialect and global_options.verbose:
+            print 'Create sql with {} dialect'.format(options.dialect)
+
         engine = get_engine(options, global_options)
-        
+
         tables = get_sorted_tables(get_tables(global_options.apps_dir, 
             tables=args, engine_name=options.engine, 
             settings_file=global_options.settings, 
@@ -477,7 +487,11 @@ class SQLTableCommand(SQLCommandMixin, Command):
         for name, t in tables:
             if t.__mapping_only__:
                 continue
-            print "%s;" % str(CreateTable(t).compile(dialect=engine.dialect)).rstrip()
+            if options.dialect:
+                dialect = create_engine('{}://'.format(options.dialect)).dialect
+            else:
+                dialect = engine.dialect
+            print "%s;" % str(CreateTable(t).compile(dialect=dialect)).rstrip()
             for x in t.indexes:
                 print "%s;" % CreateIndex(x)
 
@@ -1182,6 +1196,10 @@ class AlembicCommand(SQLCommandMixin, CommandManager):
 class ReflectCommand(SQLCommandMixin, Command):
     name = 'reflectdb'
     args = '<tablename, tablename, ...>'
+    option_list = (
+        make_option('-o', '--oracle', dest='oracle', action='store_true', default=False,
+            help='Create model using oracle dialect, especially using VARCHAR2.'),
+    )
     help = 'Reflect database tables to Uliweb model class code.'
 
     def handle(self, options, global_options, *args):
@@ -1196,10 +1214,14 @@ class ReflectCommand(SQLCommandMixin, Command):
         else:
             tables = args
 
+        mapping = {}
         print '#coding=utf8'
         print 'from uliweb.orm import *'
         print 'from uliweb.i18n import ugettext_lazy as _'
         print 'from uliweb.utils.common import get_var'
+        if options.oracle:
+            print 'from sqlalchemy.dialects.oracle import VARCHAR2'
+            mapping = {'str': 'VARCHAR2'}
         print '\n'
 
         meta = engine.metadata
@@ -1207,7 +1229,7 @@ class ReflectCommand(SQLCommandMixin, Command):
             table = Table(name, meta)
             try:
                 insp.reflecttable(table, None)
-                print reflect_table_model(table)
+                print reflect_table_model(table, mapping)
                 print '\n'
             except Exception as e:
                 import traceback
