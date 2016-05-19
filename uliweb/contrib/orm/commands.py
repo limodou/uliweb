@@ -10,6 +10,7 @@ from uliweb.utils.common import log, is_pyfile_exist, get_temppath
 from sqlalchemy.types import *
 from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
+from sqlalchemy.exc import NoSuchTableError
 from uliweb.orm import get_connection, set_auto_set_model, do_
 from time import time
 from .load_table_file import load_table_file
@@ -82,10 +83,13 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
 
     def get_table(tablename):
         table = Table(tablename, all_meta)
-        insp.reflecttable(table, None)
+        try:
+            insp.reflecttable(table, None)
+        except NoSuchTableError:
+            return
         return table
 
-    all_tables = insp.get_table_names()
+    all_tables = insp.get_table_names() + meta.tables.keys()
     if apps:
         t = {}
         for tablename in all_tables:
@@ -97,21 +101,22 @@ def get_tables(apps_dir, apps=None, engine_name=None, tables=None,
     elif tables:
         t = {}
         for tablename in tables:
-            if tablename in all_tables:
-                if tablename in meta.tables:
-                    table = meta.tables[tablename]
-                else:
-                    try:
-                        table = get_table(tablename)
-                        table.__appname__ = 'UNKNOWN'
-                    except Exception as e:
-                        import traceback
-                        traceback.print_exc()
-                        continue
-                t[tables_map.get(tablename, tablename)] = table
-                table.__mapping_only__ = tables_mapping_only.get(tablename, False)
+            if tablename in meta.tables:
+                table = meta.tables[tablename]
             else:
-                print "Table [%s] can't be found, it'll be skipped." % tablename
+                try:
+                    table = get_table(tablename)
+                    if not table:
+                        print "Table [%s] can't be found, it'll be skipped." % tablename
+                        continue
+                    table.__appname__ = 'UNKNOWN'
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()
+                    continue
+            t[tables_map.get(tablename, tablename)] = table
+            table.__mapping_only__ = tables_mapping_only.get(tablename, False)
+
     else:
         t = {}
         if not all:
