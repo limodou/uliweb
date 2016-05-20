@@ -443,7 +443,7 @@ class DropTableCommand(SQLCommandMixin, Command):
             if global_options.verbose:
                 print '[%s] Dropping %s...%s' % (options.engine, show_table(name, t, i, _len), msg)
 
-class SqlCommand(SQLCommandMixin, Command):
+class SQLCommand(SQLCommandMixin, Command):
     name = 'sql'
     args = '<appname, appname, ...>'
     help = 'Display the table creation sql statement. If no apps, then process the whole database.'
@@ -465,7 +465,7 @@ class SqlCommand(SQLCommandMixin, Command):
             for x in t.indexes:
                 print "%s;" % CreateIndex(x)
             
-class SqlTableCommand(SQLCommandMixin, Command):
+class SQLTableCommand(SQLCommandMixin, Command):
     name = 'sqltable'
     args = '<tablename, tablename, ...>'
     help = 'Display the table creation sql statement.'
@@ -1000,7 +1000,7 @@ class DbinitCommand(SQLCommandMixin, Command):
                 orm.Rollback()
                 log.exception("There are something wrong when importing module [%s]" % m)
 
-class SqldotCommand(SQLCommandMixin, Command):
+class SQLdotCommand(SQLCommandMixin, Command):
     name = 'sqldot'
     args = '<appname, appname, ...>'
     help = ("Create graphviz dot file. If no apps, then process the whole database. If "
@@ -1068,7 +1068,7 @@ class SqldotCommand(SQLCommandMixin, Command):
             if result:
                 print result
 
-class SqlHtmlCommand(SQLCommandMixin, Command):
+class SQLHtmlCommand(SQLCommandMixin, Command):
     name = 'sqlhtml'
     args = '<appname, appname, ...>'
     help = "Create database documentation in HTML format. If no apps, then process the whole database."
@@ -1089,7 +1089,7 @@ class SqlHtmlCommand(SQLCommandMixin, Command):
             local_settings_file=global_options.local_settings)
         print generate_html(tables, apps)
     
-class SqlShellCommand(SQLCommandMixin, Command):
+class SQLShellCommand(SQLCommandMixin, Command):
     name = 'sqlshell'
     args = ''
     help = "Enter database shell, support sqlite, mysql, postgresql."
