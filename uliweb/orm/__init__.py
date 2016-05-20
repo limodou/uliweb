@@ -3657,13 +3657,11 @@ class Model(object):
             if fields and not k in fields:
                 continue
             if not isinstance(v, ManyToMany):
-                t = getattr(self, k)
-                if isinstance(t, Model):
-                    t = t._key
                 if convert:
                     t = v.get_value_for_datastore(self)
                     d[k] = self.field_str(t)
                 else:
+                    t = getattr(self, k)
                     d[k] = t
             else:
                 if manytomany:
