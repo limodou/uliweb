@@ -45,7 +45,7 @@ def check_password(raw_password, enc_password):
     l = enc_password.split('$')
     #only password of built-in user can split to 3
     if len(l)==3:
-        algo, salt, hsh = l.split('$')
+        algo, salt, hsh = l
         return hsh == get_hexdigest(algo, salt, raw_password)
     else:
         return False
