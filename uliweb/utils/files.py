@@ -9,7 +9,7 @@ def save_file(fname, fobj, replace=False, buffer_size=4096):
     if not os.path.exists(path):
         try:
             os.makedirs(path)
-        except Exception, e:
+        except Exception as e:
             log.exception(e)
             raise Exception("Can't create %s directory" % path)
     
@@ -21,20 +21,17 @@ def save_file(fname, fobj, replace=False, buffer_size=4096):
             i += 1
         
     out = open(fname, 'wb')
-    size = 0
     try:
         while 1:
             text = fobj.read(buffer_size)
             if text:
-                size += len(text)
                 out.write(text)
             else:
                 break
         return os.path.basename(fname)
     finally:
         out.close()
-    return size
-        
+
 def unicode_filename(filename, encoding=None):
     encoding = encoding or sys.getfilesystemencoding()
     if isinstance(filename, unicode):
