@@ -1204,6 +1204,8 @@ class ReflectCommand(SQLCommandMixin, Command):
     option_list = (
         make_option('-o', '--oracle', dest='oracle', action='store_true', default=False,
             help='Create model using oracle dialect, especially using VARCHAR2.'),
+        make_option('--auto-id', dest='auto_id', action='store_true', default=False,
+            help='Automatically add id field. Default is False.'),
     )
     help = 'Reflect database tables to Uliweb model class code.'
 
@@ -1234,7 +1236,7 @@ class ReflectCommand(SQLCommandMixin, Command):
             table = Table(name, meta)
             try:
                 insp.reflecttable(table, None)
-                print reflect_table_model(table, mapping)
+                print reflect_table_model(table, mapping, without_id=not options.auto_id)
                 print '\n'
             except Exception as e:
                 import traceback
