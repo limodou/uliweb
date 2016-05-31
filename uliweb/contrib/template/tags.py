@@ -47,7 +47,7 @@ def use(env, plugin, *args, **kwargs):
 def find(plugin, *args, **kwargs):
     from uliweb.core.SimpleFrame import get_app_dir
     from uliweb import application as app, settings
-    from uliweb.utils.common import is_pyfile_exist
+    from uliweb.utils.common import is_pyfile_exist, import_attr
 
     key = (plugin, repr(args) + repr(sorted(kwargs.items())))
     if key in __use_cached__:
@@ -70,6 +70,14 @@ def find(plugin, *args, **kwargs):
         #   'default':{'version':'1.2.0'},
         #}
         #
+        # add toplinks and bottomlinks could be config by a function path,
+        # just like:
+        #
+        #[TEMPLATE_USE]
+        #name = {
+        #   'toplinks':'#{appname}.load_js',
+        #   'config':{'version':'UI_CONFIG/test'},
+        #}
         mod = None
         c = settings.get_var('TEMPLATE_USE/'+plugin)
         if c:
@@ -81,7 +89,12 @@ def find(plugin, *args, **kwargs):
             config.update(kwargs)
             for t in ['toplinks', 'bottomlinks']:
                 if t in c:
-                    c[t] = [x.format(**config) for x in c[t]]
+                    links = c[t]
+                    if isinstance(links, (tuple, list)):
+                        c[t] = [x.format(**config) for x in c[t]]
+                    elif isinstance(links, (str, unicode)):
+                        m = import_attr(links)
+                        c[t] = [x for x in m(**config)]
             mod = c
         else:
             for p in reversed(app.apps):

@@ -103,14 +103,14 @@ def default_authenticate(username, password):
         else:
             return False, {'password': _("Password isn't correct!")}
     else:
-        return False, {'username': _('Username is not existed!')}
+        return False, {'username': _('"{}" is not existed!').format(username)}
 
 def authenticate(username, password, auth_type=None):
     from uliweb import settings
 
     auth_type = auth_type or settings.AUTH.AUTH_DEFAULT_TYPE
 
-    err_msg = ''
+    errors = {}
     if not isinstance(auth_type, (list, tuple)):
         auth_type = [auth_type]
 
@@ -125,11 +125,11 @@ def authenticate(username, password, auth_type=None):
                     return f, d
                 else:
                     log.error("fail to login, auth_type: %s, err: %s"%(t,d))
-                    err_msg = d
+                    errors = d
         else:
             log.error("auth_type %s not in config"%(t))
 
-    return False, {'username':err_msg}
+    return False, errors
 
 def login(username):
     """
