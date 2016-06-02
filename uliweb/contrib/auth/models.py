@@ -78,7 +78,7 @@ class UserGroup(Model):
     number_of_people = Field(int, verbose_name=_('Number of People'))
     order = Field(int, verbose_name=_('Order'), default=9999)
     type = Field(CHAR, max_length=1, verbose_name=_('Group Type'), choices=get_var('AUTH/USER_GROUP_TYPE'))
-    auth_type = Field(int, default=get_var('AUTH/AUTH_TYPE_DEFAULT'), verbose_name=_('Auth type'))
+    auth_type = Field(str, max_length=20, default='default', verbose_name=_('Auth type'))
 
     def __unicode__(self):
         return self.name
