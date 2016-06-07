@@ -109,7 +109,7 @@ class BaseField(object):
     default_validators = []
     default_datatype = None
     creation_counter = 0
-    type_name = 'str'
+    type_name = 'string'
 
     def __init__(self, label='', default=None, required=False, validators=None,
         name='', html_attrs=None, help_string='', build=None, datatype=None,
@@ -247,6 +247,9 @@ class BaseField(object):
         if data is None:
             return ''
         return u_str(data)
+
+    def to_json(self):
+        return {'name':self.name, 'type':self.type_name, 'label':self.label}
 
     def validate(self, data, all_data=None):
         """
@@ -714,6 +717,7 @@ class FormBuild(object):
 
 fields_mapping = {
     'str':StringField,
+    'string':StringField,
     'select':SelectField,
     'text':TextField,
     'unicode':UnicodeField,
