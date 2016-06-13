@@ -109,7 +109,7 @@ class BaseField(object):
     default_validators = []
     default_datatype = None
     creation_counter = 0
-    type_name = 'string'
+    type_name = 'str'
 
     def __init__(self, label='', default=None, required=False, validators=None,
         name='', html_attrs=None, help_string='', build=None, datatype=None,

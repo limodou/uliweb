@@ -2269,6 +2269,18 @@ class SimpleListView(object):
             x['width_str'] = width
 
         return t
+
+    @property
+    def data_url(self):
+        from uliweb.utils.common import query_string, request_url
+
+        return query_string(request_url(), data='1')
+
+    def download_url(self, **kwargs):
+        from uliweb.utils.common import query_string, request_url
+
+        return query_string(request_url(), download='1')
+
     
 class ListView(SimpleListView):
     def __init__(self, model, condition=None, query=None, pageno=0, order_by=None,
@@ -2752,23 +2764,23 @@ class QueryView(object):
         """
         make op condition
         :param column: column object
-        :param op: gt >, lt <, ge >=, ne !=, le <=, eq ==, in in_,
+        :param op: >, <, >=, !=, <=, ==, in_,
         :param value: volumn value
         :return: condition object
         """
         if not op:
             return None
-        if op == 'gt':
+        if op == '>':
             return column>value
-        elif op == 'lt':
+        elif op == '<':
             return column<value
-        elif op == 'ge':
+        elif op == '>=':
             return column>=value
-        elif op == 'le':
+        elif op == '<=':
             return column<=value
-        elif op == 'eq':
+        elif op == '==':
             return column==value
-        elif op == 'ne':
+        elif op == '!=':
             return column!=value
         elif op == 'in':
             return column.in_(value)

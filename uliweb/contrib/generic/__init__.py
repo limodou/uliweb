@@ -87,7 +87,7 @@ class MultiView(object):
         return query
 
 
-    def _list(self, model, queryview=None, **kwargs):
+    def _list(self, model, queryview=None, queryform=None, **kwargs):
         from uliweb import request, json, CONTENT_TYPE_JSON
         from sqlalchemy import and_
 
@@ -121,7 +121,7 @@ class MultiView(object):
         else:
             result = view.run()
             if queryview:
-                result.update({'query_form':queryview.form})
+                result.update({'query_form':queryform or queryview.form})
             else:
                 result.update({'query_form':''})
             result.update({'table':view})
