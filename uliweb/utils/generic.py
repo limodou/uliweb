@@ -1778,7 +1778,7 @@ class SimpleListView(object):
 
         return query.count()
 
-    def download(self, filename, timeout=3600, action=None, query=None, fields_convert_map=None, type=None, domain=None):
+    def download(self, filename, timeout=3600, action=None, query=None, fields_convert_map=None, type=None, domain=None, **kwargs):
         """
         Default domain option is PARA/DOMAIN
         """
@@ -1802,9 +1802,13 @@ class SimpleListView(object):
         if type in ('xlt', 'xls'):
             if not domain:
                 domain = settings.get_var('PARA/DOMAIN')
-            return self.download_xlt(filename, query, action, fields_convert_map, domain, not_tempfile=bool(timeout))
+            return self.download_xlt(filename, query, action, fields_convert_map, domain, not_tempfile=bool(timeout), **kwargs)
+        if type in ('xlsx',):
+            if not domain:
+                domain = settings.get_var('PARA/DOMAIN')
+            return self.download_xlsx(filename, query, action, fields_convert_map, domain, not_tempfile=bool(timeout), **kwargs)
         else:
-            return self.download_csv(filename, query, action, fields_convert_map, not_tempfile=bool(timeout))
+            return self.download_csv(filename, query, action, fields_convert_map, not_tempfile=bool(timeout), **kwargs)
        
     def get_column(self, name, model=None):
         """
@@ -1935,7 +1939,7 @@ class SimpleListView(object):
         ufile = os.path.join(os.path.dirname(filename), os.path.basename(tfile.name))
         return tfile, bfile, ufile
     
-    def download_xlt(self, filename, data, action, fields_convert_map=None, domain=None, not_tempfile=False):
+    def download_xlt(self, filename, data, action, fields_convert_map=None, domain=None, not_tempfile=False, **kwargs):
         from uliweb.utils.xlt import ExcelWriter
         from uliweb import request, settings
         
@@ -1953,7 +1957,25 @@ class SimpleListView(object):
         return self.downloader.download(bfile, action=action, x_filename=ufile, 
             real_filename=tfile.name)
         
-    def download_csv(self, filename, data, action, fields_convert_map=None, not_tempfile=False):
+    def download_xlsx(self, filename, data, action, fields_convert_map=None, domain=None, not_tempfile=False, **kwargs):
+        from uliweb.utils.xltools import SimpleWriter
+        from uliweb import request, settings
+
+        fields_convert_map = fields_convert_map or {}
+        tfile, bfile, ufile = self.get_download_file(filename, not_tempfile)
+        if not domain:
+            domain = settings.get_var('GENERIC/DOWNLOAD_DOMAIN', request.host_url)
+        default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
+        #process hidden fields
+        header = [x for x in self.table_info['fields_list'] if not x.get('hidden')]
+        w = SimpleWriter(header=header, data=self.get_data(data,
+            fields_convert_map, default_encoding, auto_convert=False),
+            encoding=default_encoding, domain=domain, **kwargs)
+        w.save(tfile.name)
+        return self.downloader.download(bfile, action=action, x_filename=ufile,
+            real_filename=tfile.name)
+
+    def download_csv(self, filename, data, action, fields_convert_map=None, not_tempfile=False, **kwargs):
         from uliweb import settings
         from uliweb.utils.common import simple_value, safe_unicode
         import csv

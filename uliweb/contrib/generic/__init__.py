@@ -109,15 +109,16 @@ class MultiView(object):
         if 'data' in request.values:
             return json(view.json(), content_type=CONTENT_TYPE_JSON)
         elif 'download' in request.GET:
-            filename = 'download.xls'
+            filename = 'download.xlsx'
             kw = {}
+            kw['filename'] = kwargs.get('download_filename', filename)
             kw['action'] = kwargs.get('download_action', 'download')
             kw['timeout'] = 0
             kw['query'] = kwargs.get('download_query', kwargs.get('query'))
             kw['fields_convert_map'] = kwargs.get('download_fields_convert_map',
                                                   kwargs.get('fields_convert_map'))
             kw['domain'] = kwargs.get('download_domain')
-            return view.download(filename, **kw)
+            return view.download(**kw)
         else:
             result = view.run()
             if queryview:

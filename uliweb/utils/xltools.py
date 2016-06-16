@@ -1,10 +1,10 @@
-#coding=utf8
+#coding=utf-8
 #xlsx模板处理
 
 import os
 import re
 import shutil
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
 from openpyxl.worksheet.datavalidation import DataValidation
 from pprint import pprint
 from copy import deepcopy
@@ -78,11 +78,344 @@ class Converter(object):
             d['value'] = eval(f, d, env)
         return d['value']
 
+re_link = re.compile('^<a.*?href=\"([^\"]+)\".*?>(.*?)</a>', re.DOTALL)
+
+
+
+def get_range_string(start_column, start_row, end_column, end_row):
+    from openpyxl.utils import get_column_letter
+
+    return (get_column_letter(start_column)+str(start_row) + ':' +
+            get_column_letter(end_column)+str(end_row))
+
+class SimpleWriter(object):
+    def __init__(self, filename=None, sheet_name=None, header=None, data=None,
+                 write_header=True, begin_col=1, begin_row=1, merge_fields=None,
+                 border=True, border_color=None, header_color=None, domain=None,
+                 encoding=None,
+                 default_min_width=10, default_max_width=50, auto_width=True):
+        self.header = header or []
+        self.data = data
+        self.filename = filename
+        self.sheet_name = sheet_name
+        self.write_header = write_header
+        self.merge_fields = merge_fields or []
+        self.begin_col = begin_col
+        self.begin_row = begin_row
+        self._row = begin_row
+        self._col = begin_col
+        self.wb = None
+        self.sheet = None
+        self.border = border
+        self.border_color = border_color or 'FF000000'
+        self.header_color = header_color or 'FF33AAFF'
+        self.default_min_width = default_min_width
+        self.default_max_width = default_max_width
+        self.auto_width = auto_width
+        self.widths = {}
+        self.fields_list = []
+        self.fields = {}
+        self.field_names = []
+        if domain:
+            self.domain = domain.rstrip('/')
+        else:
+            self.domain = domain
+
+    def _write_header(self):
+        from uliweb.utils.common import safe_unicode
+
+        fields = []
+        max_rowspan = 0
+        for i, f in enumerate(self.fields_list):
+            _f = list(f['title'].split('/'))
+            max_rowspan = max(max_rowspan, len(_f))
+            fields.append((_f, i))
+
+        def get_field(fields, i, m_rowspan):
+            f_list, col = fields[i]
+            field = {'title':f_list[0], 'col':col, 'colspan':1, 'rowspan':1}
+            if len(f_list) == 1:
+                field['rowspan'] = m_rowspan
+            return field
+
+        def remove_field(fields, i):
+            del fields[i][0][0]
+
+        def clear_fields(fields):
+            n = len(fields)
+            for i in range(len(fields)-1, -1, -1):
+                if len(fields[i][0]) == 0:
+                    n = min(n, fields[i][1])
+                    del fields[i]
+            if len(fields):
+                return fields[0][1]
+            return 0
+
+        n = len(fields)
+        y = 0
+        while n>0:
+            i = 0
+            while i<n:
+                field = get_field(fields, i, max_rowspan-y)
+                remove_field(fields, i)
+                j = i + 1
+                while j<n:
+                    field_n = get_field(fields, j, max_rowspan-y)
+                    if safe_unicode(field['title']) == safe_unicode(field_n['title']) and field['rowspan'] == field_n['rowspan']:
+                        #combine
+                        remove_field(fields, j)
+                        field['colspan'] += 1
+                        j += 1
+                    else:
+                        break
+
+                _f = self.fields[field['col']]
+                y1 = self._row + y
+                y2 = y1 + field['rowspan'] - 1
+                x1 = self._col + field['col']
+                x2 = x1 + field['colspan'] - 1
+                cell = self.sheet.cell(column=x1, row=y1, value=safe_unicode(field['title']))
+                self.sheet.merge_cells(start_row=y1, end_row=y2,
+                                       start_column=x1, end_column=x2)
+                self._format_header_cell(cell, start_row=y1, end_row=y2,
+                                       start_column=x1, end_column=x2)
+
+
+                i = j
+            clear_fields(fields)
+            n = len(fields)
+            y += 1
+
+        self._row += y
+
+    def _process_header(self):
+        if not self.header:
+            return
+
+        for i, field in enumerate(self.header):
+            if isinstance(field, dict):
+                f = field.copy()
+                if 'verbose_name' in field:
+                    f['title'] = field['verbose_name']
+            else:
+                raise ValueError("Dict type should be used, but {!r} found".format(field))
+            self.fields[i] = f
+            self.fields_list.append(f)
+            self.field_names.append(f['name'])
+
+    def _set_width(self, col, value):
+        from uliweb.utils.common import safe_unicode
+
+        length = len(safe_unicode(value))
+        if self.auto_width:
+            self.widths[col] = min(max(self.default_min_width, length), self.default_max_width)
+
+    def _set_widths(self):
+        if self.auto_width:
+            from openpyxl.cell import get_column_letter
+
+            col = self._col
+            #设置列宽度
+            for i in range(len(self.header)):
+                self.sheet.column_dimensions[get_column_letter(col+i)].width = self.widths[col+i]
+
+    def _write_body(self):
+        x = self._col
+        y = self._row
+        #存储将要合并单元格信息
+        #{name:{row: col: value}}
+        last_merge_data = {}
+        for j, row in enumerate(self.data):
+            for i, col in enumerate(self.header):
+                name = col['name']
+                if isinstance(row, (tuple, list)):
+                    value = row[i]
+                elif isinstance(row, dict):
+                    value = row[name]
+                else:
+                    raise ValueError("Row data should be tuple, list or dict, but {!r} found".format(row))
+
+                #处理链接
+                r = None
+                if isinstance(value, (str, unicode)):
+                    r = re_link.search(value)
+                    if r:
+                        value, link = self.hyperlink(r.group(2), r.group(1))
+                cell = self.sheet.cell(column=x+i, row=y+j, value=value)
+                if r:
+                    cell.hyperlink = link
+
+                #处理列宽度
+                self._set_width(x+i, value)
+
+                #处理样式
+                self._format_cell(cell, i)
+
+                #处理单元格合并
+                if name in self.merge_fields:
+                    if name in last_merge_data:
+                        v = last_merge_data[name]
+                        if v['value'] != value: #相同则忽略,不相同则合并
+                            last_row = y+j-1
+                            self._merge_cells(last_row, name, last_merge_data)
+                        else:
+                            continue
+                    last_merge_data[name] = {'row':y+j, 'col':x+i, 'value':value}
+
+
+        last_row = y+j
+        for k, v in last_merge_data.items():
+            if last_row > v['row']:
+                self.sheet.merge_cells(start_row=v['row'],
+                                                    start_column=v['col'],
+                                                    end_row=last_row,
+                                                    end_column=v['col'])
+
+        self._set_widths()
+
+    def _merge_cells(self, row, name, last_merge_data):
+        flag = False
+        for i in range(len(self.merge_fields)):
+            field = self.merge_fields[i]
+            if flag or name==field:
+                if name == field:
+                    flag = True
+
+                v = last_merge_data[field]
+                if row > v['row']:
+                    self.sheet.merge_cells(start_row=v['row'],
+                                        start_column=v['col'],
+                                        end_row=row,
+                                        end_column=v['col'])
+                    del last_merge_data[field]
+                else:
+                    last_merge_data[field]['row'] = row
+
+
+    def _style_range(self, cell, cell_range, border=None, fill=None, font=None, alignment=None):
+        """
+        Apply styles to a range of cells as if they were a single cell.
+
+        :param ws:  Excel worksheet instance
+        :param range: An excel range to style (e.g. A1:F20)
+        :param border: An openpyxl Border
+        :param fill: An openpyxl PatternFill or GradientFill
+        :param font: An openpyxl Font object
+        """
+
+        from openpyxl.styles import Border, Side
+
+        top = left = right = bottom = Side(border_style='thin', color=self.border_color)
+
+        def border_add(border, top=None, right=None, left=None, bottom=None):
+            top = top or border.top
+            left = left or border.left
+            right = right or border.right
+            bottom = bottom or border.bottom
+            return Border(top=top, left=left, right=right, bottom=bottom)
+
+        cell.alignment = alignment
+        cell.fill = fill
+
+        rows = list(self.sheet[cell_range])
+
+        for cell in rows[0]:
+            cell.border = border_add(cell.border, top=top)
+        for cell in rows[-1]:
+            cell.border = border_add(cell.border, bottom=bottom)
+
+        for row in rows:
+            l = row[0]
+            r = row[-1]
+            l.border = border_add(l.border, left=left)
+            r.border = border_add(r.border, right=right)
+            # if fill:
+            #     for c in row:
+            #         c.fill = fill
+
+    def _format_header_cell(self, cell, start_column, start_row, end_column, end_row):
+        from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
+
+        align = Alignment(horizontal='center', vertical='center')
+        fill = PatternFill(start_color=self.header_color,
+               end_color=self.header_color,
+               fill_type='solid')
+        border = Border(left=Side(border_style='thin',
+                       color=self.border_color),
+             right=Side(border_style='thin',
+                        color=self.border_color),
+             top=Side(border_style='thin',
+                      color=self.border_color),
+             bottom=Side(border_style='thin',
+                         color=self.border_color))
+
+        self._style_range(cell,
+                    get_range_string(start_column, start_row, end_column, end_row),
+                    border=border, fill=fill, alignment=align)
+
+
+    def _format_cell(self, cell, index):
+        from openpyxl.styles import PatternFill, Border, Side, Alignment, Protection, Font
+
+        head = self.header[index]
+        if 'number_format' in head:
+            cell.number_format = head['number_format']
+        if 'align' in head:
+            align = Alignment(horizontal=head['align'],
+                     vertical=head.get('valign', 'center'))
+            cell.alignment = align
+        if self.border:
+            border = Border(left=Side(border_style='thin',
+                           color=self.border_color),
+                 right=Side(border_style='thin',
+                            color=self.border_color),
+                 top=Side(border_style='thin',
+                          color=self.border_color),
+                 bottom=Side(border_style='thin',
+                             color=self.border_color))
+            cell.border = border
+        if cell.hyperlink:
+            font = Font(underline='single', color='FF0000FF')
+            cell.font = font
+
+
+    def _write(self):
+        if self.filename:
+            wb = load_workbook(self.filename, keep_vba=True)
+        else:
+            wb = Workbook()
+        self.wb = wb
+        if self.sheet_name:
+            if self.sheet_name in wb.sheetnames:
+                sheet = wb[self.sheet_name]
+            else:
+                sheet = wb.create_sheet(title=self.sheet_name)
+        else:
+            sheet = wb.active
+
+        self.sheet = sheet
+        if self.write_header:
+            self._process_header()
+            self._write_header()
+        self._write_body()
+
+    def save(self, filename=None):
+        self._write()
+        self.wb.save(filename or self.filename)
+
+    def hyperlink(self, title, link):
+        import urlparse
+
+        r = urlparse.urlparse(link)
+        if not r.scheme and self.domain:
+            link = self.domain + link
+        title = title.replace('"', '')
+        return title, link
 
 class WriteTemplate(object):
     def __init__(self, sheet):
         self.sheet = sheet
-        self.size = (len(sheet.rows), len(sheet.columns))
+        self.size = (len(sheet.get_highest_row()), len(sheet.get_highest_column()))
         self.template = self.get_template()
         self.row = 0
 
@@ -574,3 +907,24 @@ class Merge(object):
             else:
                 d1[k] = d2.get(k, d1[k])
 
+if __name__ == '__main__':
+    header = [{'width':10, 'title':'名字', 'name':'name', 'align':'center'},
+        {'width':10, 'title':'信息/人员/年龄', 'align':'left', 'name':'age'},
+        {'width':10, 'title':'信息/人员/aaaa', 'name':'aaaa', 'align':'right'},
+        {'width':20, 'title':'信息/日期', 'number_format':'yyyy-mm-dd', 'name':'date'},
+        {'title':'链接', 'name':'link'}]
+    data = [
+        ('中文', 12, 12.3, datetime.datetime(2011, 7, 11), '<a href="http://google.com">google.com</a>'),
+        {'name':'中文', 'age':12, 'aaaa':15, 'date':datetime.datetime(2015, 7, 11),
+         'link':'<a href="http://google.com">google.com</a>'},
+        {'name':'中文', 'age':13, 'aaaa':15, 'date':datetime.datetime(2015, 7, 11),
+         'link':'<a href="http://google.com">google.com</a>'},
+        {'name':'中文', 'age':13, 'aaaa':15, 'date':datetime.datetime(2015, 7, 11),
+         'link':'<a href="http://google.com">google.com</a>'},
+        {'name':'中文1', 'age':13, 'aaaa':15, 'date':datetime.datetime(2015, 7, 11),
+         'link':'<a href="http://google.com">google.com</a>'},
+        {'name':'中文1', 'age':14, 'aaaa':15, 'date':datetime.datetime(2015, 7, 11),
+         'link':'<a href="http://google.com">google.com</a>'},
+    ]
+    w = SimpleWriter(header=header, data=data, merge_fields=['name', 'age'])
+    w.save('test1.xlsx')
