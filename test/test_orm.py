@@ -2953,8 +2953,54 @@ def test_bulk():
     >>> from sqlalchemy import select
     >>> b.prepare('select_2', select([User.c.nick_name, User.c.username]).where(User.c.nick_name=='nick_name'))
     >>> print b.sqles['select_2']['fields']
-    [u'nick_name']
+    <SortedDict {u'nick_name':u'nick_name_1'}>
     """
+
+def test_rawsql():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode, primary_key=True)
+    ...     year = Field(int, default=30)
+    >>> from sqlalchemy import create_engine
+    >>> sql = User.filter(User.c.username=='guest').get_query()
+    >>> e = create_engine('oracle://', strategy='mock', executor=None)
+    >>> print rawsql(sql, e)
+    SELECT user.username, user.year FROM user WHERE user.username = 'guest'
+    >>> e = create_engine('postgresql://', strategy='mock', executor=None)
+    >>> print rawsql(sql, e)
+    SELECT user.username, user.year FROM user WHERE user.username = 'guest'
+    >>> e = create_engine('mysql://', strategy='mock', executor=None)
+    >>> print rawsql(sql, e)
+    SELECT user.username, user.year FROM user WHERE user.username = 'guest'
+    >>> e = create_engine('sqlite://', strategy='mock', executor=None)
+    >>> print rawsql(sql, e)
+    SELECT user.username, user.year FROM user WHERE user.username = 'guest'
+    """
+
+def test_bulk_3():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode, primary_key=True)
+    ...     year = Field(int, default=30)
+    >>> from sqlalchemy import create_engine
+    >>> e = get_connection('oracle://', strategy='mock', executor=None, engine_name='oracle')
+    >>> b = Bulk(engine='oracle', size=10)
+    >>> b.prepare('update', User.table.update().values(year='year').where(User.c.username=='username'))
+    >>> b.put('update', **{'username':'test', 'year':30})
+    >>> print b.sqles['update']['data']
+    [{u'username_1': 'test', 'year': 30}]
+    >>> e = get_connection('mysql://', strategy='mock', executor=None, engine_name='mysql')
+    >>> b = Bulk(engine='mysql', size=10)
+    >>> b.prepare('update', User.table.update().values(year='year').where(User.c.username=='username'))
+    >>> b.put('update', **{'username':'test', 'year':30})
+    >>> print b.sqles['update']['data']
+    [[30, 'test']]
+    """
+
 if __name__ == '__main__':
     from uliweb import orm
     # db = get_connection('sqlite://')
@@ -2995,7 +3041,18 @@ if __name__ == '__main__':
     class User(Model):
         username = Field(unicode, primary_key=True)
         year = Field(int, default=30)
-    print User.properties.keys()
-    print User._primary_field
-    u = User(username='guest')
-    u.save() # doctest:+ELLIPSIS
+
+    from sqlalchemy import create_engine
+    e = get_connection('oracle://', strategy='mock', executor=None, engine_name='oracle')
+    Bulk = orm.Bulk
+    b = Bulk(engine='oracle', size=10)
+    b.prepare('update', User.table.update().values(year='year').where(User.c.username=='username'))
+    b.put('update', **{'username':'test', 'year':30})
+    print b.sqles['update']['data']
+
+    e = get_connection('mysql://', strategy='mock', executor=None, engine_name='mysql')
+    Bulk = orm.Bulk
+    b = Bulk(engine='mysql', size=10)
+    b.prepare('update', User.table.update().values(year='year').where(User.c.username=='username'))
+    b.put('update', **{'username':'test', 'year':30})
+    print b.sqles['update']['data']
