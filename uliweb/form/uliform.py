@@ -149,6 +149,8 @@ class BaseField(object):
         else:
             self._id = None
 
+    # def _get_http_attrs
+    #
     def _get_default(self):
         return self._default
     default = property(_get_default)
@@ -602,6 +604,12 @@ class SelectField(BaseField):
                         choices.insert(0, ('', self.empty))
 
         return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
+
+
+    def to_json(self):
+        return {'name': self.name, 'type': self.type_name, 'label': self.label,
+                'choices': self.get_choices(), 'multiple':self.multiple}
+
 
 class RadioSelectField(SelectField):
     default_build = RadioSelect
