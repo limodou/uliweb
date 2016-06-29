@@ -415,7 +415,7 @@ class SimpleWriter(object):
 class WriteTemplate(object):
     def __init__(self, sheet):
         self.sheet = sheet
-        self.size = (len(sheet.get_highest_row()), len(sheet.get_highest_column()))
+        self.size = (sheet.max_row, sheet.max_column)
         self.template = self.get_template()
         self.row = 0
 
@@ -659,7 +659,8 @@ class ReadTemplate(WriteTemplate):
                         _d = _get_line(line, r)
                         d.update(_d)
                         line = line_iter.next()
-                    if d:
+                    #skip blank line, all columns value should be None
+                    if d and filter(None, d.values()):
                         data.append(d)
                 else:
                     break
@@ -688,21 +689,29 @@ class ReadTemplate(WriteTemplate):
 
                 n += 1
 
-            if data:
+            if data and filter(None, data.values()):
                 result.append(data)
 
         return result
 
-    def get_data(self, sheet, multi=False):
-        line = 1
+    def get_data(self, sheet, find=False, begin=1):
+        """
+        Extract data from sheet
+        :param find: 查找模式.缺省为False.为True时,将进行递归查找
+        :param begin: 开始行号
+        """
+        line = begin
         size = len(sheet.rows)
         while line <= size:
             if self.match(sheet.rows[line-1]):
                 d = self.extract_data(sheet, line)
                 return d
             else:
-                line += 1
-        return []
+                if find:
+                    line += 1
+                else:
+                    break
+        return
 
 class Writer(object):
     def __init__(self, template_file, sheet_name, output_file, data, create=True):
@@ -737,7 +746,7 @@ class Writer(object):
 class Reader(object):
     def __init__(self, template_file, sheet_name, input_file,
                  use_merge=False, merge_keys=None, merge_left_join=True,
-                 merge_verbose=False, callback=None):
+                 merge_verbose=False, find=False, begin=1, callback=None):
         """
 
         :param template_file:
@@ -751,6 +760,8 @@ class Reader(object):
         :param merge_keys: keys parameter used in Merge
         :param merge_left_join: left_join parameter used in Merge
         :param merge_verbose: verbose parameter used in Merge
+        :param find: 是否查找模板,缺省为False
+        :param begin: 是否从begin行开始,缺省为1
         :param callback: callback function used after combine data, the callback function
                 should be:
 
@@ -761,6 +772,7 @@ class Reader(object):
         """
         self.template_file = template_file
         self.sheet_name = sheet_name
+        self.matched = False #if matched template
         if isinstance(input_file, (str, unicode)):
             self.input_file = [input_file]
         elif isinstance(input_file, (tuple, list)):
@@ -774,15 +786,12 @@ class Reader(object):
         else:
             self.merge = False
 
-        self.init()
+        template = self.get_template()
+
+        self.result = self.read(template, find=find, begin=begin)
 
         if self.callback:
             self.callback(self.result)
-
-    def init(self):
-        template = self.get_template()
-
-        self.result = self.read(template)
 
     def get_template(self):
         wb = load_workbook(self.template_file)
@@ -817,15 +826,22 @@ class Reader(object):
                 yield w[name]
 
 
-    def read(self, template):
+    def read(self, template, find=False, begin=1):
+        """
+        :param find: 是否使用find模式.True为递归查找.缺省为False
+        :param begin: 开始行号. 缺省为 1
+        """
         result = []
+        self.matched = False
         for sheet in self.get_sheet():
-            r = template.get_data(sheet)
-            if self.merge:
-                self.merge.add(r)
-                result = self.merge.result
-            else:
-                result.extend(r)
+            r = template.get_data(sheet, find=find, begin=begin)
+            if r is not None: #not matched
+                self.matched = True
+                if self.merge:
+                    self.merge.add(r)
+                    result = self.merge.result
+                else:
+                    result.extend(r)
         return result
 
 class Merge(object):
@@ -927,4 +943,4 @@ if __name__ == '__main__':
          'link':'<a href="http://google.com">google.com</a>'},
     ]
     w = SimpleWriter(header=header, data=data, merge_fields=['name', 'age'])
-    w.save('test1.xlsx')
+    w.save('test.xlsx')

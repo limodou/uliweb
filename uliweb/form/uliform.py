@@ -137,8 +137,7 @@ class BaseField(object):
 #            self.html_attrs['class'] = ' '.join([self.html_attrs.pop(_cls), self.field_css_class])
 #        else:
             self.html_attrs['class'] = ' '.join([self.field_css_class])
-        if placeholder:
-            self.html_attrs['placeholder'] = placeholder
+        self.placeholder = placeholder
         self.multiple = multiple
         self.build = build or self.default_build
         self.help_string = help_string
@@ -149,8 +148,10 @@ class BaseField(object):
         else:
             self._id = None
 
-    # def _get_http_attrs
-    #
+    def _get_http_attrs(self):
+        if self.placeholder:
+            self.html_attrs['placeholder'] = self.placeholder
+
     def _get_default(self):
         return self._default
     default = property(_get_default)
@@ -187,6 +188,7 @@ class BaseField(object):
                 build = Hidden
             else:
                 build = self.build
+            self._get_http_attrs()
             return str(build(name=self.name, value=value, id=self.id, **self.html_attrs))
 
     def get_label(self, delimeter=True, label=None, **kwargs):
