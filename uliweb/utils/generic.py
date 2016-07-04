@@ -728,7 +728,7 @@ class AddView(object):
         static_fields=None, hidden_fields=None, save=None, pre_save=None, post_save=None,
         post_created_form=None, layout_class=None, layout=None, rules=None,
         file_replace=True, template_data=None,
-        success_data=None, fail_data=None, meta='AddForm', get_form_field=None, post_fail=None,
+        success_data=True, fail_data=None, meta='AddForm', get_form_field=None, post_fail=None,
         types_convert_map=None, fields_convert_map=None, json_func=None,
         file_convert=True, upload_to=None, upload_to_sub=None, 
         fileserving_config='UPLOAD', protect=False, protect_field_name=None,
