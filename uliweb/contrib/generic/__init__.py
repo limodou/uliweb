@@ -66,8 +66,6 @@ class MultiView(object):
         :param kwargs:
         :return:
         """
-        self._process_fields_convert_map(kwargs)
-
         view =  functions.ListView(model, **kwargs)
         return view
 
@@ -103,6 +101,7 @@ class MultiView(object):
         else:
             kwargs['condition'] = condition
 
+        self._process_fields_convert_map(kwargs)
         #get list view
         view = self._list_view(model=model, **kwargs)
 

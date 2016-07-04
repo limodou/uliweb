@@ -386,8 +386,11 @@ def get_obj_url(obj):
     
 def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
     json_func = json_func or json
-    
-    t = {'success':success, 'message':safe_str(msg), 'data':d}
+
+    if success:
+        t = {'success':success, 'message':safe_str(msg), 'data':d}
+    else:
+        t = {'success':success, 'message':safe_str(msg), 'errors':d}
     t.update(kwargs)
     return json_func(t)
     
