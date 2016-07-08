@@ -96,7 +96,7 @@ class ReferenceSelectField(SelectField):
         query=None, label='', default=None, required=False, validators=None, 
         name='', html_attrs=None, help_string='', build=None, empty='', 
         get_display=None, post_choices=None, **kwargs):
-        super(ReferenceSelectField, self).__init__(label=label, default=default, choices=None, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
+        super(ReferenceSelectField, self).__init__(label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
         self.model = model
         self.group_field = group_field
         self.value_field = value_field
@@ -1467,7 +1467,7 @@ class DeleteView(object):
 
     def __init__(self, model, ok_url='', fail_url='', condition=None, obj=None,
         pre_delete=None, post_delete=None, validator=None, json_func=None,
-        use_flash=True, use_delete_fieldname=None, success_data=None,
+        use_flash=True, use_delete_fieldname=None, success_data=True,
         fail_data=None):
         self.model = get_model(model)
         self.condition = condition
@@ -1498,7 +1498,11 @@ class DeleteView(object):
                     if self.use_flash:
                         functions.flash(msg, 'error')
                     return redirect(self.fail_url)
-                
+
+        if self.obj:
+            data = self.obj.to_dict()
+        else:
+            data = {}
         if self.pre_delete:
             self.pre_delete(self.obj)
         self.delete(self.obj)
@@ -1506,15 +1510,17 @@ class DeleteView(object):
             self.post_delete()
         
         if json_result:
-            return to_json_result(True, self.success_msg, self.on_success_data(None, {}), json_func=self.json_func)
+            return to_json_result(True, self.success_msg, self.on_success_data(data), json_func=self.json_func)
         else:
             if self.use_flash:
                 functions.flash(self.success_msg)
             return redirect(get_url(self.ok_url))
     
-    def on_success_data(self, obj, data):
-        if callable(self.success_data):
-            return self.success_data(obj, data)
+    def on_success_data(self, data):
+        if self.success_data is True:
+            return data
+        elif callable(self.success_data):
+            return self.success_data(data)
         else:
             return None
 
