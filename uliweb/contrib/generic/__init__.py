@@ -31,33 +31,52 @@ class MultiView(object):
         """
         if 'fields_convert_map' in parameters:
             _f = parameters.get('fields_convert_map')
-            if isinstance(_f, list):
-                t = {}
-                for k in _f:
-                    if isinstance(k, str):
-                        t[k] = getattr(self, '_convert_{}'.format(k))
-                    elif isinstance(k, (tuple, list)):
-                        name = k[0]
-                        func = k[1]
-                        if isinstance(func, str):
-                            t[name] = getattr(self, '_convert_{}'.format(func))
-                        elif callable(func):
-                            t[name] = func
-                        else:
-                            raise ValueError("Fields convert function should be str or callable, but %r found" % type(func))
-                    else:
-                        raise ValueError("Fields convert element should be str or tuple or list, but %r found" % type(k))
-                parameters['fields_convert_map'] = t
-            elif isinstance(_f, dict):
-                t = {}
-                for k, v in _f.items():
-                    if isinstance(v, str):
-                        t[k] = getattr(self, '_convert_{}'.format(v))
-                    elif callable(v):
-                        t[k] = v
+            parameters['fields_convert_map'] = self._get_fields_convert_map(_f)
+
+
+    def _get_fields_convert_map(self, fields):
+        """
+        process fields_convert_map, ListView doesn't support list type but dict
+
+        fields_convert_map should be define as list or dict
+        for list, it can be:
+            [name, name, ...]
+            [(name, func), (name, func), ...] if func is str, it'll be the property name of class
+        for dict, it can be:
+            {'name':func, ...}
+        :param model: model object
+        :param parameters:
+        :param prefix: it'll used to combine prefix+_convert_xxx to get convert function
+            from class
+        :return:
+        """
+        _f = fields
+        if isinstance(_f, list):
+            t = {}
+            for k in _f:
+                if isinstance(k, str):
+                    t[k] = getattr(self, '_convert_{}'.format(k))
+                elif isinstance(k, (tuple, list)):
+                    name = k[0]
+                    func = k[1]
+                    if isinstance(func, str):
+                        t[name] = getattr(self, '_convert_{}'.format(func))
+                    elif callable(func):
+                        t[name] = func
                     else:
                         raise ValueError("Fields convert function should be str or callable, but %r found" % type(func))
-                parameters['fields_convert_map'] = t
+                else:
+                    raise ValueError("Fields convert element should be str or tuple or list, but %r found" % type(k))
+        elif isinstance(_f, dict):
+            t = {}
+            for k, v in _f.items():
+                if isinstance(v, str):
+                    t[k] = getattr(self, '_convert_{}'.format(v))
+                elif callable(v):
+                    t[k] = v
+                else:
+                    raise ValueError("Fields convert function should be str or callable, but %r found" % type(func))
+        return t
 
     def _list_view(self, model, **kwargs):
         """

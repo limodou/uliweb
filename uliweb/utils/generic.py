@@ -716,6 +716,15 @@ def get_model_display(model, obj, fields=None, types_convert_map=None, fields_co
         r[name] = make_view_field(field, obj=obj, types_convert_map=types_convert_map, fields_convert_map=fields_convert_map, value=value)
     return r
 
+def get_object_display(model, obj, fields=None, types_convert_map=None, fields_convert_map=None, data=None):
+    data = data or {}
+    r = {}
+    for name, field in get_fields(model, fields):
+        value = data.get(name, __default_value__)
+        f = make_view_field(field, obj=obj, types_convert_map=types_convert_map, fields_convert_map=fields_convert_map, value=value)
+        r[name] = f['display']
+    return r
+
 class AddView(object):
     success_msg = _('The information has been saved successfully!')
     fail_msg = _('There are somethings wrong.')
