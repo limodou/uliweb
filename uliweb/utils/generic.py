@@ -1207,7 +1207,7 @@ class EditView(AddView):
 #            fields_list.insert(0, d)
 #            fields_name.insert(0, 'id')
         
-        data = self.obj.to_dict(fields_name, convert=False).copy()
+        data = self.obj.to_dict(fields_name).copy()
         data.update(self.data)
         
         #add layout support
