@@ -3648,7 +3648,11 @@ class Model(object):
                     t = v.get_value_for_datastore(self)
                     d[k] = self.field_str(t)
                 else:
-                    t = getattr(self, k)
+                    #if reference it'll use primary_key
+                    if isinstance(v, Reference):
+                        t = v.get_value_for_datastore(self)
+                    else:
+                        t = getattr(self, k)
                     d[k] = t
             else:
                 if manytomany:

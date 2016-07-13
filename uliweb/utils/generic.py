@@ -1207,7 +1207,7 @@ class EditView(AddView):
 #            fields_list.insert(0, d)
 #            fields_name.insert(0, 'id')
         
-        data = self.obj.to_dict(fields_name).copy()
+        data = self.obj.to_dict(fields_name, convert=False).copy()
         data.update(self.data)
         
         #add layout support
@@ -2397,10 +2397,7 @@ class ListView(SimpleListView):
         else:
             r = SortedDict()
             for i, x in enumerate(self.table_info['fields_list']):
-                if hasattr(self.model, x['name']):
-                    field = getattr(self.model, x['name'])
-                else:
-                    field = x
+                field = self.model.properties.get(x['name'], x)
                 v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map, auto_convert=not json_result)
                 r[x['name']] = v['display']
         r['_obj_'] = record
