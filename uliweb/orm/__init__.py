@@ -2511,8 +2511,8 @@ class Result(object):
         If result is True, then the count will process result set , if
         result if False, then only use condition to count
         """
-        if self._group_by or self._join:
-            return self.do_(self.get_query().alias().count()).scalar()
+        if self._group_by or self._join or self.distinct_field:
+            return self.do_(self.get_query().limit(None).order_by(None).offset(None).alias().count()).scalar()
         else:
             return self.do_(self.get_query().with_only_columns([func.count()]).limit(None).order_by(None).offset(None)).scalar()
 

@@ -5,7 +5,6 @@ import os
 import re
 import shutil
 from openpyxl import load_workbook, Workbook
-from openpyxl.worksheet.datavalidation import DataValidation
 from pprint import pprint
 from copy import deepcopy
 import datetime
@@ -26,6 +25,7 @@ def _link(cell, data, text, _var=None, _sh=None):
     return cell.value
 
 def _validate_list(cell, data, _list, blank=True, _var=None, _sh=None):
+    from openpyxl.worksheet.datavalidation import DataValidation
     cell.value = data
     dv = DataValidation(type="list", formula1='"{}"'.format(_list), allow_blank=blank)
     _sh.add_data_validation(dv)

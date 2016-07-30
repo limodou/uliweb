@@ -190,7 +190,7 @@ class HtmlMerge(object):
         #cal links first, if no toplinks or bottomlinks be found, then
         #do nothing, otherwise find the head, and calculate the position
         #of toplinks and bottomlinks
-        if result['toplinks'] or result['bottomlinks'] or result['headlinks']:
+        if result['toplinks'] or result['bottomlinks']:
             links = []
             b = r_head.search(self.text)
             if b:
@@ -223,9 +223,9 @@ class HtmlMerge(object):
     def _clean_collection(self, existlinks):
         from uliweb.utils.sorteddict import SortedDict
 
-        r = {'toplinks':SortedDict(), 'bottomlinks':SortedDict(), 'headlinks':SortedDict()}
+        r = {'toplinks':SortedDict(), 'bottomlinks':SortedDict()}
         #process links, link could be (order, link) or link
-        for _type in ['toplinks', 'bottomlinks', 'headlinks']:
+        for _type in ['toplinks', 'bottomlinks']:
             t = self.links.get(_type, [])
             for link in t:
                 #link will also be template string
