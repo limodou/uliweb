@@ -253,7 +253,8 @@ class BaseField(object):
         return u_str(data)
 
     def to_json(self):
-        return {'name':self.name, 'type':self.type_name, 'label':self.label}
+        return {'name':self.name, 'type':self.type_name, 'label':self.label,
+                'placeholder':self.placeholder, 'attrs':self.html_attrs}
 
     def validate(self, data, all_data=None):
         """
@@ -610,7 +611,8 @@ class SelectField(BaseField):
 
     def to_json(self):
         return {'name': self.name, 'type': self.type_name, 'label': self.label,
-                'choices': self.get_choices(), 'multiple':self.multiple}
+                'choices': self.get_choices(), 'multiple':self.multiple,
+                'placeholder': self.placeholder, 'attrs':self.html_attrs}
 
 
 class RadioSelectField(SelectField):
