@@ -2461,6 +2461,8 @@ class ListView(SimpleListView):
         return query
         
     def get_table_info(self):
+        from copy import deepcopy
+
         t = {'fields_name':[], 'fields_list':[], 'fields':[], 'fields_label':{}}
     
         if self.fields is not None:
@@ -2482,14 +2484,17 @@ class ListView(SimpleListView):
                     d['verbose_name'] = x
             elif isinstance(x, dict):
                 name = x['name']
-                d = x
+                d = deepcopy(x)
 
-                if 'verbose_name' not in d:
-                    f = self.get_table_meta_field(name, x.get('model', self.model))
-                    if f:
-                        d['verbose_name'] = f['verbose_name']
-                    else:
-                        d['verbose_name'] = name
+                if 'title' in d:
+                    d['verbose_name'] = d['title']
+                else:
+                    if 'verbose_name' not in d:
+                        f = self.get_table_meta_field(name, x.get('model', self.model))
+                        if f:
+                            d['verbose_name'] = f['verbose_name']
+                        else:
+                            d['verbose_name'] = name
             
             #process field width
             w = d.get('width')
@@ -2827,6 +2832,7 @@ class QueryView(object):
     def _get_query_condition(self, model, fields, values):
         from sqlalchemy import true, and_
 
+        model = get_model(model)
         condition = true()
 
         for v in fields:

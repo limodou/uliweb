@@ -199,3 +199,42 @@ class MultiView(object):
                 result.update({'query_form':''})
             result.update({'table':view})
             return result
+
+
+def get_model_columns(model, fields=None, meta='Table'):
+    """
+    Get fields info according model class, the fields just like ListView fields definition
+    :param fields: A list
+    :param meta: if no fields, it'll use meta
+    """
+    from copy import deepcopy
+
+    fields = fields or []
+    model = functions.get_model(model)
+
+    if not fields:
+        if hasattr(model, meta):
+            fields = getattr(model, meta).fields
+        else:
+            fields = [x for x, y in model._fields_list]
+
+    fields_list = []
+    for x in fields:
+        if isinstance(x, (str, unicode)):
+            f = get_grid_column(model, x)
+        elif isinstance(x, dict):
+            name = x['name']
+            f = deepcopy(x)
+            if 'title' not in x:
+                f.update(get_grid_column(model, name))
+        else:
+            raise ValueError("Field should be string or dict type, but {!r} found".format(x))
+        fields_list.append(f)
+    return fields_list
+
+def get_grid_column(model, name):
+    field = getattr(model, name, None)
+    d = {'name':name, 'title':name}
+    if field:
+        d = {'name': name, 'title': field.verbose_name or field.name}
+    return d

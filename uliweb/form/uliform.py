@@ -253,8 +253,16 @@ class BaseField(object):
         return u_str(data)
 
     def to_json(self):
-        return {'name':self.name, 'type':self.type_name, 'label':self.label,
+        d = {'name':self.name, 'type':self.type_name, 'label':self.label,
                 'placeholder':self.placeholder, 'attrs':self.html_attrs}
+        if hasattr(self, 'choices'):
+            choices = self.get_choices()
+        else:
+            choices = []
+        if choices:
+            d['type'] = 'select'
+            d['choices'] = choices
+        return d
 
     def validate(self, data, all_data=None):
         """
