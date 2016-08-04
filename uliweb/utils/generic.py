@@ -669,7 +669,7 @@ def make_view_field(field, obj=None, types_convert_map=None, fields_convert_map=
                             v = functions.get_cached_object(prop.reference_class, obj.get_datastore_value(prop.property_name))
                         else:
                             v = functions.get_cached_object(prop.reference_class,
-                                    condition=prop.reference_class[prop.reference_fieldname]==obj.get_datastore_value(prop.property_name))
+                                    condition=prop.reference_class.c[prop.reference_fieldname]==obj.get_datastore_value(prop.property_name))
                 except orm.Error:
                     display = prop.get_datastore_value(obj) or ''
                     v = None
