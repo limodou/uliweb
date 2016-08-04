@@ -1056,8 +1056,8 @@ class Dispatcher(object):
         dispatch.call(self, 'prepare_view_env', local_env)
         
         local_env['application'] = __global__.application
-        local_env['request'] = local.request
-        local_env['response'] = local.response
+        local_env['request'] = request
+        local_env['response'] = response
         local_env['settings'] = __global__.settings
         
         env = Storage(self.env.to_dict())
