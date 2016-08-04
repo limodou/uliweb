@@ -1068,7 +1068,7 @@ def get_object(table, id=None, condition=None, cache=False, fields=None, use_loc
     
     return obj
 
-def get_cached_object(table, id, condition=None, cache=True, fields=None, use_local=True, session=None):
+def get_cached_object(table, id=None, condition=None, cache=True, fields=None, use_local=True, session=None):
     return get_object(table, id, condition, cache, fields, use_local, session)
 
 class SQLMointor(object):
