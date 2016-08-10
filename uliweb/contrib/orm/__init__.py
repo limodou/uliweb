@@ -87,3 +87,13 @@ def patch(patch_none='empty'):
         _f = f(exp.BooleanClauseList._construct, patch_none=='exception')
         exp.BooleanClauseList._construct = classmethod(_f)
 
+from uliweb.core.SimpleFrame import Finder
+
+class ModelFinder(object):
+    def __getattr__(self, name):
+        from uliweb.orm import get_model
+
+        obj = get_model(name)
+        return obj
+
+models = ModelFinder()
