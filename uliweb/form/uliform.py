@@ -114,7 +114,7 @@ class BaseField(object):
     def __init__(self, label='', default=None, required=False, validators=None,
         name='', html_attrs=None, help_string='', build=None, datatype=None,
         multiple=False, idtype=None, static=False, placeholder='',
-        hidden=False, rules=None, **kwargs):
+        hidden=False, rules=None, range=False, **kwargs):
         self.label = label
         self._default = default
         self.validators = validators or []
@@ -127,6 +127,7 @@ class BaseField(object):
         self.static = static
         self.hidden = hidden
         self.rules = rules or {}
+        self.range = range
 
         _cls = ''
         if '_class' in self.html_attrs:
@@ -138,7 +139,7 @@ class BaseField(object):
 #        else:
             self.html_attrs['class'] = ' '.join([self.field_css_class])
         self.placeholder = placeholder
-        self.multiple = multiple
+        self.multiple = multiple or range
         self.build = build or self.default_build
         self.help_string = help_string
         BaseField.creation_counter += 1
@@ -253,8 +254,7 @@ class BaseField(object):
         return u_str(data)
 
     def to_json(self):
-        d = {'name':self.name, 'type':self.type_name, 'label':self.label,
-                'placeholder':self.placeholder, 'attrs':self.html_attrs}
+        d = {'name':self.name, 'type':self.type_name, 'label':self.label}
         if hasattr(self, 'choices'):
             choices = self.get_choices()
         else:
@@ -262,6 +262,16 @@ class BaseField(object):
         if choices:
             d['type'] = 'select'
             d['choices'] = choices
+        if self.placeholder:
+            d['placeholder'] = self.placeholder
+        if self.html_attrs:
+            d['attrs'] = self.html_attrs
+        if self.range:
+            d['range'] = self.range
+        if self.help_string:
+            d['help_string'] = self.help_string
+        if self.required:
+            d['required'] = True
         return d
 
     def validate(self, data, all_data=None):
@@ -958,6 +968,34 @@ class Form(object):
         result.post_html = self.post_html() if hasattr(self, 'post_html') else ''
         return result
 
+
+    def get_json(self):
+        return {
+            'fields': self.get_fields(),
+            'layout': self.get_layout(),
+            'data': self.data,
+            'rules': self.front_rules['rules'],
+            'messages': self.front_rules['messages'],
+        }
+
+
+    def get_fields(self):
+        s = []
+        for f in self.fields_list:
+            f[1].name = f[0]
+            d = f[1].to_json()
+            s.append(d)
+        return s
+
+    def get_layout(self):
+        if self.layout:
+            return self.layout
+
+        layout = []
+        for x in self.fields_list:
+            layout.append(x[0])
+        layout = [tuple(layout)]
+        return layout
 
 def get_field_cls(type, default=None):
     return fields_mapping.get(type, default or StringField)
