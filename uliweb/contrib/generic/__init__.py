@@ -200,6 +200,34 @@ class MultiView(object):
             result.update({'table':view})
             return result
 
+    def _search(self, model, condition=None, search_field='name', value_field='id', label_field=None):
+        """
+        Default search function
+        :param search_field: Used for search field, default is 'name'
+        :param value_field: Used for id field, default is id
+        :param label_field: Used for label field, default is None, then it'll use unicode() function
+        """
+        from uliweb import json, request
+
+        name = request.GET.get('term', '')
+        M = functions.get_model(model)
+
+        def _v(label_field):
+            if label_field:
+                return lambda x: getattr(x, label_field)
+            else:
+                return lambda x: unicode(x)
+
+        v_field = request.values.get('label', 'title')
+        if name:
+            if condition is None:
+                condition = M.c[search_field].like('%' + name + '%')
+            result = [{'id': getattr(obj, value_field), v_field: _v(label_field)}
+                      for obj in M.filter(condition)]
+        else:
+            result = []
+        return json(result)
+
 
 def get_model_columns(model, fields=None, meta='Table'):
     """

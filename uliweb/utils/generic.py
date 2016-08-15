@@ -2507,6 +2507,8 @@ class ListView(SimpleListView):
             else:
                 width = '*'
             d['width_str'] = width
+            if not 'title' in d:
+                d['title'] = d['verbose_name']
             
             t['fields_list'].append(d)
             t['fields_name'].append(d['verbose_name'])
