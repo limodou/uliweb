@@ -253,10 +253,10 @@ class BaseField(object):
             return ''
         return u_str(data)
 
-    def to_json(self):
+    def to_json(self, value=None):
         d = {'name':self.name, 'type':self.type_name, 'label':self.label}
         if hasattr(self, 'choices'):
-            choices = self.get_choices()
+            choices = self.get_choices(value)
         else:
             choices = []
         if choices:
@@ -598,7 +598,7 @@ class SelectField(BaseField):
 #            self._default = default or self.choices[0][0]
 #        self.validators.append(IS_IN_SET(lambda :self.get_choices()))
 
-    def get_choices(self):
+    def get_choices(self, value=None):
         if callable(self.choices):
             return self.choices()
         else:
@@ -609,7 +609,7 @@ class SelectField(BaseField):
 #            value = self.to_html(data)
 #        else:
 #            value = data
-        choices = self.get_choices()[:]
+        choices = self.get_choices(data)[:]
         if (self.empty is not None) and (not self.multiple):
             group = False
             if choices:
@@ -627,10 +627,15 @@ class SelectField(BaseField):
         return str(self.build(choices, data, id=self.id, name=self.name, multiple=self.multiple, size=self.size, **self.html_attrs))
 
 
-    def to_json(self):
-        return {'name': self.name, 'type': self.type_name, 'label': self.label,
-                'choices': self.get_choices(), 'multiple':self.multiple,
+    def to_json(self, value=None):
+        d = {'name': self.name, 'type': self.type_name, 'label': self.label,
+                'choices': self.get_choices(value), 'multiple':self.multiple,
                 'placeholder': self.placeholder, 'attrs':self.html_attrs}
+        if 'data-url' in self.html_attrs:
+            d['data-url'] = self.html_attrs['data-url']
+        elif 'url' in self.html_attrs:
+            d['data-url'] = self.html_attrs['url']
+        return d
 
 
 class RadioSelectField(SelectField):
@@ -983,7 +988,7 @@ class Form(object):
         s = []
         for f in self.fields_list:
             f[1].name = f[0]
-            d = f[1].to_json()
+            d = f[1].to_json(self.data.get(f[0]))
             s.append(d)
         return s
 

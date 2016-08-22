@@ -97,7 +97,7 @@ class ReferenceSelectField(SelectField):
         name='', html_attrs=None, help_string='', build=None, empty='', 
         get_display=None, post_choices=None, **kwargs):
         super(ReferenceSelectField, self).__init__(label=label, default=default, required=required, validators=validators, name=name, html_attrs=html_attrs, help_string=help_string, build=build, empty=empty, **kwargs)
-        self.model = model
+        self.model = get_model(model)
         self.group_field = group_field
         self.value_field = value_field
         self.condition = condition
@@ -105,14 +105,23 @@ class ReferenceSelectField(SelectField):
         self.get_display = get_display or unicode
         self.post_choices = post_choices
         
-    def get_choices(self):
+    def get_choices(self, value=None):
+        #add value and url support
+        model = self.model
+
+        if value and not self.query:
+            self.choices = None
+            self.query = model.filter(model.c[self.value_field].in_(value))
+        #if using url, then choices should be [('', '')]
+        if not value and not self.choices and ('data-url' in self.html_attrs or 'url' in self.html_attrs):
+            placeholder = self.html_attrs.get('placeholder', '')
+            self.choices = [('', placeholder)]
         if self.choices:
             if callable(self.choices):
                 _choices = self.choices()
             else:
                 _choices = self.choices
         else:
-            model = get_model(self.model)
             if not self.group_field:
                 if hasattr(model, 'Meta'):
                     self.group_field = getattr(model.Meta, 'group_field', None)
@@ -122,7 +131,7 @@ class ReferenceSelectField(SelectField):
             if self.query is not None:
                 query = self.query
             else:
-                query = model.all()
+                query = self.model.all()
                 if hasattr(model, 'Meta') and hasattr(model.Meta, 'order_by'):
                     _order = model.Meta.order_by
                     if not isinstance(_order, (list, tuple)):
@@ -1291,11 +1300,15 @@ class DetailLayout(object):
         return str(self.render())
 
 class DetailTableLayout(object):
-    def __init__(self, layout, get_field, model=None, table_class='table'):
+    default_class = 'view-table'
+    default_table_class = 'table'
+
+    def __init__(self, layout, get_field, model=None, table_class=None, **kwargs):
         self.layout = layout
         self.get_field = get_field
         self.model = model
-        self.table_class = table_class
+        self.table_class = table_class or self.default_table_class
+        self.kwargs = kwargs
         
     def line(self, fields, n):
         from uliweb.core.html import Tag
@@ -1307,7 +1320,7 @@ class DetailTableLayout(object):
             elif isinstance(_f, dict):
                 _x += _f.get('colspan', 1)
             else:
-                raise Exception, 'Colume definition is not right, only support string or dict'
+                raise Exception('Colume definition is not right, only support string or dict')
         
         tr = Tag('tr')
         with tr:
@@ -1319,7 +1332,7 @@ class DetailTableLayout(object):
                     f = self.get_field(x['name'])
                     _span = _span * x.get('colspan', 1)
                 
-                with tr.td(colspan=_span, width='%d%%' % (100*_span/n,)):
+                with tr.td(colspan=_span, width='%d%%' % (100*_span/n,), _class='view-cell'):
                     with tr.div:
                         with tr.span(_class='view-label'):
                             tr << '<b>' + f['label'] + ': </b>'
@@ -1345,7 +1358,7 @@ class DetailTableLayout(object):
                     elif isinstance(f, dict):
                         _x += f.get('colspan', 1)
                     else:
-                        raise Exception, 'Colume definition is not right, only support string or dict'
+                        raise Exception('Colume definition is not right, only support string or dict')
                 m.append(_x)
             else:
                 m.append(1)
@@ -1369,7 +1382,7 @@ class DetailTableLayout(object):
                         buf.body << '<fieldset>'
                         buf.body << self.title(title)
                     
-                    buf.body << '<table class="%s"><tbody>' % self.table_class
+                    buf.body << '<table class="{} {}"><tbody>'.format(self.table_class, self.default_class)
                     table = True
                     first = False
                     continue
@@ -1377,7 +1390,7 @@ class DetailTableLayout(object):
                     fields = [fields]
             if first:
                 first = False
-                buf.begin << '<table class="%s">' % self.table_class
+                buf.begin << '<table class="{} {}">'.format(self.table_class, self.default_class)
                 buf.body << '<tbody>'
                 table = True
             buf.body << self.line(fields, n)
@@ -1402,6 +1415,10 @@ class DetailView(object):
     def __init__(self, model, condition=None, obj=None, fields=None, 
         types_convert_map=None, fields_convert_map=None, table_class_attr='table',
         layout_class=None, layout=None, layout_kwargs=None, template_data=None, meta='DetailView'):
+
+        from uliweb import settings
+        from uliweb.utils.common import import_attr
+
         self.model = get_model(model)
         self.meta = meta
         self.condition = condition
@@ -1415,11 +1432,16 @@ class DetailView(object):
         self.fields_convert_map = fields_convert_map or {}
         self.table_class_attr = table_class_attr
         self.layout = layout or get_layout(model, meta)
-        self.layout_class = layout_class
-        if isinstance(self.layout, (str, unicode)):
-            self.layout_class = layout_class or DetailLayout
-        elif isinstance(self.layout, (tuple, list)):
-            self.layout_class = layout_class or DetailTableLayout
+        if layout_class:
+            if isinstance(layout_class, (str, unicode)):
+                self.layout_class = import_attr(settings.get_var('DETAIL_LAYOUT_CLASSES/{}'.format(layout_class)))
+            else:
+                self.layout_class = layout_class
+        else:
+            if isinstance(self.layout, (str, unicode)):
+                self.layout_class = layout_class or DetailLayout
+            elif isinstance(self.layout, (tuple, list)):
+                self.layout_class = layout_class or DetailTableLayout
         self.template_data = template_data or {}
         self.result_fields = Storage({})
         self.r = self.result_fields
@@ -1454,7 +1476,7 @@ class DetailView(object):
         for field_name, prop in get_fields(self.model, self.fields, self.meta):
             field = make_view_field(prop, self.obj, self.types_convert_map, self.fields_convert_map)
             if field:
-                text.append('<tr><th align="right" width=150>%s</th><td>%s</td></tr>' % (field["label"], field["display"]))
+                text.append('<tr><th align="right" width=150>%s</th><td>%s</td></tr>' % (safe_str(field["label"]), safe_str(field["display"])))
                 self.result_fields[field_name] = field
                 self.f[field_name] = field['display']
         b.body << '\n'.join(text)
@@ -2898,7 +2920,20 @@ class QueryView(object):
                         _cond = self._make_op(column, v['op'], value)
                     else:
                         if isinstance(value, (tuple, list)):
-                            _cond = column.in_(value)
+                            if v.get('range'):
+                                _cond = None
+                                if (value[0]):
+                                    if 'op' in v:
+                                        _cond = self._make_op(column, v['op'][0], value[0])
+                                    else:
+                                        _cond = (column >= value[0]) & _cond
+                                if (value[1]):
+                                    if 'op' in v:
+                                        _cond = self._make_op(column, v['op'][1], value[1])
+                                    else:
+                                        _cond = (column <= value[1]) & _cond
+                            else:
+                                _cond = column.in_(value)
                         else:
                             _cond = column==value
                 if _cond is not None:
