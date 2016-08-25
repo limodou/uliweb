@@ -28,6 +28,7 @@ import re
 import threading
 import shutil
 import warnings
+from .js import json_dumps
 
 #################################
 # escape module
@@ -469,6 +470,7 @@ __custom_nodes__ = {}
 
 default_namespace = {
     "escape": xhtml_escape,
+    "json_dumps": json_dumps,
     "xhtml_escape": xhtml_escape,
     "url_escape": url_escape,
     "json_encode": json_encode,
@@ -1567,6 +1569,22 @@ def _parse(reader, template, in_block=None, in_loop=None,
                 raise ParseError("Empty expression on line %s:%d" % (
                         filename, line))
             body.chunks.append(_Expression('escape(%s)' % contents, line))
+            continue
+
+        # Expression
+        # if start_brace == "{{$":
+        if reader[0] == "$":
+            reader.consume(1)
+            end = reader.find(end_tag)
+            if end == -1:
+                raise ParseError("Missing end expression %s on line %s:%d" % (
+                    end_tag, filename, line))
+            contents = reader.consume(end).strip()
+            reader.consume(_len_e)
+            if not contents:
+                raise ParseError("Empty expression on line %s:%d" % (
+                        filename, line))
+            body.chunks.append(_Expression('json_dumps(%s)' % contents, line))
             continue
 
         # Escape expression
