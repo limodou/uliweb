@@ -614,8 +614,43 @@ def do_(query, ec=None, args=None):
                 
     return result
 
+class Writer(object):
+    def __init__(self, fobj, encoding='utf8', **kwargs):
+        import csv
+
+        self.fobj = fobj
+        self.encoding = encoding
+        self.writer = csv.writer(fobj, **kwargs)
+
+    def begin(self, header):
+        self.writer.writerrow(header)
+
+    def close(self):
+        pass
+
+    def writerow(self, row):
+        from uliweb.utils.common import simple_value
+
+        self.writer.writerow( [simple_value(x, encoding=self.encoding) for x in row])
+
+class DictWriter(Writer):
+    def __init__(self, fobj, encoding='utf8', tree=False, **kwargs):
+        self.fobj = fobj
+        self.encoding = encoding
+        self.tree = tree
+        self.kwargs = kwargs
+
+    def begin(self, header):
+        self.header = header
+
+    def writerow(self, row):
+        from uliweb.utils.common import dumps
+
+        self.fobj.write(dumps(dict(zip(self.header, row)), beautiful=True))
+        self.fobj.write('\n')
+
 def save_file(result, filename, encoding='utf8', headers=None,
-              convertors=None, visitor=None, **kwargs):
+              convertors=None, visitor=None, writer=None, **kwargs):
     """
     save query result to a csv file
     visitor can used to convert values, all value should be convert to string
@@ -635,11 +670,11 @@ def save_file(result, filename, encoding='utf8', headers=None,
     
     headers used to convert column to a provided value
     """
-    import csv
     from uliweb.utils.common import simple_value
     
     convertors = convertors or {}
     headers = headers or {}
+    writer = writer or Writer
     
     def convert(k, v, data):
         f = convertors.get(k)
@@ -650,11 +685,11 @@ def save_file(result, filename, encoding='utf8', headers=None,
     def convert_header(k):
         return headers.get(k, k)
     
-    def _r(x):
-        if isinstance(x, (str, unicode)):
-            return re.sub('\r\n|\r|\n', ' ', x)
-        else:
-            return x
+    # def _r(x):
+    #     if isinstance(x, (str, unicode)):
+    #         return re.sub('\r\n|\r|\n', ' ', x)
+    #     else:
+    #         return x
 
     if isinstance(filename, (str, unicode)):
         f = open(filename, 'wb')
@@ -664,15 +699,15 @@ def save_file(result, filename, encoding='utf8', headers=None,
         need_close = False
 
     try:
-        w = csv.writer(f, **kwargs)
-        w.writerow([simple_value(convert_header(x), encoding=encoding) for x in result.keys()])
+        w = writer(f, encoding, **kwargs)
+        w.begin([simple_value(convert_header(x), encoding=encoding) for x in result.keys()])
         for row in result:
             if visitor and callable(visitor):
                 _row = visitor(result.keys, row.values(), encoding)
             else:
                 _row = [convert(k, v, row) for k, v in zip(result.keys(), row.values())]
-            r = [simple_value(_r(x), encoding=encoding) for x in _row]
-            w.writerow(r)
+            w.writerow(_row)
+        w.close()
     finally:
         if need_close:
             f.close()
@@ -2708,7 +2743,40 @@ class Result(object):
             if not result:
                 raise StopIteration
             yield self.load(result)
-  
+
+    def iter_tree(self, parent_field='parent', children_name='children', fields=None,
+             datatype='dict', subcondition=None):
+        d = None
+
+        def _f(parent):
+            return self.model.filter(self.model.c[parent_field]==parent, subcondition)
+
+        for row in self.run():
+            yield row
+            r = _f(getattr(row, parent_field))
+            for x in r:
+                yield x
+
+    def tree(self, query=None, parent_field='parent', children_name='children', fields=None,
+             datatype='dict', key_field='id', subcondition=None):
+        from uliweb.utils.sorteddict import SortedDict
+
+        result = []
+        d = None
+
+        for row in query or self:
+            if datatype == 'dict':
+                d = row.to_dict(fields=fields, dicttype=SortedDict)
+            else:
+                d = row
+            result.append(d)
+            query = self.model.filter(self.model.c[parent_field]==getattr(row, key_field))
+            r = self.tree(query, parent_field, children_name, fields, datatype, key_field, subcondition)
+            if r:
+                d[children_name] = r
+
+        return result
+
 class ReverseResult(Result):
     def __init__(self, model, condition, a_field, b_table, instance, b_field, *args, **kwargs):
         self.model = model
@@ -2761,7 +2829,7 @@ class ReverseResult(Result):
             self.do_(self.model.table.delete(self.condition))
     
     remove = clear
-    
+
 class ManyResult(Result):
     def __init__(self, modela, instance, property_name, modelb, 
         table, fielda, fieldb, realfielda, realfieldb, valuea, through_model=None):
@@ -3637,12 +3705,11 @@ class Model(object):
                     self._old_values[k] = t
         self._saved = True
         
-    def to_dict(self, fields=None, convert=True, manytomany=False):
-        d = {}
-        fields = fields or []
-        for k, v in self.properties.items():
-            if fields and not k in fields:
-                continue
+    def to_dict(self, fields=None, convert=True, manytomany=False, dicttype=dict):
+        d = dicttype()
+        fields = fields or self.properties.keys()
+        for k in fields:
+            v = self.properties[k]
             if not isinstance(v, ManyToMany):
                 if convert:
                     t = v.get_value_for_datastore(self)

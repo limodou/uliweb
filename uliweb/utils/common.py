@@ -396,8 +396,103 @@ def str_value(v, encoding='utf-8', bool_int=True, none='NULL', newline_escape=Fa
                 return '0'
         else:
             return str(v)
+    elif isinstance(v, long):
+        return int(v)
     else:
         return str(v)
+
+def dumps(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
+    """
+    Dumps an data type to a string
+    :param a: variable
+    :param encoding:
+    :param beautiful: If using indent
+    :param indent:
+    :param convertors:
+    :return:
+    """
+    convertors = convertors or {}
+    escapechars = [("\\", "\\\\"), ("'", r"\'"), ('\"', r'\"'), ('\b', r'\b'),
+        ('\t', r"\t"), ('\r', r"\r"), ('\n', r"\n")]
+    s = []
+    indent_char = ' '*4
+    if isinstance(a, (list, tuple)):
+        if isinstance(a, list):
+            # if beautiful:
+            #     s.append(indent_char*indent)
+            s.append('[')
+        else:
+            if beautiful:
+                s.append(indent_char*indent)
+            s.append('(')
+        if beautiful:
+            s.append('\n')
+            # s.append(indent_char * (indent+1))
+        for i, k in enumerate(a):
+            if beautiful:
+                ind = indent + 1
+            else:
+                ind = indent
+            s.append(indent_char*ind + dumps(k, encoding, beautiful, ind, convertors=convertors))
+            if i<len(a)-1:
+                if beautiful:
+                    s.append(',\n')
+                else:
+                    s.append(', ')
+        if beautiful:
+            s.append('\n')
+        if isinstance(a, list):
+            if beautiful:
+                s.append(indent_char*indent)
+            s.append(']')
+        else:
+            if len(a) == 1:
+                s.append(',')
+            if beautiful:
+                s.append(indent_char*indent)
+            s.append(')')
+    elif isinstance(a, dict):
+        # if beautiful:
+        #     s.append(indent_char*(max(indent-1, 0)))
+        s.append('{')
+        if beautiful:
+            s.append('\n')
+        for i, k in enumerate(a.items()):
+            key, value = k
+            if beautiful:
+                ind = indent + 1
+            else:
+                ind = indent
+            s.append('%s: %s' % (indent_char*ind + dumps(key, encoding, beautiful, ind, convertors=convertors),
+                                 dumps(value, encoding, beautiful, ind, convertors=convertors)))
+            if i<len(a.items())-1:
+                if beautiful:
+                    s.append(',\n')
+                    # s.append(indent_char * indent)
+                else:
+                    s.append(', ')
+        if beautiful:
+            s.append('\n')
+            s.append(indent_char*indent)
+        s.append('}')
+    elif isinstance(a, str):
+        t = a
+        for i in escapechars:
+            t = t.replace(i[0], i[1])
+        s.append("'%s'" % t)
+    elif isinstance(a, unicode):
+        t = a
+        for i in escapechars:
+            t = t.replace(i[0], i[1])
+        s.append("u'%s'" % t.encode(encoding))
+    else:
+        _type = type(a)
+        c_func = convertors.get(_type)
+        if c_func:
+            s.append(c_func(a))
+        else:
+            s.append(str(str_value(a, none='None')))
+    return ''.join(s)
 
 def norm_path(path):
     return os.path.normpath(os.path.abspath(path))
