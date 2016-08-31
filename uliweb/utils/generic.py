@@ -2280,6 +2280,7 @@ class SimpleListView(object):
                         break
                 _f = self.table_info['fields_list'][field['col']].copy()
                 kwargs = {}
+                kwargs.update(_f)
                 kwargs['field'] = _f.pop('name')
                 _f.pop('verbose_name', None)
                 _f.pop('prop', None)
@@ -2298,7 +2299,6 @@ class SimpleListView(object):
                     _f.pop('title', None)
                 else:
                     kwargs['width'] = _f.pop('width', self.default_column_width)
-                kwargs.update(_f)
                 frozen_flag = kwargs.pop('frozen', False)
                 if frozen is None or frozen_flag is frozen:
                     s.append(kwargs)
