@@ -3709,7 +3709,8 @@ class Model(object):
         d = dicttype()
         fields = fields or self.properties.keys()
         for k in fields:
-            v = self.properties[k]
+            v = self.properties.get(k)
+            if not v: continue
             if not isinstance(v, ManyToMany):
                 if convert:
                     t = v.get_value_for_datastore(self)
