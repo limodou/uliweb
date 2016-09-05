@@ -135,6 +135,9 @@ class Worker(object):
                     ret = self.run()
             except TimeoutException as e:
                 self.log.info('Time out')
+            except Exception as e:
+                self.log.exception(e)
+                self.is_exit = True
             finally:
                 # !important
                 # count shoud be calculated by child class
