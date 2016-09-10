@@ -1241,3 +1241,155 @@ class ReflectCommand(SQLCommandMixin, Command):
             except Exception as e:
                 import traceback
                 traceback.print_exc()
+
+class DumpRecordCommand(SQLCommandMixin, Command):
+    name = 'dumprecord'
+    args = 'modelname condition'
+    option_list = (
+        make_option('-f', '--filename', dest='filename',
+            help='Output filename.'),
+        make_option('-r', '--recursion', dest='recursion', action='store_true',
+            help="Dump relative record recursionly"),
+    )
+    help = 'Dump records and relative records to a file.'
+
+    def handle(self, options, global_options, *args):
+        from uliweb import orm
+        from sqlalchemy import text
+        import sys
+
+        if len(args) < 2:
+            self.print_help(self.prog_name, 'dumprecord')
+            sys.exit(1)
+
+        verbose = global_options.verbose
+
+        get_engine(options, global_options)
+        self.engine = orm.engine_manager[options.engine]
+
+        self.tables = {}
+        for name, model in self.engine.models.items():
+            x = orm.get_model(name, options.engine)
+            self.tables[x.tablename] = name
+
+        M = orm.get_model(args[0])
+        if verbose:
+            print '-- Ready to dump table ({}) where ({})'.format(args[0], args[1])
+
+        if args[1].isdigit():
+            condition = M.c[M._primary_field]==int(args[1])
+        else:
+            condition = text(args[1])
+        query = M.filter(condition)
+        if verbose:
+            print '-- SQL = [{}]'.format(orm.rawsql(query.get_query()))
+        need_close = False
+        if options.filename:
+            f = open(options.filename, 'wb')
+            need_close = True
+        else:
+            f = sys.stdout
+
+        self.items = set()
+        try:
+            t = 0
+            max_level = 1 if not options.recursion else None
+            if verbose:
+                print '-- Output with max-level={}'.format(max_level)
+            for row in query:
+                for n in self.dump_record(args[0], M, row, max_level=max_level,
+                                          verbose=verbose):
+                    f.write(n)
+                    f.write('\n')
+                    t += 1
+            if verbose:
+                print '-- Total dump {} records'.format(t)
+        finally:
+            if need_close:
+                f.close()
+
+    def dump_record(self, name, model, row, level=1, max_level=None, verbose=None,
+                    field_name=''):
+        from uliweb.orm import OneToOne, ReferenceProperty, ManyToMany, get_model
+        from uliweb.utils.common import dumps
+
+        if not row:
+            raise StopIteration
+        sql = (name, row.to_dict(manytomany=True))
+        key = (name, row._key)
+        if key in self.items:
+            raise StopIteration
+        self.items.add(key)
+        if verbose:
+            if field_name:
+                fname = '[{}]'.format(field_name)
+            else:
+                fname = ''
+            print ' '*level*4, '{} {}-{}'.format(fname, *key)
+        yield dumps(sql)
+        for field_name, prop in model.properties.items():
+            if isinstance(prop, ManyToMany):
+                _name = self.tables[prop.reference_class.tablename]
+                _M = get_model(_name)
+                if max_level and level > max_level:
+                    raise StopIteration
+                for record in getattr(row, field_name):
+                    for r in self.dump_record(_name, _M, record, level + 1, max_level,
+                                              verbose=verbose, field_name=field_name):
+                        yield r
+            elif isinstance(prop, (OneToOne, ReferenceProperty)):
+                _name = self.tables[prop.reference_class.tablename]
+                _M = get_model(_name)
+                if max_level and level > max_level:
+                    raise StopIteration
+                for r in self.dump_record(_name, _M, getattr(row, field_name), level+1, max_level,
+                                          verbose=verbose, field_name=field_name):
+                    yield r
+
+class LoadRecordCommand(SQLCommandMixin, Command):
+    name = 'loadrecord'
+    args = 'filename'
+    help = 'Load records from dumprecord command output file.'
+
+    def handle(self, options, global_options, *args):
+        import sys
+        from uliweb import orm
+        from sqlalchemy import text
+        from uliweb.utils.common import read_syntax_line
+
+        if len(args) < 1:
+            self.print_help(self.prog_name, 'loadrecord')
+            sys.exit(1)
+
+        verbose = global_options.verbose
+
+        get_engine(options, global_options)
+        self.engine = orm.engine_manager[options.engine]
+
+        if verbose:
+            print '-- Ready to load records from {}'.format(args[0])
+
+        n = 0
+        with open(args[0]) as f:
+            while 1:
+                line = read_syntax_line(f)
+                if line:
+                    model, values = eval(line)
+                    M = orm.get_model(model)
+                    row = M.get(M.c[M._primary_field]==values[M._primary_field])
+                    if row:
+                        if verbose:
+                            print '    Update {}-{}'.format(model, values[M._primary_field])
+                        row.update(**values)
+                        row.save()
+                    else:
+                        if verbose:
+                            print '    Insert {}-{}'.format(model, values[M._primary_field])
+                        row = M(**values)
+                        row.save(insert=True)
+                    n += 1
+                else:
+                    break
+
+        if verbose:
+            print '-- Total {} records loaded'.format(n)

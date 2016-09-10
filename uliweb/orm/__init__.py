@@ -3065,11 +3065,14 @@ class ManyResult(Result):
             columns = list(self.table.c) + self.columns
         else:
             columns = self.columns
+        condition = self.condition or None
+        if condition and isinstance(condition, (str, unicode)):
+            condition = text(condition)
         query = select(
             self.get_columns(self.modelb, columns), 
             (self.table.c[self.fielda] == self.valuea) & 
             (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & 
-            self.condition,
+            condition,
             **self.kwargs)
         for func, args, kwargs in self.funcs:
             query = getattr(query, func)(*args, **kwargs)

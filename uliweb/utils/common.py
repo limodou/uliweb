@@ -860,6 +860,24 @@ def convert_bytes(n):
             return '%.1f%s' % (value, s)
     return "%sB" % n
 
+def read_syntax_line(f):
+    import token
+    import tokenize
+
+    g = tokenize.generate_tokens(f.readline)
+
+    buf = []
+    for v in g:
+        tokentype, t, start, end, line = v
+        if tokentype == 54:
+            continue
+        if tokentype in (token.INDENT, token.DEDENT, tokenize.COMMENT):
+            continue
+        if tokentype == token.NEWLINE:
+            return ''.join(buf)
+        else:
+            buf.append(t)
+    return ''.join(buf)
 
 #if __name__ == '__main__':
 #    log.info('Info: info')
