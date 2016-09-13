@@ -4123,7 +4123,10 @@ class Model(object):
         else:
             if collection_name in cls._collection_names:
                 if cls._collection_names.get(collection_name) != from_class_name:
-                    raise DuplicatePropertyError("Model %s already has property %s" % (cls.__name__, collection_name))
+                    raise DuplicatePropertyError("Model %s already has collection property %s" % (cls.__name__, collection_name))
+            #add property check
+            if collection_name in cls.properties:
+                raise DuplicatePropertyError("Model %s already has property %s" % (cls.__name__, collection_name))
         return collection_name
             
     @classmethod
