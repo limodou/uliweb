@@ -107,6 +107,7 @@ class MultiView(object):
     def _list(self, model, queryview=None, queryform=None, **kwargs):
         from uliweb import request, json, CONTENT_TYPE_JSON
         from sqlalchemy import and_
+        from uliweb.utils.generic import get_sort_field
 
         if queryview:
             queryview.run()
@@ -119,6 +120,14 @@ class MultiView(object):
             kwargs['condition'] = condition
         else:
             kwargs['condition'] = condition
+
+        #process order
+        if 'order' not in kwargs:
+            order_by = get_sort_field(model)
+            if order_by is not None:
+                kwargs['order_by'] = order_by
+
+        print kwargs
 
         self._process_fields_convert_map(kwargs)
         #get list view

@@ -2222,7 +2222,7 @@ class ReferenceProperty(Property):
         self.reference_fieldname = self.reference_fieldname or self.reference_class._primary_field
         self.collection_name = self.reference_class.get_collection_name(model_class.tablename, self._collection_name, model_class.tablename)
         setattr(self.reference_class, self.collection_name,
-            _ReverseReferenceProperty(model_class, property_name, self._id_attr_name()))
+            _ReverseReferenceProperty(model_class, property_name, self._id_attr_name(), self.collection_name))
 
     def __get__(self, model_instance, model_class):
         """Get reference object.
@@ -3447,7 +3447,7 @@ class _ReverseReferenceProperty(Property):
     that instance of model B.
     """
 
-    def __init__(self, model, reference_id, reversed_id):
+    def __init__(self, model, reference_id, reversed_id, collection_name):
         """Constructor for reverse reference.
 
         Constructor does not take standard values of other property types.
@@ -3458,6 +3458,9 @@ class _ReverseReferenceProperty(Property):
         self._reversed_id = reversed_id     #B's reference_field
         self.verbose_name = ''
         self.label = ''
+        self.name = collection_name
+        self._collection_name = collection_name
+        self.choices = None
 
     def __get__(self, model_instance, model_class):
         """Fetches collection of model instances of this collection property."""
@@ -3476,6 +3479,15 @@ class _ReverseReferenceProperty(Property):
     def __set__(self, model_instance, value):
         """Not possible to set a new collection."""
         raise BadValueError('Virtual property is read-only')
+
+    def get_value_for_datastore(self, model_instance, cached=False):
+        """Get key of reference rather than reference itself."""
+        value = getattr(model_instance, self._attr_name(), None)
+        if not cached:
+            value = getattr(model_instance, self._collection_name).keys()
+            setattr(model_instance, self._attr_name(), value)
+        return value
+
 
 class _OneToOneReverseReferenceProperty(_ReverseReferenceProperty):
     def __init__(self, model, reference_id, reversed_id, collection_name):
