@@ -122,12 +122,10 @@ class MultiView(object):
             kwargs['condition'] = condition
 
         #process order
-        if 'order' not in kwargs:
+        if 'order_by' not in kwargs:
             order_by = get_sort_field(model)
             if order_by is not None:
                 kwargs['order_by'] = order_by
-
-        print kwargs
 
         self._process_fields_convert_map(kwargs)
         #get list view
