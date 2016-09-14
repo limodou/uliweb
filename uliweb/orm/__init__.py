@@ -615,39 +615,51 @@ def do_(query, ec=None, args=None):
     return result
 
 class Writer(object):
-    def __init__(self, fobj, encoding='utf8', **kwargs):
-        import csv
-
-        self.fobj = fobj
+    def __init__(self, filename, encoding='utf8', header=None, data=None, **kwargs):
+        self.filename = filename
         self.encoding = encoding
-        self.writer = csv.writer(fobj, **kwargs)
-
-    def begin(self, header):
-        self.writer.writerrow(header)
-
-    def close(self):
-        pass
-
-    def writerow(self, row):
-        from uliweb.utils.common import simple_value
-
-        self.writer.writerow( [simple_value(x, encoding=self.encoding) for x in row])
-
-class DictWriter(Writer):
-    def __init__(self, fobj, encoding='utf8', tree=False, **kwargs):
-        self.fobj = fobj
-        self.encoding = encoding
-        self.tree = tree
+        self.data = data or []
+        self.header = header
         self.kwargs = kwargs
 
-    def begin(self, header):
-        self.header = header
+    def get_header(self):
+        header = []
+        if self.header:
+            for x in self.header:
+                if isinstance(x, (str, unicode)):
+                    header.append(x)
+                elif isinstance(x, dict):
+                    header.append(x['title'])
+                else:
+                    raise ValueError(
+                        "Header type is not right, should be str, unicode, or dict, but {} found".format(type(x)))
+        return header
 
-    def writerow(self, row):
+    def save(self):
+        import csv
+        from uliweb.utils.common import simple_value
+
+        with open(self.filename, 'wb') as f:
+            writer = csv.writer(f, **self.kwargs)
+            if self.header:
+                writer.writerow(self.get_header())
+            for row in self.data:
+                writer.writerow([simple_value(x, encoding=self.encoding) for x in row])
+
+class DictWriter(Writer):
+    def save(self):
         from uliweb.utils.common import dumps
 
-        self.fobj.write(dumps(dict(zip(self.header, row)), beautiful=True))
-        self.fobj.write('\n')
+        with open(self.filename, 'wb') as f:
+            f.write(dumps([dict(zip(self.get_header(), x)) for x in self.data], beautiful=True))
+            f.write('\n')
+
+class XlsxWriter(Writer):
+    def save(self):
+        from uliweb.utils.xltools import SimpleWriter
+
+        writer = SimpleWriter(self.filename, header=self.header, data=self.data, **self.kwargs)
+        writer.save()
 
 def save_file(result, filename, encoding='utf8', headers=None,
               convertors=None, visitor=None, writer=None, **kwargs):
@@ -670,11 +682,20 @@ def save_file(result, filename, encoding='utf8', headers=None,
     
     headers used to convert column to a provided value
     """
+    import os
     from uliweb.utils.common import simple_value
     
     convertors = convertors or {}
-    headers = headers or {}
-    writer = writer or Writer
+    headers = headers or []
+    ext = os.path.splitext(filename)[1]
+    if ext == '.csv':
+        writer_class = Writer
+    elif ext == '.dict':
+        writer_class = DictWriter
+    elif ext == '.xlsx':
+        writer_class = XlsxWriter
+    else:
+        raise ValueError("Can't find suitable writer for file type {}".format(ext))
     
     def convert(k, v, data):
         f = convertors.get(k)
@@ -682,36 +703,27 @@ def save_file(result, filename, encoding='utf8', headers=None,
             v = f(v, data)
         return v
     
-    def convert_header(k):
-        return headers.get(k, k)
-    
-    # def _r(x):
-    #     if isinstance(x, (str, unicode)):
-    #         return re.sub('\r\n|\r|\n', ' ', x)
-    #     else:
-    #         return x
+    _header = []
+    for k in result.keys():
+        flag = False
+        for x in headers:
+            if x['name'] == k:
+                _header.append(x)
+                flag = True
+                break
+        if not flag:
+            _header.append({'name':x, 'title':x})
 
-    if isinstance(filename, (str, unicode)):
-        f = open(filename, 'wb')
-        need_close = True
-    else:
-        f = filename
-        need_close = False
-
-    try:
-        w = writer(f, encoding, **kwargs)
-        w.begin([simple_value(convert_header(x), encoding=encoding) for x in result.keys()])
+    def _data():
         for row in result:
             if visitor and callable(visitor):
                 _row = visitor(result.keys, row.values(), encoding)
             else:
                 _row = [convert(k, v, row) for k, v in zip(result.keys(), row.values())]
-            w.writerow(_row)
-        w.close()
-    finally:
-        if need_close:
-            f.close()
+            yield _row
 
+    writer = writer_class(filename, header=_header, data=_data(), **kwargs)
+    writer.save()
     
 def Begin(ec=None):
     session = get_session(ec)
@@ -2663,17 +2675,35 @@ class Result(object):
         global save_file
         
         convertors = convertors or {}
+        headers = headers or []
         
-        if display:
-            fields = self.get_fields()
-            for i, column in enumerate(fields):
-                if column.name not in convertors:
+        fields = self.get_fields()
+        _header = []
+        for i, column in enumerate(fields):
+            if column.name not in convertors:
+                if display:
                     def f(value, data):
                         return column.get_display_value(value)
+
                     convertors[column.name] = f
+            flag = False
+            for j in headers:
+                if not isinstance(j, dict):
+                    raise ValueError("Header should be a list of dict, but {} type found".format(type(j)))
+                if j['name'] == column.name:
+                    _header.append(j)
+                    flag = True
+                    break
+            if not flag:
+                d = {'name':column.name}
+                if display:
+                    d['title'] = column.verbose_name or column.name
+                else:
+                    d['title'] = column.name
+                _header.append(d)
 
         return save_file(self.run(), filename, encoding=encoding,
-                         headers=headers, convertors=convertors, **kwargs)
+                         headers=_header, convertors=convertors, **kwargs)
     
     def get_query(self, columns=None):
         #user can define default_query, and default_query 

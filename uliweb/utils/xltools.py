@@ -380,7 +380,7 @@ class SimpleWriter(object):
 
 
     def _write(self):
-        if self.filename:
+        if self.filename and os.path.exists(self.filename):
             wb = load_workbook(self.filename, keep_vba=True)
         else:
             wb = Workbook()
