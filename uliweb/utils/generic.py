@@ -2871,7 +2871,7 @@ class QueryView(object):
                 v = {'name':v}
             name = v['name']
             if name in values:
-                render = v.get('render')
+                render = v.get('condition')
                 value = values[name]
                 if not value:
                     continue
