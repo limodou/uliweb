@@ -2857,43 +2857,6 @@ class QueryView(object):
         else:
             raise KeyError('Not support this op[%s] value' % op)
 
-    def _get_query_condition(self, model, fields, values):
-        from sqlalchemy import true, and_
-
-        model = get_model(model)
-        condition = true()
-
-        for v in fields:
-            if isinstance(v, (tuple, list)):
-                v = {'name':v[0]}
-            elif not isinstance(v, dict):
-                v = {'name':v}
-            name = v['name']
-            if name in values:
-                render = v.get('render')
-                value = values[name]
-                if not value:
-                    continue
-                _cond = None
-                if render:
-                    _cond = render(model, name, value, values)
-                else:
-                    column = model.c[name]
-                    if 'like' in v:
-                        _cond = self._make_like(column, v['like'], value)
-                    elif 'op' in v:
-                        _cond = self._make_op(column, v['op'], value)
-                    else:
-                        if isinstance(value, (tuple, list)):
-                            _cond = column.in_(value)
-                        else:
-                            _cond = column==value
-                if _cond is not None:
-                    condition = and_(_cond, condition)
-
-        log.debug("condition=%s", condition)
-        return condition
-
     def get_condition(self, values=None):
         from sqlalchemy import true, and_
 
@@ -2916,6 +2879,9 @@ class QueryView(object):
                 if render:
                     _cond = render(model, name, value, values)
                 else:
+                    if name not in model.c:
+                        log.debug("Can't found {} in model {}".format(name, model.__name__))
+                        continue
                     column = model.c[name]
                     if 'like' in v:
                         _cond = self._make_like(column, v['like'], value)
