@@ -110,7 +110,7 @@ class ReferenceSelectField(SelectField):
         model = self.model
 
         if value and not self.query:
-            self.choices = None
+            # self.choices = None
             if self.multiple:
                 self.query = model.filter(model.c[self.value_field].in_(value))
             else:

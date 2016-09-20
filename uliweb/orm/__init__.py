@@ -1084,7 +1084,7 @@ def get_model(model, engine_name=None, signal=True, reload=False):
     raise ModelNotFound("Can't found the model %s in engine %s" % (model, engine_name))
     
 def get_object_id(engine_name, tablename, id):
-    return 'OC:%s:%s:%s' % (engine_name, tablename, str(id))
+    return 'OC:%s:%s:%s' % (engine_name, tablename, safe_str(id))
 
 def get_object(table, id=None, condition=None, cache=False, fields=None, use_local=False,
                engine_name=None, session=None):
