@@ -3095,8 +3095,11 @@ class ManyResult(Result):
             columns = list(self.table.c) + self.columns
         else:
             columns = self.columns
-        condition = self.condition or None
-        if condition and isinstance(condition, (str, unicode)):
+        if self.condition is None:
+            condition = ''
+        else:
+            condition = self.condition
+        if condition is not None and isinstance(condition, (str, unicode)):
             condition = text(condition)
         query = select(
             self.get_columns(self.modelb, columns), 
