@@ -109,12 +109,12 @@ class ReferenceSelectField(SelectField):
         #add value and url support
         model = self.model
 
-        if value and not self.query:
-            # self.choices = None
-            if self.multiple:
-                self.query = model.filter(model.c[self.value_field].in_(value))
-            else:
-                self.query = model.filter(model.c[self.value_field]==value)
+        # if value and not self.query and not self.condition:
+        #     # self.choices = None
+        #     if self.multiple:
+        #         self.query = model.filter(model.c[self.value_field].in_(value))
+        #     else:
+        #         self.query = model.filter(model.c[self.value_field]==value)
         #if using url, then choices should be [('', '')]
         if not value and not self.choices and ('data-url' in self.html_attrs or 'url' in self.html_attrs):
             placeholder = self.html_attrs.get('placeholder', '')
