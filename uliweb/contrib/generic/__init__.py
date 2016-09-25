@@ -128,22 +128,23 @@ class MultiView(object):
                 kwargs['order_by'] = order_by
 
         self._process_fields_convert_map(kwargs)
+        downloads = {}
+        downloads['filename'] = kwargs.pop('download_filename', 'download.xlsx')
+        downloads['action'] = kwargs.pop('download_action', 'download')
+        downloads['fields_convert_map'] = kwargs.pop('download_fields_convert_map',
+                                                  kwargs.get('fields_convert_map'))
+        downloads['domain'] = kwargs.pop('download_domain', '')
+        downloads['timeout'] = 0
+        downloads.update(kwargs.pop('download_kwargs', {}))
+        self._process_fields_convert_map(downloads)
+
         #get list view
         view = self._list_view(model=model, **kwargs)
 
         if 'data' in request.values:
             return json(view.json(), content_type=CONTENT_TYPE_JSON)
         elif 'download' in request.GET:
-            filename = 'download.xlsx'
-            kw = {}
-            kw['filename'] = kwargs.get('download_filename', filename)
-            kw['action'] = kwargs.get('download_action', 'download')
-            kw['timeout'] = 0
-            kw['query'] = kwargs.get('download_query', kwargs.get('query'))
-            kw['fields_convert_map'] = kwargs.get('download_fields_convert_map',
-                                                  kwargs.get('fields_convert_map'))
-            kw['domain'] = kwargs.get('download_domain')
-            return view.download(**kw)
+            return view.download(**downloads)
         else:
             result = view.run()
             if queryview:
@@ -226,10 +227,12 @@ class MultiView(object):
                 return lambda x: unicode(x)
 
         v_field = request.values.get('label', 'title')
+        v_func = _v(label_field)
         if name:
             if condition is None:
                 condition = M.c[search_field].like('%' + name + '%')
-            result = [{'id': getattr(obj, value_field), v_field: _v(label_field)}
+            functions.set_echo(True)
+            result = [{'id': getattr(obj, value_field), v_field: v_func(obj)}
                       for obj in M.filter(condition)]
         else:
             result = []

@@ -456,8 +456,8 @@ class WriteTemplate(object):
         stack.append(rows)
         #top用来记录当前栈
         top = rows
-        for i in range(1, len(self.sheet.rows)+1):
-            cell = self.sheet.cell(row=i, column=1)
+        for i, _row in enumerate(self.sheet.rows):
+            cell = _row[0]
             #是否子模板开始
             if (isinstance(cell.value, (str, unicode)) and
                     cell.value.startswith('{{for ') and
@@ -474,8 +474,8 @@ class WriteTemplate(object):
             else:
                 row = {'cols':[], 'subs':[]}
                 cols = row['cols']
-                for j in range(1, len(self.sheet.columns)+1):
-                    cell = self.sheet.cell(row=i, column=j)
+                for j, _col in enumerate(self.sheet.columns):
+                    cell = _row[j]
                     v = self.process_cell(i, j, cell)
                     if v:
                         cols.append(v)

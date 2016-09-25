@@ -2891,12 +2891,12 @@ class QueryView(object):
                         if isinstance(value, (tuple, list)):
                             if v.get('range'):
                                 _cond = None
-                                if (value[0]):
+                                if (len(value) > 0 and value[0]):
                                     if 'op' in v:
                                         _cond = self._make_op(column, v['op'][0], value[0])
                                     else:
                                         _cond = (column >= value[0]) & _cond
-                                if (value[1]):
+                                if (len(value) > 1 and value[1]):
                                     if 'op' in v:
                                         _cond = self._make_op(column, v['op'][1], value[1])
                                     else:
