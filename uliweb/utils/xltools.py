@@ -4,11 +4,13 @@
 import os
 import re
 import shutil
-from openpyxl import load_workbook, Workbook
+from openpyxl import load_workbook, Workbook, __version__
 from pprint import pprint
 from copy import deepcopy
 import datetime
 from uliweb.utils.common import safe_unicode
+
+ver_4 = __version__ > '2.3.5'
 
 re_filter = re.compile(r'(\w+)(?:\((.*?)\))?')
 
@@ -34,6 +36,12 @@ def _validate_list(cell, data, _list, blank=True, _var=None, _sh=None):
 
 env = {'date':_date, 'datetime':datetime, 'link':_link,
        'validate_list':_validate_list}
+
+def get_line(sheet, line):
+    if ver_4:
+        return sheet[line]
+    else:
+        return sheet.rows[line-1]
 
 class Converter(object):
     """
@@ -416,8 +424,9 @@ class WriteTemplate(object):
     def __init__(self, sheet):
         self.sheet = sheet
         self.size = (sheet.max_row, sheet.max_column)
-        self.template = self.get_template()
         self.row = 0
+        self.begin = 1 #记录第一个for的位置,用在简单模板读取中
+        self.template = self.get_template()
 
     def get_style(self, cell):
         return {'font':cell.font, 'border':cell.border, 'fill':cell.fill,
@@ -456,8 +465,8 @@ class WriteTemplate(object):
         stack.append(rows)
         #top用来记录当前栈
         top = rows
-        for i, _row in enumerate(self.sheet.rows):
-            cell = _row[0]
+        for i in range(1, self.sheet.max_row+1):
+            cell = self.sheet.cell(row=i, column=1)
             #是否子模板开始
             if (isinstance(cell.value, (str, unicode)) and
                     cell.value.startswith('{{for ') and
@@ -466,6 +475,8 @@ class WriteTemplate(object):
                 top.append(row)
                 top = row['subs']
                 stack.append(top)
+                if self.begin == 1:
+                    self.begin = i
             #是否子模板结束
             elif (isinstance(cell.value, (str, unicode)) and
                     cell.value == '{{end}}'):
@@ -474,8 +485,8 @@ class WriteTemplate(object):
             else:
                 row = {'cols':[], 'subs':[]}
                 cols = row['cols']
-                for j, _col in enumerate(self.sheet.columns):
-                    cell = _row[j]
+                for j in range(1, self.sheet.max_column+1):
+                    cell = self.sheet.cell(row=i, column=j)
                     v = self.process_cell(i, j, cell)
                     if v:
                         cols.append(v)
@@ -525,7 +536,7 @@ class WriteTemplate(object):
                 cell = sheet.cell(row=i, column=j+1)
                 cell.value = None
             i += 1
-        self.sheet._garbage_collect()
+        # self.sheet._garbage_collect()
 
 
     def write_line(self, sheet, row, data):
@@ -583,7 +594,7 @@ class WriteTemplate(object):
 class ReadLines(object):
     def __init__(self, sheet, start=1):
         self.line = start
-        self.size = len(sheet.rows)
+        self.size = sheet.max_row
 
     def next(self):
         if self.line < self.size:
@@ -591,9 +602,6 @@ class ReadLines(object):
         else:
             self.line = None
         return self.line
-
-    def row(self):
-        return self.rows[self.line-1]
 
 class ReadTemplate(WriteTemplate):
     def process_cell(self, row, column, cell):
@@ -653,7 +661,7 @@ class ReadTemplate(WriteTemplate):
         def _subs(line, subs, nextrow):
             data = []
             while line:
-                if not nextrow or (nextrow and not self.match(sheet.rows[line-1], nextrow)):
+                if not nextrow or (nextrow and not self.match(get_line(sheet, line), nextrow)):
                     d = {}
                     for r in subs:
                         _d = _get_line(line, r)
@@ -701,9 +709,8 @@ class ReadTemplate(WriteTemplate):
         :param begin: 开始行号
         """
         line = begin
-        size = len(sheet.rows)
-        while line <= size:
-            if self.match(sheet.rows[line-1]):
+        for row in sheet.rows:
+            if self.match(row):
                 d = self.extract_data(sheet, line)
                 return d
             else:
@@ -712,6 +719,33 @@ class ReadTemplate(WriteTemplate):
                 else:
                     break
         return
+
+    def read_data(self, sheet, begin=None):
+        """
+        用于简单模板匹配,只处理一行的模板, begin为None时自动从for行开始
+        :param sheet: 应该使用read_only模式打开
+        :param begin:
+        :return:
+        """
+        line = self.begin
+        rows = sheet.rows
+        for i in range(line):
+            rows.next()
+        template_line = self.template[self.begin-1]
+        if not template_line['subs']:
+            raise ValueError("Template definition is not right")
+
+        for row in rows:
+            d = {}
+            for c in template_line['subs'][0]['cols']:
+                if c['field']:
+                    cell = row[c['col']-1]
+                    if isinstance(cell.value, (str, unicode)):
+                        v = cell.value.strip()
+                    else:
+                        v = cell.value
+                    d[c['field']] = v
+            yield d
 
 class Writer(object):
     def __init__(self, template_file, sheet_name, output_file, data, create=True):
@@ -843,6 +877,53 @@ class Reader(object):
                 else:
                     result.extend(r)
         return result
+
+class SimpleReader(object):
+    def __init__(self, template_file, input_file, sheet_name=None,
+                 begin=None):
+        """
+        只用来处理简单读取,即数据为单行的模式
+        :param template_file:
+        :param input_file: 输入文件名
+        :param sheet_name: 当只有一个sheet时,不管名字对不对都进行处理
+        :param find: 是否查找模板,缺省为False
+        :param begin: 是否从begin行开始,缺省为None,表示自动根据模板进行判断
+        :return:
+        """
+        self.template_file = template_file
+        self.sheet_name = sheet_name
+        self.input_file = input_file
+        self.begin = begin
+        self.template = self.get_template()
+
+    def get_template(self):
+        wb = load_workbook(self.template_file)
+
+        if not self.sheet_name:
+            sheet = wb.active
+        else:
+            sheet = wb[self.sheet_name]
+        t = ReadTemplate(sheet)
+        return t
+
+    def get_sheet(self):
+        w = load_workbook(self.input_file, read_only=True)
+        if self.sheet_name:
+            if self.sheet_name not in w.sheetnames:
+                raise ValueError("Sheet name [{}] is not found in file {}".format(self.sheet_name, self.input_file))
+            sheet = w[self.sheet_name]
+        else:
+            sheet = w.active
+        return sheet
+
+    def read(self):
+        """
+        :param find: 是否使用find模式.True为递归查找.缺省为False
+        :param begin: 开始行号. 缺省为 None, 表示使用模板计算的位置
+        """
+        sheet = self.get_sheet()
+        for row in self.template.read_data(sheet, begin=self.begin):
+            yield row
 
 class Merge(object):
     def __init__(self, keys=None, left_join=True, verbose=False):
