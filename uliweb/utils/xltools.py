@@ -729,7 +729,7 @@ class ReadTemplate(WriteTemplate):
         """
         line = self.begin
         rows = sheet.rows
-        for i in range(line):
+        for i in range(line-1):
             rows.next()
         template_line = self.template[self.begin-1]
         if not template_line['subs']:
