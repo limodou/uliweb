@@ -30,7 +30,7 @@ class MultiView(object):
         :return:
         """
         if 'fields_convert_map' in parameters:
-            _f = parameters.get('fields_convert_map')
+            _f = parameters.get('fields_convert_map', [])
             parameters['fields_convert_map'] = self._get_fields_convert_map(_f)
 
 
