@@ -231,7 +231,6 @@ class MultiView(object):
         if name:
             if condition is None:
                 condition = M.c[search_field].like('%' + name + '%')
-            functions.set_echo(True)
             result = [{'id': getattr(obj, value_field), v_field: v_func(obj)}
                       for obj in M.filter(condition)]
         else:
