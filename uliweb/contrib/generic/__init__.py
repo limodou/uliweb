@@ -30,7 +30,7 @@ class MultiView(object):
         :return:
         """
         if 'fields_convert_map' in parameters:
-            _f = parameters.get('fields_convert_map', [])
+            _f = parameters.get('fields_convert_map') or []
             parameters['fields_convert_map'] = self._get_fields_convert_map(_f)
 
 
@@ -51,8 +51,8 @@ class MultiView(object):
         :return:
         """
         _f = fields
+        t = {}
         if isinstance(_f, list):
-            t = {}
             for k in _f:
                 if isinstance(k, str):
                     t[k] = getattr(self, '_convert_{}'.format(k))
@@ -68,7 +68,6 @@ class MultiView(object):
                 else:
                     raise ValueError("Fields convert element should be str or tuple or list, but %r found" % type(k))
         elif isinstance(_f, dict):
-            t = {}
             for k, v in _f.items():
                 if isinstance(v, str):
                     t[k] = getattr(self, '_convert_{}'.format(v))
