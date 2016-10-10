@@ -2599,11 +2599,11 @@ class Result(object):
         self._having = args
         return self
 
-    def fields(self, *args, **kwargs):
+    def fields(self, keep_primary_key=True, *args, **kwargs):
         if args:
             args = flat_list(args)
             if args:
-                if self.model._primary_field and self.model._primary_field not in args:
+                if keep_primary_key and self.model._primary_field and self.model._primary_field not in args:
                     args.append(self.model._primary_field)
                 self.funcs.append(('with_only_columns', ([self.get_column(self.model, x) for x in args],), kwargs))
         return self
@@ -3042,11 +3042,11 @@ class ManyResult(Result):
             (self.table.c[self.fieldb].in_(keys))).limit(1))
         return len(list(row)) > 0
         
-    def fields(self, *args, **kwargs):
+    def fields(self, keep_primary_key=True, *args, **kwargs):
         if args:
             args = flat_list(args)
             if args:
-                if self.modelb._primary_field and self.modelb._primary_field not in args:
+                if keep_primary_key and self.modelb._primary_field and self.modelb._primary_field not in args:
                     args.append(self.modelb.c[self.modelb._primary_field])
                 self.funcs.append(('with_only_columns', ([self.get_column(self.modelb, x) for x in args],), kwargs))
         return self
