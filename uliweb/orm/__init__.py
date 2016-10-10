@@ -61,7 +61,7 @@ from uliweb.utils import date as _date
 from uliweb.utils.common import (flat_list, classonlymethod, simple_value, 
     safe_str, import_attr)
 from sqlalchemy import *
-from sqlalchemy.sql import select, ColumnElement, text, true, and_, false
+from sqlalchemy.sql import select, Select, ColumnElement, text, true, and_, false
 from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
@@ -702,7 +702,9 @@ def save_file(result, filename, encoding='utf8', headers=None,
         if f:
             v = f(v, data)
         return v
-    
+
+    if isinstance(result, Select):
+        result = do_(result)
     _header = []
     for k in result.keys():
         flag = False
@@ -712,7 +714,7 @@ def save_file(result, filename, encoding='utf8', headers=None,
                 flag = True
                 break
         if not flag:
-            _header.append({'name':x, 'title':x})
+            _header.append({'name':k, 'title':k})
 
     def _data():
         for row in result:
