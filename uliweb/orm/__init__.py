@@ -719,7 +719,7 @@ def save_file(result, filename, encoding='utf8', headers=None,
     def _data():
         for row in result:
             if visitor and callable(visitor):
-                _row = visitor(result.keys, row.values(), encoding)
+                _row = visitor(result.keys(), row.values(), encoding)
             else:
                 _row = [convert(k, v, row) for k, v in zip(result.keys(), row.values())]
             yield _row
@@ -2599,10 +2599,11 @@ class Result(object):
         self._having = args
         return self
 
-    def fields(self, keep_primary_key=True, *args, **kwargs):
+    def fields(self, *args, **kwargs):
         if args:
             args = flat_list(args)
             if args:
+                keep_primary_key = kwargs.pop('keep_primary_key', None)
                 if keep_primary_key and self.model._primary_field and self.model._primary_field not in args:
                     args.append(self.model._primary_field)
                 self.funcs.append(('with_only_columns', ([self.get_column(self.model, x) for x in args],), kwargs))
@@ -3042,10 +3043,11 @@ class ManyResult(Result):
             (self.table.c[self.fieldb].in_(keys))).limit(1))
         return len(list(row)) > 0
         
-    def fields(self, keep_primary_key=True, *args, **kwargs):
+    def fields(self, *args, **kwargs):
         if args:
             args = flat_list(args)
             if args:
+                keep_primary_key = kwargs.pop('keep_primary_key', None)
                 if keep_primary_key and self.modelb._primary_field and self.modelb._primary_field not in args:
                     args.append(self.modelb.c[self.modelb._primary_field])
                 self.funcs.append(('with_only_columns', ([self.get_column(self.modelb, x) for x in args],), kwargs))
