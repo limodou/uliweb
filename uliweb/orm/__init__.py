@@ -2603,7 +2603,7 @@ class Result(object):
         if args:
             args = flat_list(args)
             if args:
-                keep_primary_key = kwargs.pop('keep_primary_key', None)
+                keep_primary_key = kwargs.pop('keep_primary_key', True)
                 if keep_primary_key and self.model._primary_field and self.model._primary_field not in args:
                     args.append(self.model._primary_field)
                 self.funcs.append(('with_only_columns', ([self.get_column(self.model, x) for x in args],), kwargs))
@@ -3047,7 +3047,7 @@ class ManyResult(Result):
         if args:
             args = flat_list(args)
             if args:
-                keep_primary_key = kwargs.pop('keep_primary_key', None)
+                keep_primary_key = kwargs.pop('keep_primary_key', True)
                 if keep_primary_key and self.modelb._primary_field and self.modelb._primary_field not in args:
                     args.append(self.modelb.c[self.modelb._primary_field])
                 self.funcs.append(('with_only_columns', ([self.get_column(self.modelb, x) for x in args],), kwargs))
