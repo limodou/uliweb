@@ -140,7 +140,7 @@ class MultiView(object):
         #get list view
         view = self._list_view(model=model, **kwargs)
 
-        if 'data' in request.values:
+        if 'data' in request.values and request.is_xhr:
             return json(view.json(), content_type=CONTENT_TYPE_JSON)
         elif 'download' in request.GET:
             return view.download(**downloads)
@@ -207,7 +207,8 @@ class MultiView(object):
             result.update({'table':view})
             return result
 
-    def _search(self, model, condition=None, search_field='name', value_field='id', label_field=None):
+    def _search(self, model, condition=None, search_field='name',
+                value_field='id', label_field=None, pagination=True):
         """
         Default search function
         :param search_field: Used for search field, default is 'name'
@@ -226,11 +227,20 @@ class MultiView(object):
                 return lambda x: unicode(x)
 
         v_field = request.values.get('label', 'title')
+        page = int(request.values.get('page') or 1)
+        limit = int(request.values.get('limit') or 10)
         v_func = _v(label_field)
         if name:
             if condition is None:
                 condition = M.c[search_field].like('%' + name + '%')
-            result = [{'id': getattr(obj, value_field), v_field: v_func(obj)}
+            if pagination:
+                query = M.filter(condition)
+                total = query.count()
+                rows = [{'id': getattr(obj, value_field), v_field: v_func(obj)}
+                            for obj in query.limit(limit).offset((page-1)*limit)]
+                result = {'total':total, 'rows':rows}
+            else:
+                result = [{'id': getattr(obj, value_field), v_field: v_func(obj)}
                       for obj in M.filter(condition)]
         else:
             result = []

@@ -536,7 +536,8 @@ def rawsql(query, ec=None):
     if isinstance(query, (str, unicode)):
         return query
     comp = query.compile(dialect=dialect)
-    return str(query.compile(compile_kwargs={"literal_binds": True})).replace('\n', '')
+    # return str(query.compile(compile_kwargs={"literal_binds": True})).replace('\n', '')
+    return str(query).replace('\n', '')
 
 def get_engine_name(ec=None):
     """
@@ -4454,7 +4455,24 @@ class Model(object):
     @classmethod
     def any(cls, *condition, **kwargs):
         return Result(cls, **kwargs).filter(*condition).any()
-    
+
+    @classmethod
+    def get_tree(cls, *condition, **kwargs):
+        parent_field = kwargs.pop('parent_field', 'parent')
+        parent = kwargs.pop('parent', None)
+        order_by = kwargs.pop('order_by', None)
+        id_field = kwargs.pop('id_field', 'id')
+        def _f(parent):
+            query = Result(cls, **kwargs)
+            if order_by is not None:
+                query.order_by(order_by)
+            q = query.filter(cls.c[parent_field]==parent, *condition)
+            for row in q:
+                yield row
+                for _row in _f(getattr(row, id_field)):
+                    yield _row
+        return _f(parent)
+
     @classmethod
     def load(cls, values, from_='db'):
         if isinstance(values, (list, tuple)):
