@@ -469,6 +469,10 @@ def make_form_field(field, model=None, field_cls=None,
         'required':field.get('required', False) if 'required' in field else default_kwargs.get('required', False)
     }
 
+    #add data-url support
+    if 'data-url' in field:
+        kwargs['html_attrs']['data-url'] = field['data-url']
+
     if use_default_value:
         v = prop.default_value()
         kwargs['default'] = v

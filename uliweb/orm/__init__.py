@@ -536,8 +536,7 @@ def rawsql(query, ec=None):
     if isinstance(query, (str, unicode)):
         return query
     comp = query.compile(dialect=dialect)
-    # return str(query.compile(compile_kwargs={"literal_binds": True})).replace('\n', '')
-    return str(query).replace('\n', '')
+    return str(query.compile(compile_kwargs={"literal_binds": True})).replace('\n', '')
 
 def get_engine_name(ec=None):
     """
