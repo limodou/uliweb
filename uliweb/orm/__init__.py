@@ -58,7 +58,7 @@ import copy
 import re
 import cPickle as pickle
 from uliweb.utils import date as _date
-from uliweb.utils.common import (flat_list, classonlymethod, simple_value, 
+from uliweb.utils.common import (flat_list, classonlymethod,
     safe_str, import_attr)
 from sqlalchemy import *
 from sqlalchemy.sql import select, Select, ColumnElement, text, true, and_, false
@@ -518,8 +518,35 @@ def ResetAll():
 def default_post_do(sender, query, conn, usetime):
     if __default_post_do__:
         __default_post_do__(sender, query, conn, usetime)
-      
-re_placeholder = re.compile(r'%\(\w+\)s')
+
+
+def repr_value(v, encoding='utf8'):
+    if callable(v):
+        v = v()
+    if isinstance(v, datetime.datetime):
+        return "'{}'".format(v.strftime('%Y-%m-%d %H:%M:%S'))
+    elif isinstance(v, datetime.date):
+        return "'{}'".format(v.strftime('%Y-%m-%d'))
+    elif isinstance(v, datetime.time):
+        return "'{}'".format(v.strftime('%H:%M:%S'))
+    elif isinstance(v, decimal.Decimal):
+        return str(v)
+    elif isinstance(v, (str, unicode)):
+        if isinstance(v, unicode):
+            v = v.encode(encoding)
+        return "'{}'".format(v)
+    elif v is None:
+        return 'NULL'
+    elif isinstance(v, bool):
+        if v:
+            return '1'
+        else:
+            return '0'
+    elif isinstance(v, (int, long)):
+        return "{}".format(int(v))
+    else:
+        return str(v)
+
 def rawsql(query, ec=None):
     """
     ec could be engine name or engine instance
@@ -535,8 +562,32 @@ def rawsql(query, ec=None):
         dialect = ec.dialect
     if isinstance(query, (str, unicode)):
         return query
-    comp = query.compile(dialect=dialect)
-    return str(query.compile(compile_kwargs={"literal_binds": True})).replace('\n', '')
+    # comp = query.compile(dialect=dialect)
+
+    compiler = query._compiler(dialect)
+    class LiteralCompiler(compiler.__class__):
+        def visit_bindparam(
+                self, bindparam, within_columns_clause=False,
+                literal_binds=False, **kwargs
+        ):
+            return super(LiteralCompiler, self).render_literal_bindparam(
+                    bindparam, within_columns_clause=within_columns_clause,
+                    literal_binds=literal_binds, **kwargs
+            )
+        def render_literal_value(self, value, type_):
+            """Render the value of a bind parameter as a quoted literal.
+
+            This is used for statement sections that do not accept bind paramters
+            on the target driver/database.
+
+            This should be implemented by subclasses using the quoting services
+            of the DBAPI.
+
+            """
+            return repr_value(value)
+
+    compiler = LiteralCompiler(dialect, query)
+    return str(compiler.process(query)).replace('\n', ' ')
 
 def get_engine_name(ec=None):
     """
