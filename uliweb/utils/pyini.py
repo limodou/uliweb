@@ -536,7 +536,7 @@ class Ini(SortedDict):
                     comments = []
                 elif '=' in line:
                     if section is None:
-                        raise Exception("No section found, please define it first in %s file" % self.filename)
+                        raise Exception("No section found, please define it first in %s file, line=%s" % (filename or self._inifile, line))
 
                     #if find <=, then it'll replace the old value for mutable variables
                     #because the default behavior will merge list and dict

@@ -4675,6 +4675,7 @@ class Bulk(object):
             self.engine = engine_name
 
         self.sqles = {}
+        self.keys = [] #remember the order of sql
 
         if self.transcation:
             Begin(self.engine)
@@ -4702,17 +4703,18 @@ class Bulk(object):
                     fields[i] = i
             self.sqles[name] = {'fields':fields, 'raw_sql':unicode(x), 'data':[],
                                 'positional':x.positional}
+            self.keys.append(name)
         except:
             if self.transcation:
                 Rollback(self.engine)
             raise
 
-    def get_sql(self, name):
-        return self.sqles[name]['raw_sql']
+    def get_sql(self, _name):
+        return self.sqles[_name]['raw_sql']
 
-    def do_(self, name, **values):
+    def do_(self, _name, **values):
         try:
-            sql = self.sqles[name]
+            sql = self.sqles[_name]
             if sql['positional']:
                 d = [values[k] for k, v in sql['fields'].items()]
             else:
@@ -4723,12 +4725,12 @@ class Bulk(object):
                 Rollback(self.engine)
             raise
 
-    def put(self, name, **values):
+    def put(self, _name, **values):
         """
         Put data to cach, if reached size value, it'll execute at once.
         """
         try:
-            sql = self.sqles[name]
+            sql = self.sqles[_name]
             data = sql['data']
             if sql['positional']:
                 d = [values[k] for k, v in sql['fields'].items()]
@@ -4743,11 +4745,15 @@ class Bulk(object):
                 Rollback(self.engine)
             raise
 
+    def fresh(self):
+        for name in self.keys:
+            d = self.sqles[name]
+            if d['data']:
+                do_(d['raw_sql'], args=d['data'])
+
     def close(self):
         try:
-            for name, d in self.sqles.items():
-                if d['data']:
-                    do_(d['raw_sql'], args=d['data'])
+            self.fresh()
 
             if self.transcation:
                 Commit(self.engine)
