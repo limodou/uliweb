@@ -147,8 +147,9 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
             rbegin,rend = range.ranges[0]
             if check_if_range_ok and (rbegin+1)<fsize:
                 if rend == None:
-                    rend = fsize-1
-                headers.append(('Content-Length',str(rend-rbegin+1)))
+                    rend = fsize
+
+                headers.append(('Content-Length',str(rend-rbegin)))
                 #werkzeug do not count rend with the same way of rfc7233,so -1
                 headers.append(('Content-Range','%s %d-%d/%d' %(range.units,rbegin, rend-1, fsize)))
                 headers.append(('Last-Modified', mtime_str))
