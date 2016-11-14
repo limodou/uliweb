@@ -62,6 +62,7 @@ from uliweb.utils.common import (flat_list, classonlymethod,
     safe_str, import_attr)
 from sqlalchemy import *
 from sqlalchemy.sql import select, Select, ColumnElement, text, true, and_, false
+from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.pool import NullPool
 import sqlalchemy.engine.base as EngineBase
 from uliweb.core import dispatch
@@ -754,7 +755,10 @@ def save_file(result, filename, encoding='utf8', headers=None,
             v = f(v, data)
         return v
 
-    if isinstance(result, Select):
+    if isinstance(result, (str, unicode)):
+        result = text(result)
+
+    if isinstance(result, (Select, TextClause)):
         result = do_(result)
     _header = []
     for k in result.keys():
