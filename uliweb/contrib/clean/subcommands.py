@@ -9,6 +9,8 @@ class DirCommand(Command):
     option_list = (
         make_option('-e', '--extension', dest='extensions', action='append', default=[],
             help='Only matches extension. E.g. .txt'),
+        make_option('-p', '--pattern', dest='pattern', action='append', default=[],
+            help='Only matches patterns. E.g. "kq*"'),
         make_option('-x', '--exclude_extensions', dest='exclude_extensions', action='append', default=[],
             help='Not matches extension.'),
         make_option('-r', '--recursion', dest='recursion', action='store_true', default=False,
@@ -25,9 +27,11 @@ class DirCommand(Command):
             self.clean_dir(d, extensions=options.extensions,
                            exclude_extensions=options.exclude_extensions,
                            days=options.days, recursion=options.recursion,
+                           pattern=options.pattern,
                            verbose=global_options.verbose)
 
-    def clean_dir(self, dir, extensions, exclude_extensions, recursion, days, verbose=False):
+    def clean_dir(self, dir, extensions, exclude_extensions, recursion,
+                  days, pattern, verbose=False):
         from uliweb.utils.common import walk_dirs
         import datetime
         from uliweb.utils import date
@@ -35,7 +39,8 @@ class DirCommand(Command):
         now = date.now()
         i = 0
         for f in walk_dirs(dir, include_ext=extensions, exclude_ext=exclude_extensions,
-                           recursion=recursion, file_only=True, use_default_pattern=False):
+                           recursion=recursion, file_only=True,
+                           use_default_pattern=False, patterns=pattern):
             t = datetime.datetime.fromtimestamp(os.path.getmtime(f))
             if not days or (days and (now-t).days >= days):
                 try:
