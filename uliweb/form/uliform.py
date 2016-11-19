@@ -876,20 +876,22 @@ class Form(object):
         all_data = {}
         for k, v in self.fields.items():
             #skip static field
-            if not v.static:
-                v.parse_data(data, all_data)
+            if v.static: continue
+            v.parse_data(data, all_data)
 
         errors = D({})
         new_data = {}
 
         #gather all fields
         for field_name, field in self.fields.items():
+            if field.static: continue
             new_data[field_name] = field.get_data(all_data)
 
         #validate and gather the result
         # result = D({})
         result = D(new_data.copy())
         for field_name, field in self.fields.items():
+            if field.static: continue
             flag, value = field.validate(new_data[field_name], result)
             if not flag:
                 if isinstance(value, dict):
