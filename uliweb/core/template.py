@@ -644,7 +644,7 @@ class Template(object):
                                     "template loader on file %s" % (self.begin_tag,
                                     self.end_tag, self.filename))
                 template = loader.load(chunk.name, skip=self.filename,
-                                    skip_original=self.name)
+                                    skip_original=self.name, layout=chunk.extend)
                 #process depends
                 self.depends[template.filename] = template.compiled_time
                 self.depends.update(template.depends)
@@ -891,8 +891,10 @@ class Loader(object):
             if layout:
                 if not r_extend.match(text):
                     text = ('{{extend "%s"}}\n' % layout) + text
-                    name = name + '.' + layout
-                    filename = filename + '.' + layout
+                else:
+                    text = r_extend.sub('{{extend "%s"}}' % layout, text)
+                name = name + '.' + layout
+                filename = filename + '.' + layout
 
             template = Template(text, name=name, loader=self,
                                 begin_tag=self.begin_tag, end_tag=self.end_tag,
@@ -1145,7 +1147,13 @@ class _NamedBlock(_Node):
 
 class _ExtendsBlock(_Node):
     def __init__(self, name):
-        self.name = name
+        v = name.split()
+        if len(v) > 1 and v[1] == 'extend':
+            self.name = v[0].strip('"').strip()
+            self.extend = v[2].strip('"').strip()
+        else:
+            self.name = v[0].strip('"').strip()
+            self.extend = ''
 
 
 class _IncludeBlock(_Node):
@@ -1667,8 +1675,8 @@ def _parse(reader, template, in_block=None, in_loop=None,
                           "head", "head_link"):
             if operator in ("extend", "extends"):
                 if template.skip_extern: continue
-                suffix = suffix.strip('"').strip("'")
-                if not suffix:
+                _v = suffix.strip('"').strip("'")
+                if not _v:
                     raise ParseError("extends missing file path on line %s:%d" % (
                         filename, line))
                 block = _ExtendsBlock(suffix)
