@@ -518,6 +518,34 @@ def test_model_selfreference():
     <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
     """
 
+def test_tree():
+    """
+    >>> #set_debug_query(True)
+    >>> db = get_connection('sqlite://')
+    >>> db.metadata.drop_all()
+    >>> class User(Model):
+    ...     username = Field(unicode)
+    ...     parent = SelfReference(collection_name='children')
+    >>> a = User(username='a')
+    >>> a.save()
+    True
+    >>> b = User(username='b', parent=a)
+    >>> b.save()
+    True
+    >>> c = User(username='c', parent=a)
+    >>> c.save()
+    True
+    >>> for i in User.get_tree(): #User.c.parent==0, parent_field='parent'
+    ...     print repr(i)
+    <User {'username':u'a','parent':None,'id':1}>
+    <User {'username':u'b','parent':<ReferenceProperty:1>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
+    >>> User.delete_tree(parent=None)
+    3
+    >>> User.count()
+    0
+    """
+
 def test_floatproperty():
     """
     >>> db = get_connection('sqlite://')
@@ -2967,10 +2995,10 @@ def test_rawsql():
     >>> sql = User.filter(User.c.username=='guest').get_query()
     >>> e = create_engine('oracle://', strategy='mock', executor=None)
     >>> print rawsql(sql, e)
-    SELECT user.username, user.year FROM user WHERE user.username = 'guest'
+    SELECT "user".username, "user".year FROM "user" WHERE "user".username = 'guest'
     >>> e = create_engine('postgresql://', strategy='mock', executor=None)
     >>> print rawsql(sql, e)
-    SELECT user.username, user.year FROM user WHERE user.username = 'guest'
+    SELECT "user".username, "user".year FROM "user" WHERE "user".username = 'guest'
     >>> e = create_engine('mysql://', strategy='mock', executor=None)
     >>> print rawsql(sql, e)
     SELECT user.username, user.year FROM user WHERE user.username = 'guest'

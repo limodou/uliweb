@@ -588,7 +588,7 @@ def rawsql(query, ec=None):
             return repr_value(value)
 
     compiler = LiteralCompiler(dialect, query)
-    return str(compiler.process(query)).replace('\n', ' ')
+    return str(compiler.process(query)).replace('\n', '')
 
 def get_engine_name(ec=None):
     """
@@ -668,6 +668,9 @@ def do_(query, ec=None, args=None):
 
 class Writer(object):
     def __init__(self, filename, encoding='utf8', header=None, data=None, **kwargs):
+        """
+        :param filename: Could be string or file-like object
+        """
         self.filename = filename
         self.encoding = encoding
         self.data = data or []
@@ -691,12 +694,21 @@ class Writer(object):
         import csv
         from uliweb.utils.common import simple_value
 
-        with open(self.filename, 'wb') as f:
+        if isinstance(self.filename, (str, unicode)):
+            f = open(self.filename, 'wb')
+            close = True
+        else:
+            f = self.filename
+            close = False
+        try:
             writer = csv.writer(f, **self.kwargs)
             if self.header:
                 writer.writerow(self.get_header())
             for row in self.data:
                 writer.writerow([simple_value(x, encoding=self.encoding) for x in row])
+        finally:
+            if close:
+                f.close()
 
 class DictWriter(Writer):
     def save(self):
@@ -739,15 +751,18 @@ def save_file(result, filename, encoding='utf8', headers=None,
     
     convertors = convertors or {}
     headers = headers or []
-    ext = os.path.splitext(filename)[1]
-    if ext == '.csv':
-        writer_class = Writer
-    elif ext == '.dict':
-        writer_class = DictWriter
-    elif ext == '.xlsx':
-        writer_class = XlsxWriter
+    if isinstance(filename, (str, unicode)):
+        ext = os.path.splitext(filename)[1]
+        if ext == '.csv':
+            writer_class = Writer
+        elif ext == '.dict':
+            writer_class = DictWriter
+        elif ext == '.xlsx':
+            writer_class = XlsxWriter
+        else:
+            raise ValueError("Can't find suitable writer for file type {}".format(ext))
     else:
-        raise ValueError("Can't find suitable writer for file type {}".format(ext))
+        writer_class = Writer
     
     def convert(k, v, data):
         f = convertors.get(k)
@@ -4512,20 +4527,50 @@ class Model(object):
 
     @classmethod
     def get_tree(cls, *condition, **kwargs):
+        """
+        parent is root parent value, default is None
+        condition is extra condition for select root records
+        """
         parent_field = kwargs.pop('parent_field', 'parent')
         parent = kwargs.pop('parent', None)
         order_by = kwargs.pop('order_by', None)
         id_field = kwargs.pop('id_field', 'id')
         def _f(parent):
-            query = Result(cls, **kwargs)
+            query = cls.filter(cls.c[parent_field]==parent, *condition)
             if order_by is not None:
                 query.order_by(order_by)
-            q = query.filter(cls.c[parent_field]==parent, *condition)
-            for row in q:
+            for row in query:
                 yield row
                 for _row in _f(getattr(row, id_field)):
                     yield _row
         return _f(parent)
+
+    @classmethod
+    def delete_tree(cls, *condition, **kwargs):
+        parent_field = kwargs.pop('parent_field', 'parent')
+        parent = kwargs.pop('parent', None)
+        id_field = kwargs.pop('id_field', 'id')
+        visit = kwargs.pop('visit', None)
+        manytomany = kwargs.pop('manytomany', None)
+        onetoone = kwargs.pop('onetoone', None)
+        delete_fieldname = kwargs.pop('delete_fieldname', None)
+        _kw = {'manytomany':manytomany, 'onetoone':onetoone, 'delete_fieldname':delete_fieldname}
+        order_by = kwargs.pop('order_by', None)
+
+        result = []
+        for i, row in enumerate(cls.get_tree(*condition, **{'parent_field':parent_field,
+                                               'parent':parent, 'id_field':id_field,
+                                                'order_by':order_by})):
+            if visit:
+                visit(row)
+            result.append(row)
+
+        n = len(result)
+        for row in result:
+            row.delete(**_kw)
+
+        result = []
+        return n
 
     @classmethod
     def load(cls, values, from_='db'):
