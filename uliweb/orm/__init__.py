@@ -48,7 +48,7 @@ __default_post_do__ = None #used to process post_do topic
 __nullable__ = False    #not enabled null by default
 __server_default__ = False    #not enabled null by default
 __manytomany_index_reverse__ = False
-__lazy_model_init__ = False  
+__lazy_model_init__ = False
 
 import sys
 import decimal
@@ -98,6 +98,8 @@ class BadPropertyTypeError(Error):pass
 class KindError(Error):pass
 class ConfigurationError(Error):pass
 class SaveError(Error):pass
+
+DEFAULT = object()
 
 _SELF_REFERENCE = object()
 class Lazy(object): pass
@@ -1017,6 +1019,9 @@ def create_model(modelname, fields, indexes=None, basemodel=None, **props):
         Index(name, *props, **kwargs)
 
     return cls
+
+def is_condition(condition):
+    return isinstance(condition, ColumnElement)
 
 def valid_model(model, engine_name=None):
     if isinstance(model, type) and issubclass(model, Model):
@@ -2620,7 +2625,7 @@ class Result(object):
         return self
 
     def get(self, condition=None):
-        if isinstance(condition, ColumnElement):
+        if is_condition(condition):
             self.filter(condition).one()
         else:
             self.filter(self.model.c[self._primary_field]==condition).one()
@@ -2977,7 +2982,7 @@ class ManyResult(Result):
             return self
 
     def get(self, condition=None):
-        if not isinstance(condition, ColumnElement):
+        if not is_condition(condition):
             return self.filter(self.modelb.c[self.realfieldb]==condition).one()
         else:
             return self.filter(condition).one()
@@ -4071,7 +4076,7 @@ class Model(object):
         return self.save(*args, **kwargs)
 
     def delete(self, manytomany=True, delete_fieldname=None, send_dispatch=True,
-               onetoone=True):
+               onetoone=True, **kwargs):
         """
         Delete current obj
         :param manytomany: if also delete all manytomany relationships
@@ -4454,7 +4459,7 @@ class Model(object):
         if condition is not None:
             _cond = condition
         else:
-            if isinstance(id, ColumnElement):
+            if is_condition(id):
                 _cond = id
             else:
                 _cond = cls.c[cls._primary_field] == id
@@ -4511,7 +4516,7 @@ class Model(object):
     def remove(cls, condition=None, **kwargs):
         if isinstance(condition, (tuple, list)):
             condition = cls.c[cls._primary_field].in_(condition)
-        elif condition is not None and not isinstance(condition, ColumnElement):
+        elif condition is not None and not is_condition(condition):
             condition = cls.c[cls._primary_field]==condition
         #todo
         do_(cls.table.delete(condition, **kwargs), cls.get_session())
@@ -4528,13 +4533,14 @@ class Model(object):
     @classmethod
     def get_tree(cls, *condition, **kwargs):
         """
-        parent is root parent value, default is None
+        parent is root parent value, default is DEFAULT
         condition is extra condition for select root records
         """
         parent_field = kwargs.pop('parent_field', 'parent')
         parent = kwargs.pop('parent', None)
         order_by = kwargs.pop('order_by', None)
         id_field = kwargs.pop('id_field', 'id')
+
         def _f(parent):
             query = cls.filter(cls.c[parent_field]==parent, *condition)
             if order_by is not None:
@@ -4543,7 +4549,15 @@ class Model(object):
                 yield row
                 for _row in _f(getattr(row, id_field)):
                     yield _row
-        return _f(parent)
+
+        if is_condition(parent):
+            query = cls.filter(parent, *condition)
+        else:
+            query = cls.filter(cls.c[parent_field]==parent)
+        for row in query:
+            yield row
+            for r in _f(getattr(row, id_field)):
+                yield r
 
     @classmethod
     def delete_tree(cls, *condition, **kwargs):
@@ -4551,8 +4565,8 @@ class Model(object):
         parent = kwargs.pop('parent', None)
         id_field = kwargs.pop('id_field', 'id')
         visit = kwargs.pop('visit', None)
-        manytomany = kwargs.pop('manytomany', None)
-        onetoone = kwargs.pop('onetoone', None)
+        manytomany = kwargs.pop('manytomany', True)
+        onetoone = kwargs.pop('onetoone', True)
         delete_fieldname = kwargs.pop('delete_fieldname', None)
         _kw = {'manytomany':manytomany, 'onetoone':onetoone, 'delete_fieldname':delete_fieldname}
         order_by = kwargs.pop('order_by', None)
@@ -4569,8 +4583,12 @@ class Model(object):
         for row in result:
             row.delete(**_kw)
 
-        result = []
         return n
+
+    def delete_children(self, **kwargs):
+        id_field = kwargs.get('id_field', 'id')
+        p = getattr(self, id_field)
+        return self.delete_tree(parent=self.c[id_field] == p, **kwargs)
 
     @classmethod
     def load(cls, values, from_='db'):
