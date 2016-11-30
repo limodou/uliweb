@@ -465,8 +465,9 @@ class ExportStaticCommand(Command):
         dirs = [os.path.join(SimpleFrame.get_app_dir(appname), 'static') for appname in apps]
         self.options = options
         self.global_options = global_options
-        copy_dir_with_check(dirs, outputdir, False, options.check, processor=self.process_file)
-        
+        # copy_dir_with_check(dirs, outputdir, False, options.check, processor=self.process_file)
+        copy_dir_with_check(dirs, outputdir, False, options.check)
+
         # self.process_combine(outputdir, global_options.verbose)
         
     def process_combine(self, outputdir, verbose=False):
