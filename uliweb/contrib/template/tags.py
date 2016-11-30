@@ -178,9 +178,12 @@ class HtmlMerge(object):
     def init(self):
         global __static_combine__, __static_mapping__
         from . import init_static_combine
+        from uliweb import settings
+        from uliweb.utils.common import import_attr
         
         if __static_combine__ is None:
-            __static_combine__ = init_static_combine()
+            func = settings.get_var('STATIC_COMBINE_CONFIG/init_static_combine', init_static_combine)
+            __static_combine__ = import_attr(func)()
             for k, v in __static_combine__.items():
                 for x in v:
                     __static_mapping__[x] = k

@@ -911,19 +911,22 @@ class SimpleReader(object):
         if self.sheet_name:
             if self.sheet_name not in w.sheetnames:
                 raise ValueError("Sheet name [{}] is not found in file {}".format(self.sheet_name, self.input_file))
-            sheet = w[self.sheet_name]
+            if self.sheet_name == '*':
+                for x in w.sheetnames:
+                    yield w.sheetnames[x]
+            else:
+                yield w[self.sheet_name]
         else:
-            sheet = w.active
-        return sheet
+            yield w.active
 
     def read(self):
         """
         :param find: 是否使用find模式.True为递归查找.缺省为False
         :param begin: 开始行号. 缺省为 None, 表示使用模板计算的位置
         """
-        sheet = self.get_sheet()
-        for row in self.template.read_data(sheet, begin=self.begin):
-            yield row
+        for sheet in self.get_sheet():
+            for row in self.template.read_data(sheet, begin=self.begin):
+                yield row
 
 class Merge(object):
     def __init__(self, keys=None, left_join=True, verbose=False):

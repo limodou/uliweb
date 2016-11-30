@@ -2420,7 +2420,11 @@ class ReferenceProperty(Property):
             return 0
         if value is None:
             return value
-        return self.data_type(value)
+        try:
+            return self.data_type(value)
+        except:
+            print 'Error for converting {!r} to {} of property {}'.format(value, type(self.data_type), self.property_name)
+            raise
 
     def get_column_type_name(self):
         return self.reference_field.get_column_type_name()

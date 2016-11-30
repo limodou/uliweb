@@ -436,12 +436,12 @@ class ExportStaticCommand(Command):
     option_list = (
         make_option('-c', '--check', action='store_true', 
             help='Check if the output files or directories have conflicts.'),
-        make_option('--js', action='store_true', dest='js', default=False,
-            help='Enable javascript compress process.'),
-        make_option('--css', action='store_true', dest='css', default=False,
-            help='Enable css compress process.'),
-        make_option('--auto', action='store_true', dest='auto', default=False,
-            help='Enable javascript and css both compress process.'),
+        # make_option('--js', action='store_true', dest='js', default=False,
+        #     help='Enable javascript compress process.'),
+        # make_option('--css', action='store_true', dest='css', default=False,
+        #     help='Enable css compress process.'),
+        # make_option('--auto', action='store_true', dest='auto', default=False,
+        #     help='Enable javascript and css both compress process.'),
     )
 
     def handle(self, options, global_options, *args):
@@ -467,7 +467,7 @@ class ExportStaticCommand(Command):
         self.global_options = global_options
         copy_dir_with_check(dirs, outputdir, False, options.check, processor=self.process_file)
         
-        self.process_combine(outputdir, global_options.verbose)
+        # self.process_combine(outputdir, global_options.verbose)
         
     def process_combine(self, outputdir, verbose=False):
         #automatically process static combine
