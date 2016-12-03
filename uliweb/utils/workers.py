@@ -4,7 +4,7 @@
 
 from __future__ import print_function, absolute_import
 
-__all__ = ['Worker', 'Manager', 'make_log']
+__all__ = ['Worker', 'Manager', 'make_log', 'Timeout']
 __version__ = '0.1'
 
 import os
@@ -101,7 +101,7 @@ class Worker(object):
 
         self.init()
         try:
-            self._run()
+            self.loop()
             self.on_finished()
         except Exception as e:
             self.log.exception(e)
@@ -111,6 +111,14 @@ class Worker(object):
 
     def init(self):
         self.log.info('%s %d created' % (self.name, self.pid))
+
+    def _run(self):
+        if self.timeout:
+            with Timeout(self.timeout):
+                ret = self.run()
+        else:
+            ret = self.run()
+        return ret
 
     def run(self):
         self.log.info('%s %d running' % (self.name, self.pid))
@@ -123,16 +131,12 @@ class Worker(object):
     def on_finished(self):
         pass
 
-    def _run(self):
+    def loop(self):
         while (not self.max_requests or
                    (self.max_requests and self.count <= self.max_requests)) and \
                 not self.is_exit:
             try:
-                if self.timeout:
-                    with Timeout(self.timeout):
-                        ret = self.run()
-                else:
-                    ret = self.run()
+                self._run()
             except TimeoutException as e:
                 self.log.info('Time out')
             except Exception as e:
