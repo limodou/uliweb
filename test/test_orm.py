@@ -587,15 +587,17 @@ def test_datetime_property():
     ...     date1 = DateTimeProperty()
     ...     date2 = DateProperty()
     ...     date3 = TimeProperty()
+    ...     date4 = TimestampProperty()
     >>> a = Test()
     >>> #test common datetime object
     >>> a.date1 = None
     >>> a.date1=datetime.datetime(2009,1,1,14,0,5)
     >>> a.date2=datetime.date(2009,1,1)
     >>> a.date3=datetime.time(14,0,5)
+    >>> a.date4=datetime.datetime(2009,1,1,14,0,5)
     >>> #test to_dict function
     >>> print a.to_dict()
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:05', 'date2': '2009-01-01', 'id': None}
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:05', 'date2': '2009-01-01', 'date4': '2009-01-01 14:00:05', 'id': None}
     >>> print a.to_dict(fields=('date1', 'date2'))
     {'date1': '2009-01-01 14:00:05', 'date2': '2009-01-01'}
     >>> print repr(a.date1)
@@ -608,10 +610,10 @@ def test_datetime_property():
     >>> a.save()
     True
     >>> a
-    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'id':1}>
+    <Test {'date1':datetime.datetime(2009, 1, 1, 14, 0, 5),'date2':datetime.date(2009, 1, 1),'date3':datetime.time(14, 0, 5),'date4':datetime.datetime(2009, 1, 1, 14, 0, 5),'id':1}>
     >>> #test to_dict function
     >>> print a.to_dict()
-    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:05', 'date2': '2009-01-01', 'id': 1}
+    {'date1': '2009-01-01 14:00:05', 'date3': '14:00:05', 'date2': '2009-01-01', 'date4': '2009-01-01 14:00:05', 'id': 1}
     >>> #test different datetime object to diffent datetime property
     >>> a.date2=datetime.datetime(2009,1,1,14,0,5)
     >>> a.date3=datetime.datetime(2009,1,1,14,0,5)
@@ -2371,6 +2373,7 @@ def test_createtable():
     ...     text = Field(TEXT)
     ...     blob = Field(BLOB)
     ...     pickle = Field(PICKLE)
+    ...     timestamp = Field(TIMESTAMP)
     >>> a1 = Test(username='limodou1')
     >>> a1.save()
     True
@@ -2389,6 +2392,7 @@ def test_reflect_table():
     ...     datetime_type = Field(datetime.datetime)
     ...     date_type = Field(datetime.date)
     ...     time_type = Field(datetime.time)
+    ...     timestamp_type = Field(TIMESTAMP)
     ...     float = Field(float)
     ...     decimal = Field(DECIMAL, precision=2, scale=1)
     ...     text = Field(TEXT)
@@ -2420,6 +2424,7 @@ def test_reflect_table():
         datetime_type = Field(DATETIME)
         date_type = Field(DATE)
         time_type = Field(TIME)
+        timestamp_type = Field(TIMESTAMP)
         float = Field(float)
         decimal = Field(DECIMAL, precision=2, scale=1)
         text = Field(TEXT)
@@ -2664,6 +2669,7 @@ def test_to_column_info():
     ...     date1 = DateTimeProperty()
     ...     date2 = DateProperty()
     ...     date3 = TimeProperty()
+    ...     date4 = TimestampProperty()
     ...     float = FloatProperty()
     ...     decimal = DecimalProperty()
     ...     reference = Reference()
@@ -2687,6 +2693,8 @@ def test_to_column_info():
     {'index': False, 'name': 'date2', 'nullable': True, 'verbose_name': '', 'type_name': 'DATE', 'label': '', 'fieldname': 'date2', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'DATE', 'primary_key': False}
     >>> Test.date3.to_column_info()
     {'index': False, 'name': 'date3', 'nullable': True, 'verbose_name': '', 'type_name': 'TIME', 'label': '', 'fieldname': 'date3', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'TIME', 'primary_key': False}
+    >>> Test.date4.to_column_info()
+    {'index': False, 'name': 'date4', 'nullable': True, 'verbose_name': '', 'type_name': 'TIMESTAMP', 'label': '', 'fieldname': 'date4', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'TIMESTAMP', 'primary_key': False}
     >>> Test.float.to_column_info()
     {'index': False, 'name': 'float', 'nullable': True, 'verbose_name': '', 'type_name': 'FLOAT', 'label': '', 'fieldname': 'float', 'server_default': None, 'autoincrement': False, 'relation': '', 'unique': False, 'type': 'FLOAT', 'primary_key': False}
     >>> Test.decimal.to_column_info()
@@ -2698,7 +2706,7 @@ def test_to_column_info():
     >>> Test.one.to_column_info()
     {'index': False, 'name': 'one', 'nullable': True, 'verbose_name': '', 'type_name': 'INTEGER', 'label': '', 'fieldname': 'one', 'server_default': None, 'autoincrement': False, 'relation': 'OneToOne(One:id)', 'unique': False, 'type': 'OneToOne', 'primary_key': False}
     >>> [(x['name'], x['type']) for x in Test.get_columns_info()]
-    [('string', 'VARCHAR'), ('char', 'CHAR'), ('file', 'VARCHAR'), ('uni', 'VARCHAR'), ('boolean', 'BOOL'), ('integer', 'INTEGER'), ('date1', 'DATETIME'), ('date2', 'DATE'), ('date3', 'TIME'), ('float', 'FLOAT'), ('decimal', 'DECIMAL'), ('reference', 'Reference'), ('other', 'ManyToMany'), ('one', 'OneToOne'), ('id', 'INTEGER')]
+    [('string', 'VARCHAR'), ('char', 'CHAR'), ('file', 'VARCHAR'), ('uni', 'VARCHAR'), ('boolean', 'BOOL'), ('integer', 'INTEGER'), ('date1', 'DATETIME'), ('date2', 'DATE'), ('date3', 'TIME'), ('date4', 'TIMESTAMP'), ('float', 'FLOAT'), ('decimal', 'DECIMAL'), ('reference', 'Reference'), ('other', 'ManyToMany'), ('one', 'OneToOne'), ('id', 'INTEGER')]
     """
 
 def test_uuid_and_new_fields():

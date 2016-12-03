@@ -12,13 +12,13 @@ __all__ = ['Field', 'get_connection', 'Model', 'do_',
     'Begin', 'Commit', 'Rollback', 'Reset', 'ResetAll', 'CommitAll', 'RollbackAll',
     'PICKLE', 'BIGINT', 'set_pk_type', 'PKTYPE', 'FILE', 'INT', 'SMALLINT', 'DATE',
     'TIME', 'DATETIME', 'FLOAT', 'BOOLEAN', 'UUID', 'BINARY', 'VARBINARY',
-    'JSON', 'UUID_B',
+    'JSON', 'UUID_B', 'TIMESTAMP',
     'BlobProperty', 'BooleanProperty', 'DateProperty', 'DateTimeProperty',
     'TimeProperty', 'DecimalProperty', 'FloatProperty', 'SQLStorage',
     'IntegerProperty', 'Property', 'StringProperty', 'CharProperty',
     'TextProperty', 'UnicodeProperty', 'Reference', 'ReferenceProperty',
     'PickleProperty', 'BigIntegerProperty', 'FileProperty', 'JsonProperty',
-    'UUIDBinaryProperty', 'UUIDProperty',
+    'UUIDBinaryProperty', 'UUIDProperty', 'TimestampProperty',
     'SelfReference', 'SelfReferenceProperty', 'OneToOne', 'ManyToMany',
     'ReservedWordError', 'BadValueError', 'DuplicatePropertyError', 
     'ModelInstanceError', 'KindError', 'ConfigurationError', 'SaveError',
@@ -1307,7 +1307,7 @@ def reflect_table_data(table, mapping=None, engine_name='default'):
             kwargs['precision'] = v.type.precision
             kwargs['scale'] = v.type.scale
         elif type_name in ('timestamp',):
-            field_type = 'DATETIME'
+            field_type = 'TIMESTAMP'
         elif type_name in ('datetime', 'date', 'time'):
             pass
         #for tinyint will be treated as bool
@@ -2065,6 +2065,12 @@ class DateTimeProperty(Property):
             if not v:
                 return u''
             return unicode(v)
+
+class TimestampProperty(DateTimeProperty):
+    data_type = datetime.datetime
+    field_class = TIMESTAMP
+    server_default = '0000-00-00 00:00:00'
+    type_name = 'TIMESTAMP'
 
 class DateProperty(DateTimeProperty):
     data_type = datetime.date
@@ -3716,6 +3722,8 @@ _fields_mapping = {
     'datetime':DateTimeProperty,
     datetime.datetime:DateTimeProperty,
     DATETIME:DateTimeProperty,
+    'timestamp':TimestampProperty,
+    TIMESTAMP:TimestampProperty,
     'json':JsonProperty,
     JSON:JsonProperty,
     datetime.date:DateProperty,
