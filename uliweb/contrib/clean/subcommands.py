@@ -35,18 +35,26 @@ class DirCommand(Command):
         from uliweb.utils.common import walk_dirs
         import datetime
         from uliweb.utils import date
+        import shutil
 
         now = date.now()
         i = 0
         for f in walk_dirs(dir, include_ext=extensions, exclude_ext=exclude_extensions,
-                           recursion=recursion, file_only=True,
+                           recursion=recursion, file_only=False,
                            use_default_pattern=False, patterns=pattern):
             t = datetime.datetime.fromtimestamp(os.path.getmtime(f))
-            if not days or (days and (now-t).days >= days):
+            #if not days or (days and (now-t).days >= days):
+            if True:
                 try:
-                    os.unlink(f)
-                    if verbose:
-                        print 'Clean filename {}...'.format(f)
+                    if os.path.isfile(f):
+                        os.unlink(f)
+                        if verbose:
+                            print 'Clean filename {}...'.format(f)
+                    else:
+                        shutil.rmtree(f)
+                        if verbose:
+                            print 'Clean directory {}...'.format(f)
+
                     i += 1
                 except:
                     import traceback

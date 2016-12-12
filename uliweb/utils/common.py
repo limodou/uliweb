@@ -169,7 +169,8 @@ def walk_dirs(path, include=None, include_ext=None, exclude=None,
         fpath = os.path.join(path, r)
         if os.path.isdir(fpath):
             if not file_only:
-                yield os.path.normpath(fpath).replace('\\', '/')
+                if patterns and match(r, patterns):
+                    yield os.path.normpath(fpath).replace('\\', '/')
             if recursion:
                 for f in walk_dirs(fpath, include, include_ext, exclude,
                     exclude_ext, recursion, file_only, use_default_pattern, patterns):
@@ -181,7 +182,7 @@ def walk_dirs(path, include=None, include_ext=None, exclude=None,
             if include_ext and ext not in include_ext:
                 continue
             if patterns:
-                if not match(fpath, patterns):
+                if not match(r, patterns):
                     continue
             yield os.path.normpath(fpath).replace('\\', '/')
 
