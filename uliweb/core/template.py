@@ -682,6 +682,13 @@ class LRUTmplatesCacheDict(object):
         self.__access_keys = []
         self.__modified_times.clear()
 
+    def _get_mtime(self, key, mtime=None):
+        if mtime:
+            return mtime
+        if '$$' in key:
+            _filename = key.split('$$')[0]
+            return os.path.getmtime(_filename)
+
     def has(self, key, mtime=None):
         """
         This method should almost NEVER be used. The reason is that between the time
@@ -692,7 +699,7 @@ class LRUTmplatesCacheDict(object):
         if not v:
             return False
         if self.check_modified_time:
-            mtime = mtime or os.path.getmtime(key)
+            mtime = self._get_mtime(key, mtime)
             if mtime != self.__modified_times[key]:
                 del self[key]
                 return False
@@ -710,7 +717,7 @@ class LRUTmplatesCacheDict(object):
             pass
         self.__access_keys.insert(0, key)
         if self.check_modified_time:
-            self.__modified_times[key] = mtime or os.path.getmtime(key)
+            self.__modified_times[key] = self._get_mtime(key, mtime)
         self.cleanup()
 
     def __setitem__(self, key, value):
@@ -721,7 +728,7 @@ class LRUTmplatesCacheDict(object):
         if not v:
             return None
         if self.check_modified_time:
-            mtime = mtime or os.path.getmtime(key)
+            mtime = self._get_mtime(key, mtime)
             if mtime != self.__modified_times[key]:
                 del self[key]
                 return None
@@ -803,7 +810,7 @@ class Loader(object):
 
         with self.lock:
             if layout:
-                _filename = filename + '.' + layout
+                _filename = filename + '$$' + layout
                 mtime = os.path.getmtime(filename)
             else:
                 mtime = None
