@@ -883,6 +883,29 @@ def read_syntax_line(f):
             buf.append(t)
     return ''.join(buf)
 
+
+def read_code_line(f):
+    import tokenize
+    import token
+
+    g = tokenize.generate_tokens(f.readline)
+
+    buf = []
+    while 1:
+        try:
+            v = g.next()
+        except StopIteration:
+            return None
+        tokentype, t, start, end, line = v
+        if tokentype == 54:
+            continue
+        if tokentype in (token.INDENT, token.DEDENT, tokenize.COMMENT):
+            continue
+        if tokentype == token.NEWLINE:
+            return ''.join(buf)
+        else:
+            buf.append(t)
+
 #if __name__ == '__main__':
 #    log.info('Info: info')
 #    try:
