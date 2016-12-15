@@ -6,19 +6,19 @@ msgid ""
 msgstr ""
 "Project-Id-Version: uliweb 0.0.1\n"
 "POT-Creation-Date: Mon Dec 13 13:20:53 2010\n"
-"PO-Revision-Date: 2011-10-11 15:15+0800\n"
+"PO-Revision-Date: 2016-12-15 12:15+0800\n"
 "Last-Translator: limodou <limodou@gmail.com>\n"
 "Language-Team: uliweb <limodou@gmail.com>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
-"X-Poedit-Language: Chinese\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"Language: zh\n"
+"X-Generator: Poedit 1.6.5\n"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:5
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:6
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\templates\register.html:4
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:5
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/templates/register.html:17
 msgid "Register"
 msgstr "注册"
 
@@ -38,29 +38,24 @@ msgstr "密码："
 msgid "Password again:"
 msgstr "再次输入密码："
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:24
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:24
 msgid "Passwords are not match."
 msgstr "密码不一致。"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:27
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:28
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\templates\login.html:4
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:9
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:27
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/templates/login.html:17
 msgid "Login"
 msgstr "登录"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:32
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:32
 msgid "Remember Me"
 msgstr "记住我"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:44
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:57
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:46
 msgid "Password is not right."
 msgstr "密码不正确。"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:47
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:719
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:723
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:36
 msgid "Save"
 msgstr "保存"
 
@@ -72,19 +67,19 @@ msgstr "修改密码"
 msgid "Old Password:"
 msgstr "旧密码："
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\i18n\__init__.py:6
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/i18n/__init__.py:5
 msgid "English"
 msgstr "英语"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\i18n\__init__.py:7
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/i18n/__init__.py:6
 msgid "Simplified Chinese"
 msgstr "简体中文"
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:242
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:228
 msgid "This field is required."
 msgstr "这个字段是必输项。"
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:712
+#: /Users/limodou/mywork/uliweb/uliweb/form/uliform.py:704
 msgid "The date is not a valid date format."
 msgstr "日期不是一个有效的日期格式。"
 
@@ -112,15 +107,15 @@ msgstr "图片文件大小超出限制。"
 msgid "The file is not a valid image."
 msgstr "文件不是一个有效的图片。"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:384
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:599
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1800
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:751
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1102
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:2662
 msgid "The information has been saved successfully!"
 msgstr "信息已经被正确保存。"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:385
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:600
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1801
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:752
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1103
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:2663
 msgid "There are somethings wrong."
 msgstr "存在错误。"
 
@@ -129,126 +124,127 @@ msgstr "存在错误。"
 msgid "Create"
 msgstr "创建"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:651
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1152
 msgid "The object has not been changed."
 msgstr "对象没有修改。"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:963
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1510
 msgid "The object has been deleted successfully!"
 msgstr "对象已经被成功删除！"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1060
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1689
 msgid "Total"
 msgstr "合计"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:45
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:11
 msgid "Email"
 msgstr "邮件"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:48
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:14
 msgid "Last Login"
 msgstr "上次登录"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:50
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:16
 msgid "Portrait"
 msgstr "头像"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:51
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:17
 msgid "Active Status"
 msgstr "活动状态"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1864
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1875
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:2740
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:2751
 msgid "Query"
 msgstr "查询"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:9
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:31
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:51
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:46
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:9
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:31
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:40
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:12
 msgid "Password"
 msgstr "口令"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:8
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:30
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:43
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:8
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:30
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:9
 msgid "Username"
 msgstr "用户名"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:47
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:13
 msgid "Is Superuser"
 msgstr "超级用户"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:52
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:18
 msgid "Lock Status"
 msgstr "锁状态"
 
 msgid "Join Date"
 msgstr "加入日期"
 
-#: d:\project\mywork\uliweb-git\uliweb\form\layout.py:274
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/generic/forms.py:12
+#: /Users/limodou/mywork/uliweb/uliweb/form/layout.py:340
 msgid "more"
 msgstr "更多条件"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:33
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:33
 msgid "hour"
 msgid_plural "hours"
 msgstr[0] "小时"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:49
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:49
 msgid " ago"
 msgstr " 之前"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\rbac.py:132
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/rbac.py:136
 msgid "You have no permissions to visit this page."
 msgstr "你没有相应的权限来访问此页面。"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:51
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:51
 msgid " later"
 msgstr " 之后"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:32
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:32
 msgid "day"
 msgid_plural "days"
 msgstr[0] "天"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\rbac.py:113
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/rbac.py:117
 msgid "You have no roles to visit this page."
 msgstr "你没有相应的角色来访问此页面。"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:34
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:34
 msgid "minute"
 msgid_plural "minutes"
 msgstr[0] "分钟"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:30
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:30
 msgid "month"
 msgid_plural "months"
 msgstr[0] "月"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:29
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:29
 msgid "year"
 msgid_plural "years"
 msgstr[0] "年"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\settings.ini:7
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/settings.ini:8
 msgid "Super User"
 msgstr "超级用户"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:49
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:15
 msgid "Joined Date"
 msgstr "加入时间"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\settings.ini:9
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/settings.ini:10
 msgid "Trusted User"
 msgstr "可信用户"
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:31
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:31
 msgid "week"
 msgid_plural "weeks"
 msgstr[0] "周"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\settings.ini:8
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/settings.ini:9
 msgid "Anonymous User"
 msgstr "匿名用户"
 
@@ -256,7 +252,7 @@ msgstr "匿名用户"
 msgid "User \"%s\" does not exist!"
 msgstr "用户 \"%s\" 不存在！"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:49
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/views.py:59
 msgid "Register failed!"
 msgstr "注册失败！"
 
@@ -264,20 +260,20 @@ msgstr "注册失败！"
 msgid "User \"%s\" has already exist!"
 msgstr "用户 \"%s\" 已经存在！"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:44
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:10
 msgid "Nick Name"
 msgstr "昵称"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\__init__.py:47
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/__init__.py:104
 msgid "Password isn't correct!"
 msgstr "口令不正确！"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:10
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:52
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:10
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:41
 msgid "Password again"
 msgstr "再次输入口令"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:27
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/views.py:33
 msgid "Login failed!"
 msgstr "登录失败！"
 
@@ -285,7 +281,7 @@ msgstr "登录失败！"
 msgid "Username is not existed!"
 msgstr "用户名不存在！"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:50
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:39
 msgid "Old Password"
 msgstr "旧口令"
 
@@ -293,11 +289,218 @@ msgstr "旧口令"
 msgid "User \"%s\" is not existed!"
 msgstr "用户 \"%s\" 不存在!"
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:20
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:20
 msgid "User \"%s\" is already existed!"
 msgstr "用户 \"%s\" 已经存在！"
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:977
+#: /Users/limodou/mywork/uliweb/uliweb/form/uliform.py:821
 msgid "Submit"
 msgstr "提交"
 
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:11
+msgid "Modified Time"
+msgstr "修改时间"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:155
+msgid "Please enter a value less than or equal to {max}."
+msgstr "请输入小于或等 {max} 的值。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/settings.ini:3
+msgid "Department"
+msgstr "部门"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:7
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:29
+msgid "Display Name"
+msgstr "显示名称"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:209
+msgid "Please enter a valid email address."
+msgstr "请输入有效的邮箱地址。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:43
+msgid "(Deleted)"
+msgstr "(已删除)"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:65
+msgid "The file is not a valid image file."
+msgstr "文件不是有效的图片。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:222
+msgid "Please enter only digits."
+msgstr "请输入数字。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/generic/forms.py:15
+msgid "Search"
+msgstr "搜索"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:72
+msgid "Name"
+msgstr "名称"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:73
+msgid "Parent Group"
+msgstr "父组"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:181
+msgid "Please enter a valid datetime."
+msgstr "请输入有效的日期时间。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:145
+msgid "Please enter a value greater than or equal to {min}."
+msgstr "请输入大于或等 {min} 的值。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:100
+msgid "Please enter the same value to {target}."
+msgstr "请输入与 {target} 相同的值。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/__init__.py:106
+msgid "\"{}\" is not existed!"
+msgstr "\"{}\" 不存在！"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:8
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:30
+msgid "Description"
+msgstr "描述"
+
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:25
+msgid "The entry is duplicate."
+msgstr "记录重复。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1075
+msgid "You can't submit multiple times."
+msgstr "你不能提交多次。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:9
+msgid "UUID"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:13
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:46
+msgid "Published Time"
+msgstr "发布时间"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:35
+msgid "Has Extension Model"
+msgstr "存在扩展Model"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:114
+msgid "Please enter at least {minlength} characters."
+msgstr "请输入长度至少 {minlength} 个字符串。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:134
+msgid ""
+"Please enter a value between {minlength} and {maxlength} characters long."
+msgstr "请输入长度在 {minlength} 和 {maxlength} 之间的字符串。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:165
+msgid "Please enter a value between %(min)d and %(max)d."
+msgstr "请输入值在 %(min)d 和 %(max)d 间的值。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:41
+msgid "The value is not in choices."
+msgstr "当前值不在可选项内。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:187
+msgid "Please enter a valid time."
+msgstr "请输入有效时间。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:78
+msgid "Number of People"
+msgstr "人数"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:43
+msgid "Publish Status"
+msgstr "发布状态"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:33
+msgid "Base Model Class"
+msgstr "基Model类"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:19
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:75
+msgid "Deleted"
+msgstr "已删除"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:20
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:81
+msgid "Auth type"
+msgstr "认证类型"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:80
+msgid "Group Type"
+msgstr "组类型"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:77
+msgid "Number of Children"
+msgstr "孩子个数"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:6
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:28
+msgid "Model Name"
+msgstr "Model名"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:201
+msgid "Please enter a valid URL."
+msgstr "请输入有效的URL。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:74
+msgid "Users"
+msgstr "用户"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:84
+msgid "The image file size exceeds the limit {size!r}."
+msgstr "图片大小超过 {size!r} 的限制。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:31
+msgid "Tablename"
+msgstr "表名"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/uliform.py:22
+msgid "Can't convert %r to %s."
+msgstr "不能转换 %r 为 %s。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:175
+msgid "Please enter a valid date."
+msgstr "请输入有效的日期。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:216
+msgid "Please enter a valid number."
+msgstr "请输入有效的数值。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:34
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:37
+msgid "Underlying model class path"
+msgstr "底层实现Model类的路径"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:8
+msgid "There is an error!"
+msgstr "存在错误！"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:79
+msgid "Order"
+msgstr "顺序"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:45
+msgid "Create Time"
+msgstr "创建时间"
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:124
+msgid "Please enter no more than {maxlength} characters."
+msgstr "请输入长度不超过 {maxlength} 的字符串。"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:36
+msgid "Extension Model Class"
+msgstr "扩展Model类"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:10
+msgid "Modified User"
+msgstr "修改人"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/settings.ini:3
+msgid "Group"
+msgstr "组"
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:76
+msgid "Created Datetime"
+msgstr "创建日期时间"

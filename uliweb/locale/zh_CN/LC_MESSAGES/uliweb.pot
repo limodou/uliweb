@@ -5,274 +5,435 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2011-10-11 15:15\n"
+"POT-Creation-Date: 2016-12-15 12:04\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
-"Content-Transfer-Encoding: ENCODING\n"
-"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: pygettext.py 1.6\n"
 
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\__init__.py:47
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/__init__.py:104
 msgid "Password isn't correct!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\__init__.py:49
-msgid "Username is not existed!"
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/__init__.py:106
+msgid "\"{}\" is not existed!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:5
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:6
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\templates\register.html:4
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:5
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/templates/register.html:17
 msgid "Register"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:8
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:30
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:43
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:8
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:30
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:9
 msgid "Username"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:9
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:31
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:51
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:46
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:9
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:31
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:40
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:12
 msgid "Password"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:10
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:52
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:10
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:41
 msgid "Password again"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:20
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:20
 msgid "User \"%s\" is already existed!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:24
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:24
 msgid "Passwords are not match."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:27
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:28
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\templates\login.html:4
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:9
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:27
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/templates/login.html:17
 msgid "Login"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:32
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:32
 msgid "Remember Me"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:42
-msgid "User \"%s\" is not existed!"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:44
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:57
-msgid "Password is not right."
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:47
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:719
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:723
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:36
 msgid "Save"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:48
-msgid "Change Password"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\forms.py:50
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:39
 msgid "Old Password"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:44
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/forms.py:46
+msgid "Password is not right."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:10
 msgid "Nick Name"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:45
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:11
 msgid "Email"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:47
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:13
 msgid "Is Superuser"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:48
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:14
 msgid "Last Login"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:49
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:15
 msgid "Joined Date"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:50
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:16
 msgid "Portrait"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:51
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:17
 msgid "Active Status"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\models.py:52
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:18
 msgid "Lock Status"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:27
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:19
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:75
+msgid "Deleted"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:20
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:81
+msgid "Auth type"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:43
+msgid "(Deleted)"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:72
+msgid "Name"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:73
+msgid "Parent Group"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:74
+msgid "Users"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:76
+msgid "Created Datetime"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:77
+msgid "Number of Children"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:78
+msgid "Number of People"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:79
+msgid "Order"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/models.py:80
+msgid "Group Type"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/settings.ini:3
+msgid "Department"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/settings.ini:3
+msgid "Group"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/views.py:33
 msgid "Login failed!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\auth\views.py:49
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/auth/views.py:59
 msgid "Register failed!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\contrib\i18n\__init__.py:6
-msgid "English"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\i18n\__init__.py:7
-msgid "Simplified Chinese"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\rbac.py:113
-msgid "You have no roles to visit this page."
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\rbac.py:132
-msgid "You have no permissions to visit this page."
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\settings.ini:7
-msgid "Super User"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\settings.ini:8
-msgid "Anonymous User"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\contrib\rbac\settings.ini:9
-msgid "Trusted User"
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\form\layout.py:274
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/generic/forms.py:12
+#: /Users/limodou/mywork/uliweb/uliweb/form/layout.py:340
 msgid "more"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:242
-msgid "This field is required."
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/generic/forms.py:15
+msgid "Search"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:712
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/i18n/__init__.py:5
+msgid "English"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/i18n/__init__.py:6
+msgid "Simplified Chinese"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:6
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:28
+msgid "Model Name"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:7
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:29
+msgid "Display Name"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:8
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:30
+msgid "Description"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:9
+msgid "UUID"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:10
+msgid "Modified User"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:11
+msgid "Modified Time"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:13
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:46
+msgid "Published Time"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:31
+msgid "Tablename"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:33
+msgid "Base Model Class"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:34
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:37
+msgid "Underlying model class path"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:35
+msgid "Has Extension Model"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:36
+msgid "Extension Model Class"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:43
+msgid "Publish Status"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/model_config/models.py:45
+msgid "Create Time"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/rbac.py:117
+msgid "You have no roles to visit this page."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/rbac.py:136
+msgid "You have no permissions to visit this page."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/settings.ini:8
+msgid "Super User"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/settings.ini:9
+msgid "Anonymous User"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/contrib/rbac/settings.ini:10
+msgid "Trusted User"
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/uliform.py:22
+msgid "Can't convert %r to %s."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/uliform.py:704
 msgid "The date is not a valid date format."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:763
-msgid "The time is not a valid time format."
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:813
-msgid "The datetime is not a valid datetime format."
-msgstr ""
-
-#: d:\project\mywork\uliweb-git\uliweb\form\uliform.py:977
+#: /Users/limodou/mywork/uliweb/uliweb/form/uliform.py:821
 msgid "Submit"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\validators.py:16
-msgid "Choices need a dict, tuple or list data."
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:8
+msgid "There is an error!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\validators.py:25
-msgid "Select a valid choice. That choice is not one of the available choices."
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:41
+msgid "The value is not in choices."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\validators.py:36
-msgid "The image file size exceeds the limit."
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:65
+msgid "The file is not a valid image file."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\form\validators.py:38
-msgid "The file is not a valid image."
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:84
+msgid "The image file size exceeds the limit {size!r}."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:384
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:599
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1800
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:100
+msgid "Please enter the same value to {target}."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:114
+msgid "Please enter at least {minlength} characters."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:124
+msgid "Please enter no more than {maxlength} characters."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:134
+msgid "Please enter a value between {minlength} and {maxlength} characters long."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:145
+msgid "Please enter a value greater than or equal to {min}."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:155
+msgid "Please enter a value less than or equal to {max}."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:165
+msgid "Please enter a value between %(min)d and %(max)d."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:175
+msgid "Please enter a valid date."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:181
+msgid "Please enter a valid datetime."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:187
+msgid "Please enter a valid time."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:201
+msgid "Please enter a valid URL."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:209
+msgid "Please enter a valid email address."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:216
+msgid "Please enter a valid number."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:222
+msgid "Please enter only digits."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/form/validators.py:228
+msgid "This field is required."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:25
+msgid "The entry is duplicate."
+msgstr ""
+
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:751
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1102
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:2662
 msgid "The information has been saved successfully!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:385
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:600
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1801
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:752
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1103
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:2663
 msgid "There are somethings wrong."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:462
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:466
-msgid "Create"
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1075
+msgid "You can't submit multiple times."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:651
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1152
 msgid "The object has not been changed."
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:963
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1510
 msgid "The object has been deleted successfully!"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1060
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:1689
 msgid "Total"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1864
-#: d:\project\mywork\uliweb-git\uliweb\utils\generic.py:1875
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:2740
+#: /Users/limodou/mywork/uliweb/uliweb/utils/generic.py:2751
 msgid "Query"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:29
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:29
 msgid "year"
 msgid_plural "years"
 msgstr[0] ""
 msgstr[1] ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:30
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:30
 msgid "month"
 msgid_plural "months"
 msgstr[0] ""
 msgstr[1] ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:31
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:31
 msgid "week"
 msgid_plural "weeks"
 msgstr[0] ""
 msgstr[1] ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:32
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:32
 msgid "day"
 msgid_plural "days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:33
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:33
 msgid "hour"
 msgid_plural "hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:34
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:34
 msgid "minute"
 msgid_plural "minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:49
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:49
 msgid " ago"
 msgstr ""
 
-#: d:\project\mywork\uliweb-git\uliweb\utils\timesince.py:51
+#: /Users/limodou/mywork/uliweb/uliweb/utils/timesince.py:51
 msgid " later"
 msgstr ""
 
