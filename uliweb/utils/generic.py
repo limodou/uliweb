@@ -31,11 +31,16 @@ class TEST_DUPLICATE(Validator):
         self.condition = self.args.get('condition')
 
     def validate(self, data, all_data=None):
+        model = functions.get_model(self.model)
+        if isinstance(self.field, (str, unicode)):
+            field = model.c[self.field]
+        else:
+            field = self.field
         if self.condition is not None:
-            if self.model.filter(self.field == data).filter(self.condition).any():
+            if model.filter(field == data).filter(self.condition).any():
                 return False
         else:
-            if self.model.filter(self.field == data).any():
+            if model.filter(field == data).any():
                 return False
         return True
 
@@ -155,8 +160,8 @@ class ReferenceSelectField(SelectField):
             else:
                 _count = query.count()
             if _count > max_reference_field_count:
-                log.error('ReferenceSelectField query [{}] count is {} great than {}'.format(
-                            str(query), _count, max_reference_field_count))
+                log.error('ReferenceSelectField {} query [{}] count is {} great than {}'.format(
+                            self.name, str(query), _count, max_reference_field_count))
             if self.group_field:
                 query = query.order_by(model.c[self.group_field].asc())
             if self.group_field:
