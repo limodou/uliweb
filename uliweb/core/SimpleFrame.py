@@ -288,6 +288,26 @@ def get_url_adapter(_domain_name):
         adapter = url_map.bind_to_environ(env)
     return adapter
 
+def get_rule(url):
+    from werkzeug.test import EnvironBuilder
+
+    builder = EnvironBuilder(url)
+    env = builder.get_environ()
+
+    url_adapter = url_map.bind_to_environ(env)
+    result = {}
+    try:
+        rule, values = url_adapter.match(return_rule=True)
+        result['rule'] = rule.rule
+        result['endpoint'] = rule.endpoint
+        result['doc'] = ''
+        mod, handler_cls, func = application.get_handler(rule.endpoint)
+        if func.__doc__:
+            result['doc'] = func.__doc__.strip()
+    except NotFound:
+        pass
+    return result
+
 def _sub(matcher):
     return '{%s}' % matcher.group().strip('<>').strip().split(':')[-1]
 

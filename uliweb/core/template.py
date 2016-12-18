@@ -688,6 +688,8 @@ class LRUTmplatesCacheDict(object):
         if '$$' in key:
             _filename = key.split('$$')[0]
             return os.path.getmtime(_filename)
+        else:
+            return os.path.getmtime(key)
 
     def has(self, key, mtime=None):
         """

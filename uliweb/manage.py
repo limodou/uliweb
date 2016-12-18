@@ -1407,21 +1407,13 @@ class FindCommand(Command):
             self._find_option(global_options, options.option)
         
     def _find_url(self, url):
-        from uliweb.core.SimpleFrame import url_map
-        from werkzeug.test import EnvironBuilder
-        from uliweb import NotFound, application
-
-        builder = EnvironBuilder(url)
-        env = builder.get_environ()
-        
-        url_adapter = url_map.bind_to_environ(env)
-        try:
-            rule, values = url_adapter.match(return_rule=True)
-            print rule.rule, '--->', rule.endpoint
-            mod, handler_cls, func = application.get_handler(rule.endpoint)
-            if func.__doc__:
-                print '\nDescription:', func.__doc__.strip()
-        except NotFound:
+        from uliweb.core.SimpleFrame import get_rule
+        result = get_rule(url)
+        if result:
+            print result['rule'], '--->', result['endpoint']
+            if result['doc']:
+                print '\nDescription:', result['doc']
+        else:
             print 'Not Found'
 
     def _search_url(self, pattern):
