@@ -43,8 +43,7 @@ class DirCommand(Command):
                            recursion=recursion, file_only=False,
                            use_default_pattern=False, patterns=pattern):
             t = datetime.datetime.fromtimestamp(os.path.getmtime(f))
-            #if not days or (days and (now-t).days >= days):
-            if True:
+            if not days or (days and (now-t).days >= days):
                 try:
                     if os.path.isfile(f):
                         os.unlink(f)
