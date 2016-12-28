@@ -1165,10 +1165,10 @@ class EditView(AddView):
     def on_fail(self, d, json_result=False):
         log.debug(self.form.errors)
         if json_result:
-            return to_json_result(False, self.fail_msg, self.on_fail_data(self.obj, self.form.errors, d), json_func=self.json_func)
+            return to_json_result(False, self.form.errors.get('_') or self.fail_msg, self.on_fail_data(self.obj, self.form.errors, d), json_func=self.json_func)
         else:
             if self.use_flash:
-                functions.flash(self.fail_msg, 'error')
+                functions.flash(self.form.errors.get('_') or self.fail_msg, 'error')
             return d
 
     def prepare_static_data(self, data):
