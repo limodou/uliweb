@@ -230,6 +230,7 @@ class SimpleWriter(object):
     def _write_body(self):
         x = self._col
         y = self._row
+        j = 0
         #存储将要合并单元格信息
         #{name:{row: col: value}}
         last_merge_data = {}
