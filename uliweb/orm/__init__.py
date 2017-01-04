@@ -1997,7 +1997,7 @@ class JsonProperty(TextProperty):
 
     def get_value_for_datastore(self, model_instance):
         from uliweb import json_dumps
-        return json_dumps(getattr(model_instance, self._attr_name(), None))
+        return json_dumps(getattr(model_instance, self._attr_name(), None)).decode("utf8")
 
     def make_value_from_datastore(self, value):
         return self.convert_dump(value)
