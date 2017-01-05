@@ -1684,8 +1684,8 @@ def _parse(reader, template, in_block=None, in_loop=None,
                           "head", "head_link"):
             if operator in ("extend", "extends"):
                 if template.skip_extern: continue
-                _v = suffix.strip('"').strip("'")
-                if not _v:
+                suffix = suffix.strip('"').strip("'")
+                if not suffix:
                     raise ParseError("extends missing file path on line %s:%d" % (
                         filename, line))
                 block = _ExtendsBlock(suffix)
