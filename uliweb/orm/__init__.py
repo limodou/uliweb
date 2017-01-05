@@ -4829,6 +4829,7 @@ class Bulk(object):
             d = self.sqles[name]
             if d['data']:
                 do_(d['raw_sql'], args=d['data'])
+                d['data'] = []
 
     def close(self):
         try:
