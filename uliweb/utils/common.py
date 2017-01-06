@@ -569,7 +569,7 @@ class Serial(object):
 import urlparse
 class QueryString(object):
     def __init__(self, url):
-        self.url = str(url)
+        self.url = safe_str(url)
         self.scheme, self.netloc, self.script_root, qs, self.anchor = self.parse()
         self.qs = urlparse.parse_qs(qs, True)
         
