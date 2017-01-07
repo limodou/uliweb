@@ -664,9 +664,9 @@ def request_url(req=None):
     r = req or request
     if request:
         if r.query_string:
-            return quote_url(r.path + '?' + r.query_string)
+            return r.path + '?' + r.query_string
         else:
-            return quote_url(r.path)
+            return r.path
     else:
         return ''
 

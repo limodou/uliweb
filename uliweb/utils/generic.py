@@ -2347,9 +2347,9 @@ class SimpleListView(object):
 
     @property
     def data_url(self):
-        from uliweb.utils.common import query_string, request_url
+        from uliweb.utils.common import query_string, request_url, quote_url
 
-        return query_string(request_url(), data='1')
+        return quote_url(query_string(request_url(), data='1'))
 
     def download_url(self, **kwargs):
         from uliweb.utils.common import query_string, request_url

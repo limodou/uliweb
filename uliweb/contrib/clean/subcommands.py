@@ -17,6 +17,8 @@ class DirCommand(Command):
             help='Recursion the directory.'),
         make_option('-d', '--days', dest='days', type='int', default=7,
             help='Delta days before now.'),
+        make_option('-t', '--test', dest='test', default=False, action='store_true',
+                    help='Only display filenames but not really deleted them.'),
     )
 
     def handle(self, options, global_options, *args):
@@ -28,10 +30,11 @@ class DirCommand(Command):
                            exclude_extensions=options.exclude_extensions,
                            days=options.days, recursion=options.recursion,
                            pattern=options.pattern,
-                           verbose=global_options.verbose)
+                           verbose=global_options.verbose,
+                           test=options.test)
 
     def clean_dir(self, dir, extensions, exclude_extensions, recursion,
-                  days, pattern, verbose=False):
+                  days, pattern, verbose=False, test=False):
         from uliweb.utils.common import walk_dirs
         import datetime
         from uliweb.utils import date
@@ -46,12 +49,14 @@ class DirCommand(Command):
             if not days or (days and (now-t).days >= days):
                 try:
                     if os.path.isfile(f):
-                        os.unlink(f)
-                        if verbose:
+                        if not test:
+                            os.unlink(f)
+                        if test or verbose:
                             print 'Clean filename {}...'.format(f)
                     else:
-                        shutil.rmtree(f)
-                        if verbose:
+                        if not test:
+                            shutil.rmtree(f)
+                        if test or verbose:
                             print 'Clean directory {}...'.format(f)
 
                     i += 1
