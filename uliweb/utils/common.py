@@ -660,15 +660,20 @@ def request_url(req=None):
     Get full url of a request
     """
     from uliweb import request
-    
+
     r = req or request
     if request:
         if r.query_string:
-            return r.path + '?' + r.query_string
+            return quote_url(r.path + '?' + r.query_string)
         else:
-            return r.path
+            return quote_url(r.path)
     else:
         return ''
+
+def quote_url(url):
+    import urllib
+
+    return urllib.quote(safe_str(url))
 
 def flat_list(*alist):
     """
