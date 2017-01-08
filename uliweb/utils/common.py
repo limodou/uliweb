@@ -672,8 +672,17 @@ def request_url(req=None):
 
 def quote_url(url):
     import urllib
+    import urlparse
 
-    return urllib.quote(safe_str(url))
+    scheme, netloc, path, qs, anchor = urlparse.urlsplit(safe_str(url))
+    return urlparse.urlunsplit((scheme, netloc, urllib.quote(urllib.unquote(path)), qs, anchor))
+
+def unquote_url(url):
+    import urllib
+    import urlparse
+
+    scheme, netloc, path, qs, anchor = urlparse.urlsplit(safe_str(url))
+    return urlparse.urlunsplit((scheme, netloc, urllib.unquote(path), qs, anchor))
 
 def flat_list(*alist):
     """
