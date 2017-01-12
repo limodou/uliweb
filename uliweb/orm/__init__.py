@@ -4563,9 +4563,9 @@ class Model(object):
                     yield _row
 
         if is_condition(parent):
-            query = cls.filter(parent, *condition)
+            query = cls.filter(parent)
         else:
-            query = cls.filter(cls.c[parent_field]==parent, *condition)
+            query = cls.filter(cls.c[parent_field]==parent)
         for row in query:
             yield row
             for r in _f(getattr(row, id_field)):
