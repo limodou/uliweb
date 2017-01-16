@@ -261,15 +261,19 @@ class SimpleWriter(object):
                 self._format_cell(cell, i)
 
                 #处理单元格合并
-                if name in self.merge_fields:
+                if self.merge_fields and name in self.merge_fields:
                     if name in last_merge_data:
                         v = last_merge_data[name]
                         if v['value'] != value: #相同则忽略,不相同则合并
-                            last_row = y+j-1
-                            self._merge_cells(last_row, name, last_merge_data)
+                            #合并当前单元格之后的（包括当前单元格）
+                            last_row = y + j - 1
+                            ix = self.merge_fields.index(name)
+                            self._merge_cells(last_row, ix, last_merge_data)
+                            last_merge_data[name] = {'row':y+j, 'col':x+i, 'value':value}
                         else:
                             continue
-                    last_merge_data[name] = {'row':y+j, 'col':x+i, 'value':value}
+                    else:
+                        last_merge_data[name] = {'row':y+j, 'col':x+i, 'value':value}
 
 
         last_row = y+j
@@ -282,24 +286,17 @@ class SimpleWriter(object):
 
         self._set_widths()
 
-    def _merge_cells(self, row, name, last_merge_data):
-        flag = False
-        for i in range(len(self.merge_fields)):
-            field = self.merge_fields[i]
-            if flag or name==field:
-                if name == field:
-                    flag = True
-
-                v = last_merge_data[field]
-                if row > v['row']:
-                    self.sheet.merge_cells(start_row=v['row'],
-                                        start_column=v['col'],
-                                        end_row=row,
-                                        end_column=v['col'])
-                    del last_merge_data[field]
-                else:
-                    last_merge_data[field]['row'] = row
-
+    def _merge_cells(self, row, index, last_merge_data):
+        # flag = False
+        for i in range(index, len(self.merge_fields)):
+            name = self.merge_fields[i]
+            v = last_merge_data[name]
+            if row > v['row']:
+                self.sheet.merge_cells(start_row=v['row'],
+                                    start_column=v['col'],
+                                    end_row=row,
+                                    end_column=v['col'])
+            del last_merge_data[name]
 
     def _style_range(self, cell, cell_range, border=None, fill=None, font=None, alignment=None):
         """
