@@ -4545,11 +4545,13 @@ class Model(object):
     @classmethod
     def get_tree(cls, *condition, **kwargs):
         """
-        parent is root parent value, default is DEFAULT
+        parent is root parent value, default is None
+        current is current value
         condition is extra condition for select root records
         """
         parent_field = kwargs.pop('parent_field', 'parent')
         parent = kwargs.pop('parent', None)
+        current = kwargs.pop('current', None)
         order_by = kwargs.pop('order_by', None)
         id_field = kwargs.pop('id_field', 'id')
 
@@ -4562,10 +4564,13 @@ class Model(object):
                 for _row in _f(getattr(row, id_field)):
                     yield _row
 
-        if is_condition(parent):
-            query = cls.filter(parent)
+        if current:
+            query = cls.filter(cls.c[id_field]==current)
         else:
-            query = cls.filter(cls.c[parent_field]==parent)
+            if is_condition(parent):
+                query = cls.filter(parent)
+            else:
+                query = cls.filter(cls.c[parent_field]==parent)
         for row in query:
             yield row
             for r in _f(getattr(row, id_field)):
