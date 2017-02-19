@@ -13,7 +13,7 @@ class MultiView(object):
     Support: list, add, delete, edit, detail, etc
     """
 
-    def _process_fields_convert_map(self, parameters):
+    def _process_fields_convert_map(self, parameters, download=False):
         """
         process fields_convert_map, ListView doesn't support list type but dict
 
@@ -31,10 +31,10 @@ class MultiView(object):
         """
         if 'fields_convert_map' in parameters:
             _f = parameters.get('fields_convert_map') or []
-            parameters['fields_convert_map'] = self._get_fields_convert_map(_f)
+            parameters['fields_convert_map'] = self._get_fields_convert_map(_f, download)
 
 
-    def _get_fields_convert_map(self, fields):
+    def _get_fields_convert_map(self, fields, download=False):
         """
         process fields_convert_map, ListView doesn't support list type but dict
 
@@ -52,15 +52,23 @@ class MultiView(object):
         """
         _f = fields
         t = {}
+
+        # add support for download field
+        def _get(name):
+            _name = '_convert_download_{}'.format(name)
+            if download and hasattr(self, _name):
+                return getattr(self, _name)
+            return getattr(self, '_convert_{}'.format(name))
+
         if isinstance(_f, list):
             for k in _f:
                 if isinstance(k, str):
-                    t[k] = getattr(self, '_convert_{}'.format(k))
+                    t[k] = _get(k)
                 elif isinstance(k, (tuple, list)):
                     name = k[0]
                     func = k[1]
                     if isinstance(func, str):
-                        t[name] = getattr(self, '_convert_{}'.format(func))
+                        t[name] = _get(func)
                     elif callable(func):
                         t[name] = func
                     else:
@@ -70,7 +78,7 @@ class MultiView(object):
         elif isinstance(_f, dict):
             for k, v in _f.items():
                 if isinstance(v, str):
-                    t[k] = getattr(self, '_convert_{}'.format(v))
+                    t[k] = _get(v)
                 elif callable(v):
                     t[k] = v
                 else:
@@ -107,35 +115,43 @@ class MultiView(object):
         from uliweb import request, json, CONTENT_TYPE_JSON
         from sqlalchemy import and_
         from uliweb.utils.generic import get_sort_field
+        import copy
 
         if queryview:
             queryview.run()
             condition = queryview.get_condition()
+            post_query_condition = kwargs.get('post_query_condition')
+            if post_query_condition:
+                condition = post_query_condition(condition)
         else:
             condition = None
 
         if 'condition' in kwargs:
             condition = and_(condition, kwargs['condition'])
-            kwargs['condition'] = condition
-        else:
-            kwargs['condition'] = condition
+
+        post_condition = kwargs.get('post_condition')
+        if post_condition:
+            condition = post_condition(condition)
+        kwargs['condition'] = condition
+
 
         #process order
-        if 'order_by' not in kwargs:
-            order_by = get_sort_field(model)
-            if order_by is not None:
-                kwargs['order_by'] = order_by
+        order_by = get_sort_field(model)
+        if order_by is not None:
+            kwargs['order_by'] = order_by
+
+        _fields = copy.copy(kwargs.get('fields_convert_map', []))
 
         self._process_fields_convert_map(kwargs)
         downloads = {}
         downloads['filename'] = kwargs.pop('download_filename', 'download.xlsx')
         downloads['action'] = kwargs.pop('download_action', 'download')
         downloads['fields_convert_map'] = kwargs.pop('download_fields_convert_map',
-                                                  kwargs.get('fields_convert_map'))
+                                                  _fields)
         downloads['domain'] = kwargs.pop('download_domain', '')
         downloads['timeout'] = 0
         downloads.update(kwargs.pop('download_kwargs', {}))
-        self._process_fields_convert_map(downloads)
+        self._process_fields_convert_map(downloads, download=True)
 
         #get list view
         view = self._list_view(model=model, **kwargs)
