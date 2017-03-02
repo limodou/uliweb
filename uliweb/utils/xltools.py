@@ -878,6 +878,7 @@ class Reader(object):
 
 class SimpleReader(object):
     def __init__(self, template_file, input_file, sheet_name=None,
+                 data_sheet_name=None,
                  begin=None):
         """
         只用来处理简单读取,即数据为单行的模式
@@ -892,6 +893,7 @@ class SimpleReader(object):
         self.sheet_name = sheet_name
         self.input_file = input_file
         self.begin = begin
+        self.data_sheet_name = data_sheet_name or sheet_name
         self.template = self.get_template()
 
     def get_template(self):
@@ -906,14 +908,14 @@ class SimpleReader(object):
 
     def get_sheet(self):
         w = load_workbook(self.input_file, read_only=True)
-        if self.sheet_name:
-            if self.sheet_name not in w.sheetnames:
-                raise ValueError("Sheet name [{}] is not found in file {}".format(self.sheet_name, self.input_file))
-            if self.sheet_name == '*':
+        if self.data_sheet_name:
+            if self.data_sheet_name not in w.sheetnames:
+                raise ValueError("Sheet name [{}] is not found in file {}".format(self.data_sheet_name, self.input_file))
+            if self.data_sheet_name == '*':
                 for x in w.sheetnames:
                     yield w.sheetnames[x]
             else:
-                yield w[self.sheet_name]
+                yield w[self.data_sheet_name]
         else:
             yield w.active
 
