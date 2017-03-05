@@ -191,7 +191,8 @@ class MultiView(object):
         view = functions.DeleteView(model, obj=obj, **kwargs)
         return view.run(json_result=json_result)
 
-    def _select_list(self, queryview=None, download_filename=None, **kwargs):
+    def _select_list(self, queryview=None, queryform=None,
+                     download_filename=None, **kwargs):
         from uliweb import request, json
 
         if queryview:
@@ -217,7 +218,7 @@ class MultiView(object):
         else:
             result = view.run()
             if queryview:
-                result.update({'query_form':queryview.form})
+                result.update({'query_form':queryform or queryview.form})
             else:
                 result.update({'query_form':''})
             result.update({'table':view})
