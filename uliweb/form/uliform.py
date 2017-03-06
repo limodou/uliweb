@@ -212,7 +212,7 @@ class BaseField(object):
     def get_help_string(self, **kwargs):
         if self.help_string:
 #            return str(Tag('label', self.help_string, _for=self.id, **kwargs))
-            return str(self.help_string)
+            return safe_str(self.help_string)
         else:
             return ''
 
