@@ -400,7 +400,47 @@ def get_obj_url(obj):
         else:
             display = unicode(obj)
     return display
-    
+
+def get_model_columns(model, fields=None, meta='Table'):
+    """
+    Get fields info according model class, the fields just like ListView fields definition
+    :param fields: A list
+    :param meta: if no fields, it'll use meta
+    """
+    from copy import deepcopy
+
+    fields = fields or []
+    model = functions.get_model(model)
+
+    if not fields:
+        if hasattr(model, meta):
+            fields = getattr(model, meta).fields
+        else:
+            fields = [x for x, y in model._fields_list]
+
+    fields_list = []
+    for x in fields:
+        if isinstance(x, (str, unicode)):
+            f = get_grid_column(model, x)
+        elif isinstance(x, dict):
+            name = x['name']
+            f = deepcopy(x)
+            if 'verbose_name' in x:
+                f['title'] = x['verbose_name']
+            if 'title' not in f:
+                f.update(get_grid_column(model, name))
+        else:
+            raise ValueError("Field should be string or dict type, but {!r} found".format(x))
+        fields_list.append(f)
+    return fields_list
+
+def get_grid_column(model, name):
+    field = getattr(model, name, None)
+    d = {'name':name, 'title':name}
+    if field:
+        d = {'name': name, 'title': field.verbose_name or field.name}
+    return d
+
 def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
     json_func = json_func or json
 
@@ -1844,7 +1884,7 @@ class SimpleListView(object):
             if timeout and os.path.getmtime(t_filename) + timeout > time.time():
                 return self.downloader.download(filename, action)
             
-        if not query:
+        if query is None:
             query = self.query_all()
         if not type:
             type = os.path.splitext(filename)[1]
