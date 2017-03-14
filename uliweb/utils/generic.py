@@ -778,10 +778,11 @@ def get_model_display(model, obj, fields=None, types_convert_map=None, fields_co
         r[name] = make_view_field(field, obj=obj, types_convert_map=types_convert_map, fields_convert_map=fields_convert_map, value=value)
     return r
 
-def get_object_display(model, obj, fields=None, types_convert_map=None, fields_convert_map=None, data=None):
+def get_object_display(model, obj, fields=None, types_convert_map=None,
+                       fields_convert_map=None, data=None, meta='Table'):
     data = data or {}
     r = {}
-    for name, field in get_fields(model, fields):
+    for name, field in get_fields(model, fields, meta=meta):
         value = data.get(name, __default_value__)
         f = make_view_field(field, obj=obj, types_convert_map=types_convert_map, fields_convert_map=fields_convert_map, value=value)
         r[name] = f['display']

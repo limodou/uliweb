@@ -92,7 +92,23 @@ class MultiView(object):
         :param kwargs:
         :return:
         """
-        view =  functions.ListView(model, **kwargs)
+        from uliweb import request
+
+        #add download fields process
+        fields = kwargs.pop('fields', None)
+        meta = kwargs.pop('meta', 'Table')
+        if 'download' in request.GET:
+            if 'download_fields' in kwargs:
+                fields = kwargs.pop('download_fields', fields)
+            if 'download_meta' in kwargs:
+                meta = kwargs.pop('download_meta')
+            else:
+                if hasattr(model, 'Download'):
+                    meta = 'Download'
+                else:
+                    meta = meta
+
+        view =  functions.ListView(model, fields=fields, meta=meta, **kwargs)
         return view
 
 
