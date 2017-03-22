@@ -175,7 +175,7 @@ def dump_table(table, filename, con, std=None, delimiter=',', format=None,
     for r in result:
         n += 1
         if not format:
-            print >>std, r
+            print >>std, [x for x in r]
         elif format == 'txt':
             fw.writerow([str_value(x, encoding=encoding, newline_escape=True) for x in r])
         else:
@@ -288,6 +288,8 @@ def load_table(table, filename, con, delimiter=',', format=None,
                     count = 0
                     buf = []
             except:
+                import traceback
+                traceback.print_exc()
                 log.error('Error: Line %d of %s' % (n, filename))
                 raise
         

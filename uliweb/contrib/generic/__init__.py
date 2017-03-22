@@ -126,6 +126,21 @@ class MultiView(object):
         query = functions.QueryView(model, **kwargs)
         return query
 
+    def _parse_download_args(self, kwargs, fields):
+        """
+        Parse download parameters from kwargs
+        :return: parsed data
+        """
+
+        downloads = {}
+        downloads['filename'] = kwargs.pop('download_filename', 'download.xlsx')
+        downloads['action'] = kwargs.pop('download_action', 'download')
+        downloads['fields_convert_map'] = kwargs.pop('download_fields_convert_map',
+                                                     fields)
+        downloads['domain'] = kwargs.pop('download_domain', '')
+        downloads['timeout'] = 0
+        downloads.update(kwargs.pop('download_kwargs', {}))
+        return downloads
 
     def _list(self, model, queryview=None, queryform=None, **kwargs):
         from uliweb import request, json, CONTENT_TYPE_JSON
@@ -159,14 +174,7 @@ class MultiView(object):
         _fields = copy.copy(kwargs.get('fields_convert_map', []))
 
         self._process_fields_convert_map(kwargs)
-        downloads = {}
-        downloads['filename'] = kwargs.pop('download_filename', 'download.xlsx')
-        downloads['action'] = kwargs.pop('download_action', 'download')
-        downloads['fields_convert_map'] = kwargs.pop('download_fields_convert_map',
-                                                  _fields)
-        downloads['domain'] = kwargs.pop('download_domain', '')
-        downloads['timeout'] = 0
-        downloads.update(kwargs.pop('download_kwargs', {}))
+        downloads = self._parse_download_args(kwargs, _fields)
         self._process_fields_convert_map(downloads, download=True)
 
         #get list view
@@ -208,8 +216,9 @@ class MultiView(object):
         return view.run(json_result=json_result)
 
     def _select_list(self, queryview=None, queryform=None,
-                     download_filename=None, **kwargs):
+                     **kwargs):
         from uliweb import request, json
+        import copy
 
         if queryview:
             queryview.run()
@@ -223,14 +232,15 @@ class MultiView(object):
         else:
             kwargs['condition'] = condition
 
+        _fields = copy.copy(kwargs.get('fields_convert_map', []))
+        downloads = self._parse_download_args(kwargs, _fields)
+        self._process_fields_convert_map(downloads, download=True)
+
         view = functions.SelectListView(**kwargs)
         if 'data' in request.values:
             return json(view.json())
         elif 'download' in request.GET:
-            filename = download_filename or 'download.xls'
-            kwargs.setdefault('action', 'download')
-            kwargs.setdefault('timeout', 0)
-            return view.download(filename, **kwargs)
+            return view.download(**downloads)
         else:
             result = view.run()
             if queryview:
