@@ -1182,7 +1182,8 @@ class Headers(object):
         :return: list
         """
         if PY2:
-            return [(k, v.encode('latin1')) for k, v in self]
+            #return [(k, v.encode('latin1')) for k, v in self]
+            return [(k, v) for k, v in self]
         return list(self)
 
     def copy(self):
