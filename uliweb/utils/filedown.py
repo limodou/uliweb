@@ -98,7 +98,9 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
     apache
         ('X-Sendfile', '/path/to/local_url')
     """
+    from .common import safe_str
     from werkzeug.http import parse_range_header
+    import urllib
 
     guessed_type = mimetypes.guess_type(filename)
     mime_type = guessed_type[0] or default_mimetype
@@ -115,7 +117,7 @@ def filedown(environ, filename, cache=True, cache_timeout=None,
     if x_sendfile:
         if not x_header_name or not x_filename:
             raise Exception("x_header_name or x_filename can't be empty")
-        headers.append((x_header_name, x_filename))
+        headers.append((x_header_name, urllib.quote(safe_str(x_filename))))
         return Response('', status=200, headers=headers,
             direct_passthrough=True)
     else:
