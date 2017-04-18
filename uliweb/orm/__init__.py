@@ -3958,7 +3958,7 @@ class Model(object):
         changed will be callback function, only when the non manytomany properties
         are saved, the signature is:
             
-            def changed(created, old_data, new_data, obj=None):
+            def changed(obj, created, old_data, diff_data):
                 if flag is true, then it means the record is changed
                 you can change new_data, and the new_data will be saved to database
                 

@@ -69,11 +69,12 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
     include_apps=None, debug_console=True, settings_file=None, 
     local_settings_file=None, start=True, default_settings=None, 
     dispatcher_cls=None, dispatcher_kwargs=None, debug_cls=None, debug_kwargs=None, 
-    reuse=True, verbose=False, pythonpath=None):
+    reuse=True, verbose=False, pythonpath=None, trace_print=False):
     """
     Make an application object
     """
     from uliweb.utils.common import import_attr
+    from uliweb.utils.whocallme import print_frame
     from werkzeug.debug import DebuggedApplication
     
     #is reuse, then create application only one
@@ -106,8 +107,21 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
         sys.path.insert(0, apps_dir)
 
     install_config(apps_dir)
-    
-    application = app = dispatcher_cls(apps_dir=apps_dir, 
+
+    if trace_print:
+        output = sys.stdout
+
+        class MyOut(object):
+            def write(self, s):
+                output.write(s)
+                output.write('\n')
+                print_frame(output)
+                if hasattr(output, 'flush'):
+                    output.flush()
+
+        sys.stdout = MyOut()
+
+    application = app = dispatcher_cls(apps_dir=apps_dir,
         include_apps=include_apps, 
         settings_file=settings_file, 
         local_settings_file=local_settings_file, 
@@ -167,14 +181,15 @@ def make_application(debug=None, apps_dir='apps', project_dir=None,
 def make_simple_application(apps_dir='apps', project_dir=None, include_apps=None, 
     settings_file='', local_settings_file='', 
     default_settings=None, dispatcher_cls=None, dispatcher_kwargs=None, reuse=True,
-    pythonpath=None):
+    pythonpath=None, trace_print=False):
     settings = {'ORM/AUTO_DOTRANSACTION':False}
     settings.update(default_settings or {})
     return make_application(apps_dir=apps_dir, project_dir=project_dir,
         include_apps=include_apps, debug_console=False, debug=False,
         settings_file=settings_file, local_settings_file=local_settings_file,
         start=False, default_settings=settings, dispatcher_cls=dispatcher_cls, 
-        dispatcher_kwargs=dispatcher_kwargs, reuse=reuse, pythonpath=pythonpath)
+        dispatcher_kwargs=dispatcher_kwargs, reuse=reuse, pythonpath=pythonpath,
+        trace_print=trace_print)
 
 class MakeAppCommand(Command):
     name = 'makeapp'
@@ -866,6 +881,8 @@ class RunserverCommand(Command):
             help='Start uliweb server with gevent-socketio.'),
         make_option('--coverage', dest='coverage', action='store_true', default=False,
             help='Start uliweb server with coverage.'),
+        make_option('--trace-print', dest='trace_print', action='store_true', default=False,
+                    help='Trace print statement.'),
     )
     develop = False
     check_apps_dirs = False
@@ -916,7 +933,8 @@ class RunserverCommand(Command):
             return make_application(options.debug, project_dir=global_options.project,
                         include_apps=include_apps, settings_file=global_options.settings,
                         local_settings_file=global_options.local_settings, debug_cls=debug_cls,
-                        verbose=global_options.verbose, pythonpath=old_apps_dir)
+                        verbose=global_options.verbose, pythonpath=old_apps_dir,
+                        trace_print=options.trace_print)
 
         cov = None
         try:
