@@ -373,6 +373,49 @@ def get_fields(model, fields, meta=None):
         fields_list.append((field['name'], field))
     return fields_list
 
+
+def get_columns(model=None, fields=None, meta=None):
+    """
+    Get model columns list
+    """
+    if model:
+        M = get_model(model)
+    else:
+        M = None
+    if fields is not None:
+        f = fields
+
+    if M:
+        if meta and hasattr(M, meta):
+            m = getattr(model, meta)
+            if hasattr(m, 'fields'):
+                f = m.fields
+            else:
+                f = M._fields_list
+        else:
+            f = M._fields_list
+
+    columns = []
+    for x in f:
+        if isinstance(x, str):  # so x is field_name
+            field_name = x
+        elif isinstance(x, dict):
+            field_name = x['name']
+        else:
+            raise UliwebError("Field definition is not right, it should be just like str or {'name':xxx}")
+
+        if '.' in field_name:
+            model_name, field_name = field_name.split('.')
+            M = get_model(model_name)
+
+        if not M:
+            raise UliwebError("Model can't be empty, because field name not has `model.` prefix")
+
+        if field_name in M.c:
+            columns.append(M.c[field_name])
+
+    return columns
+
 def get_layout(model, meta):
     f = None
     if hasattr(model, meta):
@@ -435,8 +478,14 @@ def get_model_columns(model, fields=None, meta='Table'):
     return fields_list
 
 def get_grid_column(model, name):
-    field = getattr(model, name, None)
-    d = {'name':name, 'title':name}
+    if '.' in name:
+        model_name, field_name = name.split('.')
+        model = get_model(model_name)
+    else:
+        field_name = name
+
+    field = getattr(model, field_name, None)
+    d = {'name':field_name, 'title':field_name}
     if field:
         d = {'name': name, 'title': field.verbose_name or field.name}
     return d
@@ -2163,7 +2212,7 @@ class SimpleListView(object):
             for i, x in enumerate(self.table_info['fields_list']):
                 v = self.make_view_field(x, record, self.fields_convert_map)
                 r[x['name']] = v['display']
-        r['_obj_'] = record
+            r['_obj_'] = record
         if self.post_record_render:
             self.post_record_render(r)
         return r
@@ -2476,7 +2525,7 @@ class ListView(SimpleListView):
                 field = self.model.properties.get(x['name'], x)
                 v = make_view_field(field, record, self.types_convert_map, self.fields_convert_map, auto_convert=not json_result)
                 r[x['name']] = v['display']
-        r['_obj_'] = record
+            r['_obj_'] = record
         if self.post_record_render:
             self.post_record_render(r)
         return r
@@ -2618,13 +2667,9 @@ class SelectListView(ListView):
                 self._field_labels.append((f, f.replace('.', '_')))
             else:
                 self._field_labels.append((f, f))
-                
+
     def get_select(self):
-        columns = []
-        for f in self.table_info['fields']:
-            model, col = self.get_column(f)
-            if col is not None:
-                columns.append(col)
+        columns = get_columns(self.model, None, self.meta)
         return select(columns, use_labels=True)
     
     def query(self):
@@ -2693,7 +2738,7 @@ class SelectListView(ListView):
                     self.fields_convert_map, auto_convert=not json_result, 
                     value=_record[x['name']])
                 r[x['name']] = v['display']
-        r['_obj_'] = _record
+            r['_obj_'] = _record
         if self.post_record_render:
             self.post_record_render(r)
         return r

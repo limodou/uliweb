@@ -142,29 +142,24 @@ class MultiView(object):
         downloads.update(kwargs.pop('download_kwargs', {}))
         return downloads
 
-    def _list(self, model, queryview=None, queryform=None, **kwargs):
+    def _list(self, model, queryview=None, queryform=None,
+              auto_condition=True,
+              post_view=None, post_run=None, **kwargs):
         from uliweb import request, json, CONTENT_TYPE_JSON
         from sqlalchemy import and_
         from uliweb.utils.generic import get_sort_field
         import copy
 
-        if queryview:
+        if queryview and auto_condition:
             queryview.run()
             condition = queryview.get_condition()
-            post_query_condition = kwargs.get('post_query_condition')
-            if post_query_condition:
-                condition = post_query_condition(condition)
         else:
             condition = None
 
         if 'condition' in kwargs:
             condition = and_(condition, kwargs['condition'])
 
-        post_condition = kwargs.get('post_condition')
-        if post_condition:
-            condition = post_condition(condition)
         kwargs['condition'] = condition
-
 
         #process order
         order_by = get_sort_field(model)
@@ -180,6 +175,9 @@ class MultiView(object):
         #get list view
         view = self._list_view(model=model, **kwargs)
 
+        if post_view:
+            post_view(view)
+
         if 'data' in request.values and request.is_xhr:
             return json(view.json(), content_type=CONTENT_TYPE_JSON)
         elif 'download' in request.GET:
@@ -191,6 +189,9 @@ class MultiView(object):
             else:
                 result.update({'query_form':''})
             result.update({'table':view})
+
+            if post_run:
+                post_run(view, result)
             return result
 
     def _view(self, model, obj, **kwargs):
@@ -215,39 +216,50 @@ class MultiView(object):
         view = functions.DeleteView(model, obj=obj, **kwargs)
         return view.run(json_result=json_result)
 
-    def _select_list(self, queryview=None, queryform=None,
-                     **kwargs):
+    def _select_list(self, model=None, queryview=None, queryform=None,
+                     auto_condition=True,
+                     post_view=None, post_run=None, **kwargs):
+        """
+        SelectListView wrap method
+        :param auto_condition: if using queryview to create condition
+        """
         from uliweb import request, json
         import copy
 
-        if queryview:
+        if queryview and auto_condition:
             queryview.run()
             condition = queryview.get_condition()
         else:
             condition = None
 
         if 'condition' in kwargs:
-            condition = and_(condition, kwargs['condition'])
-            kwargs['condition'] = condition
-        else:
-            kwargs['condition'] = condition
+            condition = kwargs['condition'] & condition
+
+        kwargs['condition'] = condition
 
         _fields = copy.copy(kwargs.get('fields_convert_map', []))
         downloads = self._parse_download_args(kwargs, _fields)
         self._process_fields_convert_map(downloads, download=True)
 
-        view = functions.SelectListView(**kwargs)
+        view = functions.SelectListView(model, **kwargs)
+
+        if post_view:
+            post_view(view)
+
         if 'data' in request.values:
             return json(view.json())
         elif 'download' in request.GET:
             return view.download(**downloads)
         else:
             result = view.run()
-            if queryview:
+            if queryform or queryview:
                 result.update({'query_form':queryform or queryview.form})
             else:
                 result.update({'query_form':''})
             result.update({'table':view})
+
+            if post_run:
+                post_run(view, result)
             return result
 
     def _search(self, model, condition=None, search_field='name',

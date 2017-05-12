@@ -150,7 +150,7 @@ class FileServing(object):
         
         s = settings.GLOBAL
         #create new filename according fname2 and filename, the result should be unicode
-        return norm_filename(os.path.join(os.path.dirname(filename), files.unicode_filename(fname2, s.FILESYSTEM_ENCODING)))
+        return norm_filename(os.path.join(subpath, os.path.dirname(filename), files.unicode_filename(fname2, s.FILESYSTEM_ENCODING)))
     
     def save_file_field(self, field, replace=False, filename=None, convert=True, subpath=''):
         filename = filename or field.data.filename
