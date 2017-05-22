@@ -989,8 +989,9 @@ class AddView(object):
             return errors
 
     def get_url(self, obj):
+        from functools import partial
         #guess ok_url kwargs, it could be (id) or (obj)
-        if callable(self.ok_url):
+        if callable(self.ok_url) and type(self.ok_url)!=partial:
             args = inspect.getargspec(self.ok_url).args
             kwargs = {}
             _dict = obj.to_dict()
