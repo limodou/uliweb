@@ -150,11 +150,11 @@ class MultiView(object):
         from uliweb.utils.generic import get_sort_field
         import copy
 
+        condition = None
         if queryview and auto_condition:
             queryview.run()
-            condition = queryview.get_condition()
-        else:
-            condition = None
+            if hasattr(queryview, 'get_condition'):
+                condition = queryview.get_condition()
 
         if 'condition' in kwargs:
             condition = and_(condition, kwargs['condition'])
@@ -226,11 +226,11 @@ class MultiView(object):
         from uliweb import request, json
         import copy
 
+        condition = None
         if queryview and auto_condition:
             queryview.run()
-            condition = queryview.get_condition()
-        else:
-            condition = None
+            if hasattr(queryview, 'get_condition'):
+                condition = queryview.get_condition()
 
         if 'condition' in kwargs:
             condition = kwargs['condition'] & condition

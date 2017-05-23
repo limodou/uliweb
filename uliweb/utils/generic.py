@@ -71,7 +71,7 @@ def get_sort_field(model, sort_field='sort', order_name='asc'):
         for m in models:
             if name in m.c:
                 return m.c[name]
-            
+
     if request.values.getlist('sort'):
         sort_fields = request.values.getlist('sort')
         order_by = []
@@ -362,7 +362,7 @@ def get_fields(model, fields, meta=None):
         elif isinstance(x, dict):
             field = x.copy()
         else:
-            raise UliwebError('Field definition is not right, it should be just like (field_name, form_field_obj)')
+            raise UliwebError('Field definition {!r} is not right, it should be just like (field_name, form_field_obj)'.format(x))
         
         if 'prop' not in field:
             if hasattr(model, field['name']):
@@ -489,6 +489,30 @@ def get_grid_column(model, name):
     if field:
         d = {'name': name, 'title': field.verbose_name or field.name}
     return d
+
+def get_column(name, model=None):
+    """
+    get model field according to name
+    """
+    if '.' in name:
+        m, name = name.split('.')
+        model = get_model(m)
+
+    if model:
+        return getattr(model, name, None)
+
+def get_column_model(name, model=None):
+    """
+    get model field according to name
+    """
+    if '.' in name:
+        m, name = name.split('.')
+        model = get_model(m)
+
+    if model:
+        return getattr(model, name, None), model
+    else:
+        return None, None
 
 def to_json_result(success, msg='', d=None, json_func=None, **kwargs):
     json_func = json_func or json
@@ -1953,34 +1977,34 @@ class SimpleListView(object):
         else:
             return self.download_csv(filename, query, action, fields_convert_map, not_tempfile=bool(timeout), **kwargs)
        
-    def get_column(self, name, model=None):
-        """
-        get table column according to name
-        """
-        col = None
-        if '.' in name:
-            m, fname = name.split('.')
-            model = get_model(m)
-            if model and fname in model.c:
-                col = get_model(m).c[fname]
-        else:
-            if model and name in model.c:
-                col = model.c[name]
-        return model, col
-        
-    def get_field(self, name, model=None):
-        """
-        get model field according to name
-        """
-        if '.' in name:
-            m, name = name.split('.')
-            model = get_model(m)
-        
-        if model:
-            return getattr(model, name, None)
+    # def get_column(self, name, model=None):
+    #     """
+    #     get table column according to name
+    #     """
+    #     col = None
+    #     if '.' in name:
+    #         m, fname = name.split('.')
+    #         model = get_model(m)
+    #         if model and fname in model.c:
+    #             col = get_model(m).c[fname]
+    #     else:
+    #         if model and name in model.c:
+    #             col = model.c[name]
+    #     return model, col
+    #
+    # def get_field(self, name, model=None):
+    #     """
+    #     get model field according to name
+    #     """
+    #     if '.' in name:
+    #         m, name = name.split('.')
+    #         model = get_model(m)
+    #
+    #     if model:
+    #         return getattr(model, name, None)
         
     def get_table_meta_field(self, name, model=None):
-        field = self.get_field(name, model)
+        field = get_column(name, model)
         if field:
             d = {'name':name, 'verbose_name':field.verbose_name or field.name}
             return d
@@ -2032,7 +2056,7 @@ class SimpleListView(object):
                 model = None
                 
             for i, x in enumerate(self.table_info['fields_list']):
-                field = self.get_field(x['name'], model)
+                field = get_column(x['name'], model)
                 if not field:
                     field = {'name':x['name']}
                 else:
@@ -2729,7 +2753,7 @@ class SelectListView(ListView):
             r = self.record_render(_record)
         else:
             for i, x in enumerate(self.table_info['fields_list']):
-                field = self.get_field(x['name'], self.model)
+                field = get_column(x['name'], self.model)
                 if not field:
                     field = {'name':x['name']}
                 else:
