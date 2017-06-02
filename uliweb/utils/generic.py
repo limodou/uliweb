@@ -978,6 +978,10 @@ class AddView(object):
             if self.get_form_field:
                 field = self.get_form_field(f['name'])
                 if field:
+                    if f['hidden']:
+                        field.hidden = True
+                    if f['static']:
+                        field.static = True
                     flag = True
             if not flag:
                 field = make_form_field(f, self.model, builds_args_map=self.builds_args_map)
@@ -1259,7 +1263,7 @@ class EditView(AddView):
         r = self._save(self.obj, d) or r
         if self.post_save:
             r = self.post_save(self.obj, d) or r
-        
+
         if r:
             msg = self.success_msg
         else:
@@ -2843,7 +2847,7 @@ class QueryView(object):
         
         if isinstance(self.model, str):
             self.model = get_model(self.model)
-            
+
         if self.form_cls:
             class DummyForm(self.form_cls):pass
             if not hasattr(DummyForm, 'form_buttons'):

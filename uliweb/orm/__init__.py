@@ -2665,6 +2665,8 @@ class Result(object):
         cond = true()
         for c in condition:
             if c is not None:
+                if isinstance(c, (str, unicode)):
+                    c = text(c)
                 cond = and_(c, cond)
         if self.condition is not None:
             self.condition = and_(cond, self.condition)
@@ -3843,7 +3845,39 @@ class Model(object):
                 if not t is Lazy:
                     self._old_values[k] = t
         self._saved = True
-        
+
+    def to_display(self, fields=None, manytomany=False, dicttype=dict, prefix=''):
+        """
+        Create display dict for instance of Model
+        :param fields:
+        :param manytomany:
+        :param dicttype:
+        :param prefix: add prefix to fieldname, e.g.
+            prefix='dis_'
+            fieldname = 'name' will become 'dis_name'
+        :return:
+        """
+        d = dicttype()
+
+        fields = fields or self.properties.keys()
+        for k in fields:
+            v = self.properties.get(k)
+            if not v: continue
+            if prefix:
+                field_name = prefix+k
+            else:
+                field_name = k
+            if not isinstance(v, ManyToMany):
+                field_value = getattr(self, k)
+                d[k] = v.get_value_for_datastore(self)
+                d[field_name] = self.get_display_value(k, field_value)
+            else:
+                if manytomany:
+                    field_value = getattr(self, v._lazy_value(), [])
+                    d[k] = getattr(self, v._lazy_value(), [])
+                    d[field_name] = u', '.join([unicode(x) in field_value])
+        return d
+
     def to_dict(self, fields=None, convert=True, manytomany=False, dicttype=dict):
         d = dicttype()
         fields = fields or self.properties.keys()
@@ -3892,7 +3926,7 @@ class Model(object):
         If compare is False, then it'll include all data not only changed property
         """
         fields = fields or []
-        if self._key is None or self._key == '':
+        if self._key is None or self._key == '' or self._key == 0:
             d = {}
             for k, v in self.properties.items():
                 #test fields
