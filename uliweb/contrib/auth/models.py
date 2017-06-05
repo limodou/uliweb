@@ -36,7 +36,8 @@ class User(Model):
         else:
             return functions.url_for_static('images/user%dx%d.jpg' % (50, 50))
 
-    def get_default_image_url(self, size=50):
+    @classmethod
+    def get_default_image_url(cls, size=50):
         return functions.url_for_static('images/user%dx%d.jpg' % (size, size))
 
     def __unicode__(self):

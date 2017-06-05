@@ -4642,6 +4642,30 @@ class Model(object):
         return self.delete_tree(parent=self.c[id_field] == p, **kwargs)
 
     @classmethod
+    def get_choices(cls, condition=None, order_by=None, query=None, value_field=None, text_field=None):
+        """
+        Get [(value, text),...] list
+        :param condition:
+        :param value_field: default is primary_key
+        :param text_field: default is unicode(obj)
+        :return:
+        """
+        result = []
+        if query is None:
+            query = cls.filter(condition).order_by(order_by)
+        for row in query:
+            if not value_field:
+                value = row._key
+            else:
+                value = getattr(row, value_field)
+            if not text_field:
+                text = unicode(row)
+            else:
+                text = getattr(row, text_field)
+            result.append((value, text))
+        return result
+
+    @classmethod
     def load(cls, values, from_='db'):
         if isinstance(values, (list, tuple)):
             d = cls._data_prepare(values)
