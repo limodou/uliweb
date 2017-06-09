@@ -57,21 +57,25 @@ def get_fileds_builds(section='GENERIC_FIELDS_MAPPING'):
                 __default_fields_builds__[getattr(form, k)] = v
     return __default_fields_builds__
 
-def get_sort_field(model, sort_field='sort', order_name='asc'):
+def get_sort_field(model=None, sort_field='sort', order_name='asc'):
+    """
+    Get sort column info according request, the data format just likes:
+
+        ?sort=fieldA.asc&sort=fieldB.desc
+
+        or:
+
+        ?sort=fieldA&sort=fieldB&order=asc&order=desc
+
+    default order is 'asc'. `field` can be just like `model.field`
+    :param model: default model, if no model existed in field
+    :param sort_field: sort field name in request
+    :param order_name: order field name in request, the order direction can be
+        set in field, just like `model.field.asc` or `field.asc`, etc.
+    :return:
+    """
     from uliweb import request
     
-    models = []
-    if isinstance(model, (list, tuple)):
-        for m in model:
-            models.append(get_model(m))
-    else:
-        models = [get_model(model)]
-    
-    def get_field(name):
-        for m in models:
-            if name in m.c:
-                return m.c[name]
-
     if request.values.getlist('sort'):
         sort_fields = request.values.getlist('sort')
         order_by = []
@@ -83,7 +87,7 @@ def get_sort_field(model, sort_field='sort', order_name='asc'):
                     f, _order = f.rsplit('.', 1)
                 else:
                     continue
-            field = get_field(f)
+            field = get_column(f, model)
             if field is not None:
                 if orders:
                     _order = orders[i]
@@ -490,7 +494,29 @@ def get_grid_column(model, name):
         d = {'name': name, 'title': field.verbose_name or field.name}
     return d
 
+def get_field(name, model=None):
+    """
+    get model field according to name, the name can be like `model.column`
+    """
+    if '.' in name:
+        m, name = name.split('.')
+        model = get_model(m)
+
+    if model:
+        return getattr(model, name, None)
+
 def get_column(name, model=None):
+    """
+    get table column according to name, the name can be like `model.column`
+    """
+    if '.' in name:
+        m, name = name.split('.')
+        model = get_model(m)
+
+    if model:
+        return model.c.get(name)
+
+def get_field_model(name, model=None):
     """
     get model field according to name
     """
@@ -499,7 +525,9 @@ def get_column(name, model=None):
         model = get_model(m)
 
     if model:
-        return getattr(model, name, None)
+        return getattr(model, name, None), model
+    else:
+        return None, None
 
 def get_column_model(name, model=None):
     """
@@ -510,7 +538,7 @@ def get_column_model(name, model=None):
         model = get_model(m)
 
     if model:
-        return getattr(model, name, None), model
+        return model.c.get(name), model
     else:
         return None, None
 
@@ -2008,7 +2036,7 @@ class SimpleListView(object):
     #         return getattr(model, name, None)
         
     def get_table_meta_field(self, name, model=None):
-        field = get_column(name, model)
+        field = get_field(name, model)
         if field:
             d = {'name':name, 'verbose_name':field.verbose_name or field.name}
             return d
@@ -2060,7 +2088,7 @@ class SimpleListView(object):
                 model = None
                 
             for i, x in enumerate(self.table_info['fields_list']):
-                field = get_column(x['name'], model)
+                field = get_field(x['name'], model)
                 if not field:
                     field = {'name':x['name']}
                 else:
@@ -2757,7 +2785,7 @@ class SelectListView(ListView):
             r = self.record_render(_record)
         else:
             for i, x in enumerate(self.table_info['fields_list']):
-                field = get_column(x['name'], self.model)
+                field = get_field(x['name'], self.model)
                 if not field:
                     field = {'name':x['name']}
                 else:

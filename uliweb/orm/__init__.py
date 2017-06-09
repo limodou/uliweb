@@ -70,6 +70,7 @@ import threading
 import warnings
 import inspect
 from uliweb.utils.sorteddict import SortedDict
+from uliweb.utils.date import strftime
 from . import patch
 
 Local = threading.local()
@@ -527,11 +528,11 @@ def repr_value(v, encoding='utf8'):
     if callable(v):
         v = v()
     if isinstance(v, datetime.datetime):
-        return "'{}'".format(v.strftime('%Y-%m-%d %H:%M:%S'))
+        return "'{}'".format(strftime(v, '%Y-%m-%d %H:%M:%S'))
     elif isinstance(v, datetime.date):
-        return "'{}'".format(v.strftime('%Y-%m-%d'))
+        return "'{}'".format(strftime(v, '%Y-%m-%d'))
     elif isinstance(v, datetime.time):
-        return "'{}'".format(v.strftime('%H:%M:%S'))
+        return "'{}'".format(strftime(v, '%H:%M:%S'))
     elif isinstance(v, decimal.Decimal):
         return str(v)
     elif isinstance(v, (str, unicode)):
@@ -3906,11 +3907,11 @@ class Model(object):
                 return ''
             return v
         if isinstance(v, datetime.datetime):
-            return v.strftime('%Y-%m-%d %H:%M:%S')
+            return strftime(v, '%Y-%m-%d %H:%M:%S')
         elif isinstance(v, datetime.date):
-            return v.strftime('%Y-%m-%d')
+            return strftime(v, '%Y-%m-%d')
         elif isinstance(v, datetime.time):
-            return v.strftime('%H:%M:%S')
+            return strftime(v, '%H:%M:%S')
         elif isinstance(v, decimal.Decimal):
             return str(v)
         elif isinstance(v, unicode):

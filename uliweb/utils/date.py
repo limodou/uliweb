@@ -220,14 +220,14 @@ def to_string(dt, microsecond=False, timezone=True):
             format += '.%f'
         if timezone:
             format += ' %Z'
-        return dt.strftime(format).rstrip()
+        return strftime(dt, format).rstrip()
     elif isinstance(dt, date):
-        return dt.strftime('%Y-%m-%d')
+        return strftime(dt, '%Y-%m-%d')
     elif isinstance(dt, time_):
         format = '%H:%M:%S'
         if microsecond:
             format += '.%f'
-        return dt.strftime(format)
+        return strftime(dt, format)
 
 re_time = re.compile(r'(\d+)([s|ms|h|m])')
 def parse_time(t):
@@ -253,6 +253,57 @@ def parse_time(t):
     else:
         raise TimeFormatError(t)
 
+def _findall(text, substr):
+    # Also finds overlaps
+    sites = []
+    i = 0
+    while 1:
+        j = text.find(substr, i)
+        if j == -1:
+            break
+        sites.append(j)
+        i = j+1
+    return sites
+
+# I hope I did this math right. Every 28 years the
+# calendar repeats, except through century leap years
+# excepting the 400 year leap years. But only if
+# you're using the Gregorian calendar.
+
+def strftime(dt, fmt):
+    # WARNING: known bug with "%s", which is the number
+    # of seconds since the epoch. This is too harsh
+    # of a check. It should allow "%%s".
+    fmt = fmt.replace("%s", "s")
+    if dt.year > 1900:
+        return time.strftime(fmt, dt.timetuple())
+
+    year = dt.year
+    # For every non-leap year century, advance by
+    # 6 years to get into the 28-year repeat cycle
+    delta = 2000 - year
+    off = 6*(delta // 100 + delta // 400)
+    year = year + off
+
+    # Move to around the year 2000
+    year = year + ((2000 - year)//28)*28
+    timetuple = dt.timetuple()
+    s1 = time.strftime(fmt, (year,) + timetuple[1:])
+    sites1 = _findall(s1, str(year))
+
+    s2 = time.strftime(fmt, (year+28,) + timetuple[1:])
+    sites2 = _findall(s2, str(year+28))
+
+    sites = []
+    for site in sites1:
+        if site in sites2:
+            sites.append(site)
+
+    s = s1
+    syear = "%4d" % (dt.year,)
+    for site in sites:
+        s = s[:site] + syear + s[site+4:]
+    return s
     
 #if __name__ == '__main__':
 #    GMT8 = timezone('GMT +8')

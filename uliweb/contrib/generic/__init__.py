@@ -108,7 +108,7 @@ class MultiView(object):
                 else:
                     meta = meta
 
-        view =  functions.ListView(model, fields=fields, meta=meta, **kwargs)
+        view = functions.ListView(model, fields=fields, meta=meta, **kwargs)
         return view
 
 
@@ -162,10 +162,12 @@ class MultiView(object):
         kwargs['condition'] = condition
 
         #process order
-        order_by = get_sort_field(model)
-        if order_by is not None:
-            kwargs['order_by'] = order_by
+        if 'order_by' not in kwargs:
+            order_by = get_sort_field(model)
+            if order_by is not None:
+                kwargs['order_by'] = order_by
 
+        print '=====', order_by
         _fields = copy.copy(kwargs.get('fields_convert_map', []))
 
         self._process_fields_convert_map(kwargs)
@@ -224,6 +226,7 @@ class MultiView(object):
         :param auto_condition: if using queryview to create condition
         """
         from uliweb import request, json
+        from uliweb.utils.generic import get_sort_field
         import copy
 
         condition = None
@@ -236,6 +239,12 @@ class MultiView(object):
             condition = kwargs['condition'] & condition
 
         kwargs['condition'] = condition
+
+        #process order
+        if 'order_by' not in kwargs:
+            order_by = get_sort_field(model)
+            if order_by is not None:
+                kwargs['order_by'] = order_by
 
         _fields = copy.copy(kwargs.get('fields_convert_map', []))
         downloads = self._parse_download_args(kwargs, _fields)
