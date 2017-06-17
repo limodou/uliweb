@@ -586,7 +586,9 @@ def restart_with_reloader():
     """
     while 1:
         _log('info', ' * Restarting with reloader')
-        args = [sys.executable] + sys.argv
+        #fix lastest python version entry_point script file incompatible bug
+        #args = [sys.executable] + sys.argv
+        args = sys.argv
         new_environ = os.environ.copy()
         new_environ['WERKZEUG_RUN_MAIN'] = 'true'
 
