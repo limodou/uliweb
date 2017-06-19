@@ -1252,6 +1252,10 @@ class DumpRecordCommand(SQLCommandMixin, Command):
             help='Output filename.'),
         make_option('-r', '--recursion', dest='recursion', action='store_true',
             help="Dump relative record recursionly"),
+        make_option('-a', '--append', dest='append', action='store_true',
+                    help="Append result to existed file"),
+        make_option('-w', '--with-relation', dest='relation', action='store_true',
+                    help="Dump relation record also"),
     )
     help = 'Dump records and relative records to a file.'
 
@@ -1275,22 +1279,25 @@ class DumpRecordCommand(SQLCommandMixin, Command):
             self.tables[x.tablename] = name
 
         M = orm.get_model(args[0])
-        if verbose:
-            print '-- Ready to dump table ({}) where ({})'.format(args[0], args[1])
 
         if args[1].isdigit():
             condition = M.c[M._primary_field]==int(args[1])
         else:
             condition = text(args[1])
         query = M.filter(condition)
-        if verbose:
-            print '-- SQL = [{}]'.format(orm.rawsql(query.get_query()))
         need_close = False
         if options.filename:
-            f = open(options.filename, 'wb')
+            if options.append:
+                f = open(options.filename, 'ab')
+            else:
+                f = open(options.filename, 'wb')
             need_close = True
         else:
             f = sys.stdout
+
+        if verbose:
+            print '-- Ready to dump table ({}) where ({})'.format(args[0], args[1])
+            print '-- SQL = [{}]'.format(orm.rawsql(query.get_query()))
 
         self.items = set()
         try:
@@ -1300,7 +1307,7 @@ class DumpRecordCommand(SQLCommandMixin, Command):
                 print '-- Output with max-level={}'.format(max_level)
             for row in query:
                 for n in self.dump_record(args[0], M, row, max_level=max_level,
-                                          verbose=verbose):
+                                          verbose=verbose, relation=options.relation):
                     f.write(n)
                     f.write('\n')
                     t += 1
@@ -1311,7 +1318,7 @@ class DumpRecordCommand(SQLCommandMixin, Command):
                 f.close()
 
     def dump_record(self, name, model, row, level=1, max_level=None, verbose=None,
-                    field_name=''):
+                    field_name='', relation=False):
         from uliweb.orm import OneToOne, ReferenceProperty, ManyToMany, get_model
         from uliweb.utils.common import dumps
 
@@ -1329,24 +1336,27 @@ class DumpRecordCommand(SQLCommandMixin, Command):
                 fname = ''
             print ' '*level*4, '{} {}-{}'.format(fname, *key)
         yield dumps(sql)
-        for field_name, prop in model.properties.items():
-            if isinstance(prop, ManyToMany):
-                _name = self.tables[prop.reference_class.tablename]
-                _M = get_model(_name)
-                if max_level and level > max_level:
-                    raise StopIteration
-                for record in getattr(row, field_name):
-                    for r in self.dump_record(_name, _M, record, level + 1, max_level,
-                                              verbose=verbose, field_name=field_name):
+        if relation:
+            for field_name, prop in model.properties.items():
+                if isinstance(prop, ManyToMany):
+                    _name = self.tables[prop.reference_class.tablename]
+                    _M = get_model(_name)
+                    if max_level and level > max_level:
+                        raise StopIteration
+                    for record in getattr(row, field_name):
+                        for r in self.dump_record(_name, _M, record, level + 1, max_level,
+                                                  verbose=verbose, field_name=field_name,
+                                                  relation=relation):
+                            yield r
+                elif isinstance(prop, (OneToOne, ReferenceProperty)):
+                    _name = self.tables[prop.reference_class.tablename]
+                    _M = get_model(_name)
+                    if max_level and level > max_level:
+                        raise StopIteration
+                    for r in self.dump_record(_name, _M, getattr(row, field_name), level+1, max_level,
+                                              verbose=verbose, field_name=field_name,
+                                              relation=relation):
                         yield r
-            elif isinstance(prop, (OneToOne, ReferenceProperty)):
-                _name = self.tables[prop.reference_class.tablename]
-                _M = get_model(_name)
-                if max_level and level > max_level:
-                    raise StopIteration
-                for r in self.dump_record(_name, _M, getattr(row, field_name), level+1, max_level,
-                                          verbose=verbose, field_name=field_name):
-                    yield r
 
 class LoadRecordCommand(SQLCommandMixin, Command):
     name = 'loadrecord'
