@@ -7,6 +7,7 @@ def timesince(d, now=None, pos=True, flag=False):
     pos means calculate which direction, pos = True, now - d, pos = False, d - now
     flag means return value type, True will return since, message and Flase return message
     >>> d = datetime.datetime(2009, 10, 1, 12, 23, 19)
+    >>> timesince(d, d, True)
     >>> now = datetime.datetime(2009, 10, 1, 12, 24, 19)
     >>> timesince(d, now, True)
     u'1 minute ago'
@@ -45,7 +46,7 @@ def timesince(d, now=None, pos=True, flag=False):
     
     suffix = ''
     if pos:
-        if since > 0:
+        if since >= 0:
             suffix = ugettext(' ago')
         elif since < 0:
             suffix = ugettext(' later')
