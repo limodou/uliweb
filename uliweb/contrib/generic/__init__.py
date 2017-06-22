@@ -217,6 +217,32 @@ class MultiView(object):
         view = functions.DeleteView(model, obj=obj, **kwargs)
         return view.run(json_result=json_result)
 
+    def _select_list_view(self, model, **kwargs):
+        """
+        :param model:
+        :param fields_convert_map: it's different from ListView
+        :param kwargs:
+        :return:
+        """
+        from uliweb import request
+
+        # add download fields process
+        fields = kwargs.pop('fields', None)
+        meta = kwargs.pop('meta', 'Table')
+        if 'download' in request.GET:
+            if 'download_fields' in kwargs:
+                fields = kwargs.pop('download_fields', fields)
+            if 'download_meta' in kwargs:
+                meta = kwargs.pop('download_meta')
+            else:
+                if hasattr(model, 'Download'):
+                    meta = 'Download'
+                else:
+                    meta = meta
+
+        view = functions.SelectListView(model, fields=fields, meta=meta, **kwargs)
+        return view
+
     def _select_list(self, model=None, queryview=None, queryform=None,
                      auto_condition=True,
                      post_view=None, post_run=None, **kwargs):
@@ -249,7 +275,7 @@ class MultiView(object):
         downloads = self._parse_download_args(kwargs, _fields)
         self._process_fields_convert_map(downloads, download=True)
 
-        view = functions.SelectListView(model, **kwargs)
+        view = self._select_list_view(model, **kwargs)
 
         if post_view:
             post_view(view)
