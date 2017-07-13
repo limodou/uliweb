@@ -2188,7 +2188,7 @@ class SimpleListView(object):
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
         #process hidden fields
         if template_filename:
-            header = self.table_info['fields']
+            header = [x.replace('.', '_') for x in self.table_info['fields']]
             data = self.get_data(data, fields_convert_map, default_encoding,
                                  auto_convert=False, header=header)
             d = template_data or {}

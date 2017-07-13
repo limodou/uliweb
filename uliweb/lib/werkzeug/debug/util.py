@@ -228,7 +228,7 @@ def get_frame_info(tb, context_lines=7, simple=False):
     loader = None
     if not os.path.exists(fn):
         loader = tb.tb_frame.f_globals.get('__loader__')
-        while not loader and tb:
+        while not loader and tb.tb_next:
             tb = tb.tb_next
             loader = tb.tb_frame.f_globals.get('__loader__')
 

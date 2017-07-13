@@ -85,7 +85,7 @@ class Converter(object):
         d['cell'] = cell
 
         if self.expr:
-            value = eval(self.expr, env, data)
+            value = eval(self.expr.replace('.', '_'), env, data)
         else:
             value = self.expr
 

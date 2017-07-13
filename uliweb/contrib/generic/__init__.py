@@ -139,6 +139,8 @@ class MultiView(object):
                                                      fields)
         downloads['domain'] = kwargs.pop('download_domain', '')
         downloads['timeout'] = 0
+        downloads['template_filename'] = kwargs.pop('download_template_filename', '')
+        downloads['template_data'] = kwargs.pop('download_template_data', None)
         downloads.update(kwargs.pop('download_kwargs', {}))
         return downloads
 
