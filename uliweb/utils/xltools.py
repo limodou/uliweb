@@ -245,7 +245,7 @@ class SimpleWriter(object):
 
     def _set_widths(self):
         if self.auto_width:
-            from openpyxl.cell import get_column_letter
+            from openpyxl.utils import get_column_letter
 
             col = self._col
             #设置列宽度

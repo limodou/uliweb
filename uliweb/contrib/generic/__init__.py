@@ -272,6 +272,7 @@ class MultiView(object):
                 kwargs['order_by'] = order_by
 
         _fields = copy.copy(kwargs.get('fields_convert_map', []))
+        self._process_fields_convert_map(kwargs)
         downloads = self._parse_download_args(kwargs, _fields)
         self._process_fields_convert_map(downloads, download=True)
 
