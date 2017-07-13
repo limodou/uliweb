@@ -1977,9 +1977,13 @@ class SimpleListView(object):
 
         return query.count()
 
-    def download(self, filename, timeout=3600, action=None, query=None, fields_convert_map=None, type=None, domain=None, **kwargs):
+    def download(self, filename, timeout=3600, action=None, query=None,
+                 fields_convert_map=None, type=None, domain=None,
+                 template_filename='', sheet_name='', **kwargs):
         """
         Default domain option is PARA/DOMAIN
+        :param template_filename: Excel template filename, it'll xltools to writer it, only can be used
+            in xlsx
         """
         from uliweb import settings
         
@@ -2005,7 +2009,9 @@ class SimpleListView(object):
         if type in ('xlsx',):
             if not domain:
                 domain = settings.get_var('PARA/DOMAIN')
-            return self.download_xlsx(filename, query, action, fields_convert_map, domain, not_tempfile=bool(timeout), **kwargs)
+            return self.download_xlsx(filename, query, action, fields_convert_map, domain,
+                                      not_tempfile=bool(timeout), template_filename=template_filename,
+                                      sheet_name=sheet_name, **kwargs)
         else:
             return self.download_csv(filename, query, action, fields_convert_map, not_tempfile=bool(timeout), **kwargs)
        
@@ -2061,22 +2067,23 @@ class SimpleListView(object):
             r = dict(zip(self.table_info['fields'], record))
         return r
     
-    def get_data(self, query, fields_convert_map, encoding='utf-8', auto_convert=True, include_hidden=False):
+    def get_data(self, query, fields_convert_map, encoding='utf-8', auto_convert=True,
+                 include_hidden=False, header=None):
         """
         If convert=True, will convert field value
         """
         fields_convert_map = fields_convert_map or {}
         d = self.fields_convert_map.copy() 
         d.update(fields_convert_map)
-        
+
         if isinstance(query, Select):
             query = do_(query)
         
-        def get_value(name, value, record):
-            convert = d.get(name)
-            if convert:
-                value = convert(value, record)
-            return safe_unicode(value, encoding)
+        # def get_value(name, value, record):
+        #     convert = d.get(name)
+        #     if convert:
+        #         value = convert(value, record)
+        #     return safe_unicode(value, encoding)
         
         for record in query:
             self._cal_sum(record)
@@ -2105,7 +2112,12 @@ class SimpleListView(object):
                 #value = safe_unicode(v['display'], encoding)
                 row.append(value)
                 
-            yield row
+            if header:
+                ret = dict(zip(header, row))
+            else:
+                ret = row
+            yield ret
+
         total = self._get_sum()
         if total:
             row = []
@@ -2114,7 +2126,11 @@ class SimpleListView(object):
                 if isinstance(x, str):
                     v = safe_unicode(x, encoding)
                 row.append(v)
-            yield row
+            if header:
+                ret = dict(zip(header, row))
+            else:
+                ret = row
+            yield ret
 
     def get_real_file(self, filename):
         t_filename = self.downloader.get_filename(filename)
@@ -2129,9 +2145,10 @@ class SimpleListView(object):
             os.makedirs(dirname)
         #bfile is display filename
         bfile = os.path.basename(t_filename)
+        _, ext = os.path.splitext(bfile)
         #tfile is template filename and it's the real filename
         if not not_tempfile:
-            tfile = tempfile.NamedTemporaryFile(suffix = ".tmp", prefix = bfile+'_', dir=dirname, delete = False)
+            tfile = tempfile.NamedTemporaryFile(suffix=ext, prefix=bfile+'_', dir=dirname, delete=False)
         else:
             tfile = open(t_filename, 'wb')
         #ufile is internal url filename
@@ -2156,9 +2173,13 @@ class SimpleListView(object):
         return self.downloader.download(bfile, action=action, x_filename=ufile, 
             real_filename=tfile.name)
         
-    def download_xlsx(self, filename, data, action, fields_convert_map=None, domain=None, not_tempfile=False, **kwargs):
-        from uliweb.utils.xltools import SimpleWriter
-        from uliweb import request, settings
+    def download_xlsx(self, filename, data, action, fields_convert_map=None,
+                      domain=None, not_tempfile=False, template_filename='',
+                      sheet_name='', template_data=None,
+                      loop_fieldname='items',
+                      **kwargs):
+        from uliweb.utils.xltools import SimpleWriter, Writer
+        from uliweb import request, settings, application
 
         fields_convert_map = fields_convert_map or {}
         tfile, bfile, ufile = self.get_download_file(filename, not_tempfile)
@@ -2166,11 +2187,20 @@ class SimpleListView(object):
             domain = settings.get_var('GENERIC/DOWNLOAD_DOMAIN', request.host_url)
         default_encoding = settings.get_var('GLOBAL/DEFAULT_ENCODING', 'utf-8')
         #process hidden fields
-        header = [x for x in self.table_info['fields_list'] if not x.get('hidden')]
-        w = SimpleWriter(header=header, data=self.get_data(data,
-            fields_convert_map, default_encoding, auto_convert=False),
-            encoding=default_encoding, domain=domain, **kwargs)
-        w.save(tfile.name)
+        if template_filename:
+            header = self.table_info['fields']
+            data = self.get_data(data, fields_convert_map, default_encoding,
+                                 auto_convert=False, header=header)
+            d = template_data or {}
+            d[loop_fieldname] = data
+            Writer(application.get_file(template_filename), sheet_name, tfile.name, [d])
+        else:
+            header = [x for x in self.table_info['fields_list'] if not x.get('hidden')]
+            data = self.get_data(data,
+                                 fields_convert_map, default_encoding, auto_convert=False)
+            w = SimpleWriter(header=header, data=data,
+                encoding=default_encoding, domain=domain, **kwargs)
+            w.save(tfile.name)
         return self.downloader.download(bfile, action=action, x_filename=ufile,
             real_filename=tfile.name)
 

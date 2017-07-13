@@ -34,6 +34,15 @@ def _validate_list(cell, data, _list, blank=True, _var=None, _sh=None):
     dv.add(cell)
     return cell.value
 
+def hyperlink(title, link, domain=None):
+    import urlparse
+
+    r = urlparse.urlparse(link)
+    if not r.scheme and domain:
+        link = domain + link
+    title = title.replace('"', '')
+    return title, link
+
 env = {'date':_date, 'datetime':datetime, 'link':_link,
        'validate_list':_validate_list}
 
@@ -70,6 +79,8 @@ class Converter(object):
                 self.filter.append(f)
 
     def __call__(self, cell, data, env, sheet=None):
+        from openpyxl.styles import Font
+
         d = data.copy()
         d['cell'] = cell
 
@@ -82,6 +93,20 @@ class Converter(object):
         d['_var'] = d
         d['_sh'] = sheet
         cell.value = value
+
+        #处理链接
+        r = None
+        if isinstance(value, (str, unicode)):
+            r = re_link.search(value)
+            if r:
+                value, link = hyperlink(r.group(2), r.group(1))
+        if r:
+            font = Font(underline='single', color='FF0000FF')
+            cell.font = font
+            cell.hyperlink = link
+            cell.value = value
+
+
         for f in self.filter:
             d['value'] = eval(f, d, env)
         return d['value']
@@ -249,7 +274,7 @@ class SimpleWriter(object):
                 if isinstance(value, (str, unicode)):
                     r = re_link.search(value)
                     if r:
-                        value, link = self.hyperlink(r.group(2), r.group(1))
+                        value, link = hyperlink(r.group(2), r.group(1), self.domain)
                 cell = self.sheet.cell(column=x+i, row=y+j, value=value)
                 if r:
                     cell.hyperlink = link
@@ -409,14 +434,6 @@ class SimpleWriter(object):
         self._write()
         self.wb.save(filename or self.filename)
 
-    def hyperlink(self, title, link):
-        import urlparse
-
-        r = urlparse.urlparse(link)
-        if not r.scheme and self.domain:
-            link = self.domain + link
-        title = title.replace('"', '')
-        return title, link
 
 class WriteTemplate(object):
     def __init__(self, sheet):
@@ -756,6 +773,13 @@ class Writer(object):
 
         self.init()
 
+    def get_sheet(self, wb):
+        if not self.sheet_name:
+            sheet = wb.active
+        else:
+            sheet = wb[self.sheet_name]
+        return sheet
+
     def init(self):
 
         if self.create or not os.path.exists(self.output_file):
@@ -764,13 +788,12 @@ class Writer(object):
         template = self.get_template(wb1)
 
         wb2 = load_workbook(self.output_file)
-        template.write(wb2[self.sheet_name], self.data)
+        template.write(self.get_sheet(wb2), self.data)
 
         wb2.save(self.output_file)
 
     def get_template(self, workbook):
-        sheet = workbook[self.sheet_name]
-        t = WriteTemplate(sheet)
+        t = WriteTemplate(self.get_sheet(workbook))
         return t
 
 
