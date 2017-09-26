@@ -1769,7 +1769,7 @@ class SimpleListView(object):
         pageno=0, rows_per_page=10, id='listview_table', fields_convert_map=None, 
         table_class_attr='table', table_width=False, pagination=True, total_fields=None, 
         template_data=None, default_column_width=100, total=None, manual=False, 
-        render=None, record_render=None, post_record_render=None):
+        render=None, record_render=None, post_record_render=None, before_record_render=None):
         """
         Pass a data structure to fields just like:
             [
@@ -1805,6 +1805,7 @@ class SimpleListView(object):
         self.render_func = render
         self.record_render = record_render
         self.post_record_render = post_record_render
+        self.before_record_render = before_record_render
         
         self.init()
         
@@ -1908,7 +1909,7 @@ class SimpleListView(object):
             query_result = self._query()
         else:
             query_result = self._query
-            
+
         def repeat(data, begin, n):
             result = []
             no_data_flag = False
@@ -2292,6 +2293,8 @@ class SimpleListView(object):
     def object(self, record, json_result=False):
         r = SortedDict()
         record = self._get_record(record)
+        if self.before_record_render:
+            self.before_record_render(record)
         if self.record_render:
             r = self.record_render(record)
         else:
@@ -2540,7 +2543,7 @@ class ListView(SimpleListView):
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
         total_fields=None, template_data=None, default_column_width=100, 
         meta='Table', render=None, total=0, manual=False,
-        record_render=None, post_record_render=None):
+        record_render=None, post_record_render=None, before_record_render=None):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -2571,6 +2574,7 @@ class ListView(SimpleListView):
         self.manual = manual
         self.record_render=record_render
         self.post_record_render=post_record_render
+        self.before_record_render = before_record_render
         
         self.init()
         
@@ -2603,6 +2607,8 @@ class ListView(SimpleListView):
         return query
     
     def object(self, record, json_result=False):
+        if self.before_record_render:
+            self.before_record_render(record)
         if self.record_render:
             r = self.record_render(record)
         else:
@@ -2732,7 +2738,8 @@ class SelectListView(ListView):
         rows_per_page=10, types_convert_map=None, pagination=True,
         fields_convert_map=None, id='listview_table', table_class_attr='table', table_width=True,
         total_fields=None, template_data=None, default_column_width=100, meta='Table',
-        render=None, total=0, manual=False, record_render=None, post_record_render=None):
+        render=None, total=0, manual=False, record_render=None, post_record_render=None,
+        before_record_render=None):
         """
         If pageno is None, then the ListView will not paginate 
         """
@@ -2744,7 +2751,7 @@ class SelectListView(ListView):
             total_fields=total_fields, template_data=template_data, 
             default_column_width=default_column_width, meta=meta,
             render=render, total=total, manual=manual, record_render=record_render,
-            post_record_render=post_record_render)
+            post_record_render=post_record_render, before_record_render=before_record_render)
 
         #process multiple table fields for use_labels
         self._field_labels = []
@@ -2811,6 +2818,8 @@ class SelectListView(ListView):
         d = dict(record)
         for name, label in self._field_labels:
             _record[name] = d.get(label, None)
+        if self.before_record_render:
+            self.before_record_render(record)
         if self.record_render:
             r = self.record_render(_record)
         else:
