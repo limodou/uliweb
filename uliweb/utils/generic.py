@@ -2090,6 +2090,8 @@ class SimpleListView(object):
             self._cal_sum(record)
             row = []
             record = self._get_record(record)
+            if self.before_record_render:
+                self.before_record_render(record)
             if isinstance(record, orm.Model):
                 model = record.__class__
             else:
