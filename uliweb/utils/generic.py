@@ -2819,7 +2819,7 @@ class SelectListView(ListView):
         for name, label in self._field_labels:
             _record[name] = d.get(label, None)
         if self.before_record_render:
-            self.before_record_render(record)
+            self.before_record_render(_record)
         if self.record_render:
             r = self.record_render(_record)
         else:
