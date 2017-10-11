@@ -59,7 +59,7 @@ import re
 import cPickle as pickle
 from uliweb.utils import date as _date
 from uliweb.utils.common import (flat_list, classonlymethod,
-    safe_str, import_attr)
+    safe_str, safe_unicode, import_attr)
 from sqlalchemy import *
 from sqlalchemy.sql import select, Select, ColumnElement, text, true, and_, false
 from sqlalchemy.sql.elements import TextClause
@@ -706,7 +706,7 @@ class Writer(object):
         try:
             writer = csv.writer(f, **self.kwargs)
             if self.header:
-                writer.writerow(self.get_header())
+                writer.writerow([simple_value(x, encoding=self.encoding) for x in self.get_header()])
             for row in self.data:
                 writer.writerow([simple_value(x, encoding=self.encoding) for x in row])
         finally:
@@ -774,7 +774,7 @@ def save_file(result, filename, encoding='utf8', headers=None,
         return v
 
     if isinstance(result, (str, unicode)):
-        result = text(result)
+        result = text(safe_unicode(result))
 
     if isinstance(result, (Select, TextClause)):
         result = do_(result)
