@@ -754,6 +754,7 @@ def save_file(result, filename, encoding='utf8', headers=None,
     
     convertors = convertors or {}
     headers = headers or []
+    writer_class = Writer
     if isinstance(filename, (str, unicode)):
         ext = os.path.splitext(filename)[1]
         if ext == '.csv':
@@ -762,11 +763,7 @@ def save_file(result, filename, encoding='utf8', headers=None,
             writer_class = DictWriter
         elif ext == '.xlsx':
             writer_class = XlsxWriter
-        else:
-            raise ValueError("Can't find suitable writer for file type {}".format(ext))
-    else:
-        writer_class = Writer
-    
+
     def convert(k, v, data):
         f = convertors.get(k)
         if f:
