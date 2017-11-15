@@ -1,0 +1,11 @@
+{{extend "develop_layout.html"}}
+
+{{block menu}}
+{{<<functions.dev_nav(active='settings')}}
+{{end}}
+
+{{block content_main}}
+<pre>
+{{=str(settings)}}
+</pre>
+{{end}}
