@@ -910,7 +910,7 @@ class Form(object):
 
         if errors:
             self.ok = False
-            self.errors = errors
+            self.errors.update(errors)
             self.data = new_data
         else:
             self.ok = True
