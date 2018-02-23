@@ -6,7 +6,7 @@ from decimal import Decimal
 from uliweb.core.commands import Command, get_answer, CommandManager, get_commands
 from optparse import make_option
 from uliweb.core import dispatch
-from uliweb.utils.common import log, is_pyfile_exist, get_temppath
+from uliweb.utils.common import log, is_pyfile_exist, get_temppath, safe_unicode, safe_str
 from sqlalchemy.types import *
 from sqlalchemy import MetaData, Table
 from sqlalchemy.engine.reflection import Inspector
@@ -462,10 +462,10 @@ class SQLCommand(SQLCommandMixin, Command):
         for name, t in tables:
             if t.__mapping_only__:
                 continue
-            
-            print "%s;" % str(CreateTable(t).compile(dialect=engine.dialect)).rstrip()
+
+            print "{};".format(safe_str(unicode(CreateTable(t).compile(dialect=engine.dialect))))
             for x in t.indexes:
-                print "%s;" % CreateIndex(x)
+                print "{};".format(CreateIndex(x))
             
 class SQLTableCommand(SQLCommandMixin, Command):
     name = 'sqltable'

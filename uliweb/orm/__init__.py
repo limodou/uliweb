@@ -59,8 +59,9 @@ import re
 import cPickle as pickle
 from uliweb.utils import date as _date
 from uliweb.utils.common import (flat_list, classonlymethod,
-    safe_str, safe_unicode, import_attr)
+    safe_str, safe_unicode, import_attr, dumps)
 from sqlalchemy import *
+from sqlalchemy import __version__ as sa_version
 from sqlalchemy.sql import select, Select, ColumnElement, text, true, and_, false
 from sqlalchemy.sql.elements import TextClause
 from sqlalchemy.pool import NullPool
@@ -1259,6 +1260,11 @@ def reflect_table(tablename, engine_name='default'):
         table = Table(tablename, meta)
         insp = Inspector.from_engine(engine)
         insp.reflecttable(table, None)
+
+        if sa_version >= '1.2':
+            table.comment = Inspector.get_table_comment(tablename)
+        else:
+            table.comment = ''
         return table
     else:
         return tablename
@@ -1328,6 +1334,8 @@ def reflect_table_data(table, mapping=None, engine_name='default'):
             kwargs['index'] = True
         if v.unique:
             kwargs['unique'] = True
+        if v.comment:
+            kwargs['verbose_name'] = v.comment
 
         #convert field_type to common python data type
         field_type = field_type_map.get(field_type, field_type)
@@ -1371,19 +1379,22 @@ def reflect_table_model(table, mapping=None, without_id=False, engine_name='defa
 
     __tablename__ = '{}\''''.format(table.name))
 
+    if table.comment:
+        code.append('    __verbose_name__ = {}\n'.format(dumps(table.comment, bool_int=False)))
+
     #process id
     if 'id' not in meta['columns'] and without_id:
         code.append('    __without_id__ = True\n')
     # if _primary_key:
     #     code.append('    _primary_field = {}'.format(_primary_key))
-        
+
     #output columns text
     for k, v in meta['columns'].items():
         kw = v[1].items()
         x_v = mapping.get(v[0])
         if x_v:
             kw.append(('type_class', x_v))
-        kwargs = ', '.join([v[0]] + ['{0}={1!r}'.format(x, y) for x, y in kw])
+        kwargs = ', '.join([v[0]] + ['{0}={1}'.format(x, dumps(y, bool_int=False)) for x, y in kw])
         txt = " "*4 + "{0} = Field({1})".format(k, kwargs)
         code.append(txt)
 
@@ -1635,6 +1646,8 @@ class Property(object):
             if v is not None and isinstance(v, (int, long)):
                 v = text(str(v))
             kwargs['server_default' ] = v
+        if sa_version >= '1.2' and self.verbose_name:
+            kwargs['comment'] = safe_unicode(self.verbose_name)
 
     def create(self, cls):
         global __nullable__
@@ -4436,6 +4449,8 @@ class Model(object):
                     cls.metadata.remove(t)
                 args = getattr(cls, '__table_args__', {})
                 args['mysql_charset'] = 'utf8'
+                if sa_version >= '1.2' and hasattr(cls, '__verbose_name__'):
+                    args['comment'] = safe_unicode(cls.__verbose_name__)
                 cls.table = Table(cls.tablename, cls.metadata, *cols, **args)
                 #add appname to self.table
                 appname = cls.__module__

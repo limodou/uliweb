@@ -406,7 +406,7 @@ def str_value(v, encoding='utf-8', bool_int=True, none='NULL', newline_escape=Fa
     else:
         return str(v)
 
-def dumps(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
+def dumps(a, encoding='utf-8', beautiful=False, indent=0, convertors=None, bool_int=False):
     """
     Dumps an data type to a string
     :param a: variable
@@ -496,7 +496,7 @@ def dumps(a, encoding='utf-8', beautiful=False, indent=0, convertors=None):
         if c_func:
             s.append(c_func(a))
         else:
-            s.append(str(str_value(a, none='None')))
+            s.append(str(str_value(a, none='None', bool_int=bool_int)))
     return ''.join(s)
 
 def norm_path(path):
