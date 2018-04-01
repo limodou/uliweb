@@ -274,7 +274,12 @@ def strftime(dt, fmt):
     # WARNING: known bug with "%s", which is the number
     # of seconds since the epoch. This is too harsh
     # of a check. It should allow "%%s".
+    import datetime
+
     fmt = fmt.replace("%s", "s")
+    if isinstance(dt, datetime.time):
+        return dt.strftime(fmt)
+
     if dt.year > 1900:
         return time.strftime(fmt, dt.timetuple())
 

@@ -327,8 +327,8 @@ td.ref{cursor:pointer}
             {{ for comment in table['choices']: }}
               <li id="comment-{{= table['name']}}-{{=comment['fieldname']}}">{{=comment['index']}}.{{=comment['fieldlabel']}}:
               <span>
-              {{ for i, value in comment['list']: }}
-                ({{=repr(i)}},{{=value}}) 
+              {{ for v in comment['list']: }}
+                ({{=repr(v[0])}},{{=v[1]}})
               {{ pass }}
               </span>
               </li>

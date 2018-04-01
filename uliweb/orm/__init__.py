@@ -4595,21 +4595,29 @@ class Model(object):
         parent is root parent value, default is None
         current is current value
         condition is extra condition for select root records
+        mode is search method, value is 'wide' or 'deep'
         """
         parent_field = kwargs.pop('parent_field', 'parent')
         parent = kwargs.pop('parent', None)
+        parent_order_by = kwargs.pop('parent_order_by', None)
         current = kwargs.pop('current', None)
         order_by = kwargs.pop('order_by', None)
         id_field = kwargs.pop('id_field', 'id')
+        mode = kwargs.pop('mode', 'wide')
+        if mode not in ('wide', 'deep'):
+            raise Exception("mode parameter should be 'wide' or 'deep', but '{}' found.".format(mode))
 
         def _f(parent):
             query = cls.filter(cls.c[parent_field]==parent, *condition)
             if order_by is not None:
                 query.order_by(order_by)
             for row in query:
-                yield row
+                if mode == 'wide':
+                    yield row
                 for _row in _f(getattr(row, id_field)):
                     yield _row
+                if mode == 'deep':
+                    yield row
 
         if current:
             query = cls.filter(cls.c[id_field]==current)
@@ -4618,10 +4626,15 @@ class Model(object):
                 query = cls.filter(parent)
             else:
                 query = cls.filter(cls.c[parent_field]==parent)
+        if parent_order_by is not None:
+            query.order_by(parent_order_by)
         for row in query:
-            yield row
+            if mode == 'wide':
+                yield row
             for r in _f(getattr(row, id_field)):
                 yield r
+            if mode == 'deep':
+                yield row
 
     @classmethod
     def delete_tree(cls, *condition, **kwargs):

@@ -535,11 +535,16 @@ def test_tree():
     >>> c = User(username='c', parent=a)
     >>> c.save()
     True
-    >>> for i in User.get_tree(parent=None): #User.c.parent==0, parent_field='parent'
+    >>> for i in User.get_tree(parent=None, parent_order_by=User.c.id): #User.c.parent==0, parent_field='parent'
     ...     print repr(i)
     <User {'username':u'a','parent':None,'id':1}>
     <User {'username':u'b','parent':<ReferenceProperty:1>,'id':2}>
     <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
+    >>> for i in User.get_tree(parent=None, mode='deep'): #User.c.parent==0, parent_field='parent'
+    ...     print repr(i)
+    <User {'username':u'b','parent':<ReferenceProperty:1>,'id':2}>
+    <User {'username':u'c','parent':<ReferenceProperty:1>,'id':3}>
+    <User {'username':u'a','parent':None,'id':1}>
     >>> User.delete_tree(parent=None)
     3
     >>> User.count()
