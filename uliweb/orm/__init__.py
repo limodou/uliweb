@@ -2963,7 +2963,10 @@ class ReverseResult(Result):
 
 class ManyResult(Result):
     def __init__(self, modela, instance, property_name, modelb, 
-        table, fielda, fieldb, realfielda, realfieldb, valuea, through_model=None):
+        table, fielda, fieldb, realfielda, realfieldb, valuea,
+                 before_save=None,
+                 default_condition=None,
+                 through_model=None):
         """
         modela will define property_name = ManyToMany(modelb) relationship.
         instance will be modela instance
@@ -2993,6 +2996,8 @@ class ManyResult(Result):
         self.distinct_field = None
         self._values_flag = False
         self.connection = self.modela.get_session()
+        self.before_save = before_save
+        self.default_condition = default_condition
         self.kwargs = {}
         
     def all(self, cache=False):
@@ -3028,6 +3033,8 @@ class ManyResult(Result):
                 else:
                     v = o
                 d = {self.fielda:self.valuea, self.fieldb:v}
+                if self.before_save:
+                    self.before_save(d)
                 if self.through_model:
                     obj = self.through_model(**d)
                     obj.save()
@@ -3053,7 +3060,7 @@ class ManyResult(Result):
         if not cache or ids is None or ids is Lazy:
             if self.valuea is None:
                 return []
-            query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
+            query = select([self.table.c[self.fieldb]], self.get_default_condition())
             ids = [x[0] for x in self.do_(query)]
         if cache:
             setattr(self.instance, key, ids)
@@ -3065,11 +3072,22 @@ class ManyResult(Result):
         if not cache or keys is None or keys is Lazy:
             if self.valuea is None:
                 return []
-            query = select([self.table.c[self.fieldb]], self.table.c[self.fielda]==self.valuea)
+            query = select([self.table.c[self.fieldb]], self.get_default_condition())
             keys = [x[0] for x in self.do_(query)]
         if cache:
             setattr(self.instance, key, keys)
         return keys
+
+    def get_default_condition(self, condition=None):
+        cond = self.table.c[self.fielda]==self.valuea
+        if self.default_condition:
+            if callable(self.default_condition):
+                cond = cond & self.default_condition()
+            else:
+                cond = cond & self.default_condition
+        if condition is not None:
+            cond = cond & condition
+        return cond
 
     def update(self, *objs):
         """
@@ -3084,6 +3102,8 @@ class ManyResult(Result):
                 keys.remove(v)
             else:
                 d = {self.fielda:self.valuea, self.fieldb:v}
+                if self.before_save:
+                    self.before_save(d)
                 if self.through_model:
                     obj = self.through_model(**d)
                     obj.save()
@@ -3106,9 +3126,9 @@ class ManyResult(Result):
         """
         if objs:
             keys = get_objs_columns(objs, self.realfieldb)
-            self.do_(self.table.delete((self.table.c[self.fielda]==self.valuea) & (self.table.c[self.fieldb].in_(keys))))
+            self.do_(self.table.delete(self.get_default_condition() & (self.table.c[self.fieldb].in_(keys))))
         else:
-            self.do_(self.table.delete(self.table.c[self.fielda]==self.valuea))
+            self.do_(self.table.delete(self.get_default_condition()))
         #cache [] to _STORED_attr_name
         setattr(self.instance, self.store_key, Lazy)
         
@@ -3124,8 +3144,8 @@ class ManyResult(Result):
     
     def any(self):
         row = self.do_(
-            select([self.table.c[self.fieldb]], 
-                (self.table.c[self.fielda]==self.valuea) &
+            select([self.table.c[self.fieldb]],
+                self.get_default_condition() &
                 self.condition).limit(1)
             )
         return len(list(row)) > 0
@@ -3136,8 +3156,8 @@ class ManyResult(Result):
         if not keys:
             return False
         
-        row = self.do_(select([text('*')], 
-            (self.table.c[self.fielda]==self.valuea) & 
+        row = self.do_(select([text('*')],
+            self.get_default_condition() &
             (self.table.c[self.fieldb].in_(keys))).limit(1))
         return len(list(row)) > 0
         
@@ -3204,8 +3224,8 @@ class ManyResult(Result):
         if condition is not None and isinstance(condition, (str, unicode)):
             condition = text(condition)
         query = select(
-            self.get_columns(self.modelb, columns), 
-            (self.table.c[self.fielda] == self.valuea) & 
+            self.get_columns(self.modelb, columns),
+            self.get_default_condition() &
             (self.table.c[self.fieldb] == self.modelb.c[self.realfieldb]) & 
             condition,
             **self.kwargs)
@@ -3273,7 +3293,8 @@ class ManyToMany(ReferenceProperty):
 
     def __init__(self, reference_class=None, label=None, collection_name=None,
         reference_fieldname=None, reversed_fieldname=None, required=False, through=None, 
-        through_reference_fieldname=None, through_reversed_fieldname=None, 
+        through_reference_fieldname=None, through_reversed_fieldname=None,
+        before_save=None, default_condition=None,
         **attrs):
         """
         Definition of ManyToMany property
@@ -3295,6 +3316,8 @@ class ManyToMany(ReferenceProperty):
         self.through_reference_fieldname = through_reference_fieldname
         self.through_reversed_fieldname = through_reversed_fieldname
         self.index_reverse = attrs['index_reverse'] if 'index_reverse' in attrs else __manytomany_index_reverse__
+        self.before_save = before_save
+        self.default_condition = default_condition
 
     def create(self, cls):
         if not self.through:
@@ -3468,7 +3491,8 @@ class ManyToMany(ReferenceProperty):
             reference_id = getattr(model_instance, self.reversed_fieldname, None)
             x = ManyResult(self.model_class, model_instance, self.property_name, self.reference_class, self.table,
                 self.fielda, self.fieldb, self.reversed_fieldname,
-                self.reference_fieldname, reference_id, through_model=self.through)
+                self.reference_fieldname, reference_id, through_model=self.through,
+                before_save=self.before_save, default_condition=self.default_condition)
             return x
         else:
             return self
@@ -3695,7 +3719,9 @@ class _ManyToManyReverseReferenceProperty(_ReverseReferenceProperty):
                 self.reference_property.fieldb, self.reference_property.fielda, 
                 self.reference_property.reference_fieldname,
                 self.reference_property.reversed_fieldname, reference_id, 
-                through_model=self.reference_property.through)
+                through_model=self.reference_property.through,
+                before_save=self.reference_property.before_save,
+                default_condition=self.reference_property.default_condition)
             return x
         else:
             return self

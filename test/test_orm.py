@@ -1089,6 +1089,66 @@ def test_many2many_through():
     [<Group {'name':u'python','id':1}>, <Group {'name':u'perl','id':2}>]
     """
 
+def test_many2many_through_ext():
+    """
+    >>> db = get_connection('sqlite://')
+    >>> db.echo = False
+    >>> db.metadata.drop_all()
+    >>> db.metadata.clear()
+    >>> class User(Model):
+    ...     username = Field(CHAR, max_length=20)
+    >>> def _save1(x):
+    ...     x['flag'] = '1'
+    >>> def _save2(x):
+    ...     x['flag'] = '2'
+    >>> def _default1():
+    ...     R = Relation
+    ...     return R.c.flag == '1'
+    >>> def _default2():
+    ...     R = Relation
+    ...     return R.c.flag == '2'
+    >>> class Group(Model):
+    ...     name = Field(str, max_length=20)
+    ...     users1 = ManyToMany(User, through='relation', before_save=_save1, default_condition=_default1)
+    ...     users2 = ManyToMany(User, through='relation', before_save=_save2, default_condition=_default2)
+    >>> class Relation(Model):
+    ...     user = Reference(User)
+    ...     group = Reference(Group)
+    ...     flag = Field(CHAR, max_length=1)
+    >>> a = User(username='a')
+    >>> a.save()
+    True
+    >>> b = User(username='b')
+    >>> b.save()
+    True
+    >>> c = User(username='c')
+    >>> c.save()
+    True
+    >>> d = User(username='d')
+    >>> d.save()
+    True
+    >>> g1 = Group(name='G1')
+    >>> g1.save()
+    True
+    >>> g2 = Group(name='G2')
+    >>> g2.save()
+    True
+    >>> g1.users1.add(a)
+    True
+    >>> g1.users1.add(b)
+    True
+    >>> g1.users2.add(c)
+    True
+    >>> g1.users2.add(d)
+    True
+    >>> print list(g1.users1.all())
+    [<User {'username':u'a','id':1}>, <User {'username':u'b','id':2}>]
+    >>> print list(g1.users2.all())
+    [<User {'username':u'c','id':3}>, <User {'username':u'd','id':4}>]
+    >>> print g1.users1.has(a)
+    True
+    """
+
 def test_many2many_self_through():
     """
     >>> db = get_connection('sqlite://')
@@ -3090,23 +3150,24 @@ if __name__ == '__main__':
     # b.close()
     # print User.count()
 
-    db = get_connection('sqlite://')
-    db.metadata.drop_all()
-    class User(Model):
-        username = Field(unicode, primary_key=True)
-        year = Field(int, default=30)
+    # db = get_connection('sqlite://')
+    # db.metadata.drop_all()
+    # class User(Model):
+    #     username = Field(unicode, primary_key=True)
+    #     year = Field(int, default=30)
+    #
+    # from sqlalchemy import create_engine
+    # e = get_connection('oracle://', strategy='mock', executor=None, engine_name='oracle')
+    # Bulk = orm.Bulk
+    # b = Bulk(engine='oracle', size=10)
+    # b.prepare('update', User.table.update().values(year='year').where(User.c.username=='username'))
+    # b.put('update', **{'username':'test', 'year':30})
+    # print b.sqles['update']['data']
+    #
+    # e = get_connection('mysql://', strategy='mock', executor=None, engine_name='mysql')
+    # Bulk = orm.Bulk
+    # b = Bulk(engine='mysql', size=10)
+    # b.prepare('update', User.table.update().values(year='year').where(User.c.username=='username'))
+    # b.put('update', **{'username':'test', 'year':30})
+    # print b.sqles['update']['data']
 
-    from sqlalchemy import create_engine
-    e = get_connection('oracle://', strategy='mock', executor=None, engine_name='oracle')
-    Bulk = orm.Bulk
-    b = Bulk(engine='oracle', size=10)
-    b.prepare('update', User.table.update().values(year='year').where(User.c.username=='username'))
-    b.put('update', **{'username':'test', 'year':30})
-    print b.sqles['update']['data']
-
-    e = get_connection('mysql://', strategy='mock', executor=None, engine_name='mysql')
-    Bulk = orm.Bulk
-    b = Bulk(engine='mysql', size=10)
-    b.prepare('update', User.table.update().values(year='year').where(User.c.username=='username'))
-    b.put('update', **{'username':'test', 'year':30})
-    print b.sqles['update']['data']
