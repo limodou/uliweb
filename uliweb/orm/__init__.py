@@ -1334,7 +1334,7 @@ def reflect_table_data(table, mapping=None, engine_name='default'):
             kwargs['index'] = True
         if v.unique:
             kwargs['unique'] = True
-        if v.comment:
+        if sa_version >= '1.2' and v.comment:
             kwargs['verbose_name'] = v.comment
 
         #convert field_type to common python data type
@@ -1379,7 +1379,7 @@ def reflect_table_model(table, mapping=None, without_id=False, engine_name='defa
 
     __tablename__ = '{}\''''.format(table.name))
 
-    if table.comment:
+    if sa_version >= '1.2' and table.comment:
         code.append('    __verbose_name__ = {}\n'.format(dumps(table.comment, bool_int=False)))
 
     #process id
