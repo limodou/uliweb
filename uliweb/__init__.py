@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(workpath, 'lib'))
 class UliwebError(Exception): pass
 
 from .core.SimpleFrame import (Request, Response, redirect, Redirect, error, json, jsonp,
-        POST, GET, url_for, expose, get_app_dir, get_apps, function, Finder, decorators,
+        POST, GET, CORS, url_for, expose, get_app_dir, get_apps, function, Finder, decorators,
         functions, response, request, settings, application, NotFound, HTTPException,
         is_in_web, CONTENT_TYPE_JSON, CONTENT_TYPE_TEXT
     )

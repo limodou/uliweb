@@ -210,6 +210,49 @@ def jsonp(data, **json_kwargs):
     else:
         return Response(begin + '(' + json_dumps(data) + ');', **json_kwargs)
 
+
+def CORS(func=None):
+    """
+    CORS support
+    """
+
+    def w(r=None):
+        from uliweb import request, response
+
+        if request.method == 'OPTIONS':
+            response = Response(status=204)
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range'
+            response.headers['Access-Control-Max-Age'] = 24*3600
+            response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+            response.headers['Content-Length'] = 0
+            return response
+        elif request.method in ('GET', 'POST'):
+            if isinstance(r, Response):
+                print ('aaaaaaa')
+                response = r
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range'
+            response.headers['Access-Control-Expose-Headers'] = 'Content-Length,Content-Range'
+
+    if callable(func):
+        @wraps(func)
+        def f(*arg, **kwargs):
+            if request.method == 'OPTIONS':
+                return w()
+            ret = func(*arg, **kwargs)
+            w(ret)
+            print (ret.headers)
+            return ret
+
+        return f
+    else:
+        w()
+
 def expose(rule=None, **kwargs):
     e = rules.Expose(rule, **kwargs)
     if e.parse_level == 1:
