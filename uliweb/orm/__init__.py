@@ -1392,10 +1392,12 @@ def reflect_table_model(table, mapping=None, without_id=False, engine_name='defa
     for k, v in meta['columns'].items():
         kw = v[1].items()
         x_v = mapping.get(v[0])
-        if x_v:
-            kw.append(('type_class', x_v))
         kwargs = ', '.join([v[0]] + ['{0}={1}'.format(x, dumps(y, bool_int=False)) for x, y in kw])
-        txt = " "*4 + "{0} = Field({1})".format(k, kwargs)
+        if x_v:
+            type_class = ' ,type_class={}'.format(x_v)
+        else:
+            type_class = ''
+        txt = " "*4 + "{0} = Field({1}{2})".format(k, kwargs, type_class)
         code.append(txt)
 
     #output index text
