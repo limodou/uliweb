@@ -3974,6 +3974,8 @@ class Model(object):
 #                if not isinstance(v, ManyToMany):
                 if v.property_type == 'compound':
                     continue
+                if v.sequence:
+                    continue
                 if not isinstance(v, ManyToMany):
                     x = v.get_value_for_datastore(self)
                     if isinstance(x, Model):
