@@ -231,7 +231,6 @@ def CORS(func=None):
             return response
         elif request.method in ('GET', 'POST'):
             if isinstance(r, Response):
-                print ('aaaaaaa')
                 response = r
             response.headers['Access-Control-Allow-Credentials'] = 'true'
             response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
@@ -795,6 +794,7 @@ class Dispatcher(object):
         for logger_name, v in s.get_var('LOG.Loggers', {}).items():
             if logger_name == 'ROOT':
                 log = logging.getLogger('')
+                log.handlers = []
             else:
                 log = logging.getLogger(logger_name)
                 
