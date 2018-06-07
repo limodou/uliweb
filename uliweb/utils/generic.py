@@ -911,9 +911,9 @@ class AddView(object):
         self.meta = meta
         self.ok_url = ok_url
         self.ok_template = ok_template
-        if success_msg:
+        if success_msg is not None:
             self.success_msg = success_msg
-        if fail_msg:
+        if fail_msg is not None:
             self.fail_msg = fail_msg
         self.use_flash = use_flash
         self.data = data or {}
