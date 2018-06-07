@@ -1208,12 +1208,14 @@ class ReflectCommand(SQLCommandMixin, Command):
             help='Create model using oracle dialect, especially using VARCHAR2.'),
         make_option('--auto-id', dest='auto_id', action='store_true', default=False,
             help='Automatically add id field. Default is False.'),
+        make_option('-c', '--config', dest='config', action='store_true', default=False,
+                    help='Output model config information only. Default is False.'),
     )
     help = 'Reflect database tables to Uliweb model class code.'
 
     def handle(self, options, global_options, *args):
         from sqlalchemy import Table
-        from uliweb.orm import reflect_table_model
+        from uliweb.orm import reflect_table_model, reflect_table
 
         engine = get_engine(options, global_options)
 
@@ -1224,22 +1226,29 @@ class ReflectCommand(SQLCommandMixin, Command):
             tables = args
 
         mapping = {}
-        print '#coding=utf8'
-        print 'from uliweb.orm import *'
-        print 'from uliweb.i18n import ugettext_lazy as _'
-        print 'from uliweb.utils.common import get_var'
-        if options.oracle:
-            print 'from sqlalchemy.dialects.oracle import VARCHAR2'
-            mapping = {'str': 'VARCHAR2'}
-        print '\n'
+        if options.config:
+            print '[MODELS]'
+        else:
+            print '#coding=utf8'
+            print 'from uliweb.orm import *'
+            print 'from uliweb.i18n import ugettext_lazy as _'
+            print 'from uliweb.utils.common import get_var'
+            if options.oracle:
+                print 'from sqlalchemy.dialects.oracle import VARCHAR2'
+                mapping = {'str': 'VARCHAR2'}
+            print '\n'
 
         meta = engine.metadata
         for name in tables:
             table = Table(name, meta)
             try:
                 insp.reflecttable(table, None)
-                print reflect_table_model(table, mapping, without_id=not options.auto_id)
-                print '\n'
+                if options.config:
+                    model = reflect_table(table, engine)
+                    print "{} = '#{{appname}}.models.{}'".format(name, model.name.title())
+                else:
+                    print reflect_table_model(table, mapping, without_id=not options.auto_id)
+                    print '\n'
             except Exception as e:
                 import traceback
                 traceback.print_exc()
