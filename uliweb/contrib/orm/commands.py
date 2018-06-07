@@ -498,7 +498,7 @@ class SQLTableCommand(SQLCommandMixin, Command):
                 dialect = create_engine('{}://'.format(options.dialect), strategy="mock", executor=None).dialect
             else:
                 dialect = engine.dialect
-            print "%s;" % str(CreateTable(t).compile(dialect=dialect)).rstrip()
+            print "%s;" % safe_str(unicode(CreateTable(t).compile(dialect=dialect))).rstrip()
             for x in t.indexes:
                 print "%s;" % CreateIndex(x)
 
@@ -1234,8 +1234,8 @@ class ReflectCommand(SQLCommandMixin, Command):
             print 'from uliweb.i18n import ugettext_lazy as _'
             print 'from uliweb.utils.common import get_var'
             if options.oracle:
-                print 'from sqlalchemy.dialects.oracle import VARCHAR2'
-                mapping = {'str': 'VARCHAR2'}
+                print 'from sqlalchemy.dialects.oracle import VARCHAR2, LONG, RAW'
+                mapping = {'str': 'VARCHAR2', 'bigint': 'LONG', 'binary': 'RAW'}
             print '\n'
 
         meta = engine.metadata

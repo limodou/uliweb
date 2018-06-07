@@ -1294,11 +1294,16 @@ def reflect_table_data(table, mapping=None, engine_name='default'):
             kwargs['max_length'] = column_type.length
         elif type_name in ('text', 'blob', 'integer', 'float', 'bigint'):
             pass
+        elif type_name == 'long':
+            field_type = 'bigint'
         elif type_name in ('clob',):
             field_type = 'TEXT'
         elif type_name in ('decimal', 'float'):
             kwargs['precision'] = v.type.precision
             kwargs['scale'] = v.type.scale
+        elif type_name == 'raw': #oracle
+            field_type = 'binary'
+            kwargs['max_length'] = column_type.length
         elif type_name == 'number':
             if v.type.scale:
                 kwargs['precision'] = v.type.precision
@@ -1328,7 +1333,7 @@ def reflect_table_data(table, mapping=None, engine_name='default'):
         if not v.nullable:
             kwargs['nullable'] = False
         if v.server_default:
-            server_default = eval(str(v.server_default.arg))
+            server_default = v.server_default.arg
             kwargs['server_default'] = server_default
         if v.index:
             kwargs['index'] = True
