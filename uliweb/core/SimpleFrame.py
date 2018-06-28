@@ -246,7 +246,6 @@ def CORS(func=None):
                 return w()
             ret = func(*arg, **kwargs)
             w(ret)
-            print (ret.headers)
             return ret
 
         return f
