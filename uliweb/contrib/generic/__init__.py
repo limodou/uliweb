@@ -181,7 +181,7 @@ class MultiView(object):
         if post_view:
             post_view(view)
 
-        if 'data' in request.values and request.is_xhr:
+        if 'data' in request.values:
             return json(view.json(), content_type=CONTENT_TYPE_JSON)
         elif 'download' in request.GET:
             return view.download(**downloads)

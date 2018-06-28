@@ -233,7 +233,8 @@ def CORS(func=None):
             if isinstance(r, Response):
                 response = r
             response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
+            if 'Origin' in request.headers:
+                response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
             response.headers['Access-Control-Allow-Headers'] = 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range'
             response.headers['Access-Control-Expose-Headers'] = 'Content-Length,Content-Range'
