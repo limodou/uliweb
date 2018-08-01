@@ -14,6 +14,7 @@ from werkzeug import Request as OriginalRequest, Response as OriginalResponse
 from werkzeug import ClosingIterator, Local, LocalManager, BaseResponse
 from werkzeug.exceptions import HTTPException, NotFound, BadRequest, InternalServerError
 from werkzeug.routing import Map
+import json as jsn
 
 from . import template
 from .js import json_dumps
@@ -98,6 +99,13 @@ class Request(OriginalRequest):
     POST = OriginalRequest.form
     params = OriginalRequest.values
     FILES = OriginalRequest.files
+
+    def json(self):
+        """
+        Return json data, need front send json data
+        :return: dict
+        """
+        return jsn.loads(self.data)
     
 class Response(OriginalResponse):
     def write(self, value):
