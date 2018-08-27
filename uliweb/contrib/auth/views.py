@@ -63,5 +63,5 @@ def logout():
     from uliweb.contrib.auth import logout as out
     from uliweb import settings
     out()
-    next = urllib.unquote(request.POST.get('next', add_prefix('/')))
+    next = urllib.unquote(request.values.get('next', add_prefix('/')))
     return redirect(next)
