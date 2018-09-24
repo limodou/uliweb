@@ -50,7 +50,7 @@ class Session(dict):
     force = False
     
     def __init__(self, key=None, storage_type='file', options=None, expiry_time=3600*24*365,
-        serial_cls=None):
+        serial_cls=None, prefix='session:'):
         """
         expiry_time is just like max_age, the unit is second
         """
@@ -67,6 +67,7 @@ class Session(dict):
         self.cookie = SessionCookie(self)
         self._serial_cls = serial_cls or Serial
         self.serial_obj = self._serial_cls()
+        self.prefix = prefix
         
         self.load(self.key)
         
@@ -74,6 +75,7 @@ class Session(dict):
         modname = 'weto.backends.%s_storage' % self._storage_type
         mod = __import__(modname, fromlist=['*'])
         _class = getattr(mod, 'Storage', None)
+        _class.prefix = 'session:'
         return _class
     
     def _set_remember(self, v):
@@ -117,7 +119,7 @@ class Session(dict):
                 flag = True
 #        if not self.deleted and (bool(self) or (not bool(self) and self._is_modified())):
         if flag:
-            self.key = self.key or _get_id()
+            self.key = self.key or (self.prefix + _get_id())
             d = {}
             for k, value in dict(self).items():
                 v, accessed_time, expiry_time = self._parse_value(value)

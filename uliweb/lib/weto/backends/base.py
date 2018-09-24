@@ -8,7 +8,7 @@ class BaseStorage(object):
     def __init__(self, cache_manager, options):
         self.cache_manager = cache_manager
         self.options = options
-        
+
     def get(self, key):
         raise NotImplementedError()
     

@@ -62,17 +62,105 @@ def _get_auth_key():
 
     return settings.AUTH.AUTH_KEY
 
-def get_user():
+def get_auth_user():
     """
-    return user
+    Find auth user
+    :return: user object could be a model instance or a dict
     """
     from uliweb import request
+    from uliweb import settings
+
+    user_fieldname = settings.get_var('AUTH/GET_AUTH_USER_FIELDNAME', 'id')
 
     session_key = _get_auth_key()
     user_id = request.session.get(session_key)
     if user_id:
-        User = get_model('user')
-        return User.get(user_id)
+        if isinstance(user_id, dict):
+            return user_id
+        else:
+            User = get_model('user')
+            user = User.get(User.c[user_fieldname]==user_id)
+            return user
+
+
+def get_user_session_key(user_id):
+    return '__USER_SESSION:{}'.format(user_id)
+
+
+def set_user_session(user):
+    """
+    Set user session
+    :param user: user object chould be model instance or dict
+    :return:
+    """
+    from uliweb import settings, request
+
+    user_fieldname = settings.get_var('AUTH/GET_AUTH_USER_FIELDNAME', 'id')
+    share_session = settings.get_var('AUTH/AUTH_SHARE_USER_SESSION', False)
+    if isinstance(user, dict):
+        user_id = user[user_fieldname]
+    else:
+        user_id = getattr(user, user_fieldname)
+
+    if share_session:
+        cache = functions.get_cache()
+        key = get_user_session_key(user_id)
+        session_id = cache.get(key, None)
+        log.debug('Auth: user session user_id={}, session_id={}, key={}'.format(user_id, session_id, key))
+        if not session_id:
+            request.session.save()
+            log.debug('Auth: set user session mapping userid={}, '
+                      'session_id={}, expiry time={}'.format(user_id,
+                                                             request.session.key,
+                                                             request.session.expiry_time))
+            cache.set(key, request.session.key, expire=request.session.expiry_time)
+        elif session_id != request.session.key:
+            log.debug('Auth: load oldkey={}, key={}'.format(request.session.key, session_id))
+            request.session.delete()
+            request.session.load(session_id)
+    if isinstance(user, dict):
+        request.session[_get_auth_key()] = user
+    else:
+        request.session[_get_auth_key()] = user_id
+    request.user = user
+
+
+def update_user_session_expiry_time():
+    from uliweb import settings, request
+
+    user_fieldname = settings.get_var('AUTH/GET_AUTH_USER_FIELDNAME', 'id')
+    share_session = settings.get_var('AUTH/AUTH_SHARE_USER_SESSION', False)
+    user = request.user
+    if user and share_session:
+        if isinstance(user, dict):
+            user_id = user[user_fieldname]
+        else:
+            user_id = getattr(user, user_fieldname)
+        cache = functions.get_cache()
+        key = get_user_session_key(user_id)
+        log.debug('Auth: update user session expiry time, userid={}, session_id={}, '
+                  'expiry_time={}'.format(key, request.session.key,
+                                          request.session.expiry_time))
+        cache.set(key, request.session.key, expire=request.session.expiry_time)
+
+
+def delete_user_session():
+    from uliweb import settings, request
+
+    user_fieldname = settings.get_var('AUTH/GET_AUTH_USER_FIELDNAME', 'id')
+    share_session = settings.get_var('AUTH/AUTH_SHARE_USER_SESSION', False)
+    user = request.user
+    if user and share_session:
+        if isinstance(user, dict):
+            user_id = user[user_fieldname]
+        else:
+            user_id = getattr(user, user_fieldname)
+        cache = functions.get_cache()
+        key = get_user_session_key(user_id)
+        log.debug('Auth: delete user session, userid={}, session_id={}'.format(
+            key, request.session.key))
+        cache.delete(key)
+
 
 def create_user(username, password, **kwargs):
     """
@@ -146,9 +234,9 @@ def login(username):
         user = username
     user.last_login = now()
     user.save()
-    request.session[_get_auth_key()] = user.id
-    request.user = user
+    set_user_session(user)
     return True
+
 
 def logout():
     """
@@ -156,9 +244,11 @@ def logout():
     """
     from uliweb import request
 
+    delete_user_session()
     request.session.delete()
     request.user = None
     return True
+
 
 def require_login(f=None, next=None):
     from uliweb.utils.common import wraps
