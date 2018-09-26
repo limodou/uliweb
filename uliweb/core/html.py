@@ -113,9 +113,9 @@ class Tag(Buf):
             self._builder._write('<%s%s />' % (self.name, to_attrs(self.attributes)))
         elif _value != DefaultValue:
             if self._newline:
-               self._builder._write('<%s%s>\n%s\n</%s>' % (self.name, to_attrs(self.attributes), u_str(_value, self._encoding), self.name))
+                self._builder._write('<%s%s>\n%s\n</%s>' % (self.name, u_str(to_attrs(self.attributes)), u_str(_value, self._encoding), self.name))
             else:
-                self._builder._write('<%s%s>%s</%s>' % (self.name, to_attrs(self.attributes), u_str(_value, self._encoding), self.name))
+                self._builder._write('<%s%s>%s</%s>' % (self.name, u_str(to_attrs(self.attributes)), u_str(_value, self._encoding), self.name))
             return
         return self
     

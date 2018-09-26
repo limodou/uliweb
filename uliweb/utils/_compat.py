@@ -17,18 +17,22 @@ StingIO, BytesIO
 from io import StringIO, BytesIO
 
 """
+import os
 import sys
+import inspect
 
 PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
 PY26 = sys.version_info[0:2] == (2, 6)
 PYPY = hasattr(sys, 'pypy_translation_info')
-_identity = lambda x:x
+_identity = lambda x: x
 
 if not PY2:
     unichr = chr
     range = range
     string_types = (str,)
+    text_type = str
+    integer_types = (int,)
 
     iterkeys = lambda d: iter(d.keys())
     itervalues = lambda d: iter(d.values())
@@ -52,7 +56,7 @@ if not PY2:
         if isinstance(s, str):
             return s
         else:
-            return str(s)
+            return str(s, encoding)
 
     def b(s, encoding='utf8'):
         if isinstance(s, bytes):
@@ -66,15 +70,38 @@ if not PY2:
     import builtins
     exec_ = getattr(builtins, "exec")
 
-    get_next = lambda x: x.next
+    get_next = lambda x: x.__next__()
 
     input = input
     open = open
+
+    callable = lambda x: hasattr(x, '__call__')
+
+    ismethod = lambda f: callable(f) and not inspect.isclass(f) and '.' in f.__qualname__
+    isfunction = lambda f: callable(f) and not inspect.isclass(f) and '.' not in f.__qualname__
+
+    import builtins
+    from os import walk
+
+    def get_class(meth):
+        if inspect.ismethod(meth):
+            for cls in inspect.getmro(meth.__self__.__class__):
+                if cls.__dict__.get(meth.__name__) is meth:
+                    return cls
+            meth = meth.__func__  # fallback to __qualname__ parsing
+        if inspect.isfunction(meth):
+            cls = getattr(inspect.getmodule(meth),
+                          meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
+            if isinstance(cls, type):
+                return cls
+        return getattr(meth, '__objclass__', None)  # handle special descriptor objects
 
 else:
     unichr = unichr
     range = xrange
     string_types = (str, unicode)
+    text_type = unicode
+    integer_types = (int, long)
 
     iterkeys = lambda d: d.iterkeys()
     itervalues = lambda d: d.itervalues()
@@ -121,17 +148,27 @@ else:
             locs = globs
         exec("""exec code in globs, locs""")
 
-    get_next = lambda x: x.__next__
+    get_next = lambda x: x.next()
 
     input = raw_input
 
     from io import open
 
+    from inspect import ismethod, isfunction
+
+    builtins = __builtins__
+
+    from os.path import walk
+
+    def get_class(meth):
+        if inspect.ismethod(meth):
+            return meth.im_class
+
 try:
     next = next
 except NameError:
     def next(it):
-        return it.next()
+        return get_next(it)
 
 
 def with_metaclass(meta, *bases):
@@ -302,10 +339,25 @@ def import_(module, objects=None, py2=None):
     """
     if not PY2:
         mod = __import__(module, fromlist=['*'])
+        if objects:
+            if not isinstance(objects, (list, tuple)):
+                objects = [objects]
+
+            r = []
+            for x in objects:
+                r.append(getattr(mod, x))
+            if len(r) > 1:
+                return tuple(r)
+            else:
+                return r[0]
+
+        else:
+            return mod
+
     else:
         path = modules_mapping.get(module)
         if not path:
-            raise Exception("Can't find the module %s in mappings." % module)
+            raise Exception("Can't find the module {} in mappings.".format(module))
 
         if objects:
             if not isinstance(objects, (list, tuple)):
@@ -315,7 +367,7 @@ def import_(module, objects=None, py2=None):
             for x in objects:
                 m = path.get(x)
                 if not m:
-                    raise Exception("Can't find the object %s in %s." % (x, path))
+                    raise Exception("Can't find the object {} in {}.".format(x, path))
                 mod = __import__(m, fromlist=['*'])
                 r.append(getattr(mod, x))
             if len(r) > 1:

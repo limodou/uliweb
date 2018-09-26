@@ -25,6 +25,7 @@ def copy_dir(self, package, src, dst):
             target = os.path.join(dst, r)
             self.copy_file(fpath, target)
 
+
 def find_dir(self, package, src):
     for r in os.listdir(src):
         if r in ['.svn', '_svn']:
@@ -39,12 +40,14 @@ def find_dir(self, package, src):
                 continue
             yield fpath
 
+
 def build_package_data(self):
     for package in self.packages or ():
         src_dir = self.get_package_dir(package)
         build_dir = os.path.join(*([self.build_lib] + package.split('.')))
         copy_dir(self, package, src_dir, build_dir)
 setattr(b.build_py, 'build_package_data', build_package_data)
+
 
 def get_source_files(self):
     filenames = []

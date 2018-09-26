@@ -122,12 +122,12 @@ def timezone(tzname):
         tzname = fix_gmt_timezone(tzname)
         tz = __timezones__.get(tzname, None)
         if not tz:
-            raise DateError, "Can't find tzname %s" % tzname
+            raise DateError("Can't find tzname %s" % tzname)
         return tz
     elif isinstance(tzname, tzinfo):
         return tzname
     else:
-        raise DateError, "Unsupported tzname %r type" % tzname
+        raise DateError("Unsupported tzname {} type".format(tzname))
     
 def pick_timezone(*args):
     for x in args:

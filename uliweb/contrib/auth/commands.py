@@ -10,10 +10,8 @@ class CreateSuperUserCommand(SQLCommandMixin, Command):
         from uliweb import orm
         from getpass import getpass
         
-        app = make_simple_application(apps_dir=global_options.apps_dir, 
-            settings_file=global_options.settings, local_settings_file=global_options.local_settings)
-        db = orm.get_connection()
-        
+        self.get_application(global_options)
+
         username = ''
         while not username:
             username = raw_input("Please enter the super user's name: ")
@@ -46,12 +44,10 @@ class EncryptPasswordCommand(Command):
 
     def handle(self, options, global_options, *args):
         from uliweb import functions
-        from uliweb.core.SimpleFrame import get_settings, __global__
         import getpass
-        
-        settings = get_settings(global_options.project, settings_file=global_options.settings, 
-            local_settings_file=global_options.local_settings)
-        __global__.settings = settings
+
+        self.get_application(global_options)
+
         password = getpass.getpass('Input your password(Blank will quit):')
         if not password:
             return

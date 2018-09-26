@@ -1,4 +1,4 @@
-from base import BaseStorage, KeyError
+from .base import BaseStorage, KeyError
 import time
 
 import sqlalchemy as sa

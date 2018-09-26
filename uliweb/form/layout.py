@@ -1,5 +1,6 @@
 from __future__ import with_statement
 from uliweb.i18n import gettext_lazy as _
+from uliweb.utils.common import safe_str
 
 __all__ = ['Layout', 'TableLayout', 'CSSLayout', 
     'BootstrapLayout', 'BootstrapTableLayout']
@@ -32,7 +33,7 @@ class Layout(object):
         pass
 
     def html(self):
-        return '\n'.join([x for x in [self.begin(), self.hiddens(), self.body(), self.buttons_line(), self.end()] if x])
+        return '\n'.join([safe_str(x) for x in [self.begin(), self.hiddens(), self.body(), self.buttons_line(), self.end()] if x])
     
     def __str__(self):
         return self.html()
