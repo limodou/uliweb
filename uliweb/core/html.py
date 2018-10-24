@@ -29,6 +29,8 @@ def to_attrs(args, nocreate_if_none=['id', 'for', 'class']):
         return ''
     s = ['']
     for k, v in sorted(args.items()):
+        k = u_str(k)
+        v = u_str(v)
         if k.startswith('_'):
             k = k[1:]
         if v is None:
