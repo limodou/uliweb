@@ -672,13 +672,12 @@ def make_form_field(field, model=None, field_cls=None,
         elif type_name == 'FLOAT':
             field_type = form.FloatField
         elif type_name == 'INTEGER':
-            if 'autoincrement' not in prop.kwargs:
-                if prop.choices is not None:
-                    field_type = form.SelectField
-                    kwargs['choices'] = prop.get_choices()
-                    kwargs['datetype'] = int
-                else:
-                    field_type = form.IntField
+            if prop.choices is not None:
+                field_type = form.SelectField
+                kwargs['choices'] = prop.get_choices()
+                kwargs['datetype'] = int
+            else:
+                field_type = form.IntField
         elif type_name == 'ManyToMany':
             kwargs['model'] = prop.reference_class
             field_type = ManyToManySelectField
@@ -954,8 +953,13 @@ class AddView(object):
         
     def get_fields(self):
         f = []
-        for field_name, prop in get_fields(self.model, self.fields, self.meta):
-            d = prop.copy()
+        for field_name, field in get_fields(self.model, self.fields, self.meta):
+            # 判断是否自增，如果是，则忽略
+            prop = field['prop']
+            if prop and 'autoincrement' in prop.kwargs:
+                continue
+
+            d = field.copy()
             d['static'] = field_name in self.static_fields
             d['hidden'] = field_name in self.hidden_fields
             f.append(d)
