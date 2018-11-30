@@ -2801,6 +2801,11 @@ def test_uuid_and_new_fields():
     >>> a = User(username='limodou', year=5)
     >>> a.save() # doctest:+ELLIPSIS
     True
+    >>> b = User(username='limodou', year=5, id='XXX123456')
+    >>> b.save() # doctest:+ELLIPSIS
+    True
+    >>> b.id
+    'XXX123456'
     >>> u1 = User.get(User.c.username=='limodou') # doctest:+ELLIPSIS
     >>> u1 # doctest:+ELLIPSIS
     <User {'id':...,'username':u'limodou','year':5}>
