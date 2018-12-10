@@ -953,13 +953,8 @@ class AddView(object):
         
     def get_fields(self):
         f = []
-        for field_name, field in get_fields(self.model, self.fields, self.meta):
-            # 判断是否自增，如果是，则忽略
-            prop = field['prop']
-            if prop and 'autoincrement' in prop.kwargs:
-                continue
-
-            d = field.copy()
+        for field_name, prop in get_fields(self.model, self.fields, self.meta):
+            d = prop.copy()
             d['static'] = field_name in self.static_fields
             d['hidden'] = field_name in self.hidden_fields
             f.append(d)
