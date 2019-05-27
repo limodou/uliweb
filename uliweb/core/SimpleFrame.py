@@ -223,16 +223,22 @@ def CORS(func=None):
     """
     CORS support
     """
+    header = 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range'
+    if settings.get_var('CORS/HEADERS'):
+        headers = header + ',' + ','.join(settings.CORS.HEADERS)
+    else:
+        headers = header
 
     def w(r=None):
         from uliweb import request, response
+
 
         if request.method == 'OPTIONS':
             response = Response(status=204)
             response.headers['Access-Control-Allow-Credentials'] = 'true'
             response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range'
+            response.headers['Access-Control-Allow-Headers'] = headers
             response.headers['Access-Control-Max-Age'] = 24*3600
             response.headers['Content-Type'] = 'text/plain; charset=utf-8'
             response.headers['Content-Length'] = 0
@@ -244,7 +250,7 @@ def CORS(func=None):
             if 'Origin' in request.headers:
                 response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range'
+            response.headers['Access-Control-Allow-Headers'] = headers
             response.headers['Access-Control-Expose-Headers'] = 'Content-Length,Content-Range'
 
     if callable(func):
@@ -537,7 +543,7 @@ def collect_settings(project_dir, include_apps=None, settings_file='settings.ini
 
 def get_settings(project_dir, include_apps=None, settings_file='settings.ini', 
     local_settings_file='local_settings.ini', default_settings=None):
-        
+    default_settings = default_settings or {}
     settings = collect_settings(project_dir, include_apps, settings_file,
         local_settings_file)
 

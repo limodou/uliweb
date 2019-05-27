@@ -1,4 +1,22 @@
-from uliweb import settings
+from uliweb import settings, functions
+
+def parse_connection(connection, encrypt_password=False):
+    if encrypt_password:
+        from uliweb.utils._compat import import_
+        import base64
+        urlsplit, urlunsplit = import_('urllib.parse', ['urlsplit', 'urlunsplit'])
+        v = urlsplit(connection)
+        schema, netloc, path, query, fragment = v
+        username = v.username
+        password = v.password
+        hostname = v.hostname
+        port = v.port
+        password = functions.decrypt(base64.decodestring(password))
+        netloc = '{}:{}@{}'.format(username, password, hostname)
+        if port:
+            netloc += ':{}'.format(port)
+        connection = urlunsplit((schema, netloc, path, query, fragment))
+    return connection
 
 def after_init_apps(sender):
     from uliweb import orm
@@ -18,6 +36,7 @@ def after_init_apps(sender):
     convert_path = settings.get_var('ORM/TABLENAME_CONVERTER')
     convert = import_attr(convert_path) if convert_path else None
     orm.set_tablename_converter(convert)
+    encrypt_password = settings.get_var('ORM/ENCRYPT_PASSWORD')
     
     patch_none = settings.get_var('ORM/PATCH_NONE')
     if patch_none:
@@ -31,7 +50,7 @@ def after_init_apps(sender):
         orm.set_auto_transaction_in_web(settings.get_var('ORM/AUTO_TRANSACTION_IN_WEB'))
     orm.set_auto_transaction_in_notweb(settings.get_var('ORM/AUTO_TRANSACTION_IN_NOTWEB'))
     
-    d = {'connection_string':settings.get_var('ORM/CONNECTION'),
+    d = {'connection_string':parse_connection(settings.get_var('ORM/CONNECTION'), encrypt_password),
         'connection_type':settings.get_var('ORM/CONNECTION_TYPE'),
         'debug_log':settings.get_var('ORM/DEBUG_LOG'),
         'connection_args':settings.get_var('ORM/CONNECTION_ARGS'),
@@ -40,7 +59,7 @@ def after_init_apps(sender):
     orm.engine_manager.add('default', d)
     
     for name, d in settings.get_var('ORM/CONNECTIONS').items():
-        x = {'connection_string':d.get('CONNECTION', ''),
+        x = {'connection_string':parse_connection(d.get('CONNECTION', ''), encrypt_password),
             'debug_log':d.get('DEBUG_LOG', None),
             'connection_args':d.get('CONNECTION_ARGS', {}),
             'strategy':d.get('STRATEGY', 'threadlocal'),

@@ -30,3 +30,45 @@ class MakeKeyCommand(Command):
         f.write(secret_key)
         print 'OK'
 
+
+class EncryptCommand(Command):
+    name = 'encrypt'
+    args = 'string'
+    help = 'Encrypt a string.'
+    option_list = (
+        make_option('-b', '--base64', dest="base64", action='store_true',
+                    help='Encode to base64 encoding.'),
+    )
+
+    def handle(self, options, global_options, *args):
+        from uliweb import functions
+
+        self.get_application(global_options)
+
+        v = functions.encrypt(args[0])
+        if options.base64:
+            import base64
+            v = base64.encodestring(v)
+        print v
+
+class DecryptCommand(Command):
+    name = 'decrypt'
+    args = 'string'
+    help = 'Decrypt a string.'
+    option_list = (
+        make_option('-b', '--base64', dest="base64", action='store_true',
+                    help='Decode from base64 encoding.'),
+    )
+
+    def handle(self, options, global_options, *args):
+        from uliweb import functions
+
+        self.get_application(global_options)
+
+        if options.base64:
+            import base64
+            v = base64.decodestring(args[0])
+        else:
+            v = args[0]
+        v = functions.decrypt(v)
+        print v

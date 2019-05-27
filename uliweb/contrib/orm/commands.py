@@ -1414,3 +1414,51 @@ class LoadRecordCommand(SQLCommandMixin, Command):
 
         if verbose:
             print '-- Total {} records loaded'.format(n)
+
+class LoadRecordCommand(SQLCommandMixin, Command):
+    name = 'loadrecord'
+    args = 'filename'
+    help = 'Load records from dumprecord command output file.'
+
+    def handle(self, options, global_options, *args):
+        import sys
+        from uliweb import orm
+        from sqlalchemy import text
+        from uliweb.utils.common import read_syntax_line
+
+        if len(args) < 1:
+            self.print_help(self.prog_name, 'loadrecord')
+            sys.exit(1)
+
+        verbose = global_options.verbose
+
+        get_engine(options, global_options)
+        self.engine = orm.engine_manager[options.engine]
+
+        if verbose:
+            print '-- Ready to load records from {}'.format(args[0])
+
+        n = 0
+        with open(args[0]) as f:
+            while 1:
+                line = read_syntax_line(f)
+                if line:
+                    model, values = eval(line)
+                    M = orm.get_model(model)
+                    row = M.get(M.c[M._primary_field]==values[M._primary_field])
+                    if row:
+                        if verbose:
+                            print '    Update {}-{}'.format(model, values[M._primary_field])
+                        row.update(**values)
+                        row.save()
+                    else:
+                        if verbose:
+                            print '    Insert {}-{}'.format(model, values[M._primary_field])
+                        row = M(**values)
+                        row.save(insert=True)
+                    n += 1
+                else:
+                    break
+
+        if verbose:
+            print '-- Total {} records loaded'.format(n)
