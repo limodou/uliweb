@@ -38,6 +38,8 @@ class EncryptCommand(Command):
     option_list = (
         make_option('-b', '--base64', dest="base64", action='store_true',
                     help='Encode to base64 encoding.'),
+        make_option('-h', '--hex', dest="hex", action='store_true',
+                    help='Encode to hex encoding.'),
     )
 
     def handle(self, options, global_options, *args):
@@ -49,6 +51,8 @@ class EncryptCommand(Command):
         if options.base64:
             import base64
             v = base64.encodestring(v)
+        if options.hex:
+            v = v.encode('hex')
         print v
 
 class DecryptCommand(Command):
@@ -58,6 +62,8 @@ class DecryptCommand(Command):
     option_list = (
         make_option('-b', '--base64', dest="base64", action='store_true',
                     help='Decode from base64 encoding.'),
+        make_option('-h', '--hex', dest="hex", action='store_true',
+                    help='Decode from hex encoding.'),
     )
 
     def handle(self, options, global_options, *args):
@@ -68,6 +74,8 @@ class DecryptCommand(Command):
         if options.base64:
             import base64
             v = base64.decodestring(args[0])
+        elif options.hex:
+            v = args[0].decode('hex')
         else:
             v = args[0]
         v = functions.decrypt(v)

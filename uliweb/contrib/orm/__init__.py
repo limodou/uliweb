@@ -11,7 +11,10 @@ def parse_connection(connection, encrypt_password=False):
         password = v.password
         hostname = v.hostname
         port = v.port
-        password = functions.decrypt(base64.decodestring(password))
+        if encrypt_password == 'hex':
+            password = functions.decrypt(password.decode('hex'))
+        else:
+            password = functions.decrypt(base64.decodestring(password))
         netloc = '{}:{}@{}'.format(username, password, hostname)
         if port:
             netloc += ':{}'.format(port)
