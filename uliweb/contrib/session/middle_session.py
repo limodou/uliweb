@@ -58,7 +58,7 @@ class SessionMiddle(Middleware):
             else:
                 cookie_max_age = c.expiry_time
             flag = session.save()
-            if flag:
+            if flag or request.cookies.get(c.cookie_id) != session.key:
                 response.set_cookie(c.cookie_id,
                     session.key, max_age=cookie_max_age,
                     expires=None, domain=c.domain,
