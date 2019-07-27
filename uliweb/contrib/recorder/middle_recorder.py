@@ -1,5 +1,4 @@
 from uliweb import Middleware
-from uliweb.contrib.redis_cli import get_redis
 from uliweb.utils.common import request_url
 from logging import getLogger
 from datetime import datetime
@@ -27,10 +26,10 @@ class RecorderrMiddle(Middleware):
         # if not settings.get_var('GLOBAL/DEBUG'):
         #     return response
         
-        # S = functions.get_model('uliwebrecorderstatus')
-        # s = S.all().one()
-        # if not s or s.status == 'E':
-        #     return response
+        S = functions.get_model('uliwebrecorderstatus')
+        s = S.all().one()
+        if not s or s.status == 'E':
+            return response
         
         if settings.get_var('ULIWEBRECORDER/response_text'):
             try:
@@ -84,15 +83,9 @@ class RecorderrMiddle(Middleware):
         if recorder_type == 'db':
             recorder.save()
         elif recorder_type == 'mq':
-            mq_config = settings.get_var('ULIWEBRECORDER/mq')
-            mq_name = mq_config.get('name')
-            mq_lock_name = mq_config.get('lock_name', mq_name+'_lock')
-            if mq_name:
-                redis_client = get_redis()
-                lock = redis_client.lock(name=mq_lock_name)
-                if lock.acquire():
-                    redis_client.lpush(mq_name, recorder.dump())
-                    lock.release()
+            mq_name = settings.get_var('ULIWEBRECORDER/mq_name', default='uliweb_recorder_mq')
+            redis = functions.get_redis()
+            redis.lpush(mq_name, recorder.dump())
         elif recorder_type == 'stream':
             log.info(recorder.dump())
         return response
