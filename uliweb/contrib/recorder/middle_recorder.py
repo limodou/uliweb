@@ -1,18 +1,30 @@
 from uliweb import Middleware
 from uliweb.utils.common import request_url
 from logging import getLogger
+from datetime import datetime
 
 log = getLogger(__name__.rsplit('.')[0])
+
+
 class RecorderrMiddle(Middleware):
     ORDER = 600
-    
+
+    def __init__(self, *args, **kwargs):
+        self.access_datetime = datetime(1970, 1, 1)
+        super(RecorderrMiddle, self).__init__(*args, **kwargs)
+
+    def process_request(self, request):
+        self.access_datetime = datetime.now()
+
     def process_response(self, request, response):
         from uliweb import settings, functions, json_dumps
         import base64
         
-        #if not debug status it'll quit
-        if not settings.get_var('GLOBAL/DEBUG'):
-            return response
+        begin_datetime = self.access_datetime
+        end_datetime = datetime.now()
+        # #if not debug status it'll quit
+        # if not settings.get_var('GLOBAL/DEBUG'):
+        #     return response
         
         S = functions.get_model('uliwebrecorderstatus')
         s = S.all().one()
@@ -56,14 +68,26 @@ class RecorderrMiddle(Middleware):
             response_data = msg
             response_data_is_text = True
         recorder = R(method=request.method,
-            url=request_url(request),
-            post_data_is_text=post_data_is_text,
-            post_data=post_data, user=user_id,
-            response_data=response_data,
-            response_data_is_text=response_data_is_text,
-            status_code=response.status_code,
-            )
-        recorder.save()
+                     url=request_url(request),
+                     post_data_is_text=post_data_is_text,
+                     post_data=post_data,
+                     user=user_id,
+                     response_data=response_data,
+                     response_data_is_text=response_data_is_text,
+                     status_code=response.status_code,
+                     begin_datetime=begin_datetime,
+                     end_datetime=end_datetime,
+                     time_used=(end_datetime-begin_datetime).total_seconds()
+                     )
+        recorder_type = settings.get_var('ULIWEBRECORDER/recorder_type')
+        if recorder_type == 'db':
+            recorder.save()
+        elif recorder_type == 'mq':
+            mq_name = settings.get_var('ULIWEBRECORDER/mq_name', default='uliweb_recorder_mq')
+            redis = functions.get_redis()
+            redis.lpush(mq_name, recorder.dump())
+        elif recorder_type == 'stream':
+            log.info(recorder.dump())
         return response
             
     def test_text(self, content_type):
