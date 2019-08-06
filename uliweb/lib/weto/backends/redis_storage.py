@@ -42,7 +42,7 @@ class Storage(BaseStorage):
             v = self._dump(value)
         else:
             v = value
-        r = self.client.setex(key, v, expiry_time)
+        r = self.client.setex(name=key, value=v, time=expiry_time)
         return r
     
     def delete(self, key):
