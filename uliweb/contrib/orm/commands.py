@@ -565,7 +565,7 @@ class DumpCommand(SQLCommandMixin, Command):
                 engine_name=engine.engine_name)
             #write zip content
             if options.zipfile and zipfile:
-                zipfile.writestr(filename, fileobj.getvalue())
+                zipfile.writestr(filename, fileobj.getvalue(), allowZip64=True)
             if global_options.verbose:
                 print t
             
