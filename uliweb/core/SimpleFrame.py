@@ -264,7 +264,7 @@ def CORS(func=None):
 
         return f
     else:
-        w()
+        return w()
 
 def expose(rule=None, **kwargs):
     e = rules.Expose(rule, **kwargs)
@@ -1471,6 +1471,10 @@ class Dispatcher(object):
         try:
             local.request = req = Request(environ)
             local.response = res = Response(content_type='text/html')
+
+            # add DEFAULT_CORS support
+            if settings.GLOBAL.DEFAULT_CORS and req.method == 'OPTIONS':
+                return CORS()
 
             #add local cached
             local.local_cache = {}

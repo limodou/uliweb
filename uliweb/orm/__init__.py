@@ -622,7 +622,7 @@ def print_model(model, engine_name=None, skipblank=False):
     else:
         return sql
 
-def do_(query, ec=None, args=None):
+def do_(query, ec=None, args=None, **kwargs):
     """
     Execute a query
     """
@@ -631,7 +631,7 @@ def do_(query, ec=None, args=None):
 
     conn = get_session(ec)
     b = time()
-    result = conn.execute(query, *(args or ()))
+    result = conn.execute(query, *(args or ()), **kwargs)
     t = time() - b
     dispatch.call(ec, 'post_do', query, conn, t)
     
@@ -2790,7 +2790,7 @@ class Result(object):
         for i, column in enumerate(fields):
             if column.name not in convertors:
                 if display:
-                    def f(value, data):
+                    def f(value, data, column=column):
                         return column.get_display_value(value)
 
                     convertors[column.name] = f
