@@ -2225,15 +2225,15 @@ class SimpleListView(object):
         return self.downloader.download(bfile, action=action, x_filename=ufile, 
             real_filename=tfile.name)
         
-    def run(self, head=True, body=True, json_result=False):
+    def run(self, head=False, body=False, json_result=False):
         result = self.template_data.copy()
-        result.update(self.render(json_result=json_result))
+        result.update(self.render(json_result=json_result, head=head, body=body))
         return result
     
     def json(self):
-        return self.run(json_result=True)
+        return self.run(json_result=True, body=True)
     
-    def render(self, json_result=False):
+    def render(self, json_result=False, head=False, body=False):
         result = {
             'table_id':self.id, 
             'pageno':self.pageno+1,
@@ -2244,30 +2244,33 @@ class SimpleListView(object):
         if not json_result:
             s = Builder('begin', 'colgroup', 'head', 'body', 'end')
             s.begin << '<table class="%s" id=%s>' % (self.table_class_attr, self.id)
-            with s.colgroup.colgroup:
-                s.colgroup << self.create_table_colgroup()
-            with s.head.thead:
-                s.head << self.create_table_head()
-        
-            s.body << '<tbody>'
-            for r in self.objects():
-                render_func = self.render_func or self.default_body_render
-                data = []
-                for f in self.table_info['fields_list']:
-                    data.append( (f['name'], r[f['name']]) )
-                s.body << render_func(data, r.get('_obj_', {}))
-            s.body << '</tbody>'
+            if head:
+                with s.colgroup.colgroup:
+                    s.colgroup << self.create_table_colgroup()
+                with s.head.thead:
+                    s.head << self.create_table_head()
+
+            if body:
+                s.body << '<tbody>'
+                for r in self.objects():
+                    render_func = self.render_func or self.default_body_render
+                    data = []
+                    for f in self.table_info['fields_list']:
+                        data.append( (f['name'], r[f['name']]) )
+                    s.body << render_func(data, r.get('_obj_', {}))
+                s.body << '</tbody>'
             s.end << '</table>'
             
             result['table'] = s
         else:
             s = []
-            for r in self.objects(json_result):
-                render_func = self.render_func or self.json_body_render
-                data = []
-                for f in self.table_info['fields_list']:
-                    data.append( (f['name'], r[f['name']]) )
-                s.append(render_func(data, r.get('_obj_', {})))
+            if body:
+                for r in self.objects(json_result):
+                    render_func = self.render_func or self.json_body_render
+                    data = []
+                    for f in self.table_info['fields_list']:
+                        data.append( (f['name'], r[f['name']]) )
+                    s.append(render_func(data, r.get('_obj_', {})))
             result['rows'] = s
         result['total'] = self.total
         return result
