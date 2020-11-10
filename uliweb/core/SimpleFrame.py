@@ -1520,7 +1520,7 @@ class Dispatcher(object):
                                 ins = cls(self, settings)
                             response = ins.process_exception(req, e)
                             if response:
-                                break
+                                return response
                         raise
                     
                 for cls in process_response_classes:
