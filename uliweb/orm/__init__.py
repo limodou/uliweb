@@ -2687,6 +2687,8 @@ class Result(object):
                     c = text(c)
                 cond = and_(c, cond)
         if self.condition is not None:
+            if isinstance(self.condition, (str, unicode)):
+                self.condition = text(self.condition)
             self.condition = and_(cond, self.condition)
         else:
             self.condition = cond
