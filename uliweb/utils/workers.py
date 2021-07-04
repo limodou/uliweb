@@ -251,7 +251,10 @@ class Manager(object):
                     create = True
                 else:
                     #reap child process !important
-                    os.waitpid(pid, os.WNOHANG)
+                    try:
+                        os.waitpid(pid, os.WNOHANG)
+                    except Exception, e:
+                        pass
                     if not pid_exists(pid):
                         self.log.info('%s %d is not existed any more.' % (worker.name, pid))
                         create = True
@@ -297,7 +300,9 @@ class Manager(object):
             wait_pid(pid, 3, lambda x:os.kill(x, signal.SIGKILL))
             wait_pid(pid, 2)
         #remove pid
-        self.pids.pop(pid, None)
+        for index, p in self.pids.iteritems():
+            if pid == p:
+                self.pids.pop(index, None)
 
     def signal_handler(self, signum, frame):
         self.log.info ("Process %d received a signal %d" % (self.pid, signum))
